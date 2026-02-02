@@ -9,7 +9,7 @@ from app.core.config import settings
 from app.core.database import engine, async_session
 from app.core.seed import seed_exercises
 from app.models import base  # noqa: F401 - Import to register models
-from app.routers import auth, exercises, health, splits
+from app.routers import auth, exercises, health, mesocycles, splits
 
 
 @asynccontextmanager
@@ -49,6 +49,7 @@ app.include_router(health.router, prefix="/api", tags=["health"])
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(exercises.router, prefix="/api/exercises", tags=["exercises"])
 app.include_router(splits.router, prefix="/api/splits", tags=["splits"])
+app.include_router(mesocycles.router, prefix="/api/mesocycles", tags=["mesocycles"])
 
 # Serve static files in production
 static_dir = Path(__file__).parent.parent.parent / "frontend" / "dist"
