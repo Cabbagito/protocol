@@ -6,7 +6,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from app.core.config import settings
-from app.core.database import engine
+from app.core.database import engine, async_session
+from app.core.seed import seed_exercises
 from app.models import base  # noqa: F401 - Import to register models
 from app.routers import auth, exercises, health, splits
 
@@ -16,6 +17,13 @@ async def lifespan(app: FastAPI):
     # Startup: create tables if they don't exist
     async with engine.begin() as conn:
         await conn.run_sync(base.Base.metadata.create_all)
+
+    # Seed common exercises
+    async with async_session() as session:
+        added = await seed_exercises(session)
+        if added > 0:
+            print(f"Seeded {added} common exercises")
+
     yield
     # Shutdown: dispose engine
     await engine.dispose()
