@@ -14,7 +14,7 @@ Personal fitness tracking PWA - gym, nutrition, and glucose management.
 ### One Command Start
 
 ```bash
-docker compose -f docker-compose.dev.yml up
+docker compose up
 ```
 
 That's it. This starts:
@@ -32,7 +32,7 @@ If you prefer running services locally:
 
 ```bash
 # Start just the database
-docker compose -f docker-compose.dev.yml up db
+docker compose up db
 
 # Backend (terminal 1)
 cd backend
@@ -66,18 +66,17 @@ protocol/
 │   │   ├── schemas/   # Pydantic schemas
 │   │   └── services/  # Business logic
 │   └── pyproject.toml
-├── Dockerfile         # Production multi-stage build
-├── docker-compose.yml # Production-like (builds image)
-└── docker-compose.dev.yml # Development (hot reload)
+├── Dockerfile         # Production build (Railway)
+└── docker-compose.yml # Development (hot reload)
 ```
 
 ## Useful Commands
 
 ```bash
 # Development
-docker compose -f docker-compose.dev.yml up      # Start everything
-docker compose -f docker-compose.dev.yml down    # Stop everything
-docker compose -f docker-compose.dev.yml logs -f # Follow logs
+docker compose up          # Start everything
+docker compose down        # Stop everything
+docker compose logs -f     # Follow logs
 
 # Backend (local)
 cd backend
