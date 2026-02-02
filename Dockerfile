@@ -1,38 +1,39 @@
-# Stage 1: Build frontend
-FROM node:20-slim AS frontend-builder
+# Stage 1: Build frontend with Bun
+FROM oven/bun:1-alpine AS frontend-builder
 
 WORKDIR /app/frontend
 
-COPY frontend/package.json frontend/package-lock.json* ./
-RUN npm install
+COPY frontend/package.json frontend/bun.lockb* ./
+RUN bun install --frozen-lockfile
 
 COPY frontend/ ./
-RUN npm run build
+RUN bun run build
 
-# Stage 2: Python runtime
-FROM python:3.12-slim
+# Stage 2: Python runtime with uv
+FROM ghcr.io/astral-sh/uv:python3.12-alpine AS backend-builder
 
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    && rm -rf /var/lib/apt/lists/*
+COPY backend/pyproject.toml backend/uv.lock* ./
+RUN uv sync --no-dev --frozen
 
-# Install Python dependencies
-COPY backend/requirements.txt ./
-RUN pip install --no-cache-dir -r requirements.txt
+# Stage 3: Final runtime
+FROM python:3.12-alpine
+
+WORKDIR /app
+
+# Copy virtual environment from builder
+COPY --from=backend-builder /app/.venv /app/.venv
 
 # Copy backend code
-COPY backend/ ./backend/
+COPY backend/app ./app
 
 # Copy built frontend
 COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
 
-# Set working directory to backend
-WORKDIR /app/backend
+# Use the virtual environment
+ENV PATH="/app/.venv/bin:$PATH"
 
-# Expose port
 EXPOSE 8000
 
-# Run the application
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

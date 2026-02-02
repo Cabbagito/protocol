@@ -4,57 +4,52 @@ Personal fitness tracking PWA - gym, nutrition, and glucose management.
 
 ## Tech Stack
 
-- **Frontend:** React + Vite + TypeScript + Tailwind CSS
-- **Backend:** FastAPI (Python) + SQLAlchemy
+- **Frontend:** React + Vite + TypeScript + Tailwind CSS (via Bun)
+- **Backend:** FastAPI + SQLAlchemy async (via uv)
 - **Database:** PostgreSQL
 - **Hosting:** Railway (single Docker container)
 
-## Development Setup
+## Development
 
-### Prerequisites
+### One Command Start
 
-- Node.js 20+
-- Python 3.12+
-- Docker (for local Postgres)
+```bash
+docker compose -f docker-compose.dev.yml up
+```
 
-### Quick Start
+That's it. This starts:
+- **PostgreSQL** on port 5432
+- **FastAPI backend** on http://localhost:8000 (with hot reload)
+- **Vite frontend** on http://localhost:5173 (with HMR)
 
-1. **Start the database:**
-   ```bash
-   docker compose -f docker-compose.dev.yml up -d
-   ```
+Login with password: `devpassword`
 
-2. **Set up backend:**
-   ```bash
-   cd backend
-   python -m venv venv
-   source venv/bin/activate  # Windows: venv\Scripts\activate
-   pip install -r requirements.txt
-   cp ../.env.example .env
-   # Edit .env with your settings
-   uvicorn app.main:app --reload
-   ```
+### Local Development (without Docker)
 
-3. **Set up frontend (new terminal):**
-   ```bash
-   cd frontend
-   npm install
-   npm run dev
-   ```
+If you prefer running services locally:
 
-4. **Open the app:**
-   - Frontend: http://localhost:5173
-   - API docs: http://localhost:8000/docs
+**Prerequisites:** [uv](https://docs.astral.sh/uv/), [bun](https://bun.sh/), Docker (for Postgres)
 
-### Default Credentials
+```bash
+# Start just the database
+docker compose -f docker-compose.dev.yml up db
 
-Password: `devpassword` (change `APP_PASSWORD` in `.env`)
+# Backend (terminal 1)
+cd backend
+uv sync
+uv run uvicorn app.main:app --reload
+
+# Frontend (terminal 2)
+cd frontend
+bun install
+bun run dev
+```
 
 ## Project Structure
 
 ```
 protocol/
-├── frontend/           # React + Vite PWA
+├── frontend/           # React + Vite + Tailwind (Bun)
 │   ├── src/
 │   │   ├── api/       # API client
 │   │   ├── components/# Reusable components
@@ -62,22 +57,45 @@ protocol/
 │   │   ├── lib/       # Utilities
 │   │   ├── pages/     # Route pages
 │   │   └── types/     # TypeScript types
-│   └── public/        # Static assets
-├── backend/           # FastAPI
-│   └── app/
-│       ├── core/      # Config, database, security
-│       ├── models/    # SQLAlchemy models
-│       ├── routers/   # API endpoints
-│       ├── schemas/   # Pydantic schemas
-│       └── services/  # Business logic
-├── Dockerfile         # Production build
-├── docker-compose.yml # Full stack (production-like)
-└── docker-compose.dev.yml # Dev database only
+│   └── package.json
+├── backend/           # FastAPI + SQLAlchemy (uv)
+│   ├── app/
+│   │   ├── core/      # Config, database, security
+│   │   ├── models/    # SQLAlchemy models
+│   │   ├── routers/   # API endpoints
+│   │   ├── schemas/   # Pydantic schemas
+│   │   └── services/  # Business logic
+│   └── pyproject.toml
+├── Dockerfile         # Production multi-stage build
+├── docker-compose.yml # Production-like (builds image)
+└── docker-compose.dev.yml # Development (hot reload)
 ```
 
-## Deployment
+## Useful Commands
 
-### Railway
+```bash
+# Development
+docker compose -f docker-compose.dev.yml up      # Start everything
+docker compose -f docker-compose.dev.yml down    # Stop everything
+docker compose -f docker-compose.dev.yml logs -f # Follow logs
+
+# Backend (local)
+cd backend
+uv sync                    # Install dependencies
+uv run uvicorn app.main:app --reload  # Run with reload
+uv run pytest              # Run tests
+uv run ruff check .        # Lint
+uv run ruff format .       # Format
+
+# Frontend (local)
+cd frontend
+bun install                # Install dependencies
+bun run dev                # Dev server
+bun run build              # Production build
+bun run lint               # Lint
+```
+
+## Deployment (Railway)
 
 1. Connect your GitHub repo to Railway
 2. Set environment variables:
@@ -85,7 +103,7 @@ protocol/
    - `APP_PASSWORD` - Your login password
    - `SECRET_KEY` - Random string for JWT signing
    - `ANTHROPIC_API_KEY` - For Claude Vision (Phase 2)
-3. Deploy - Railway will build the Dockerfile automatically
+3. Deploy - Railway builds the Dockerfile automatically
 
 ## Development Phases
 

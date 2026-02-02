@@ -1,3 +1,4 @@
+# Production-like compose - builds images
 services:
   db:
     image: postgres:16-alpine
@@ -5,8 +6,6 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: protocol
-    ports:
-      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -15,7 +14,7 @@ services:
       timeout: 5s
       retries: 5
 
-  backend:
+  app:
     build:
       context: .
       dockerfile: Dockerfile
@@ -23,9 +22,9 @@ services:
       - "8000:8000"
     environment:
       DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/protocol
-      APP_PASSWORD: ${APP_PASSWORD:-devpassword}
-      SECRET_KEY: ${SECRET_KEY:-dev-secret-key-change-in-production}
-      CORS_ORIGINS: '["http://localhost:5173", "http://localhost:8000"]'
+      APP_PASSWORD: ${APP_PASSWORD:-changeme}
+      SECRET_KEY: ${SECRET_KEY:-change-this-in-production}
+      CORS_ORIGINS: '["http://localhost:8000"]'
     depends_on:
       db:
         condition: service_healthy
