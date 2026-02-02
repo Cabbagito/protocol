@@ -1,0 +1,27 @@
+# Git
+.git
+.gitignore
+
+# Dependencies
+node_modules
+__pycache__
+*.py[cod]
+venv
+.venv
+
+# IDE
+.idea
+.vscode
+
+# Environment
+.env
+.env.local
+
+# Build artifacts (we build in Docker)
+frontend/dist
+*.egg-info
+
+# Misc
+*.md
+*.log
+.DS_Store
