@@ -54,12 +54,25 @@ bun run lint
 ## Data Model (PRD reference)
 
 Three domains planned:
-1. **Gym:** Exercise → Session → Split → Mesocycle → WorkoutLog
+1. **Gym:** Exercise → SessionExercise → Session → Split → Mesocycle → WorkoutLog
 2. **Diet:** FoodItem, FoodLog, DailyTargets (with Claude Vision for photo estimation)
 3. **Glucose:** GlucoseSettings, GlucoseLog (insulin calculations)
 
-Currently implemented: Exercise CRUD only.
+**Currently implemented:**
+- Exercise CRUD (`/api/exercises`)
+- Split CRUD with sessions (`/api/splits`)
+  - Split contains multiple Sessions (workout days)
+  - Session contains multiple SessionExercises (exercise + sets/rep ranges)
+  - Session reordering and rest day support
 
 ## Environment Variables
 
 Backend expects: `DATABASE_URL`, `APP_PASSWORD`, `SECRET_KEY`, `CORS_ORIGINS`, `ANTHROPIC_API_KEY` (future)
+
+## Documentation
+
+**Keep CLAUDE.md updated** when making code changes that affect:
+- New models, routers, or API endpoints
+- New frontend pages or major components
+- Changes to the data model or architecture
+- New environment variables or configuration

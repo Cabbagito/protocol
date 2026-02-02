@@ -4,6 +4,8 @@ import Layout from './components/Layout'
 import Dashboard from './pages/Dashboard'
 import Login from './pages/Login'
 import Exercises from './pages/Exercises'
+import Splits from './pages/Splits'
+import SplitDetail from './pages/SplitDetail'
 import { getToken } from './lib/auth'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -40,6 +42,8 @@ export default function App() {
               <Routes>
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/exercises" element={<Exercises />} />
+                <Route path="/splits" element={<Splits />} />
+                <Route path="/splits/:id" element={<SplitDetail />} />
               </Routes>
             </Layout>
           </ProtectedRoute>
