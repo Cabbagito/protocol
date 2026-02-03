@@ -10,6 +10,7 @@ import Mesocycles from './pages/Mesocycles'
 import MesocycleDetail from './pages/MesocycleDetail'
 import Workout from './pages/Workout'
 import WorkoutDetail from './pages/WorkoutDetail'
+import Progress from './pages/Progress'
 import { getToken } from './lib/auth'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -52,6 +53,7 @@ export default function App() {
                 <Route path="/mesocycles/:id" element={<MesocycleDetail />} />
                 <Route path="/workout/:mesocycleId/:sessionId" element={<Workout />} />
                 <Route path="/workouts/:id" element={<WorkoutDetail />} />
+                <Route path="/progress" element={<Progress />} />
               </Routes>
             </Layout>
           </ProtectedRoute>
