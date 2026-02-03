@@ -58,12 +58,33 @@ Three domains planned:
 2. **Diet:** FoodItem, FoodLog, DailyTargets (with Claude Vision for photo estimation)
 3. **Glucose:** GlucoseSettings, GlucoseLog (insulin calculations)
 
-**Currently implemented:**
+**Currently implemented (Phase 1 - Gym MVP):**
 - Exercise CRUD (`/api/exercises`)
+  - Pre-seeded with ~50 common exercises on first startup
 - Split CRUD with sessions (`/api/splits`)
   - Split contains multiple Sessions (workout days)
   - Session contains multiple SessionExercises (exercise + sets/rep ranges)
   - Session reordering and rest day support
+- Mesocycle management (`/api/mesocycles`)
+  - Create mesocycles with auto-calculated RiR scheme
+  - Only one active mesocycle at a time
+  - Week advancement and progress tracking
+- Workout logging (`/api/workouts`)
+  - Log sets with weight, reps, RiR
+  - Get workout template with last weights and progression suggestions
+  - Progression algorithm: suggest weight increase when all sets hit 15 reps
+  - Exercise progress tracking endpoint
+
+**Frontend pages:**
+- Dashboard: Today's workout, active mesocycle, recent workouts
+- Exercises: List, add, edit exercises
+- Splits: List, create, delete splits
+- SplitDetail: Manage sessions and exercises within a split
+- Mesocycles: List, create mesocycles
+- MesocycleDetail: Week progress, start workouts
+- Workout: Log workout with rest timer
+- WorkoutDetail: View past workout
+- Progress: Charts for volume and exercise progression
 
 ## Environment Variables
 
