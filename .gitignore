@@ -15,6 +15,7 @@ dist/
 build/
 *.egg-info/
 .eggs/
+*.tsbuildinfo
 
 # IDE
 .idea/

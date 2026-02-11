@@ -53,10 +53,11 @@ app.include_router(mesocycles.router, prefix="/api/mesocycles", tags=["mesocycle
 app.include_router(workouts.router, prefix="/api/workouts", tags=["workouts"])
 
 # Serve static files in production
-# In Docker: /app/app/main.py → /app/frontend/dist (two parents)
-# In dev:    backend/app/main.py → frontend/dist (three parents)
-for parents in [2, 3]:
-    candidate = Path(__file__).parents[parents] / "frontend" / "dist"
-    if candidate.exists():
-        app.mount("/", StaticFiles(directory=candidate, html=True), name="static")
+# In Docker: /app/app/main.py → /app/frontend/dist
+# In dev:    backend/app/main.py → frontend/dist
+_app_dir = Path(__file__).resolve().parent.parent
+for _base in [_app_dir, _app_dir.parent]:
+    _static = _base / "frontend" / "dist"
+    if _static.exists():
+        app.mount("/", StaticFiles(directory=_static, html=True), name="static")
         break
