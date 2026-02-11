@@ -6,7 +6,7 @@ Personal fitness tracking PWA - gym, nutrition, and glucose management.
 
 - **Frontend:** React + Vite + TypeScript + Tailwind CSS (via Bun)
 - **Backend:** FastAPI + SQLAlchemy async (via uv)
-- **Database:** PostgreSQL
+- **Database:** Supabase PostgreSQL (production) / Local PostgreSQL (development)
 - **Hosting:** Railway (single Docker container)
 
 ## Development
@@ -51,62 +51,41 @@ bun run dev
 protocol/
 ├── frontend/           # React + Vite + Tailwind (Bun)
 │   ├── src/
-│   │   ├── api/       # API client
-│   │   ├── components/# Reusable components
+│   │   ├── api/       # API client with auth
+│   │   ├── components/# Shared components (Icons, Toast, Layout)
 │   │   ├── hooks/     # Custom React hooks
-│   │   ├── lib/       # Utilities
-│   │   ├── pages/     # Route pages
+│   │   ├── lib/       # Utilities (auth)
+│   │   ├── pages/     # Route pages (lazy-loaded)
 │   │   └── types/     # TypeScript types
 │   └── package.json
 ├── backend/           # FastAPI + SQLAlchemy (uv)
 │   ├── app/
 │   │   ├── core/      # Config, database, security
 │   │   ├── models/    # SQLAlchemy models
-│   │   ├── routers/   # API endpoints
-│   │   ├── schemas/   # Pydantic schemas
-│   │   └── services/  # Business logic
+│   │   ├── routers/   # API endpoints + inline Pydantic schemas
+│   │   └── services/  # Business logic (seed data)
 │   └── pyproject.toml
-├── Dockerfile         # Production build (Railway)
+├── Dockerfile         # Production multi-stage build (Railway)
 └── docker-compose.yml # Development (hot reload)
 ```
 
-## Useful Commands
+## Deployment (Railway + Supabase)
 
-```bash
-# Development
-docker compose up          # Start everything
-docker compose down        # Stop everything
-docker compose logs -f     # Follow logs
+**How it works:** Railway auto-deploys from `main` branch. The Dockerfile builds a single container that serves both the React frontend and FastAPI backend on port 8000.
 
-# Backend (local)
-cd backend
-uv sync                    # Install dependencies
-uv run uvicorn app.main:app --reload  # Run with reload
-uv run pytest              # Run tests
-uv run ruff check .        # Lint
-uv run ruff format .       # Format
+**Environment variables (Railway dashboard):**
+- `DATABASE_URL` - Supabase pooled connection string (`postgresql+asyncpg://...`)
+- `APP_PASSWORD` - Login password
+- `SECRET_KEY` - Random string for JWT signing
+- `CORS_ORIGINS` - `["https://your-domain.railway.app"]`
+- `PORT` - Set automatically by Railway (8000)
+- `ANTHROPIC_API_KEY` - For Claude Vision (Phase 2, not yet used)
 
-# Frontend (local)
-cd frontend
-bun install                # Install dependencies
-bun run dev                # Dev server
-bun run build              # Production build
-bun run lint               # Lint
-```
-
-## Deployment (Railway)
-
-1. Connect your GitHub repo to Railway
-2. Set environment variables:
-   - `DATABASE_URL` - Supabase PostgreSQL connection string
-   - `APP_PASSWORD` - Your login password
-   - `SECRET_KEY` - Random string for JWT signing
-   - `ANTHROPIC_API_KEY` - For Claude Vision (Phase 2)
-3. Deploy - Railway builds the Dockerfile automatically
+**Database:** Supabase project in eu-central-1. Tables are auto-created by FastAPI on startup. Database is accessed only through the backend API, not through Supabase's PostgREST.
 
 ## Development Phases
 
 - [x] **Phase 0:** Project scaffolding
-- [ ] **Phase 1:** Gym MVP (exercises, splits, mesocycles, workout logging)
+- [x] **Phase 1:** Gym MVP (exercises, splits, mesocycles, workout logging)
 - [ ] **Phase 2:** Diet tracking (food logging, barcode scan, AI estimation)
 - [ ] **Phase 3:** Glucose management (bolus calculator, pattern analysis)

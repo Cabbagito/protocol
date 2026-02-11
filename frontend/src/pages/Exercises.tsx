@@ -1,14 +1,10 @@
 import { useState, useEffect } from 'react'
 import { api } from '../api/client'
-
-interface Exercise {
-  id: string
-  name: string
-  muscle_groups: string[]
-  equipment_type: string
-}
+import { useToast } from '../components/Toast'
+import type { Exercise } from '../types'
 
 export default function Exercises() {
+  const toast = useToast()
   const [exercises, setExercises] = useState<Exercise[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
@@ -21,8 +17,8 @@ export default function Exercises() {
     try {
       const data = await api.get<Exercise[]>('/exercises')
       setExercises(data)
-    } catch (error) {
-      console.error('Failed to load exercises:', error)
+    } catch {
+      toast.showError('Failed to load exercises')
     } finally {
       setLoading(false)
     }
@@ -78,6 +74,7 @@ interface ExerciseFormProps {
 }
 
 function ExerciseForm({ onSave, onCancel }: ExerciseFormProps) {
+  const toast = useToast()
   const [name, setName] = useState('')
   const [muscleGroups, setMuscleGroups] = useState('')
   const [equipmentType, setEquipmentType] = useState('barbell')
@@ -94,8 +91,8 @@ function ExerciseForm({ onSave, onCancel }: ExerciseFormProps) {
         equipment_type: equipmentType,
       })
       onSave()
-    } catch (error) {
-      console.error('Failed to save exercise:', error)
+    } catch {
+      toast.showError('Failed to save exercise')
     } finally {
       setSaving(false)
     }

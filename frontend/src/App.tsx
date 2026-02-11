@@ -1,17 +1,22 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, lazy, Suspense } from 'react'
 import Layout from './components/Layout'
-import Dashboard from './pages/Dashboard'
-import Login from './pages/Login'
-import Exercises from './pages/Exercises'
-import Splits from './pages/Splits'
-import SplitDetail from './pages/SplitDetail'
-import Mesocycles from './pages/Mesocycles'
-import MesocycleDetail from './pages/MesocycleDetail'
-import Workout from './pages/Workout'
-import WorkoutDetail from './pages/WorkoutDetail'
-import Progress from './pages/Progress'
 import { getToken } from './lib/auth'
+
+const Login = lazy(() => import('./pages/Login'))
+const Dashboard = lazy(() => import('./pages/Dashboard'))
+const Exercises = lazy(() => import('./pages/Exercises'))
+const Splits = lazy(() => import('./pages/Splits'))
+const SplitDetail = lazy(() => import('./pages/SplitDetail'))
+const Mesocycles = lazy(() => import('./pages/Mesocycles'))
+const MesocycleDetail = lazy(() => import('./pages/MesocycleDetail'))
+const Workout = lazy(() => import('./pages/Workout'))
+const WorkoutDetail = lazy(() => import('./pages/WorkoutDetail'))
+const Progress = lazy(() => import('./pages/Progress'))
+
+function PageLoader() {
+  return <div className="text-slate-400 text-center py-8 animate-pulse">Loading...</div>
+}
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const token = getToken()
@@ -37,28 +42,32 @@ export default function App() {
   }
 
   return (
-    <Routes>
-      <Route path="/login" element={<Login onLogin={() => setIsAuthenticated(true)} />} />
-      <Route
-        path="/*"
-        element={
-          <ProtectedRoute>
-            <Layout>
-              <Routes>
-                <Route path="/" element={<Dashboard />} />
-                <Route path="/exercises" element={<Exercises />} />
-                <Route path="/splits" element={<Splits />} />
-                <Route path="/splits/:id" element={<SplitDetail />} />
-                <Route path="/mesocycles" element={<Mesocycles />} />
-                <Route path="/mesocycles/:id" element={<MesocycleDetail />} />
-                <Route path="/workout/:mesocycleId/:sessionId" element={<Workout />} />
-                <Route path="/workouts/:id" element={<WorkoutDetail />} />
-                <Route path="/progress" element={<Progress />} />
-              </Routes>
-            </Layout>
-          </ProtectedRoute>
-        }
-      />
-    </Routes>
+    <Suspense fallback={<PageLoader />}>
+      <Routes>
+        <Route path="/login" element={<Login onLogin={() => setIsAuthenticated(true)} />} />
+        <Route
+          path="/*"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <Suspense fallback={<PageLoader />}>
+                  <Routes>
+                    <Route path="/" element={<Dashboard />} />
+                    <Route path="/exercises" element={<Exercises />} />
+                    <Route path="/splits" element={<Splits />} />
+                    <Route path="/splits/:id" element={<SplitDetail />} />
+                    <Route path="/mesocycles" element={<Mesocycles />} />
+                    <Route path="/mesocycles/:id" element={<MesocycleDetail />} />
+                    <Route path="/workout/:mesocycleId/:sessionId" element={<Workout />} />
+                    <Route path="/workouts/:id" element={<WorkoutDetail />} />
+                    <Route path="/progress" element={<Progress />} />
+                  </Routes>
+                </Suspense>
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+      </Routes>
+    </Suspense>
   )
 }

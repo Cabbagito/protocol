@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { api } from '../api/client'
+import { useToast } from '../components/Toast'
+import { ChevronLeftIcon } from '../components/Icons'
 import type { Mesocycle, Split, WorkoutListItem } from '../types'
 
 export default function MesocycleDetail() {
+  const toast = useToast()
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const [mesocycle, setMesocycle] = useState<Mesocycle | null>(null)
@@ -27,8 +30,8 @@ export default function MesocycleDetail() {
       // Load split for session list
       const splitData = await api.get<Split>(`/splits/${mesoData.split_id}`)
       setSplit(splitData)
-    } catch (error) {
-      console.error('Failed to load mesocycle:', error)
+    } catch {
+      toast.showError('Failed to load mesocycle')
     } finally {
       setLoading(false)
     }
@@ -39,8 +42,8 @@ export default function MesocycleDetail() {
     try {
       const updated = await api.post<Mesocycle>(`/mesocycles/${id}/advance-week`, {})
       setMesocycle(updated)
-    } catch (error) {
-      console.error('Failed to advance week:', error)
+    } catch {
+      toast.showError('Failed to advance week')
     }
   }
 
@@ -51,8 +54,8 @@ export default function MesocycleDetail() {
         is_active: !mesocycle.is_active,
       })
       setMesocycle(updated)
-    } catch (error) {
-      console.error('Failed to update mesocycle:', error)
+    } catch {
+      toast.showError('Failed to update mesocycle')
     }
   }
 
@@ -209,10 +212,3 @@ export default function MesocycleDetail() {
   )
 }
 
-function ChevronLeftIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
-    </svg>
-  )
-}

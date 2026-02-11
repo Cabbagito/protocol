@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { api } from '../api/client'
+import { useToast } from '../components/Toast'
+import { ChevronLeftIcon, CheckIcon } from '../components/Icons'
 import type { WorkoutTemplate, SetData, ExerciseInSession } from '../types'
 
 interface WorkingSet extends SetData {
@@ -10,6 +12,7 @@ interface WorkingSet extends SetData {
 }
 
 export default function Workout() {
+  const toast = useToast()
   const { mesocycleId, sessionId } = useParams<{ mesocycleId: string; sessionId: string }>()
   const navigate = useNavigate()
   const [template, setTemplate] = useState<WorkoutTemplate | null>(null)
@@ -64,8 +67,8 @@ export default function Workout() {
         }
       }
       setSets(initialSets)
-    } catch (error) {
-      console.error('Failed to load workout template:', error)
+    } catch {
+      toast.showError('Failed to load workout template')
     } finally {
       setLoading(false)
     }
@@ -113,8 +116,8 @@ export default function Workout() {
         })),
       })
       navigate(`/mesocycles/${mesocycleId}`)
-    } catch (error) {
-      console.error('Failed to save workout:', error)
+    } catch {
+      toast.showError('Failed to save workout')
     } finally {
       setSaving(false)
     }
@@ -360,18 +363,3 @@ function SetRow({ set, exerciseId, targetRir, onUpdate, onComplete }: SetRowProp
   )
 }
 
-function ChevronLeftIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
-    </svg>
-  )
-}
-
-function CheckIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
-    </svg>
-  )
-}

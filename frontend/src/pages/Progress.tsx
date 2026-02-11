@@ -12,6 +12,8 @@ import {
   Bar,
 } from 'recharts'
 import { api } from '../api/client'
+import { useToast } from '../components/Toast'
+import { ChevronLeftIcon } from '../components/Icons'
 import type { Exercise, Mesocycle, WorkoutListItem } from '../types'
 
 interface ExerciseProgress {
@@ -24,6 +26,7 @@ interface ExerciseProgress {
 }
 
 export default function Progress() {
+  const toast = useToast()
   const navigate = useNavigate()
   const [exercises, setExercises] = useState<Exercise[]>([])
   const [selectedExercise, setSelectedExercise] = useState<string>('')
@@ -59,8 +62,8 @@ export default function Progress() {
         const workoutData = await api.get<WorkoutListItem[]>(`/workouts?mesocycle_id=${mesoData.id}`)
         setWorkouts(workoutData)
       }
-    } catch (error) {
-      console.error('Failed to load data:', error)
+    } catch {
+      toast.showError('Failed to load data')
     } finally {
       setLoading(false)
     }
@@ -70,8 +73,8 @@ export default function Progress() {
     try {
       const data = await api.get<ExerciseProgress[]>(`/workouts/progress/${exerciseId}`)
       setProgressData(data)
-    } catch (error) {
-      console.error('Failed to load exercise progress:', error)
+    } catch {
+      toast.showError('Failed to load exercise progress')
     }
   }
 
@@ -258,10 +261,3 @@ export default function Progress() {
   )
 }
 
-function ChevronLeftIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
-    </svg>
-  )
-}

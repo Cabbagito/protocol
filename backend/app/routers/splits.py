@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -16,10 +16,10 @@ router = APIRouter()
 
 class SessionExerciseCreate(BaseModel):
     exercise_id: str
-    order: int
-    sets: int = 3
-    rep_min: int = 8
-    rep_max: int = 12
+    order: int = Field(ge=0)
+    sets: int = Field(default=3, ge=1, le=10)
+    rep_min: int = Field(default=8, ge=1, le=100)
+    rep_max: int = Field(default=12, ge=1, le=100)
 
 
 class SessionExerciseResponse(BaseModel):
@@ -36,13 +36,13 @@ class SessionExerciseResponse(BaseModel):
 
 
 class SessionCreate(BaseModel):
-    name: str
+    name: str = Field(min_length=1, max_length=100)
     is_rest_day: bool = False
     exercises: list[SessionExerciseCreate] = []
 
 
 class SessionUpdate(BaseModel):
-    name: str
+    name: str = Field(min_length=1, max_length=100)
     is_rest_day: bool = False
     exercises: list[SessionExerciseCreate] = []
 
@@ -59,11 +59,11 @@ class SessionResponse(BaseModel):
 
 
 class SplitCreate(BaseModel):
-    name: str
+    name: str = Field(min_length=1, max_length=100)
 
 
 class SplitUpdate(BaseModel):
-    name: str
+    name: str = Field(min_length=1, max_length=100)
 
 
 class SplitListItem(BaseModel):
@@ -318,14 +318,18 @@ async def reorder_sessions(
     if not split:
         raise HTTPException(status_code=404, detail="Split not found")
 
-    # Update order for each session
+    # Update order for each session (validate all IDs belong to this split)
     for i, session_id in enumerate(reorder.session_ids):
         result = await db.execute(
             select(Session).where(Session.id == session_id, Session.split_id == split_id)
         )
         session = result.scalar_one_or_none()
-        if session:
-            session.day_order = i
+        if not session:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Session {session_id} not found in this split",
+            )
+        session.day_order = i
 
     await db.commit()
 

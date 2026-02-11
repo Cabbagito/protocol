@@ -2,7 +2,7 @@ from datetime import date
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -55,8 +55,8 @@ def calculate_rir_scheme(total_weeks: int) -> list[int]:
 
 class MesocycleCreate(BaseModel):
     split_id: str
-    name: str
-    total_weeks: int = 4
+    name: str = Field(min_length=1, max_length=100)
+    total_weeks: int = Field(default=4, ge=1, le=12)
     started_at: Optional[date] = None
 
 
@@ -302,7 +302,10 @@ async def delete_mesocycle(
 # --- Helper Functions ---
 
 def _mesocycle_to_response(mesocycle: Mesocycle, split_name: str, workouts_completed: int) -> dict:
-    current_rir = mesocycle.rir_scheme[mesocycle.current_week - 1] if mesocycle.rir_scheme else 0
+    if mesocycle.rir_scheme and mesocycle.current_week <= len(mesocycle.rir_scheme):
+        current_rir = mesocycle.rir_scheme[mesocycle.current_week - 1]
+    else:
+        current_rir = 0
     return {
         "id": mesocycle.id,
         "name": mesocycle.name,

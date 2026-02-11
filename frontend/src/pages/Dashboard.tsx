@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../api/client'
+import { useToast } from '../components/Toast'
+import { ArrowRightIcon, DumbbellIcon, CalendarIcon } from '../components/Icons'
 import type { Mesocycle, Split, WorkoutListItem } from '../types'
 
 export default function Dashboard() {
+  const toast = useToast()
   const [mesocycle, setMesocycle] = useState<Mesocycle | null>(null)
   const [split, setSplit] = useState<Split | null>(null)
   const [recentWorkouts, setRecentWorkouts] = useState<WorkoutListItem[]>([])
@@ -26,8 +29,8 @@ export default function Dashboard() {
         setSplit(splitData)
         setRecentWorkouts(workoutsData)
       }
-    } catch (error) {
-      console.error('Failed to load dashboard data:', error)
+    } catch {
+      toast.showError('Failed to load dashboard')
     } finally {
       setLoading(false)
     }
@@ -235,26 +238,3 @@ function formatRelativeDate(dateStr: string): string {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
-function ArrowRightIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
-    </svg>
-  )
-}
-
-function DumbbellIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M3 7.5h2.25M3 12h2.25m0 0V7.5m0 4.5v4.5M3 16.5h2.25M21 7.5h-2.25m0 0V12m0-4.5v4.5m0 0h2.25m-2.25 0v4.5m0 0h2.25M6.75 7.5h10.5v9H6.75v-9Z" />
-    </svg>
-  )
-}
-
-function CalendarIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" />
-    </svg>
-  )
-}

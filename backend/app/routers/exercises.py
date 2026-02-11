@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -11,9 +11,9 @@ router = APIRouter()
 
 
 class ExerciseCreate(BaseModel):
-    name: str
-    muscle_groups: list[str]
-    equipment_type: str
+    name: str = Field(min_length=1, max_length=100)
+    muscle_groups: list[str] = Field(min_length=1)
+    equipment_type: str = Field(min_length=1)
 
 
 class ExerciseResponse(BaseModel):

@@ -2,7 +2,7 @@ from datetime import date
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import select, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -20,10 +20,10 @@ router = APIRouter()
 
 class SetData(BaseModel):
     exercise_id: str
-    set_num: int
-    weight: float
-    reps: int
-    rir: Optional[int] = None
+    set_num: int = Field(ge=1)
+    weight: float = Field(ge=0)
+    reps: int = Field(ge=0)
+    rir: Optional[int] = Field(default=None, ge=-1, le=5)
     completed: bool = True
 
 
@@ -159,17 +159,23 @@ async def get_workout_template(
                 if completed_sets:
                     last_weight = max(s.get("weight", 0) for s in completed_sets)
 
-                    # Check if all sets hit max reps (15) for progression
+                    # Check if all sets hit rep_max for progression
                     all_hit_max = all(
-                        s.get("reps", 0) >= 15 for s in completed_sets
+                        s.get("reps", 0) >= se.rep_max for s in completed_sets
                     )
                     if all_hit_max:
                         increment = WEIGHT_INCREMENTS.get(se.exercise.equipment_type, 2.5)
                         if increment > 0:
                             suggested_weight = last_weight + increment
-                            progression_note = f"All sets hit 15 reps. Increase by {increment}kg."
+                            progression_note = (
+                                f"All sets hit {se.rep_max} reps."
+                                f" Increase by {increment}kg."
+                            )
                         else:
-                            progression_note = "All sets hit 15 reps. Progress to harder variation."
+                            progression_note = (
+                                f"All sets hit {se.rep_max} reps."
+                                f" Progress to harder variation."
+                            )
                     else:
                         suggested_weight = last_weight
 
