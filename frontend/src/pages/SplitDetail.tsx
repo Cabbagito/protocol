@@ -67,7 +67,7 @@ export default function SplitDetail() {
 
     const newSessions = [...split.sessions]
     const swapIdx = direction === 'up' ? idx - 1 : idx + 1
-    ;[newSessions[idx], newSessions[swapIdx]] = [newSessions[swapIdx], newSessions[idx]]
+    ;[newSessions[idx], newSessions[swapIdx]] = [newSessions[swapIdx]!, newSessions[idx]!]
 
     try {
       await api.put(`/splits/${id}/sessions/reorder`, {
@@ -257,7 +257,7 @@ function SessionForm({ splitId, session, onSave, onCancel }: SessionFormProps) {
     setExercises([
       ...exercises,
       {
-        exercise_id: availableExercises[0].id,
+        exercise_id: availableExercises[0]!.id,
         order: exercises.length,
         sets: 3,
         rep_min: 8,
@@ -281,7 +281,7 @@ function SessionForm({ splitId, session, onSave, onCancel }: SessionFormProps) {
     if (direction === 'down' && index === exercises.length - 1) return
     const newExercises = [...exercises]
     const swapIdx = direction === 'up' ? index - 1 : index + 1
-    ;[newExercises[index], newExercises[swapIdx]] = [newExercises[swapIdx], newExercises[index]]
+    ;[newExercises[index], newExercises[swapIdx]] = [newExercises[swapIdx]!, newExercises[index]!]
     setExercises(newExercises.map((ex, i) => ({ ...ex, order: i })))
   }
 

@@ -48,7 +48,7 @@ export default function WorkoutDetail() {
     if (!exerciseGroups[set.exercise_id]) {
       exerciseGroups[set.exercise_id] = { name: set.exercise_name || 'Unknown', sets: [] }
     }
-    exerciseGroups[set.exercise_id].sets.push(set)
+    exerciseGroups[set.exercise_id]!.sets.push(set)
   }
 
   const totalVolume = workout.sets.reduce(

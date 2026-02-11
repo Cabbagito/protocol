@@ -52,7 +52,7 @@ export default function Progress() {
       setMesocycle(mesoData)
 
       if (exerciseData.length > 0) {
-        setSelectedExercise(exerciseData[0].id)
+        setSelectedExercise(exerciseData[0]!.id)
       }
 
       if (mesoData) {

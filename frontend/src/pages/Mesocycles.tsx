@@ -115,7 +115,7 @@ function MesocycleForm({ onSave, onCancel }: MesocycleFormProps) {
       const data = await api.get<SplitListItem[]>('/splits')
       setSplits(data)
       if (data.length > 0) {
-        setSplitId(data[0].id)
+        setSplitId(data[0]!.id)
       }
     } catch (error) {
       console.error('Failed to load splits:', error)
