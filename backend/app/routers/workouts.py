@@ -1,6 +1,5 @@
-from __future__ import annotations
-
-from datetime import date
+from datetime import date as date_type
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
@@ -32,7 +31,7 @@ class SetData(BaseModel):
 class WorkoutCreate(BaseModel):
     mesocycle_id: str
     session_id: str
-    date: date | None = None
+    date: Optional[date_type] = None
     notes: str | None = None
     sets: list[SetData]
 
@@ -78,7 +77,7 @@ class WorkoutResponse(BaseModel):
     session_id: str | None
     session_name: str | None
     week_number: int
-    date: date
+    date: date_type
     notes: str | None
     sets: list[SetInWorkout]
 
@@ -90,7 +89,7 @@ class WorkoutListItem(BaseModel):
     id: str
     session_name: str | None
     week_number: int
-    date: date
+    date: date_type
     total_sets: int
     total_volume: float  # sum of weight * reps
 
@@ -233,7 +232,7 @@ async def create_workout(
         mesocycle_id=data.mesocycle_id,
         session_id=data.session_id,
         week_number=mesocycle.current_week,
-        date=data.date or date.today(),
+        date=data.date or date_type.today(),
         notes=data.notes,
         sets=[s.model_dump() for s in data.sets],
     )

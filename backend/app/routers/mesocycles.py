@@ -1,6 +1,5 @@
-from __future__ import annotations
-
-from datetime import date
+from datetime import date as date_type
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
@@ -59,7 +58,7 @@ class MesocycleCreate(BaseModel):
     split_id: str
     name: str = Field(min_length=1, max_length=100)
     total_weeks: int = Field(default=4, ge=1, le=12)
-    started_at: date | None = None
+    started_at: Optional[date_type] = None
 
 
 class MesocycleUpdate(BaseModel):
@@ -75,7 +74,7 @@ class MesocycleListItem(BaseModel):
     total_weeks: int
     current_week: int
     is_active: bool
-    started_at: date
+    started_at: date_type
 
     class Config:
         from_attributes = True
@@ -91,7 +90,7 @@ class MesocycleResponse(BaseModel):
     current_week: int
     current_rir: int
     is_active: bool
-    started_at: date
+    started_at: date_type
     workouts_completed: int
 
     class Config:
@@ -153,7 +152,7 @@ async def create_mesocycle(
         total_weeks=data.total_weeks,
         rir_scheme=rir_scheme,
         current_week=1,
-        started_at=data.started_at or date.today(),
+        started_at=data.started_at or date_type.today(),
         is_active=True,
     )
     db.add(mesocycle)
@@ -163,7 +162,7 @@ async def create_mesocycle(
     return _mesocycle_to_response(mesocycle, split.name, 0)
 
 
-@router.get("/active", response_model=MesocycleResponse | None)
+@router.get("/active", response_model=Optional[MesocycleResponse])
 async def get_active_mesocycle(
     db: AsyncSession = Depends(get_db),
     _: str = Depends(get_current_user),
