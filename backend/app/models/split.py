@@ -1,4 +1,5 @@
-from sqlalchemy import ForeignKey, Integer, String, Boolean
+
+from sqlalchemy import Boolean, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin, generate_uuid
@@ -9,6 +10,7 @@ class Split(Base, TimestampMixin):
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
+    seed_key: Mapped[str | None] = mapped_column(String(100), nullable=True, unique=True)
 
     sessions: Mapped[list["Session"]] = relationship(
         back_populates="split",

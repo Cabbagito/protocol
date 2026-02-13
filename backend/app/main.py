@@ -4,10 +4,11 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy import text
 
 from app.core.config import settings
-from app.core.database import engine, async_session
-from app.core.seed import seed_exercises
+from app.core.database import async_session, engine
+from app.core.seed import seed_default_splits, seed_exercises
 from app.models import base  # noqa: F401 - Import to register models
 from app.routers import auth, exercises, health, mesocycles, splits, workouts
 
@@ -17,12 +18,23 @@ async def lifespan(app: FastAPI):
     # Startup: create tables if they don't exist
     async with engine.begin() as conn:
         await conn.run_sync(base.Base.metadata.create_all)
+        # Add seed_key columns to existing tables (no-op if already present)
+        await conn.execute(
+            text("ALTER TABLE exercises ADD COLUMN IF NOT EXISTS seed_key VARCHAR(100) UNIQUE")
+        )
+        await conn.execute(
+            text("ALTER TABLE splits ADD COLUMN IF NOT EXISTS seed_key VARCHAR(100) UNIQUE")
+        )
 
-    # Seed common exercises
+    # Seed exercises and default splits
     async with async_session() as session:
-        added = await seed_exercises(session)
+        count = await seed_exercises(session)
+        if count > 0:
+            print(f"Seeded/updated {count} exercises")
+
+        added = await seed_default_splits(session)
         if added > 0:
-            print(f"Seeded {added} common exercises")
+            print(f"Seeded {added} default split(s)")
 
     yield
     # Shutdown: dispose engine
