@@ -48,6 +48,9 @@ htmlcov/
 # Docker
 .docker/
 
+# Claude Code
+.claude/worktrees/
+
 # Temporary files
 tmp/
 temp/
