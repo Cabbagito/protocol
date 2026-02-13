@@ -1,28 +1,10 @@
-import { useState, useEffect } from 'react'
-import { api } from '../api/client'
+import { useState } from 'react'
 import { useToast } from '../components/Toast'
-import type { Exercise } from '../types'
+import { useExercises, useCreateExercise } from '../api/hooks'
 
 export default function Exercises() {
-  const toast = useToast()
-  const [exercises, setExercises] = useState<Exercise[]>([])
-  const [loading, setLoading] = useState(true)
+  const { data: exercises = [], isLoading } = useExercises()
   const [showForm, setShowForm] = useState(false)
-
-  useEffect(() => {
-    loadExercises()
-  }, [])
-
-  const loadExercises = async () => {
-    try {
-      const data = await api.get<Exercise[]>('/exercises')
-      setExercises(data)
-    } catch {
-      toast.showError('Failed to load exercises')
-    } finally {
-      setLoading(false)
-    }
-  }
 
   return (
     <div className="space-y-4">
@@ -40,13 +22,12 @@ export default function Exercises() {
         <ExerciseForm
           onSave={() => {
             setShowForm(false)
-            loadExercises()
           }}
           onCancel={() => setShowForm(false)}
         />
       )}
 
-      {loading ? (
+      {isLoading ? (
         <div className="text-slate-400 text-center py-8">Loading...</div>
       ) : exercises.length === 0 ? (
         <div className="text-slate-400 text-center py-8">
@@ -78,14 +59,13 @@ function ExerciseForm({ onSave, onCancel }: ExerciseFormProps) {
   const [name, setName] = useState('')
   const [muscleGroups, setMuscleGroups] = useState('')
   const [equipmentType, setEquipmentType] = useState('barbell')
-  const [saving, setSaving] = useState(false)
+  const createExercise = useCreateExercise()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setSaving(true)
 
     try {
-      await api.post('/exercises', {
+      await createExercise.mutateAsync({
         name,
         muscle_groups: muscleGroups.split(',').map((s) => s.trim()).filter(Boolean),
         equipment_type: equipmentType,
@@ -93,8 +73,6 @@ function ExerciseForm({ onSave, onCancel }: ExerciseFormProps) {
       onSave()
     } catch {
       toast.showError('Failed to save exercise')
-    } finally {
-      setSaving(false)
     }
   }
 
@@ -136,10 +114,10 @@ function ExerciseForm({ onSave, onCancel }: ExerciseFormProps) {
         </button>
         <button
           type="submit"
-          disabled={saving || !name}
+          disabled={createExercise.isPending || !name}
           className="btn btn-primary flex-1 disabled:opacity-50"
         >
-          {saving ? 'Saving...' : 'Save'}
+          {createExercise.isPending ? 'Saving...' : 'Save'}
         </button>
       </div>
     </form>

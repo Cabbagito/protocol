@@ -1,18 +1,19 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
-from sqlalchemy import select, func
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.database import get_db
 from app.core.security import get_current_user
-from app.models.split import Split, Session, SessionExercise
 from app.models.exercise import Exercise
+from app.models.split import Session, SessionExercise, Split
 
 router = APIRouter()
 
 
 # --- Pydantic Schemas ---
+
 
 class SessionExerciseCreate(BaseModel):
     exercise_id: str
@@ -90,6 +91,7 @@ class SessionReorder(BaseModel):
 
 # --- Split Endpoints ---
 
+
 @router.get("", response_model=list[SplitListItem])
 async def list_splits(
     db: AsyncSession = Depends(get_db),
@@ -127,7 +129,9 @@ async def get_split(
     result = await db.execute(
         select(Split)
         .options(
-            selectinload(Split.sessions).selectinload(Session.exercises).selectinload(SessionExercise.exercise)
+            selectinload(Split.sessions)
+            .selectinload(Session.exercises)
+            .selectinload(SessionExercise.exercise)
         )
         .where(Split.id == split_id)
     )
@@ -148,7 +152,9 @@ async def update_split(
     result = await db.execute(
         select(Split)
         .options(
-            selectinload(Split.sessions).selectinload(Session.exercises).selectinload(SessionExercise.exercise)
+            selectinload(Split.sessions)
+            .selectinload(Session.exercises)
+            .selectinload(SessionExercise.exercise)
         )
         .where(Split.id == split_id)
     )
@@ -179,7 +185,12 @@ async def delete_split(
 
 # --- Session Endpoints ---
 
-@router.post("/{split_id}/sessions", response_model=SessionResponse, status_code=status.HTTP_201_CREATED)
+
+@router.post(
+    "/{split_id}/sessions",
+    response_model=SessionResponse,
+    status_code=status.HTTP_201_CREATED,
+)
 async def add_session(
     split_id: str,
     session: SessionCreate,
@@ -193,8 +204,7 @@ async def add_session(
 
     # Get next day_order
     max_order_result = await db.execute(
-        select(func.coalesce(func.max(Session.day_order), -1))
-        .where(Session.split_id == split_id)
+        select(func.coalesce(func.max(Session.day_order), -1)).where(Session.split_id == split_id)
     )
     next_order = max_order_result.scalar() + 1
 
@@ -207,22 +217,28 @@ async def add_session(
     db.add(db_session)
     await db.flush()
 
-    # Add exercises
-    for ex in session.exercises:
-        exercise_result = await db.execute(select(Exercise).where(Exercise.id == ex.exercise_id))
-        exercise = exercise_result.scalar_one_or_none()
-        if not exercise:
-            raise HTTPException(status_code=400, detail=f"Exercise {ex.exercise_id} not found")
+    # Batch-validate all exercise IDs in one query
+    if session.exercises:
+        exercise_ids = [ex.exercise_id for ex in session.exercises]
+        result = await db.execute(select(Exercise.id).where(Exercise.id.in_(exercise_ids)))
+        found_ids = set(row[0] for row in result.all())
+        missing = set(exercise_ids) - found_ids
+        if missing:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Exercise(s) not found: {', '.join(missing)}",
+            )
 
-        db_exercise = SessionExercise(
-            session_id=db_session.id,
-            exercise_id=ex.exercise_id,
-            order=ex.order,
-            sets=ex.sets,
-            rep_min=ex.rep_min,
-            rep_max=ex.rep_max,
-        )
-        db.add(db_exercise)
+        for ex in session.exercises:
+            db_exercise = SessionExercise(
+                session_id=db_session.id,
+                exercise_id=ex.exercise_id,
+                order=ex.order,
+                sets=ex.sets,
+                rep_min=ex.rep_min,
+                rep_max=ex.rep_max,
+            )
+            db.add(db_exercise)
 
     await db.commit()
 
@@ -260,21 +276,28 @@ async def update_session(
     for ex in session.exercises:
         await db.delete(ex)
 
-    for ex in session_update.exercises:
-        exercise_result = await db.execute(select(Exercise).where(Exercise.id == ex.exercise_id))
-        exercise = exercise_result.scalar_one_or_none()
-        if not exercise:
-            raise HTTPException(status_code=400, detail=f"Exercise {ex.exercise_id} not found")
+    # Batch-validate all exercise IDs in one query
+    if session_update.exercises:
+        exercise_ids = [ex.exercise_id for ex in session_update.exercises]
+        result = await db.execute(select(Exercise.id).where(Exercise.id.in_(exercise_ids)))
+        found_ids = set(row[0] for row in result.all())
+        missing = set(exercise_ids) - found_ids
+        if missing:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Exercise(s) not found: {', '.join(missing)}",
+            )
 
-        db_exercise = SessionExercise(
-            session_id=session.id,
-            exercise_id=ex.exercise_id,
-            order=ex.order,
-            sets=ex.sets,
-            rep_min=ex.rep_min,
-            rep_max=ex.rep_max,
-        )
-        db.add(db_exercise)
+        for ex in session_update.exercises:
+            db_exercise = SessionExercise(
+                session_id=session.id,
+                exercise_id=ex.exercise_id,
+                order=ex.order,
+                sets=ex.sets,
+                rep_min=ex.rep_min,
+                rep_max=ex.rep_max,
+            )
+            db.add(db_exercise)
 
     await db.commit()
 
@@ -318,12 +341,12 @@ async def reorder_sessions(
     if not split:
         raise HTTPException(status_code=404, detail="Split not found")
 
-    # Update order for each session (validate all IDs belong to this split)
+    # Fetch all sessions for this split in one query, then validate and reorder
+    result = await db.execute(select(Session).where(Session.split_id == split_id))
+    sessions_by_id = {s.id: s for s in result.scalars().all()}
+
     for i, session_id in enumerate(reorder.session_ids):
-        result = await db.execute(
-            select(Session).where(Session.id == session_id, Session.split_id == split_id)
-        )
-        session = result.scalar_one_or_none()
+        session = sessions_by_id.get(session_id)
         if not session:
             raise HTTPException(
                 status_code=400,
@@ -345,6 +368,7 @@ async def reorder_sessions(
 
 
 # --- Helper Functions ---
+
 
 def _session_to_response(session: Session) -> dict:
     return {

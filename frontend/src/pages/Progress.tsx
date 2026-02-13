@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   LineChart,
@@ -11,74 +11,26 @@ import {
   BarChart,
   Bar,
 } from 'recharts'
-import { api } from '../api/client'
-import { useToast } from '../components/Toast'
 import { ChevronLeftIcon } from '../components/Icons'
-import type { Exercise, Mesocycle, WorkoutListItem } from '../types'
-
-interface ExerciseProgress {
-  date: string
-  week_number: number
-  max_weight: number
-  total_reps: number
-  total_sets: number
-  volume: number
-}
+import { useExercises, useActiveMesocycle, useWorkouts, useExerciseProgress } from '../api/hooks'
 
 export default function Progress() {
-  const toast = useToast()
   const navigate = useNavigate()
-  const [exercises, setExercises] = useState<Exercise[]>([])
+  const { data: exercises = [], isLoading: exercisesLoading } = useExercises()
+  const { data: mesocycle } = useActiveMesocycle()
+  const { data: workouts = [] } = useWorkouts(
+    mesocycle ? { mesocycleId: mesocycle.id } : {}
+  )
   const [selectedExercise, setSelectedExercise] = useState<string>('')
-  const [progressData, setProgressData] = useState<ExerciseProgress[]>([])
-  const [mesocycle, setMesocycle] = useState<Mesocycle | null>(null)
-  const [workouts, setWorkouts] = useState<WorkoutListItem[]>([])
-  const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    loadData()
-  }, [])
-
-  useEffect(() => {
-    if (selectedExercise) {
-      loadExerciseProgress(selectedExercise)
-    }
-  }, [selectedExercise])
-
-  const loadData = async () => {
-    try {
-      const [exerciseData, mesoData] = await Promise.all([
-        api.get<Exercise[]>('/exercises'),
-        api.get<Mesocycle | null>('/mesocycles/active'),
-      ])
-      setExercises(exerciseData)
-      setMesocycle(mesoData)
-
-      if (exerciseData.length > 0) {
-        setSelectedExercise(exerciseData[0]!.id)
-      }
-
-      if (mesoData) {
-        const workoutData = await api.get<WorkoutListItem[]>(`/workouts?mesocycle_id=${mesoData.id}`)
-        setWorkouts(workoutData)
-      }
-    } catch {
-      toast.showError('Failed to load data')
-    } finally {
-      setLoading(false)
-    }
+  // Auto-select first exercise
+  if (exercises.length > 0 && !selectedExercise) {
+    setSelectedExercise(exercises[0]!.id)
   }
 
-  const loadExerciseProgress = async (exerciseId: string) => {
-    try {
-      const data = await api.get<ExerciseProgress[]>(`/workouts/progress/${exerciseId}`)
-      setProgressData(data)
-    } catch {
-      toast.showError('Failed to load exercise progress')
-    }
-  }
+  const { data: progressData = [] } = useExerciseProgress(selectedExercise)
 
-  if (loading) {
+  if (exercisesLoading) {
     return <div className="text-slate-400 text-center py-8">Loading...</div>
   }
 
@@ -260,4 +212,3 @@ export default function Progress() {
     </div>
   )
 }
-

@@ -1,47 +1,21 @@
-import { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { api } from '../api/client'
 import { useToast } from '../components/Toast'
 import { ChevronLeftIcon } from '../components/Icons'
-import type { Mesocycle, Split, WorkoutListItem } from '../types'
+import { useMesocycle, useSplit, useWorkouts, useAdvanceWeek, useUpdateMesocycle } from '../api/hooks'
 
 export default function MesocycleDetail() {
   const toast = useToast()
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const [mesocycle, setMesocycle] = useState<Mesocycle | null>(null)
-  const [split, setSplit] = useState<Split | null>(null)
-  const [workouts, setWorkouts] = useState<WorkoutListItem[]>([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    loadData()
-  }, [id])
-
-  const loadData = async () => {
-    try {
-      const [mesoData, workoutsData] = await Promise.all([
-        api.get<Mesocycle>(`/mesocycles/${id}`),
-        api.get<WorkoutListItem[]>(`/workouts?mesocycle_id=${id}`),
-      ])
-      setMesocycle(mesoData)
-      setWorkouts(workoutsData)
-
-      // Load split for session list
-      const splitData = await api.get<Split>(`/splits/${mesoData.split_id}`)
-      setSplit(splitData)
-    } catch {
-      toast.showError('Failed to load mesocycle')
-    } finally {
-      setLoading(false)
-    }
-  }
+  const { data: mesocycle, isLoading } = useMesocycle(id!)
+  const { data: split } = useSplit(mesocycle?.split_id ?? '')
+  const { data: workouts = [] } = useWorkouts({ mesocycleId: id })
+  const advanceWeek = useAdvanceWeek(id!)
+  const updateMesocycle = useUpdateMesocycle(id!)
 
   const handleAdvanceWeek = async () => {
-    if (!mesocycle) return
     try {
-      const updated = await api.post<Mesocycle>(`/mesocycles/${id}/advance-week`, {})
-      setMesocycle(updated)
+      await advanceWeek.mutateAsync()
     } catch {
       toast.showError('Failed to advance week')
     }
@@ -50,16 +24,15 @@ export default function MesocycleDetail() {
   const handleToggleActive = async () => {
     if (!mesocycle) return
     try {
-      const updated = await api.put<Mesocycle>(`/mesocycles/${id}`, {
+      await updateMesocycle.mutateAsync({
         is_active: !mesocycle.is_active,
       })
-      setMesocycle(updated)
     } catch {
       toast.showError('Failed to update mesocycle')
     }
   }
 
-  if (loading) {
+  if (isLoading) {
     return <div className="text-slate-400 text-center py-8">Loading...</div>
   }
 
@@ -211,4 +184,3 @@ export default function MesocycleDetail() {
     </div>
   )
 }
-

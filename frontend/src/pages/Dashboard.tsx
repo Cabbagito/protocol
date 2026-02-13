@@ -1,40 +1,13 @@
-import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { api } from '../api/client'
-import { useToast } from '../components/Toast'
+import { useActiveMesocycle, useSplit, useWorkouts } from '../api/hooks'
 import { ArrowRightIcon, DumbbellIcon, CalendarIcon } from '../components/Icons'
-import type { Mesocycle, Split, WorkoutListItem } from '../types'
 
 export default function Dashboard() {
-  const toast = useToast()
-  const [mesocycle, setMesocycle] = useState<Mesocycle | null>(null)
-  const [split, setSplit] = useState<Split | null>(null)
-  const [recentWorkouts, setRecentWorkouts] = useState<WorkoutListItem[]>([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    loadData()
-  }, [])
-
-  const loadData = async () => {
-    try {
-      const mesoData = await api.get<Mesocycle | null>('/mesocycles/active')
-      setMesocycle(mesoData)
-
-      if (mesoData) {
-        const [splitData, workoutsData] = await Promise.all([
-          api.get<Split>(`/splits/${mesoData.split_id}`),
-          api.get<WorkoutListItem[]>(`/workouts?mesocycle_id=${mesoData.id}&limit=5`),
-        ])
-        setSplit(splitData)
-        setRecentWorkouts(workoutsData)
-      }
-    } catch {
-      toast.showError('Failed to load dashboard')
-    } finally {
-      setLoading(false)
-    }
-  }
+  const { data: mesocycle, isLoading: mesoLoading } = useActiveMesocycle()
+  const { data: split } = useSplit(mesocycle?.split_id ?? '')
+  const { data: recentWorkouts = [] } = useWorkouts(
+    mesocycle ? { mesocycleId: mesocycle.id, limit: 5 } : { limit: 5 }
+  )
 
   const isDeloadWeek = mesocycle?.current_rir === -1
 
@@ -53,7 +26,7 @@ export default function Dashboard() {
 
   const suggestedSession = getTodaysSuggestion()
 
-  if (loading) {
+  if (mesoLoading) {
     return <div className="text-slate-400 text-center py-8">Loading...</div>
   }
 
@@ -237,4 +210,3 @@ function formatRelativeDate(dateStr: string): string {
 
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
-

@@ -1,43 +1,26 @@
-import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { api } from '../api/client'
 import { useToast } from '../components/Toast'
 import { ChevronLeftIcon, TrashIcon } from '../components/Icons'
-import type { WorkoutLog } from '../types'
+import { useWorkout, useDeleteWorkout } from '../api/hooks'
 
 export default function WorkoutDetail() {
   const toast = useToast()
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const [workout, setWorkout] = useState<WorkoutLog | null>(null)
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    loadWorkout()
-  }, [id])
-
-  const loadWorkout = async () => {
-    try {
-      const data = await api.get<WorkoutLog>(`/workouts/${id}`)
-      setWorkout(data)
-    } catch {
-      toast.showError('Failed to load workout')
-    } finally {
-      setLoading(false)
-    }
-  }
+  const { data: workout, isLoading } = useWorkout(id!)
+  const deleteWorkout = useDeleteWorkout()
 
   const handleDelete = async () => {
     if (!confirm('Delete this workout?')) return
     try {
-      await api.delete(`/workouts/${id}`)
+      await deleteWorkout.mutateAsync(id!)
       navigate(-1)
     } catch {
       toast.showError('Failed to delete workout')
     }
   }
 
-  if (loading) {
+  if (isLoading) {
     return <div className="text-slate-400 text-center py-8">Loading...</div>
   }
 
@@ -127,4 +110,3 @@ export default function WorkoutDetail() {
     </div>
   )
 }
-

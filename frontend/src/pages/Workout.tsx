@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { api } from '../api/client'
 import { useToast } from '../components/Toast'
 import { ChevronLeftIcon, CheckIcon } from '../components/Icons'
-import type { WorkoutTemplate, SetData, ExerciseInSession } from '../types'
+import { useWorkoutTemplate, useCreateWorkout } from '../api/hooks'
+import type { SetData, ExerciseInSession } from '../types'
 
 interface WorkingSet extends SetData {
   exercise_name: string
@@ -15,17 +15,37 @@ export default function Workout() {
   const toast = useToast()
   const { mesocycleId, sessionId } = useParams<{ mesocycleId: string; sessionId: string }>()
   const navigate = useNavigate()
-  const [template, setTemplate] = useState<WorkoutTemplate | null>(null)
+  const { data: template, isLoading } = useWorkoutTemplate(mesocycleId!, sessionId!)
+  const createWorkout = useCreateWorkout()
   const [sets, setSets] = useState<WorkingSet[]>([])
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
   const [notes, setNotes] = useState('')
   const [restTimer, setRestTimer] = useState<number | null>(null)
   const [timerRunning, setTimerRunning] = useState(false)
+  const [initialized, setInitialized] = useState(false)
 
+  // Initialize sets from template once loaded
   useEffect(() => {
-    loadTemplate()
-  }, [mesocycleId, sessionId])
+    if (template && !initialized) {
+      const initialSets: WorkingSet[] = []
+      for (const ex of template.exercises) {
+        for (let i = 0; i < ex.target_sets; i++) {
+          initialSets.push({
+            exercise_id: ex.exercise_id,
+            exercise_name: ex.exercise_name,
+            set_num: i + 1,
+            weight: ex.suggested_weight || ex.last_weight || 0,
+            reps: 0,
+            rir: template.target_rir >= 0 ? template.target_rir : null,
+            completed: false,
+            target_reps_min: ex.target_rep_min,
+            target_reps_max: ex.target_rep_max,
+          })
+        }
+      }
+      setSets(initialSets)
+      setInitialized(true)
+    }
+  }, [template, initialized])
 
   // Rest timer effect
   useEffect(() => {
@@ -43,36 +63,6 @@ export default function Workout() {
     }
     return () => clearInterval(interval)
   }, [timerRunning, restTimer])
-
-  const loadTemplate = async () => {
-    try {
-      const data = await api.get<WorkoutTemplate>(`/workouts/template/${mesocycleId}/${sessionId}`)
-      setTemplate(data)
-
-      // Initialize sets from template
-      const initialSets: WorkingSet[] = []
-      for (const ex of data.exercises) {
-        for (let i = 0; i < ex.target_sets; i++) {
-          initialSets.push({
-            exercise_id: ex.exercise_id,
-            exercise_name: ex.exercise_name,
-            set_num: i + 1,
-            weight: ex.suggested_weight || ex.last_weight || 0,
-            reps: 0,
-            rir: data.target_rir >= 0 ? data.target_rir : null,
-            completed: false,
-            target_reps_min: ex.target_rep_min,
-            target_reps_max: ex.target_rep_max,
-          })
-        }
-      }
-      setSets(initialSets)
-    } catch {
-      toast.showError('Failed to load workout template')
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const updateSet = useCallback((exerciseId: string, setNum: number, field: keyof WorkingSet, value: number | boolean) => {
     setSets((prev) =>
@@ -99,10 +89,9 @@ export default function Workout() {
 
   const handleSave = async () => {
     if (!mesocycleId || !sessionId) return
-    setSaving(true)
 
     try {
-      await api.post('/workouts', {
+      await createWorkout.mutateAsync({
         mesocycle_id: mesocycleId,
         session_id: sessionId,
         notes: notes || null,
@@ -118,8 +107,6 @@ export default function Workout() {
       navigate(`/mesocycles/${mesocycleId}`)
     } catch {
       toast.showError('Failed to save workout')
-    } finally {
-      setSaving(false)
     }
   }
 
@@ -129,7 +116,7 @@ export default function Workout() {
     return `${mins}:${secs.toString().padStart(2, '0')}`
   }
 
-  if (loading) {
+  if (isLoading) {
     return <div className="text-slate-400 text-center py-8">Loading workout...</div>
   }
 
@@ -228,10 +215,10 @@ export default function Workout() {
       {/* Save Button */}
       <button
         onClick={handleSave}
-        disabled={saving || completedSets === 0}
+        disabled={createWorkout.isPending || completedSets === 0}
         className="btn btn-primary w-full disabled:opacity-50"
       >
-        {saving ? 'Saving...' : `Save Workout (${completedSets} sets)`}
+        {createWorkout.isPending ? 'Saving...' : `Save Workout (${completedSets} sets)`}
       </button>
     </div>
   )
@@ -362,4 +349,3 @@ function SetRow({ set, exerciseId, targetRir, onUpdate, onComplete }: SetRowProp
     </div>
   )
 }
-

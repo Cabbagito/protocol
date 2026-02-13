@@ -1,36 +1,19 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { api } from '../api/client'
 import { useToast } from '../components/Toast'
 import { TrashIcon } from '../components/Icons'
-import type { SplitListItem } from '../types'
+import { useSplits, useCreateSplit, useDeleteSplit } from '../api/hooks'
 
 export default function Splits() {
   const toast = useToast()
-  const [splits, setSplits] = useState<SplitListItem[]>([])
-  const [loading, setLoading] = useState(true)
+  const { data: splits = [], isLoading } = useSplits()
   const [showForm, setShowForm] = useState(false)
-
-  useEffect(() => {
-    loadSplits()
-  }, [])
-
-  const loadSplits = async () => {
-    try {
-      const data = await api.get<SplitListItem[]>('/splits')
-      setSplits(data)
-    } catch {
-      toast.showError('Failed to load splits')
-    } finally {
-      setLoading(false)
-    }
-  }
+  const deleteSplit = useDeleteSplit()
 
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this split?')) return
     try {
-      await api.delete(`/splits/${id}`)
-      setSplits(splits.filter((s) => s.id !== id))
+      await deleteSplit.mutateAsync(id)
     } catch {
       toast.showError('Failed to delete split')
     }
@@ -52,13 +35,12 @@ export default function Splits() {
         <SplitForm
           onSave={() => {
             setShowForm(false)
-            loadSplits()
           }}
           onCancel={() => setShowForm(false)}
         />
       )}
 
-      {loading ? (
+      {isLoading ? (
         <div className="text-slate-400 text-center py-8">Loading...</div>
       ) : splits.length === 0 ? (
         <div className="text-slate-400 text-center py-8">
@@ -96,19 +78,16 @@ interface SplitFormProps {
 function SplitForm({ onSave, onCancel }: SplitFormProps) {
   const toast = useToast()
   const [name, setName] = useState('')
-  const [saving, setSaving] = useState(false)
+  const createSplit = useCreateSplit()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setSaving(true)
 
     try {
-      await api.post('/splits', { name })
+      await createSplit.mutateAsync({ name })
       onSave()
     } catch {
       toast.showError('Failed to save split')
-    } finally {
-      setSaving(false)
     }
   }
 
@@ -132,13 +111,12 @@ function SplitForm({ onSave, onCancel }: SplitFormProps) {
         </button>
         <button
           type="submit"
-          disabled={saving || !name}
+          disabled={createSplit.isPending || !name}
           className="btn btn-primary flex-1 disabled:opacity-50"
         >
-          {saving ? 'Saving...' : 'Save'}
+          {createSplit.isPending ? 'Saving...' : 'Save'}
         </button>
       </div>
     </form>
   )
 }
-

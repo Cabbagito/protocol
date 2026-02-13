@@ -1,43 +1,43 @@
 from datetime import date
-from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
-from sqlalchemy import select, and_
+from sqlalchemy import cast, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.database import get_db
 from app.core.security import get_current_user
+from app.models.exercise import Exercise
 from app.models.mesocycle import Mesocycle, WorkoutLog
 from app.models.split import Session, SessionExercise
-from app.models.exercise import Exercise
 
 router = APIRouter()
 
 
 # --- Pydantic Schemas ---
 
+
 class SetData(BaseModel):
     exercise_id: str
     set_num: int = Field(ge=1)
     weight: float = Field(ge=0)
     reps: int = Field(ge=0)
-    rir: Optional[int] = Field(default=None, ge=-1, le=5)
+    rir: int | None = Field(default=None, ge=-1, le=5)
     completed: bool = True
 
 
 class WorkoutCreate(BaseModel):
     mesocycle_id: str
     session_id: str
-    date: Optional[date] = None
-    notes: Optional[str] = None
+    date: date | None = None
+    notes: str | None = None
     sets: list[SetData]
 
 
 class WorkoutUpdate(BaseModel):
-    notes: Optional[str] = None
-    sets: Optional[list[SetData]] = None
+    notes: str | None = None
+    sets: list[SetData] | None = None
 
 
 class ExerciseInSession(BaseModel):
@@ -47,9 +47,9 @@ class ExerciseInSession(BaseModel):
     target_sets: int
     target_rep_min: int
     target_rep_max: int
-    last_weight: Optional[float] = None
-    suggested_weight: Optional[float] = None
-    progression_note: Optional[str] = None
+    last_weight: float | None = None
+    suggested_weight: float | None = None
+    progression_note: str | None = None
 
 
 class WorkoutTemplate(BaseModel):
@@ -66,18 +66,18 @@ class SetInWorkout(BaseModel):
     set_num: int
     weight: float
     reps: int
-    rir: Optional[int] = None
+    rir: int | None = None
     completed: bool
 
 
 class WorkoutResponse(BaseModel):
     id: str
     mesocycle_id: str
-    session_id: Optional[str]
-    session_name: Optional[str]
+    session_id: str | None
+    session_name: str | None
     week_number: int
     date: date
-    notes: Optional[str]
+    notes: str | None
     sets: list[SetInWorkout]
 
     class Config:
@@ -86,7 +86,7 @@ class WorkoutResponse(BaseModel):
 
 class WorkoutListItem(BaseModel):
     id: str
-    session_name: Optional[str]
+    session_name: str | None
     week_number: int
     date: date
     total_sets: int
@@ -107,6 +107,7 @@ WEIGHT_INCREMENTS = {
 
 
 # --- Endpoints ---
+
 
 @router.get("/template/{mesocycle_id}/{session_id}", response_model=WorkoutTemplate)
 async def get_workout_template(
@@ -160,21 +161,17 @@ async def get_workout_template(
                     last_weight = max(s.get("weight", 0) for s in completed_sets)
 
                     # Check if all sets hit rep_max for progression
-                    all_hit_max = all(
-                        s.get("reps", 0) >= se.rep_max for s in completed_sets
-                    )
+                    all_hit_max = all(s.get("reps", 0) >= se.rep_max for s in completed_sets)
                     if all_hit_max:
                         increment = WEIGHT_INCREMENTS.get(se.exercise.equipment_type, 2.5)
                         if increment > 0:
                             suggested_weight = last_weight + increment
                             progression_note = (
-                                f"All sets hit {se.rep_max} reps."
-                                f" Increase by {increment}kg."
+                                f"All sets hit {se.rep_max} reps. Increase by {increment}kg."
                             )
                         else:
                             progression_note = (
-                                f"All sets hit {se.rep_max} reps."
-                                f" Progress to harder variation."
+                                f"All sets hit {se.rep_max} reps. Progress to harder variation."
                             )
                     else:
                         suggested_weight = last_weight
@@ -247,7 +244,7 @@ async def create_workout(
 
 @router.get("", response_model=list[WorkoutListItem])
 async def list_workouts(
-    mesocycle_id: Optional[str] = None,
+    mesocycle_id: str | None = None,
     limit: int = 20,
     db: AsyncSession = Depends(get_db),
     _: str = Depends(get_current_user),
@@ -271,9 +268,7 @@ async def list_workouts(
             date=w.date,
             total_sets=len([s for s in w.sets if s.get("completed")]),
             total_volume=sum(
-                s.get("weight", 0) * s.get("reps", 0)
-                for s in w.sets
-                if s.get("completed")
+                s.get("weight", 0) * s.get("reps", 0) for s in w.sets if s.get("completed")
             ),
         )
         for w in workouts
@@ -367,37 +362,51 @@ async def get_exercise_progress(
     _: str = Depends(get_current_user),
 ):
     """Get weight progression for a specific exercise."""
-    # Get all workouts that include this exercise
+    # Filter at DB level: only fetch workouts that contain this exercise in their JSONB sets
     result = await db.execute(
         select(WorkoutLog)
+        .where(
+            WorkoutLog.sets.op("@>")(
+                cast(f'[{{"exercise_id": "{exercise_id}"}}]', type_=WorkoutLog.sets.type)
+            )
+        )
         .order_by(WorkoutLog.date.desc())
-        .limit(100)  # Look at more to find relevant ones
+        .limit(limit)
     )
     workouts = result.scalars().all()
 
     progress = []
     for w in workouts:
-        exercise_sets = [s for s in w.sets if s.get("exercise_id") == exercise_id and s.get("completed")]
+        exercise_sets = [
+            s for s in w.sets if s.get("exercise_id") == exercise_id and s.get("completed")
+        ]
         if exercise_sets:
             max_weight = max(s.get("weight", 0) for s in exercise_sets)
             total_reps = sum(s.get("reps", 0) for s in exercise_sets)
             total_sets = len(exercise_sets)
-            progress.append({
-                "date": w.date.isoformat(),
-                "week_number": w.week_number,
-                "max_weight": max_weight,
-                "total_reps": total_reps,
-                "total_sets": total_sets,
-                "volume": sum(s.get("weight", 0) * s.get("reps", 0) for s in exercise_sets),
-            })
+            progress.append(
+                {
+                    "date": w.date.isoformat(),
+                    "week_number": w.week_number,
+                    "max_weight": max_weight,
+                    "total_reps": total_reps,
+                    "total_sets": total_sets,
+                    "volume": sum(s.get("weight", 0) * s.get("reps", 0) for s in exercise_sets),
+                }
+            )
 
-    # Reverse to chronological order and limit
-    return list(reversed(progress[:limit]))
+    # Reverse to chronological order
+    return list(reversed(progress))
 
 
 # --- Helper Functions ---
 
-def _workout_to_response(workout: WorkoutLog, session_name: Optional[str], exercises_map: dict) -> dict:
+
+def _workout_to_response(
+    workout: WorkoutLog,
+    session_name: str | None,
+    exercises_map: dict,
+) -> dict:
     return {
         "id": workout.id,
         "mesocycle_id": workout.mesocycle_id,

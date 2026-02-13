@@ -1,36 +1,19 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { api } from '../api/client'
 import { useToast } from '../components/Toast'
 import { TrashIcon } from '../components/Icons'
-import type { MesocycleListItem, SplitListItem } from '../types'
+import { useMesocycles, useCreateMesocycle, useDeleteMesocycle, useSplits } from '../api/hooks'
 
 export default function Mesocycles() {
   const toast = useToast()
-  const [mesocycles, setMesocycles] = useState<MesocycleListItem[]>([])
-  const [loading, setLoading] = useState(true)
+  const { data: mesocycles = [], isLoading } = useMesocycles()
   const [showForm, setShowForm] = useState(false)
-
-  useEffect(() => {
-    loadMesocycles()
-  }, [])
-
-  const loadMesocycles = async () => {
-    try {
-      const data = await api.get<MesocycleListItem[]>('/mesocycles')
-      setMesocycles(data)
-    } catch {
-      toast.showError('Failed to load mesocycles')
-    } finally {
-      setLoading(false)
-    }
-  }
+  const deleteMesocycle = useDeleteMesocycle()
 
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this mesocycle and all its workout logs?')) return
     try {
-      await api.delete(`/mesocycles/${id}`)
-      setMesocycles(mesocycles.filter((m) => m.id !== id))
+      await deleteMesocycle.mutateAsync(id)
     } catch {
       toast.showError('Failed to delete mesocycle')
     }
@@ -52,13 +35,12 @@ export default function Mesocycles() {
         <MesocycleForm
           onSave={() => {
             setShowForm(false)
-            loadMesocycles()
           }}
           onCancel={() => setShowForm(false)}
         />
       )}
 
-      {loading ? (
+      {isLoading ? (
         <div className="text-slate-400 text-center py-8">Loading...</div>
       ) : mesocycles.length === 0 ? (
         <div className="text-slate-400 text-center py-8">
@@ -107,32 +89,20 @@ function MesocycleForm({ onSave, onCancel }: MesocycleFormProps) {
   const [name, setName] = useState('')
   const [splitId, setSplitId] = useState('')
   const [totalWeeks, setTotalWeeks] = useState(4)
-  const [splits, setSplits] = useState<SplitListItem[]>([])
-  const [saving, setSaving] = useState(false)
+  const { data: splits = [] } = useSplits()
+  const createMesocycle = useCreateMesocycle()
 
-  useEffect(() => {
-    loadSplits()
-  }, [])
-
-  const loadSplits = async () => {
-    try {
-      const data = await api.get<SplitListItem[]>('/splits')
-      setSplits(data)
-      if (data.length > 0) {
-        setSplitId(data[0]!.id)
-      }
-    } catch {
-      toast.showError('Failed to load splits')
-    }
+  // Auto-select first split when loaded
+  if (splits.length > 0 && !splitId) {
+    setSplitId(splits[0]!.id)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!splitId) return
-    setSaving(true)
 
     try {
-      await api.post('/mesocycles', {
+      await createMesocycle.mutateAsync({
         name,
         split_id: splitId,
         total_weeks: totalWeeks,
@@ -140,18 +110,16 @@ function MesocycleForm({ onSave, onCancel }: MesocycleFormProps) {
       onSave()
     } catch {
       toast.showError('Failed to create mesocycle')
-    } finally {
-      setSaving(false)
     }
   }
 
   const getRirSchemePreview = (weeks: number): string => {
     if (weeks <= 1) return 'RiR: 0'
-    if (weeks === 2) return 'RiR: 2 → Deload'
-    if (weeks === 3) return 'RiR: 3 → 1 → Deload'
-    if (weeks === 4) return 'RiR: 3 → 2 → 1 → Deload'
-    if (weeks === 5) return 'RiR: 3 → 2 → 1 → 0 → Deload'
-    return 'RiR: 3 → ... → 0 → Deload'
+    if (weeks === 2) return 'RiR: 2 \u2192 Deload'
+    if (weeks === 3) return 'RiR: 3 \u2192 1 \u2192 Deload'
+    if (weeks === 4) return 'RiR: 3 \u2192 2 \u2192 1 \u2192 Deload'
+    if (weeks === 5) return 'RiR: 3 \u2192 2 \u2192 1 \u2192 0 \u2192 Deload'
+    return 'RiR: 3 \u2192 ... \u2192 0 \u2192 Deload'
   }
 
   return (
@@ -208,13 +176,12 @@ function MesocycleForm({ onSave, onCancel }: MesocycleFormProps) {
         </button>
         <button
           type="submit"
-          disabled={saving || !name || !splitId}
+          disabled={createMesocycle.isPending || !name || !splitId}
           className="btn btn-primary flex-1 disabled:opacity-50"
         >
-          {saving ? 'Creating...' : 'Create'}
+          {createMesocycle.isPending ? 'Creating...' : 'Create'}
         </button>
       </div>
     </form>
   )
 }
-

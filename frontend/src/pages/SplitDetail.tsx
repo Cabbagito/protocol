@@ -1,9 +1,17 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { api } from '../api/client'
 import { useToast } from '../components/Toast'
 import { ChevronLeftIcon, ChevronUpIcon, ChevronDownIcon, PencilIcon, TrashIcon } from '../components/Icons'
-import type { Split, Session, Exercise } from '../types'
+import {
+  useSplit,
+  useUpdateSplit,
+  useExercises,
+  useAddSession,
+  useUpdateSession,
+  useDeleteSession,
+  useReorderSessions,
+} from '../api/hooks'
+import type { Session, Exercise } from '../types'
 
 interface SessionExerciseInput {
   exercise_id: string
@@ -17,34 +25,19 @@ export default function SplitDetail() {
   const toast = useToast()
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const [split, setSplit] = useState<Split | null>(null)
-  const [loading, setLoading] = useState(true)
+  const { data: split, isLoading } = useSplit(id!)
   const [editingName, setEditingName] = useState(false)
   const [name, setName] = useState('')
   const [showSessionForm, setShowSessionForm] = useState(false)
   const [editingSession, setEditingSession] = useState<Session | null>(null)
-
-  useEffect(() => {
-    loadSplit()
-  }, [id])
-
-  const loadSplit = async () => {
-    try {
-      const data = await api.get<Split>(`/splits/${id}`)
-      setSplit(data)
-      setName(data.name)
-    } catch {
-      toast.showError('Failed to load split')
-    } finally {
-      setLoading(false)
-    }
-  }
+  const updateSplitMutation = useUpdateSplit(id!)
+  const deleteSessionMutation = useDeleteSession(id!)
+  const reorderMutation = useReorderSessions(id!)
 
   const handleUpdateName = async () => {
     if (!split || !name.trim()) return
     try {
-      await api.put(`/splits/${id}`, { name })
-      setSplit({ ...split, name })
+      await updateSplitMutation.mutateAsync({ name })
       setEditingName(false)
     } catch {
       toast.showError('Failed to update split')
@@ -54,8 +47,7 @@ export default function SplitDetail() {
   const handleDeleteSession = async (sessionId: string) => {
     if (!confirm('Delete this session?')) return
     try {
-      await api.delete(`/splits/${id}/sessions/${sessionId}`)
-      loadSplit()
+      await deleteSessionMutation.mutateAsync(sessionId)
     } catch {
       toast.showError('Failed to delete session')
     }
@@ -73,16 +65,13 @@ export default function SplitDetail() {
     ;[newSessions[idx], newSessions[swapIdx]] = [newSessions[swapIdx]!, newSessions[idx]!]
 
     try {
-      await api.put(`/splits/${id}/sessions/reorder`, {
-        session_ids: newSessions.map((s) => s.id),
-      })
-      loadSplit()
+      await reorderMutation.mutateAsync(newSessions.map((s) => s.id))
     } catch {
       toast.showError('Failed to reorder sessions')
     }
   }
 
-  if (loading) {
+  if (isLoading) {
     return <div className="text-slate-400 text-center py-8">Loading...</div>
   }
 
@@ -115,7 +104,10 @@ export default function SplitDetail() {
         ) : (
           <h1
             className="text-xl font-bold flex-1 cursor-pointer hover:text-protocol-400"
-            onClick={() => setEditingName(true)}
+            onClick={() => {
+              setName(split.name)
+              setEditingName(true)
+            }}
           >
             {split.name}
           </h1>
@@ -142,7 +134,6 @@ export default function SplitDetail() {
           onSave={() => {
             setShowSessionForm(false)
             setEditingSession(null)
-            loadSplit()
           }}
           onCancel={() => {
             setShowSessionForm(false)
@@ -229,7 +220,7 @@ interface SessionFormProps {
 
 function SessionForm({ splitId, session, onSave, onCancel }: SessionFormProps) {
   const toast = useToast()
-  const [name, setName] = useState(session?.name ?? '')
+  const [sessionName, setSessionName] = useState(session?.name ?? '')
   const [isRestDay, setIsRestDay] = useState(session?.is_rest_day ?? false)
   const [exercises, setExercises] = useState<SessionExerciseInput[]>(
     session?.exercises.map((ex) => ({
@@ -240,21 +231,9 @@ function SessionForm({ splitId, session, onSave, onCancel }: SessionFormProps) {
       rep_max: ex.rep_max,
     })) ?? []
   )
-  const [availableExercises, setAvailableExercises] = useState<Exercise[]>([])
-  const [saving, setSaving] = useState(false)
-
-  useEffect(() => {
-    loadExercises()
-  }, [])
-
-  const loadExercises = async () => {
-    try {
-      const data = await api.get<Exercise[]>('/exercises')
-      setAvailableExercises(data)
-    } catch {
-      toast.showError('Failed to load exercises')
-    }
-  }
+  const { data: availableExercises = [] } = useExercises()
+  const addSessionMutation = useAddSession(splitId)
+  const updateSessionMutation = useUpdateSession(splitId)
 
   const handleAddExercise = () => {
     if (availableExercises.length === 0) return
@@ -291,34 +270,33 @@ function SessionForm({ splitId, session, onSave, onCancel }: SessionFormProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setSaving(true)
 
     try {
       const payload = {
-        name,
+        name: sessionName,
         is_rest_day: isRestDay,
         exercises: isRestDay ? [] : exercises,
       }
 
       if (session) {
-        await api.put(`/splits/${splitId}/sessions/${session.id}`, payload)
+        await updateSessionMutation.mutateAsync({ sessionId: session.id, data: payload })
       } else {
-        await api.post(`/splits/${splitId}/sessions`, payload)
+        await addSessionMutation.mutateAsync(payload)
       }
       onSave()
     } catch {
       toast.showError('Failed to save session')
-    } finally {
-      setSaving(false)
     }
   }
+
+  const isSaving = addSessionMutation.isPending || updateSessionMutation.isPending
 
   return (
     <form onSubmit={handleSubmit} className="card space-y-4">
       <input
         type="text"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
+        value={sessionName}
+        onChange={(e) => setSessionName(e.target.value)}
         placeholder="Session name (e.g., Push, Pull, Legs)"
         className="input"
         autoFocus
@@ -364,7 +342,7 @@ function SessionForm({ splitId, session, onSave, onCancel }: SessionFormProps) {
                       onChange={(e) => handleExerciseChange(index, 'exercise_id', e.target.value)}
                       className="input flex-1 text-sm"
                     >
-                      {availableExercises.map((ae) => (
+                      {availableExercises.map((ae: Exercise) => (
                         <option key={ae.id} value={ae.id}>
                           {ae.name}
                         </option>
@@ -439,13 +417,12 @@ function SessionForm({ splitId, session, onSave, onCancel }: SessionFormProps) {
         </button>
         <button
           type="submit"
-          disabled={saving || !name}
+          disabled={isSaving || !sessionName}
           className="btn btn-primary flex-1 disabled:opacity-50"
         >
-          {saving ? 'Saving...' : session ? 'Update' : 'Add'}
+          {isSaving ? 'Saving...' : session ? 'Update' : 'Add'}
         </button>
       </div>
     </form>
   )
 }
-
