@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Workout Page – Full Layout</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    html { background: #070d15; }
+    body {
+      overscroll-behavior: none;
+      font-family: 'Inter', system-ui, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+      background: #0d1b2a;
+      min-height: 100vh;
+    }
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 100;
+      background: radial-gradient(ellipse at center, transparent 60%, #070d15 100%);
+    }
+    input[type="number"]::-webkit-outer-spin-button,
+    input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
+
+    .check-pop { transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1); }
+    .check-pop:active { transform: scale(0.85); }
+    .reps-ghost::placeholder { color: #2a4a64; }
+
+    /* Row states */
+    .row-skip  { opacity: 0.3; filter: blur(0.5px); pointer-events: none; }
+
+    /* Progress bar glow — green */
+    .progress-glow {
+      box-shadow: 0 0 8px rgba(74, 222, 128, 0.5), 0 0 2px rgba(74, 222, 128, 0.8);
+    }
+
+    /* Exercise card — bordered container with muscle-group color */
+    .exercise-card {
+      background: #0f1d2e;
+      border-radius: 10px;
+      border: 1.5px solid;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    }
+
+    /* Sets wrapper variants */
+    .sets-wrap {
+      border-radius: 8px;
+      padding: 4px;
+      margin-top: 4px;
+    }
+
+    /* Frosted panel — subtle inner card for sets area */
+    .sets-wrap-frosted {
+      background: #132438;
+      border: 1px solid rgba(255,255,255,0.04);
+    }
+  </style>
+</head>
+
+<body class="min-h-screen max-w-md mx-auto relative">
+
+  <!-- ============================================================ -->
+  <!-- STICKY HEADER                                                -->
+  <!-- ============================================================ -->
+  <div class="sticky top-0 z-40" style="background: #0d1b2a;">
+    <div class="px-5 pt-5 pb-4 flex items-center justify-between">
+      <!-- Left: App icon + Session name -->
+      <div class="flex items-center gap-3 min-w-0">
+        <!-- App favicon -->
+        <svg class="w-9 h-9 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+          <rect width="100" height="100" rx="20" fill="#0f172a" stroke="rgba(56,189,248,0.15)" stroke-width="3"/>
+          <text x="50" y="68" font-family="system-ui, sans-serif" font-size="50" font-weight="bold" fill="#0ea5e9" text-anchor="middle">P</text>
+        </svg>
+        <!-- Session name -->
+        <div class="min-w-0">
+          <h1 class="text-[15px] font-semibold truncate" style="color: #e2e8f0;">Back / Biceps / Shoulders</h1>
+          <span class="text-[11px]" style="color: #475569;">Week 3 · Day 1</span>
+        </div>
+      </div>
+      <!-- Right: RiR -->
+      <div class="flex flex-col items-center flex-shrink-0 ml-4">
+        <span class="text-[10px] font-medium uppercase tracking-wider mb-1" style="color: #475569;">RiR</span>
+        <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background: rgba(56,189,248,0.1); border: 1px solid rgba(56,189,248,0.15);">
+          <span class="text-lg font-bold" style="color: #38bdf8;">2</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Workout Progress Bar — green -->
+    <div class="relative h-[3px] w-full" style="background: #162a3e;">
+      <!-- Filled portion — 50% done (3 of 6 exercises) -->
+      <div class="absolute left-0 top-0 h-full rounded-r-full progress-glow transition-all duration-500" style="width: 50%; background: #4ade80;"></div>
+    </div>
+  </div>
+
+  <!-- Exercise cards -->
+  <div class="px-2.5 pt-4 pb-8 flex flex-col gap-3">
+
+    <!-- EXERCISE 1: DONE — Back (teal) -->
+    <div class="exercise-card px-3 pt-3 pb-2.5" style="border-color: rgba(20,184,166,0.35);">
+      <div class="mb-2">
+        <span class="text-[11px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded" style="color: #2dd4bf; background: rgba(20,184,166,0.1); border: 1px solid rgba(20,184,166,0.15);">Back</span>
+      </div>
+      <div class="mb-3">
+        <h2 class="text-base font-semibold" style="color: #e2e8f0;">Lat Pulldown</h2>
+        <span class="text-xs" style="color: #475569;">Cable</span>
+      </div>
+      <div class="sets-wrap sets-wrap-frosted">
+        <div class="flex items-center mb-2 px-2 pt-1">
+          <div class="flex-1 text-center text-[11px] font-medium uppercase tracking-wider" style="color: #475569;">Weight</div>
+          <div class="flex-1 text-center text-[11px] font-medium uppercase tracking-wider" style="color: #475569;">Reps</div>
+          <div class="w-12 text-center text-[11px] font-medium uppercase tracking-wider" style="color: #475569;">Log</div>
+        </div>
+        <div class="flex items-center gap-2 mb-1.5 rounded-lg px-2 py-1.5">
+          <div class="flex-1"><input type="number" value="70" readonly class="w-full h-10 rounded-xl text-center text-sm font-medium focus:outline-none" style="background: #0c2d4e; border: 1px solid #164e7a; color: #38bdf8;" /></div>
+          <div class="flex-1"><input type="number" value="10" readonly class="w-full h-10 rounded-xl text-center text-sm font-medium focus:outline-none" style="background: #0c2d4e; border: 1px solid #164e7a; color: #38bdf8;" /></div>
+          <div class="w-12 flex justify-center"><div class="w-9 h-9 rounded-lg flex items-center justify-center check-pop" style="background: #0284c7;"><svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div></div>
+        </div>
+        <div class="flex items-center gap-2 mb-1.5 rounded-lg px-2 py-1.5">
+          <div class="flex-1"><input type="number" value="70" readonly class="w-full h-10 rounded-xl text-center text-sm font-medium focus:outline-none" style="background: #0c2d4e; border: 1px solid #164e7a; color: #38bdf8;" /></div>
+          <div class="flex-1"><input type="number" value="10" readonly class="w-full h-10 rounded-xl text-center text-sm font-medium focus:outline-none" style="background: #0c2d4e; border: 1px solid #164e7a; color: #38bdf8;" /></div>
+          <div class="w-12 flex justify-center"><div class="w-9 h-9 rounded-lg flex items-center justify-center check-pop" style="background: #0284c7;"><svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div></div>
+        </div>
+        <div class="flex items-center gap-2 mb-1.5 rounded-lg px-2 py-1.5">
+          <div class="flex-1"><input type="number" value="70" readonly class="w-full h-10 rounded-xl text-center text-sm font-medium focus:outline-none" style="background: rgba(168,85,247,0.08); border: 1px solid rgba(168,85,247,0.2); color: #c084fc;" /></div>
+          <div class="flex-1"><input type="number" value="12" readonly class="w-full h-10 rounded-xl text-center text-sm font-medium focus:outline-none" style="background: rgba(168,85,247,0.08); border: 1px solid rgba(168,85,247,0.2); color: #c084fc;" /></div>
+          <div class="w-12 flex justify-center"><div class="w-9 h-9 rounded-lg flex items-center justify-center check-pop" style="background: #7c3aed;"><svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7"/></svg></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- EXERCISE 2: DONE — Biceps (indigo) -->
+    <div class="exercise-card px-3 pt-3 pb-2.5" style="border-color: rgba(99,102,241,0.35);">
+      <div class="mb-2">
+        <span class="text-[11px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded" style="color: #818cf8; background: rgba(99,102,241,0.1); border: 1px solid rgba(99,102,241,0.15);">Biceps</span>
+      </div>
+      <div class="mb-3">
+        <h2 class="text-base font-semibold" style="color: #e2e8f0;">Machine Preacher Curl</h2>
+        <span class="text-xs" style="color: #475569;">Machine</span>
+      </div>
+      <div class="sets-wrap sets-wrap-frosted">
+        <div class="flex items-center mb-2 px-2 pt-1">
+          <div class="flex-1 text-center text-[11px] font-medium uppercase tracking-wider" style="color: #475569;">Weight</div>
+          <div class="flex-1 text-center text-[11px] font-medium uppercase tracking-wider" style="color: #475569;">Reps</div>
+          <div class="w-12 text-center text-[11px] font-medium uppercase tracking-wider" style="color: #475569;">Log</div>
+        </div>
+        <div class="flex items-center gap-2 mb-1.5 rounded-lg px-2 py-1.5">
+          <div class="flex-1"><input type="number" value="30" readonly class="w-full h-10 rounded-xl text-center text-sm font-medium focus:outline-none" style="background: #0c2d4e; border: 1px solid #164e7a; color: #38bdf8;" /></div>
+          <div class="flex-1"><input type="number" value="10" readonly class="w-full h-10 rounded-xl text-center text-sm font-medium focus:outline-none" style="background: #0c2d4e; border: 1px solid #164e7a; color: #38bdf8;" /></div>
+          <div class="w-12 flex justify-center"><div class="w-9 h-9 rounded-lg flex items-center justify-center check-pop" style="background: #0284c7;"><svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div></div>
+        </div>
+        <div class="flex items-center gap-2 mb-1.5 rounded-lg px-2 py-1.5">
+          <div class="flex-1"><input type="number" value="30" readonly class="w-full h-10 rounded-xl text-center text-sm font-medium focus:outline-none" style="background: #0c2d4e; border: 1px solid #164e7a; color: #38bdf8;" /></div>
+          <div class="flex-1"><input type="number" value="10" readonly class="w-full h-10 rounded-xl text-center text-sm font-medium focus:outline-none" style="background: #0c2d4e; border: 1px solid #164e7a; color: #38bdf8;" /></div>
+          <div class="w-12 flex justify-center"><div class="w-9 h-9 rounded-lg flex items-center justify-center check-pop" style="background: #0284c7;"><svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div></div>
+        </div>
+        <div class="flex items-center gap-2 mb-1.5 rounded-lg px-2 py-1.5">
+          <div class="flex-1"><input type="number" value="30" readonly class="w-full h-10 rounded-xl text-center text-sm font-medium focus:outline-none" style="background: rgba(239,68,68,0.06); border: 1px solid rgba(239,68,68,0.15); color: #f87171;" /></div>
+          <div class="flex-1"><input type="number" value="8" readonly class="w-full h-10 rounded-xl text-center text-sm font-medium focus:outline-none" style="background: rgba(239,68,68,0.06); border: 1px solid rgba(239,68,68,0.15); color: #f87171;" /></div>
+          <div class="w-12 flex justify-center"><div class="w-9 h-9 rounded-lg flex items-center justify-center check-pop" style="background: #dc2626;"><svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- EXERCISE 3: IN PROGRESS — Shoulders (purple) -->
+    <div class="exercise-card px-3 pt-3 pb-2.5" style="border-color: rgba(168,85,247,0.35);">
+      <div class="mb-2">
+        <span class="text-[11px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded" style="color: #c084fc; background: rgba(168,85,247,0.1); border: 1px solid rgba(168,85,247,0.15);">Shoulders</span>
+      </div>
+      <div class="mb-3">
+        <h2 class="text-base font-semibold" style="color: #e2e8f0;">Freemotion Rear Delt Fly</h2>
+        <span class="text-xs" style="color: #475569;">Machine</span>
+      </div>
+      <div class="sets-wrap sets-wrap-frosted">
+        <div class="flex items-center mb-2 px-2 pt-1">
+          <div class="flex-1 text-center text-[11px] font-medium uppercase tracking-wider" style="color: #475569;">Weight</div>
+          <div class="flex-1 text-center text-[11px] font-medium uppercase tracking-wider" style="color: #475569;">Reps</div>
+          <div class="w-12 text-center text-[11px] font-medium uppercase tracking-wider" style="color: #475569;">Log</div>
+        </div>
+        <div class="flex items-center gap-2 mb-1.5 rounded-lg px-2 py-1.5">
+          <div class="flex-1"><input type="number" value="15" readonly class="w-full h-10 rounded-xl text-center text-sm font-medium focus:outline-none" style="background: #0c2d4e; border: 1px solid #164e7a; color: #38bdf8;" /></div>
+          <div class="flex-1"><input type="number" value="12" readonly class="w-full h-10 rounded-xl text-center text-sm font-medium focus:outline-none" style="background: #0c2d4e; border: 1px solid #164e7a; color: #38bdf8;" /></div>
+          <div class="w-12 flex justify-center"><div class="w-9 h-9 rounded-lg flex items-center justify-center check-pop" style="background: #0284c7;"><svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div></div>
+        </div>
+        <div class="flex items-center gap-2 mb-1.5 rounded-lg px-2 py-1.5">
+          <div class="flex-1"><input type="number" value="15" class="w-full h-10 rounded-xl border text-center text-sm font-medium focus:outline-none focus:ring-1 focus:ring-sky-500 transition-colors" style="background: #162a3e; border-color: #1e3a52; color: #cbd5e1;" /></div>
+          <div class="flex-1"><input type="number" placeholder="12" class="reps-ghost w-full h-10 rounded-xl border text-center text-sm font-medium focus:outline-none focus:ring-1 focus:ring-sky-500 transition-colors" style="background: #162a3e; border-color: #1e3a52; color: #cbd5e1;" /></div>
+          <div class="w-12 flex justify-center"><button class="w-9 h-9 rounded-lg border-2 flex items-center justify-center check-pop" style="border-color: #1e3a52;"></button></div>
+        </div>
+        <div class="flex items-center gap-2 mb-1.5 rounded-lg px-2 py-1.5">
+          <div class="flex-1"><input type="number" value="15" class="w-full h-10 rounded-xl border text-center text-sm font-medium focus:outline-none focus:ring-1 focus:ring-sky-500 transition-colors" style="background: #162a3e; border-color: #1e3a52; color: #cbd5e1;" /></div>
+          <div class="flex-1"><input type="number" placeholder="12" class="reps-ghost w-full h-10 rounded-xl border text-center text-sm font-medium focus:outline-none focus:ring-1 focus:ring-sky-500 transition-colors" style="background: #162a3e; border-color: #1e3a52; color: #cbd5e1;" /></div>
+          <div class="w-12 flex justify-center"><button class="w-9 h-9 rounded-lg border-2 flex items-center justify-center check-pop" style="border-color: #1e3a52;"></button></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</body>
+</html>
