@@ -44,6 +44,8 @@ class WorkoutUpdate(BaseModel):
 class ExerciseInSession(BaseModel):
     exercise_id: str
     exercise_name: str
+    muscle_groups: list[str] = []
+    equipment_type: str = ""
     order: int
     target_sets: int
     target_rep_min: int
@@ -181,6 +183,8 @@ async def get_workout_template(
             ExerciseInSession(
                 exercise_id=se.exercise_id,
                 exercise_name=se.exercise.name,
+                muscle_groups=se.exercise.muscle_groups,
+                equipment_type=se.exercise.equipment_type,
                 order=se.order,
                 target_sets=se.sets,
                 target_rep_min=se.rep_min,

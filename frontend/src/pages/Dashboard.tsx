@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useActiveMesocycle, useSplit, useWorkouts } from '../api/hooks'
-import { ArrowRightIcon, DumbbellIcon, CalendarIcon } from '../components/Icons'
+import { ArrowRightIcon, ProtocolLogo } from '../components/Icons'
+import ProgressBar from '../components/ProgressBar'
 
 export default function Dashboard() {
   const { data: mesocycle, isLoading: mesoLoading } = useActiveMesocycle()
@@ -11,14 +12,10 @@ export default function Dashboard() {
 
   const isDeloadWeek = mesocycle?.current_rir === -1
 
-  // Determine today's suggested workout based on day of week and split sessions
   const getTodaysSuggestion = () => {
     if (!split || !mesocycle) return null
-
     const trainingSessions = split.sessions.filter((s) => !s.is_rest_day)
     if (trainingSessions.length === 0) return null
-
-    // Simple rotation: day of week mod number of training sessions
     const dayOfWeek = new Date().getDay()
     const sessionIndex = dayOfWeek % trainingSessions.length
     return trainingSessions[sessionIndex]
@@ -27,35 +24,39 @@ export default function Dashboard() {
   const suggestedSession = getTodaysSuggestion()
 
   if (mesoLoading) {
-    return <div className="text-slate-400 text-center py-8">Loading...</div>
+    return <div className="text-slate-500 text-center py-8">Loading...</div>
   }
 
   return (
-    <div className="space-y-4">
-      <header>
-        <h1 className="text-2xl font-bold">Protocol</h1>
-        <p className="text-slate-400 text-sm">
-          {new Date().toLocaleDateString('en-US', {
-            weekday: 'long',
-            month: 'long',
-            day: 'numeric',
-          })}
-        </p>
+    <div className="px-4 pt-5 space-y-4">
+      {/* Header */}
+      <header className="flex items-center gap-3">
+        <ProtocolLogo className="w-9 h-9 flex-shrink-0" />
+        <div>
+          <h1 className="text-[15px] font-semibold text-slate-200">Protocol</h1>
+          <p className="text-[11px] text-slate-600">
+            {new Date().toLocaleDateString('en-US', {
+              weekday: 'long',
+              month: 'long',
+              day: 'numeric',
+            })}
+          </p>
+        </div>
       </header>
 
       {/* Active Mesocycle */}
       {mesocycle ? (
-        <div className="card bg-gradient-to-br from-protocol-900 to-slate-800 border border-protocol-600/30">
-          <div className="flex items-start justify-between">
+        <div className="card">
+          <div className="flex items-start justify-between mb-3">
             <div>
-              <h2 className="font-semibold text-lg">{mesocycle.name}</h2>
-              <div className="text-sm text-slate-400 mt-1">
+              <h2 className="font-semibold text-slate-200">{mesocycle.name}</h2>
+              <div className="text-sm text-slate-500 mt-0.5">
                 Week {mesocycle.current_week} of {mesocycle.total_weeks}
                 {' '}&middot;{' '}
                 {isDeloadWeek ? (
                   <span className="text-yellow-400">Deload Week</span>
                 ) : (
-                  <span>Target RiR {mesocycle.current_rir}</span>
+                  <span>RiR {mesocycle.current_rir}</span>
                 )}
               </div>
             </div>
@@ -64,25 +65,16 @@ export default function Dashboard() {
             </Link>
           </div>
 
-          {/* Progress bar */}
-          <div className="mt-4">
-            <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-protocol-500 transition-all"
-                style={{
-                  width: `${(mesocycle.current_week / mesocycle.total_weeks) * 100}%`,
-                }}
-              />
-            </div>
-            <div className="text-xs text-slate-500 mt-1 text-center">
-              {mesocycle.workouts_completed} workouts completed
-            </div>
+          <ProgressBar percent={(mesocycle.current_week / mesocycle.total_weeks) * 100} />
+
+          <div className="text-xs text-slate-600 mt-2 text-center">
+            {mesocycle.workouts_completed} workouts completed
           </div>
         </div>
       ) : (
         <div className="card">
-          <h2 className="font-semibold mb-2">Get Started</h2>
-          <p className="text-slate-400 text-sm mb-4">
+          <h2 className="font-semibold mb-2 text-slate-200">Get Started</h2>
+          <p className="text-slate-500 text-sm mb-4">
             Create a mesocycle to start tracking your workouts.
           </p>
           <Link to="/mesocycles" className="btn btn-primary inline-block">
@@ -95,7 +87,7 @@ export default function Dashboard() {
       {mesocycle && suggestedSession && (
         <div className="card">
           <div className="flex items-start justify-between mb-3">
-            <h2 className="font-semibold">Today's Workout</h2>
+            <h2 className="font-semibold text-slate-200">Today's Workout</h2>
             <Link to="/progress" className="text-protocol-400 text-sm">
               Progress
             </Link>
@@ -103,12 +95,13 @@ export default function Dashboard() {
 
           <Link
             to={`/workout/${mesocycle.id}/${suggestedSession.id}`}
-            className="block bg-slate-800 hover:bg-slate-700 rounded-lg p-4 transition-colors"
+            className="block rounded-lg p-4 transition-colors"
+            style={{ background: '#132438', border: '1px solid rgba(255,255,255,0.04)' }}
           >
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-lg font-medium">{suggestedSession.name}</div>
-                <div className="text-sm text-slate-400">
+                <div className="text-lg font-semibold text-slate-200">{suggestedSession.name}</div>
+                <div className="text-sm text-slate-500 mt-1">
                   {suggestedSession.exercises.length} exercises
                 </div>
               </div>
@@ -126,10 +119,10 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* All Sessions (if mesocycle active) */}
+      {/* All Sessions */}
       {mesocycle && split && (
         <div className="card">
-          <h2 className="font-semibold mb-3">Start Any Workout</h2>
+          <h2 className="font-semibold mb-3 text-slate-200">Start Any Workout</h2>
           <div className="grid grid-cols-2 gap-2">
             {split.sessions
               .filter((s) => !s.is_rest_day)
@@ -137,10 +130,11 @@ export default function Dashboard() {
                 <Link
                   key={session.id}
                   to={`/workout/${mesocycle.id}/${session.id}`}
-                  className="bg-slate-800 hover:bg-slate-700 rounded p-3 text-sm transition-colors"
+                  className="rounded-lg p-3 text-sm transition-colors hover:bg-navy-input"
+                  style={{ background: '#132438', border: '1px solid rgba(255,255,255,0.04)' }}
                 >
-                  <div className="font-medium">{session.name}</div>
-                  <div className="text-xs text-slate-500">
+                  <div className="font-medium text-slate-200">{session.name}</div>
+                  <div className="text-xs text-slate-600 mt-0.5">
                     {session.exercises.length} exercises
                   </div>
                 </Link>
@@ -152,21 +146,24 @@ export default function Dashboard() {
       {/* Recent Workouts */}
       {recentWorkouts.length > 0 && (
         <div className="card">
-          <h2 className="font-semibold mb-3">Recent Workouts</h2>
+          <h2 className="font-semibold mb-3 text-slate-200">Recent Workouts</h2>
           <div className="space-y-2">
             {recentWorkouts.map((workout) => (
               <Link
                 key={workout.id}
                 to={`/workouts/${workout.id}`}
-                className="flex items-center justify-between bg-slate-800 hover:bg-slate-700 rounded p-3 transition-colors"
+                className="flex items-center justify-between rounded-lg p-3 transition-colors hover:bg-navy-input"
+                style={{ background: '#132438', border: '1px solid rgba(255,255,255,0.04)' }}
               >
                 <div>
-                  <div className="font-medium text-sm">{workout.session_name || 'Workout'}</div>
-                  <div className="text-xs text-slate-500">
+                  <div className="font-medium text-sm text-slate-200">
+                    {workout.session_name || 'Workout'}
+                  </div>
+                  <div className="text-xs text-slate-600">
                     {workout.total_sets} sets &middot; {Math.round(workout.total_volume).toLocaleString()}kg
                   </div>
                 </div>
-                <div className="text-xs text-slate-500">
+                <div className="text-xs text-slate-600">
                   {formatRelativeDate(workout.date)}
                 </div>
               </Link>
@@ -174,18 +171,6 @@ export default function Dashboard() {
           </div>
         </div>
       )}
-
-      {/* Quick Links */}
-      <div className="grid grid-cols-2 gap-3">
-        <Link to="/exercises" className="card text-center hover:border-protocol-500/50 transition-colors">
-          <DumbbellIcon className="w-8 h-8 mx-auto mb-2 text-protocol-400" />
-          <div className="text-sm">Exercises</div>
-        </Link>
-        <Link to="/splits" className="card text-center hover:border-protocol-500/50 transition-colors">
-          <CalendarIcon className="w-8 h-8 mx-auto mb-2 text-protocol-400" />
-          <div className="text-sm">Splits</div>
-        </Link>
-      </div>
     </div>
   )
 }

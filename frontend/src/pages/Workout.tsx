@@ -1,8 +1,12 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useToast } from '../components/Toast'
-import { ChevronLeftIcon, CheckIcon } from '../components/Icons'
+import { ProtocolLogo, CheckIcon, ArrowUpIcon, ArrowDownIcon } from '../components/Icons'
 import { useWorkoutTemplate, useCreateWorkout } from '../api/hooks'
+import ProgressBar from '../components/ProgressBar'
+import RirBadge from '../components/RirBadge'
+import MuscleGroupBadge from '../components/MuscleGroupBadge'
+import { getMuscleColor } from '../lib/muscleColors'
 import type { SetData, ExerciseInSession } from '../types'
 
 interface WorkingSet extends SetData {
@@ -23,7 +27,6 @@ export default function Workout() {
   const [timerRunning, setTimerRunning] = useState(false)
   const [initialized, setInitialized] = useState(false)
 
-  // Initialize sets from template once loaded
   useEffect(() => {
     if (template && !initialized) {
       const initialSets: WorkingSet[] = []
@@ -47,7 +50,6 @@ export default function Workout() {
     }
   }, [template, initialized])
 
-  // Rest timer effect
   useEffect(() => {
     let interval: number | undefined
     if (timerRunning && restTimer !== null && restTimer > 0) {
@@ -56,7 +58,6 @@ export default function Workout() {
       }, 1000)
     } else if (restTimer === 0) {
       setTimerRunning(false)
-      // Vibrate on timer end (if supported)
       if ('vibrate' in navigator) {
         navigator.vibrate([200, 100, 200])
       }
@@ -82,7 +83,6 @@ export default function Workout() {
           : s
       )
     )
-    // Start rest timer (90 seconds default)
     setRestTimer(90)
     setTimerRunning(true)
   }, [])
@@ -117,109 +117,108 @@ export default function Workout() {
   }
 
   if (isLoading) {
-    return <div className="text-slate-400 text-center py-8">Loading workout...</div>
+    return <div className="text-slate-500 text-center py-8">Loading workout...</div>
   }
 
   if (!template) {
-    return <div className="text-slate-400 text-center py-8">Workout template not found</div>
+    return <div className="text-slate-500 text-center py-8">Workout template not found</div>
   }
 
   const completedSets = sets.filter((s) => s.completed).length
   const totalSets = sets.length
-  const isDeloadWeek = template.target_rir === -1
 
-  // Group sets by exercise
   const exerciseGroups = template.exercises.map((ex) => ({
     ...ex,
     sets: sets.filter((s) => s.exercise_id === ex.exercise_id),
   }))
 
   return (
-    <div className="space-y-4 pb-4">
-      {/* Header */}
-      <header className="flex items-center gap-2">
-        <button onClick={() => navigate(-1)} className="text-slate-400 hover:text-slate-200">
-          <ChevronLeftIcon className="w-6 h-6" />
-        </button>
-        <div className="flex-1">
-          <h1 className="text-xl font-bold">{template.session_name}</h1>
-          <div className="text-sm text-slate-400">
-            Week {template.week_number} &middot;{' '}
-            {isDeloadWeek ? (
-              <span className="text-yellow-400">Deload</span>
-            ) : (
-              `Target RiR ${template.target_rir}`
-            )}
+    <div className="pb-4">
+      {/* Sticky Header */}
+      <div className="sticky top-0 z-40" style={{ background: '#0d1b2a' }}>
+        <div className="px-5 pt-5 pb-4 flex items-center justify-between">
+          <div className="flex items-center gap-3 min-w-0">
+            <button onClick={() => navigate(-1)} className="flex-shrink-0">
+              <ProtocolLogo className="w-9 h-9" />
+            </button>
+            <div className="min-w-0">
+              <h1 className="text-[15px] font-semibold truncate text-slate-200">
+                {template.session_name}
+              </h1>
+              <span className="text-[11px] text-slate-600">
+                Week {template.week_number}
+              </span>
+            </div>
           </div>
+          <RirBadge rir={template.target_rir} />
         </div>
-        <div className="text-right">
-          <div className="text-lg font-bold text-protocol-400">
-            {completedSets}/{totalSets}
-          </div>
-          <div className="text-xs text-slate-400">sets</div>
-        </div>
-      </header>
+        <ProgressBar percent={totalSets > 0 ? (completedSets / totalSets) * 100 : 0} />
+      </div>
 
       {/* Rest Timer */}
       {timerRunning && restTimer !== null && (
-        <div className="card bg-protocol-900 border border-protocol-600">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-sm text-slate-400">Rest Timer</div>
-              <div className="text-3xl font-bold text-protocol-400">{formatTime(restTimer)}</div>
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setRestTimer((t) => (t || 0) + 30)}
-                className="btn btn-secondary text-sm px-3"
-              >
-                +30s
-              </button>
-              <button
-                onClick={() => {
-                  setTimerRunning(false)
-                  setRestTimer(null)
-                }}
-                className="btn btn-secondary text-sm px-3"
-              >
-                Skip
-              </button>
+        <div className="mx-2.5 mt-4">
+          <div className="card" style={{ borderColor: 'rgba(56,189,248,0.2)' }}>
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-sm text-slate-500">Rest Timer</div>
+                <div className="text-3xl font-bold text-protocol-400">{formatTime(restTimer)}</div>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setRestTimer((t) => (t || 0) + 30)}
+                  className="btn btn-secondary text-sm px-3"
+                >
+                  +30s
+                </button>
+                <button
+                  onClick={() => {
+                    setTimerRunning(false)
+                    setRestTimer(null)
+                  }}
+                  className="btn btn-secondary text-sm px-3"
+                >
+                  Skip
+                </button>
+              </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* Exercises */}
-      {exerciseGroups.map((ex) => (
-        <ExerciseCard
-          key={ex.exercise_id}
-          exercise={ex}
-          sets={ex.sets}
-          targetRir={template.target_rir}
-          onUpdateSet={updateSet}
-          onCompleteSet={completeSet}
-        />
-      ))}
+      {/* Exercise Cards */}
+      <div className="px-2.5 pt-4 flex flex-col gap-3">
+        {exerciseGroups.map((ex) => (
+          <ExerciseCard
+            key={ex.exercise_id}
+            exercise={ex}
+            sets={ex.sets}
+            targetRir={template.target_rir}
+            onUpdateSet={updateSet}
+            onCompleteSet={completeSet}
+          />
+        ))}
 
-      {/* Notes */}
-      <div className="card">
-        <label className="text-sm text-slate-400 block mb-2">Notes (optional)</label>
-        <textarea
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          placeholder="Any notes about this workout..."
-          className="input min-h-[80px]"
-        />
+        {/* Notes */}
+        <div className="card">
+          <label className="text-sm text-slate-500 block mb-2">Notes (optional)</label>
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Any notes about this workout..."
+            className="input min-h-[80px]"
+          />
+        </div>
+
+        {/* Save Button */}
+        <button
+          onClick={handleSave}
+          disabled={createWorkout.isPending || completedSets === 0}
+          className="btn btn-primary w-full disabled:opacity-50"
+        >
+          {createWorkout.isPending ? 'Saving...' : `Save Workout (${completedSets} sets)`}
+        </button>
       </div>
-
-      {/* Save Button */}
-      <button
-        onClick={handleSave}
-        disabled={createWorkout.isPending || completedSets === 0}
-        className="btn btn-primary w-full disabled:opacity-50"
-      >
-        {createWorkout.isPending ? 'Saving...' : `Save Workout (${completedSets} sets)`}
-      </button>
     </div>
   )
 }
@@ -233,32 +232,47 @@ interface ExerciseCardProps {
 }
 
 function ExerciseCard({ exercise, sets, targetRir, onUpdateSet, onCompleteSet }: ExerciseCardProps) {
-  const completedSets = sets.filter((s) => s.completed).length
-  const allCompleted = completedSets === sets.length
+  const color = getMuscleColor(exercise.muscle_groups)
 
   return (
-    <div className={`card ${allCompleted ? 'border border-green-600/50' : ''}`}>
-      <div className="flex items-start justify-between mb-3">
-        <div>
-          <div className="font-medium">{exercise.exercise_name}</div>
-          <div className="text-sm text-slate-400">
-            {exercise.target_sets}x{exercise.target_rep_min}-{exercise.target_rep_max}
-            {exercise.progression_note && (
-              <span className="text-green-400 ml-2">{exercise.progression_note}</span>
-            )}
-          </div>
-        </div>
-        <div className="text-sm text-slate-500">
-          {completedSets}/{sets.length}
-        </div>
+    <div className="exercise-card" style={{ borderColor: color.cardBorder }}>
+      {/* Muscle group badge */}
+      <div className="mb-2">
+        <MuscleGroupBadge muscleGroups={exercise.muscle_groups} />
       </div>
 
-      <div className="space-y-2">
+      {/* Exercise name + equipment */}
+      <div className="mb-3">
+        <h2 className="text-base font-semibold text-slate-200">{exercise.exercise_name}</h2>
+        {exercise.equipment_type && (
+          <span className="text-xs text-slate-600 capitalize">{exercise.equipment_type}</span>
+        )}
+        {exercise.progression_note && (
+          <div className="text-xs text-green-400 mt-1">{exercise.progression_note}</div>
+        )}
+      </div>
+
+      {/* Sets panel */}
+      <div className="panel-frosted">
+        {/* Column headers */}
+        <div className="flex items-center mb-2 px-2 pt-1">
+          <div className="flex-1 text-center text-[11px] font-medium uppercase tracking-wider text-slate-600">
+            Weight
+          </div>
+          <div className="flex-1 text-center text-[11px] font-medium uppercase tracking-wider text-slate-600">
+            Reps
+          </div>
+          <div className="w-12 text-center text-[11px] font-medium uppercase tracking-wider text-slate-600">
+            Log
+          </div>
+        </div>
+
+        {/* Set rows */}
         {sets.map((set) => (
           <SetRow
             key={set.set_num}
             set={set}
-            exerciseId={exercise.exercise_id}
+            exercise={exercise}
             targetRir={targetRir}
             onUpdate={onUpdateSet}
             onComplete={onCompleteSet}
@@ -271,81 +285,135 @@ function ExerciseCard({ exercise, sets, targetRir, onUpdateSet, onCompleteSet }:
 
 interface SetRowProps {
   set: WorkingSet
-  exerciseId: string
+  exercise: ExerciseInSession
   targetRir: number
   onUpdate: (exerciseId: string, setNum: number, field: keyof WorkingSet, value: number | boolean) => void
   onComplete: (exerciseId: string, setNum: number) => void
 }
 
-function SetRow({ set, exerciseId, targetRir, onUpdate, onComplete }: SetRowProps) {
-  const isDeload = targetRir === -1
+type SetState = 'pending' | 'logged' | 'exceeded' | 'under'
+
+function getSetState(set: WorkingSet): SetState {
+  if (!set.completed) return 'pending'
+  if (set.reps > set.target_reps_max) return 'exceeded'
+  if (set.reps < set.target_reps_min) return 'under'
+  return 'logged'
+}
+
+const SET_STYLES: Record<SetState, { inputBg: string; inputBorder: string; textColor: string }> = {
+  pending: {
+    inputBg: '#162a3e',
+    inputBorder: '#1e3a52',
+    textColor: '#cbd5e1',
+  },
+  logged: {
+    inputBg: '#0c2d4e',
+    inputBorder: '#164e7a',
+    textColor: '#38bdf8',
+  },
+  exceeded: {
+    inputBg: 'rgba(168,85,247,0.08)',
+    inputBorder: 'rgba(168,85,247,0.2)',
+    textColor: '#c084fc',
+  },
+  under: {
+    inputBg: 'rgba(239,68,68,0.06)',
+    inputBorder: 'rgba(239,68,68,0.15)',
+    textColor: '#f87171',
+  },
+}
+
+function SetRow({ set, exercise, onUpdate, onComplete }: SetRowProps) {
+  const state = getSetState(set)
+  const styles = SET_STYLES[state]
 
   return (
-    <div
-      className={`flex items-center gap-2 p-2 rounded ${
-        set.completed ? 'bg-green-900/30' : 'bg-slate-800'
-      }`}
-    >
-      <div className="w-8 text-center text-sm text-slate-500">#{set.set_num}</div>
-
-      <div className="flex-1 flex items-center gap-2">
-        <div className="flex-1">
-          <label className="text-xs text-slate-500">Weight</label>
-          <input
-            type="number"
-            step="0.5"
-            value={set.weight || ''}
-            onChange={(e) => onUpdate(exerciseId, set.set_num, 'weight', parseFloat(e.target.value) || 0)}
-            className="input text-sm py-1"
-            disabled={set.completed}
-          />
-        </div>
-
-        <div className="w-16">
-          <label className="text-xs text-slate-500">Reps</label>
-          <input
-            type="number"
-            value={set.reps || ''}
-            onChange={(e) => onUpdate(exerciseId, set.set_num, 'reps', parseInt(e.target.value) || 0)}
-            className="input text-sm py-1"
-            disabled={set.completed}
-            placeholder={`${set.target_reps_min}-${set.target_reps_max}`}
-          />
-        </div>
-
-        {!isDeload && (
-          <div className="w-14">
-            <label className="text-xs text-slate-500">RiR</label>
-            <input
-              type="number"
-              min="0"
-              max="5"
-              value={set.rir ?? ''}
-              onChange={(e) => onUpdate(exerciseId, set.set_num, 'rir', parseInt(e.target.value) || 0)}
-              className="input text-sm py-1"
-              disabled={set.completed}
-            />
-          </div>
-        )}
+    <div className="flex items-center gap-2 mb-1.5 rounded-lg px-2 py-1.5">
+      {/* Weight input */}
+      <div className="flex-1">
+        <input
+          type="number"
+          step="0.5"
+          value={set.weight || ''}
+          onChange={(e) => onUpdate(exercise.exercise_id, set.set_num, 'weight', parseFloat(e.target.value) || 0)}
+          readOnly={set.completed}
+          className="set-input"
+          style={{
+            background: styles.inputBg,
+            border: `1px solid ${styles.inputBorder}`,
+            color: styles.textColor,
+          }}
+        />
       </div>
 
-      {set.completed ? (
-        <div className="w-10 flex justify-center">
-          <CheckIcon className="w-6 h-6 text-green-400" />
-        </div>
-      ) : (
-        <button
-          onClick={() => {
-            if (set.weight > 0 && set.reps > 0) {
-              onComplete(exerciseId, set.set_num)
-            }
+      {/* Reps input */}
+      <div className="flex-1">
+        <input
+          type="number"
+          value={set.completed ? set.reps : (set.reps || '')}
+          onChange={(e) => onUpdate(exercise.exercise_id, set.set_num, 'reps', parseInt(e.target.value) || 0)}
+          readOnly={set.completed}
+          placeholder={`${set.target_reps_min}-${set.target_reps_max}`}
+          className="set-input reps-ghost"
+          style={{
+            background: styles.inputBg,
+            border: `1px solid ${styles.inputBorder}`,
+            color: styles.textColor,
           }}
-          disabled={!set.weight || !set.reps}
-          className="w-10 h-10 flex items-center justify-center rounded bg-protocol-600 hover:bg-protocol-500 disabled:opacity-30 disabled:cursor-not-allowed"
-        >
-          <CheckIcon className="w-5 h-5" />
-        </button>
-      )}
+        />
+      </div>
+
+      {/* Check / State button */}
+      <div className="w-12 flex justify-center">
+        {set.completed ? (
+          <CompletedButton state={state} />
+        ) : (
+          <button
+            onClick={() => {
+              if (set.weight > 0 && set.reps > 0) {
+                onComplete(exercise.exercise_id, set.set_num)
+              }
+            }}
+            disabled={!set.weight || !set.reps}
+            className="w-9 h-9 rounded-lg border-2 flex items-center justify-center check-pop disabled:opacity-30 disabled:cursor-not-allowed"
+            style={{ borderColor: '#1e3a52' }}
+          />
+        )}
+      </div>
+    </div>
+  )
+}
+
+function CompletedButton({ state }: { state: SetState }) {
+  if (state === 'exceeded') {
+    return (
+      <div
+        className="w-9 h-9 rounded-lg flex items-center justify-center check-pop"
+        style={{ background: '#7c3aed' }}
+      >
+        <ArrowUpIcon className="w-4 h-4 text-white" />
+      </div>
+    )
+  }
+
+  if (state === 'under') {
+    return (
+      <div
+        className="w-9 h-9 rounded-lg flex items-center justify-center check-pop"
+        style={{ background: '#dc2626' }}
+      >
+        <ArrowDownIcon className="w-4 h-4 text-white" />
+      </div>
+    )
+  }
+
+  // logged (met target)
+  return (
+    <div
+      className="w-9 h-9 rounded-lg flex items-center justify-center check-pop"
+      style={{ background: '#0284c7' }}
+    >
+      <CheckIcon className="w-4 h-4 text-white" />
     </div>
   )
 }

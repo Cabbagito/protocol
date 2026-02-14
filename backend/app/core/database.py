@@ -12,6 +12,7 @@ from app.core.config import settings
 is_remote = (
     "localhost" not in settings.async_database_url
     and "127.0.0.1" not in settings.async_database_url
+    and "@db:" not in settings.async_database_url
 )
 
 # Use SSL and pgbouncer-compatible settings for remote databases (Supabase, etc.)

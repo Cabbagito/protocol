@@ -76,6 +76,8 @@ export interface Mesocycle {
 export interface ExerciseInSession {
   exercise_id: string
   exercise_name: string
+  muscle_groups: string[]
+  equipment_type: string
   order: number
   target_sets: number
   target_rep_min: number

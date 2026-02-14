@@ -6,8 +6,10 @@ export default {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['Inter', 'system-ui', 'sans-serif'],
+      },
       colors: {
-        // Custom color palette for Protocol
         protocol: {
           50: '#f0f9ff',
           100: '#e0f2fe',
@@ -20,8 +22,46 @@ export default {
           800: '#075985',
           900: '#0c4a6e',
           950: '#082f49',
-        }
-      }
+        },
+        navy: {
+          deep: '#070d15',
+          base: '#0d1b2a',
+          card: '#0f1d2e',
+          panel: '#132438',
+          input: '#162a3e',
+          border: '#1e3a52',
+        },
+        muscle: {
+          back: '#14b8a6',
+          'back-light': '#2dd4bf',
+          biceps: '#6366f1',
+          'biceps-light': '#818cf8',
+          shoulders: '#a855f7',
+          'shoulders-light': '#c084fc',
+          chest: '#f97316',
+          'chest-light': '#fb923c',
+          triceps: '#ec4899',
+          'triceps-light': '#f472b6',
+          quads: '#eab308',
+          'quads-light': '#facc15',
+          hamstrings: '#22c55e',
+          'hamstrings-light': '#4ade80',
+          glutes: '#f43f5e',
+          'glutes-light': '#fb7185',
+          calves: '#06b6d4',
+          'calves-light': '#22d3ee',
+          core: '#f59e0b',
+          'core-light': '#fbbf24',
+          traps: '#8b5cf6',
+          'traps-light': '#a78bfa',
+          forearms: '#64748b',
+          'forearms-light': '#94a3b8',
+        },
+      },
+      boxShadow: {
+        'card': '0 4px 12px rgba(0,0,0,0.5)',
+        'progress-glow': '0 0 8px rgba(74,222,128,0.5), 0 0 2px rgba(74,222,128,0.8)',
+      },
     },
   },
   plugins: [],
