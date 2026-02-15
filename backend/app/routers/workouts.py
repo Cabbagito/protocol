@@ -136,7 +136,9 @@ async def log_sets(
     _: str = Depends(get_current_user),
 ):
     """Log sets into the mesocycle structure."""
-    result = await db.execute(select(Mesocycle).where(Mesocycle.id == data.mesocycle_id))
+    result = await db.execute(
+        select(Mesocycle).where(Mesocycle.id == data.mesocycle_id).with_for_update()
+    )
     mesocycle = result.scalar_one_or_none()
     if not mesocycle:
         raise HTTPException(status_code=404, detail="Mesocycle not found")

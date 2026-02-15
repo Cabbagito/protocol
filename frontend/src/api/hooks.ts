@@ -256,7 +256,6 @@ export function useExerciseProgress(exerciseId: string) {
 }
 
 export function useLogSets() {
-  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (data: {
       mesocycle_id: string
@@ -265,10 +264,5 @@ export function useLogSets() {
       sets: { exercise_id: string; set_num: number; weight: number; reps: number; rir?: number | null }[]
       notes?: string | null
     }) => api.post('/workouts/log', data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.workouts.all })
-      queryClient.invalidateQueries({ queryKey: queryKeys.mesocycles.active })
-      queryClient.invalidateQueries({ queryKey: queryKeys.mesocycles.all })
-    },
   })
 }

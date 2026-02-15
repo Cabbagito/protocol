@@ -1,15 +1,16 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useToast } from '../components/Toast'
-import { ProtocolLogo, CheckIcon, ArrowUpIcon, ArrowDownIcon } from '../components/Icons'
-import { useLogSets } from '../api/hooks'
+import { ProtocolLogo, CheckIcon, ArrowUpIcon, ArrowDownIcon, ChevronDownIcon } from '../components/Icons'
+import { useLogSets, useMesocycle, queryKeys } from '../api/hooks'
 import { api } from '../api/client'
 import ProgressBar from '../components/ProgressBar'
 import RirBadge from '../components/RirBadge'
 import MuscleGroupBadge from '../components/MuscleGroupBadge'
+import MesoGrid from '../components/MesoGrid'
 import { getMuscleColor } from '../lib/muscleColors'
-import type { WorkoutTemplate, MesoExercise, MesoSet } from '../types'
+import type { WorkoutTemplate, MesoExercise, MesoSet, Mesocycle } from '../types'
 
 interface WorkingSet extends MesoSet {
   exercise_id: string
@@ -17,8 +18,19 @@ interface WorkingSet extends MesoSet {
   completed: boolean
 }
 
+function getNextSession(weekIndex: number, sessionIndex: number, mesocycle: Mesocycle) {
+  const weeks = mesocycle.structure.weeks
+  const currentWeek = weeks[weekIndex]
+  if (currentWeek && sessionIndex + 1 < currentWeek.sessions.length)
+    return { weekIndex, sessionIndex: sessionIndex + 1 }
+  if (weekIndex + 1 < weeks.length)
+    return { weekIndex: weekIndex + 1, sessionIndex: 0 }
+  return null
+}
+
 export default function Workout() {
   const toast = useToast()
+  const queryClient = useQueryClient()
   const { mesocycleId } = useParams<{ mesocycleId: string }>()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
@@ -33,9 +45,21 @@ export default function Workout() {
       : api.get<WorkoutTemplate>(`/workouts/template/${mesocycleId}`),
     enabled: !!mesocycleId,
   })
+  const { data: mesocycle } = useMesocycle(mesocycleId!)
   const logSets = useLogSets()
   const [sets, setSets] = useState<WorkingSet[]>([])
   const [initialized, setInitialized] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [headerExpanded, setHeaderExpanded] = useState(false)
+  const pendingSavesRef = useRef(0)
+  const prevCompletedRef = useRef(0)
+
+  // Reset state when navigating to a different session (same route, different query params)
+  useEffect(() => {
+    setInitialized(false)
+    setSets([])
+    prevCompletedRef.current = 0
+  }, [weekParam, sessionParam])
 
   useEffect(() => {
     if (template && !initialized) {
@@ -54,6 +78,7 @@ export default function Workout() {
         }
       }
       setSets(initialSets)
+      prevCompletedRef.current = initialSets.filter(s => s.completed).length
       setInitialized(true)
     }
   }, [template, initialized])
@@ -88,26 +113,71 @@ export default function Workout() {
     )
   }, [])
 
-  const handleSave = async () => {
+  // Auto-save: send all completed sets to backend
+  const triggerAutoSave = useCallback((currentSets: WorkingSet[]) => {
     if (!mesocycleId || !template) return
+    const completed = currentSets.filter(s => s.completed)
+    if (completed.length === 0) return
 
-    try {
-      await logSets.mutateAsync({
-        mesocycle_id: mesocycleId,
-        week_index: template.week_index,
-        session_index: template.session_index,
-        notes: null,
-        sets: sets.filter((s) => s.completed).map((s) => ({
-          exercise_id: s.exercise_id,
-          set_num: s.set_num,
-          weight: s.weight ?? 0,
-          reps: s.reps ?? 0,
-          rir: s.rir,
-        })),
+    pendingSavesRef.current++
+    setIsSaving(true)
+
+    logSets.mutateAsync({
+      mesocycle_id: mesocycleId,
+      week_index: template.week_index,
+      session_index: template.session_index,
+      sets: completed.map(s => ({
+        exercise_id: s.exercise_id,
+        set_num: s.set_num,
+        weight: s.weight ?? 0,
+        reps: s.reps ?? 0,
+        rir: s.rir,
+      })),
+      notes: null,
+    }).catch(() => {
+      toast.showError('Auto-save failed')
+    }).finally(() => {
+      pendingSavesRef.current--
+      if (pendingSavesRef.current === 0) setIsSaving(false)
+    })
+  }, [mesocycleId, template, logSets, toast])
+
+  // Trigger auto-save when completed count increases
+  useEffect(() => {
+    if (!initialized) return
+    const count = sets.filter(s => s.completed).length
+    if (count > prevCompletedRef.current) {
+      triggerAutoSave(sets)
+    }
+    prevCompletedRef.current = count
+  }, [sets, initialized, triggerAutoSave])
+
+  const isLastSession = useMemo(() => {
+    if (!mesocycle || !template) return false
+    return getNextSession(template.week_index, template.session_index, mesocycle) === null
+  }, [mesocycle, template])
+
+  const handleFinishOrNext = async () => {
+    // Wait for in-flight saves
+    if (pendingSavesRef.current > 0) {
+      setIsSaving(true)
+      await new Promise<void>(resolve => {
+        const check = setInterval(() => {
+          if (pendingSavesRef.current === 0) { clearInterval(check); resolve() }
+        }, 100)
       })
+    }
+
+    // Invalidate caches before navigation
+    queryClient.invalidateQueries({ queryKey: queryKeys.workouts.all })
+    queryClient.invalidateQueries({ queryKey: queryKeys.mesocycles.active })
+    queryClient.invalidateQueries({ queryKey: queryKeys.mesocycles.all })
+
+    if (isLastSession) {
       navigate(`/mesocycles/${mesocycleId}`)
-    } catch {
-      toast.showError('Failed to save workout')
+    } else {
+      const next = getNextSession(template!.week_index, template!.session_index, mesocycle!)
+      navigate(`/workout/${mesocycleId}?week=${next!.weekIndex}&session=${next!.sessionIndex}`)
     }
   }
 
@@ -130,10 +200,21 @@ export default function Workout() {
   return (
     <div className="pb-4">
       {/* Sticky Header */}
-      <div className="sticky top-0 z-40" style={{ background: '#0d1b2a' }}>
-        <div className="px-5 pt-5 pb-4 flex items-center justify-between">
+      <div className="sticky top-0 z-40 relative" style={{ background: '#0d1b2a' }}>
+        {isSaving && (
+          <div className="absolute right-4 top-4 z-50">
+            <div className="w-2 h-2 rounded-full bg-sky-400 animate-pulse" />
+          </div>
+        )}
+        <div
+          className="px-5 pt-5 pb-4 flex items-center justify-between cursor-pointer"
+          onClick={() => setHeaderExpanded(prev => !prev)}
+        >
           <div className="flex items-center gap-3 min-w-0">
-            <button onClick={() => navigate(-1)} className="flex-shrink-0">
+            <button
+              onClick={(e) => { e.stopPropagation(); navigate(-1) }}
+              className="flex-shrink-0"
+            >
               <ProtocolLogo className="w-9 h-9" />
             </button>
             <div className="min-w-0">
@@ -145,9 +226,22 @@ export default function Workout() {
               </span>
             </div>
           </div>
-          <RirBadge rir={template.target_rir} />
+          <div className="flex items-center gap-2">
+            <RirBadge rir={template.target_rir} />
+            <ChevronDownIcon className={`w-4 h-4 text-slate-600 transition-transform duration-300 ${headerExpanded ? 'rotate-180' : ''}`} />
+          </div>
         </div>
         <ProgressBar percent={totalSets > 0 ? (completedSets / totalSets) * 100 : 0} />
+
+        {/* Expandable drawer */}
+        <div
+          className="overflow-hidden transition-all duration-300 ease-in-out"
+          style={{ maxHeight: headerExpanded ? '300px' : '0px' }}
+        >
+          <div className="px-4 py-3">
+            {mesocycle && <MesoGrid mesocycle={mesocycle} compact />}
+          </div>
+        </div>
       </div>
 
       {/* Exercise Cards */}
@@ -163,16 +257,22 @@ export default function Workout() {
             onUncompleteSet={uncompleteSet}
           />
         ))}
-
-        {/* Save Button */}
-        <button
-          onClick={handleSave}
-          disabled={logSets.isPending || completedSets === 0}
-          className="btn btn-primary w-full disabled:opacity-50"
-        >
-          {logSets.isPending ? 'Saving...' : `Save Workout (${completedSets} sets)`}
-        </button>
       </div>
+
+      {/* Context-aware sticky button */}
+      {completedSets === totalSets && totalSets > 0 && (
+        <div className="fixed bottom-16 left-0 right-0 z-30 px-4 pb-3">
+          <div className="max-w-lg mx-auto">
+            <button
+              onClick={handleFinishOrNext}
+              disabled={isSaving}
+              className="btn btn-primary w-full"
+            >
+              {isSaving ? 'Saving...' : isLastSession ? 'Finish Mesocycle' : 'Next Workout'}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
