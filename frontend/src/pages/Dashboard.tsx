@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useActiveMesocycle, useWorkoutHistory } from '../api/hooks'
 import { ArrowRightIcon, ProtocolLogo } from '../components/Icons'
-import ProgressBar from '../components/ProgressBar'
+import MesoGrid from '../components/MesoGrid'
 import type { MesoSession } from '../types'
 
 export default function Dashboard() {
@@ -58,31 +58,7 @@ export default function Dashboard() {
 
       {/* Active Mesocycle */}
       {mesocycle ? (
-        <div className="card">
-          <div className="flex items-start justify-between mb-3">
-            <div>
-              <h2 className="font-semibold text-slate-200">{mesocycle.name}</h2>
-              <div className="text-sm text-slate-500 mt-0.5">
-                Week {mesocycle.current_week} of {mesocycle.total_weeks}
-                {' '}&middot;{' '}
-                {isDeloadWeek ? (
-                  <span className="text-yellow-400">Deload Week</span>
-                ) : (
-                  <span>RiR {mesocycle.current_rir}</span>
-                )}
-              </div>
-            </div>
-            <Link to={`/mesocycles/${mesocycle.id}`} className="text-protocol-400 text-sm">
-              View
-            </Link>
-          </div>
-
-          <ProgressBar percent={(mesocycle.current_week / mesocycle.total_weeks) * 100} />
-
-          <div className="text-xs text-slate-600 mt-2 text-center">
-            {mesocycle.workouts_completed} workouts completed
-          </div>
-        </div>
+        <MesoGrid mesocycle={mesocycle} />
       ) : (
         <div className="card">
           <h2 className="font-semibold mb-2 text-slate-200">Get Started</h2>
