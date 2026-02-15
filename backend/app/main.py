@@ -8,7 +8,7 @@ from sqlalchemy import text
 
 from app.core.config import settings
 from app.core.database import async_session, engine
-from app.core.seed import seed_default_splits, seed_exercises
+from app.core.seed import reset_and_reseed, seed_default_splits, seed_exercises
 from app.models import base  # noqa: F401 - Import to register models
 from app.routers import auth, exercises, health, mesocycles, splits, workouts
 
@@ -28,13 +28,16 @@ async def lifespan(app: FastAPI):
 
     # Seed exercises and default splits
     async with async_session() as session:
-        count = await seed_exercises(session)
-        if count > 0:
-            print(f"Seeded/updated {count} exercises")
+        if settings.dev_reset_db:
+            await reset_and_reseed(session)
+        else:
+            count = await seed_exercises(session)
+            if count > 0:
+                print(f"Seeded/updated {count} exercises")
 
-        added = await seed_default_splits(session)
-        if added > 0:
-            print(f"Seeded {added} default split(s)")
+            added = await seed_default_splits(session)
+            if added > 0:
+                print(f"Seeded {added} default split(s)")
 
     yield
     # Shutdown: dispose engine

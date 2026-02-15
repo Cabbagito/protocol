@@ -1,9 +1,11 @@
 import logging
+from datetime import date, timedelta
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.exercise import Exercise
+from app.models.mesocycle import Mesocycle, WorkoutLog
 from app.models.split import Session, SessionExercise, Split
 
 logger = logging.getLogger(__name__)
@@ -444,7 +446,7 @@ HERO_SPLIT = {
     "name": "Hero Split",
     "sessions": [
         {
-            "name": "Back / Biceps / Shoulders / Forearms",
+            "name": "Pull",
             "day_order": 0,
             "exercises": [
                 {"seed_key": "lat_pulldown", "sets": 3, "rep_min": 8, "rep_max": 12},
@@ -456,7 +458,7 @@ HERO_SPLIT = {
             ],
         },
         {
-            "name": "Chest / Triceps / Shoulders",
+            "name": "Push",
             "day_order": 1,
             "exercises": [
                 {"seed_key": "incline_dumbbell_press", "sets": 3, "rep_min": 8, "rep_max": 12},
@@ -469,7 +471,7 @@ HERO_SPLIT = {
             ],
         },
         {
-            "name": "Legs / Shoulders / Triceps",
+            "name": "Legs",
             "day_order": 2,
             "exercises": [
                 {"seed_key": "leg_curl", "sets": 3, "rep_min": 8, "rep_max": 12},
@@ -481,7 +483,7 @@ HERO_SPLIT = {
             ],
         },
         {
-            "name": "Back / Biceps / Shoulders / Forearms",
+            "name": "Pull",
             "day_order": 3,
             "exercises": [
                 {"seed_key": "lat_pulldown", "sets": 3, "rep_min": 8, "rep_max": 12},
@@ -493,7 +495,7 @@ HERO_SPLIT = {
             ],
         },
         {
-            "name": "Chest / Triceps / Shoulders / Biceps",
+            "name": "Push",
             "day_order": 4,
             "exercises": [
                 {"seed_key": "incline_dumbbell_press", "sets": 3, "rep_min": 8, "rep_max": 12},
@@ -628,3 +630,130 @@ async def seed_default_splits(session: AsyncSession) -> int:
     await session.commit()
     logger.info("Seeded default split: %s", HERO_SPLIT["name"])
     return 1
+
+
+# Realistic weights per exercise seed_key (kg)
+_DEMO_WEIGHTS: dict[str, float] = {
+    "lat_pulldown": 60,
+    "seated_cable_row": 55,
+    "preacher_curl": 25,
+    "freemotion_rear_delt_fly": 15,
+    "dumbbell_shrug": 30,
+    "cable_wrist_curl": 15,
+    "incline_dumbbell_press": 28,
+    "dumbbell_bench_press": 32,
+    "dumbbell_skull_crusher": 12,
+    "overhead_tricep_extension": 25,
+    "lateral_raise": 10,
+    "dumbbell_front_raise": 10,
+    "tricep_pushdown": 30,
+    "leg_curl": 45,
+    "leg_press": 150,
+    "bulgarian_split_squat": 20,
+    "calf_raise": 80,
+    "lying_dumbbell_curl": 12,
+    "cable_wrist_curl": 15,
+    "reverse_curl": 20,
+    "dumbbell_flye": 16,
+}
+
+
+async def seed_demo_mesocycle(session: AsyncSession) -> None:
+    """Seed a demo mesocycle with week-1 workout logs for testing."""
+    # Look up the Hero Split
+    result = await session.execute(
+        select(Split).where(Split.seed_key == HERO_SPLIT["seed_key"])
+    )
+    split = result.scalar_one_or_none()
+    if not split:
+        logger.warning("Hero Split not found, skipping demo mesocycle seed")
+        return
+
+    # Load sessions with their exercises
+    result = await session.execute(
+        select(Session).where(Session.split_id == split.id).order_by(Session.day_order)
+    )
+    sessions = result.scalars().all()
+
+    # Load exercise lookup
+    result = await session.execute(select(Exercise).where(Exercise.seed_key.isnot(None)))
+    exercises_by_id = {e.id: e for e in result.scalars().all()}
+
+    # Create the mesocycle (started ~2 weeks ago)
+    start_date = date.today() - timedelta(days=14)
+    meso = Mesocycle(
+        split_id=split.id,
+        name="Demo Mesocycle",
+        total_weeks=4,
+        rir_scheme=[3, 2, 1, -1],
+        current_week=2,
+        started_at=start_date,
+        is_active=True,
+    )
+    session.add(meso)
+    await session.flush()
+
+    # Create 5 workout logs for week 1
+    for day_offset, sess in enumerate(sessions):
+        log_date = start_date + timedelta(days=day_offset)
+
+        # Load session exercises
+        result = await session.execute(
+            select(SessionExercise)
+            .where(SessionExercise.session_id == sess.id)
+            .order_by(SessionExercise.order)
+        )
+        session_exercises = result.scalars().all()
+
+        # Build sets: 3 sets per exercise
+        sets_data = []
+        for se in session_exercises:
+            ex = exercises_by_id.get(se.exercise_id)
+            seed_key = ex.seed_key if ex else None
+            weight = _DEMO_WEIGHTS.get(seed_key, 20)
+            for set_num in range(1, 4):
+                sets_data.append(
+                    {
+                        "exercise_id": se.exercise_id,
+                        "set_num": set_num,
+                        "weight": weight,
+                        "reps": 10,
+                        "rir": 3,
+                        "completed": True,
+                    }
+                )
+
+        log = WorkoutLog(
+            mesocycle_id=meso.id,
+            session_id=sess.id,
+            week_number=1,
+            date=log_date,
+            sets=sets_data,
+        )
+        session.add(log)
+
+    await session.commit()
+    logger.info(
+        "Seeded demo mesocycle '%s' with %d workout logs", meso.name, len(sessions)
+    )
+
+
+async def reset_and_reseed(session: AsyncSession) -> None:
+    """Wipe all data and re-seed from scratch (dev mode only)."""
+    logger.warning("DEV_RESET_DB is enabled — wiping and re-seeding all data")
+
+    # Delete in FK-safe order
+    await session.execute(delete(WorkoutLog))
+    await session.execute(delete(Mesocycle))
+    await session.execute(delete(SessionExercise))
+    await session.execute(delete(Session))
+    await session.execute(delete(Split))
+    await session.execute(delete(Exercise))
+    await session.commit()
+
+    # Re-seed
+    await seed_exercises(session)
+    await seed_default_splits(session)
+    await seed_demo_mesocycle(session)
+
+    logger.info("Dev reset complete: exercises, splits, and demo mesocycle seeded")
