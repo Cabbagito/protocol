@@ -35,9 +35,6 @@ export default function Workout() {
   })
   const logSets = useLogSets()
   const [sets, setSets] = useState<WorkingSet[]>([])
-  const [notes, setNotes] = useState('')
-  const [restTimer, setRestTimer] = useState<number | null>(null)
-  const [timerRunning, setTimerRunning] = useState(false)
   const [initialized, setInitialized] = useState(false)
 
   useEffect(() => {
@@ -61,21 +58,6 @@ export default function Workout() {
     }
   }, [template, initialized])
 
-  useEffect(() => {
-    let interval: number | undefined
-    if (timerRunning && restTimer !== null && restTimer > 0) {
-      interval = window.setInterval(() => {
-        setRestTimer((t) => (t !== null && t > 0 ? t - 1 : 0))
-      }, 1000)
-    } else if (restTimer === 0) {
-      setTimerRunning(false)
-      if ('vibrate' in navigator) {
-        navigator.vibrate([200, 100, 200])
-      }
-    }
-    return () => clearInterval(interval)
-  }, [timerRunning, restTimer])
-
   const updateSet = useCallback((exerciseId: string, setNum: number, field: keyof WorkingSet, value: number | boolean) => {
     setSets((prev) =>
       prev.map((s) =>
@@ -94,8 +76,16 @@ export default function Workout() {
           : s
       )
     )
-    setRestTimer(90)
-    setTimerRunning(true)
+  }, [])
+
+  const uncompleteSet = useCallback((exerciseId: string, setNum: number) => {
+    setSets((prev) =>
+      prev.map((s) =>
+        s.exercise_id === exerciseId && s.set_num === setNum
+          ? { ...s, completed: false }
+          : s
+      )
+    )
   }, [])
 
   const handleSave = async () => {
@@ -106,7 +96,7 @@ export default function Workout() {
         mesocycle_id: mesocycleId,
         week_index: template.week_index,
         session_index: template.session_index,
-        notes: notes || null,
+        notes: null,
         sets: sets.filter((s) => s.completed).map((s) => ({
           exercise_id: s.exercise_id,
           set_num: s.set_num,
@@ -119,12 +109,6 @@ export default function Workout() {
     } catch {
       toast.showError('Failed to save workout')
     }
-  }
-
-  const formatTime = (seconds: number): string => {
-    const mins = Math.floor(seconds / 60)
-    const secs = seconds % 60
-    return `${mins}:${secs.toString().padStart(2, '0')}`
   }
 
   if (isLoading) {
@@ -166,37 +150,6 @@ export default function Workout() {
         <ProgressBar percent={totalSets > 0 ? (completedSets / totalSets) * 100 : 0} />
       </div>
 
-      {/* Rest Timer */}
-      {timerRunning && restTimer !== null && (
-        <div className="mx-2.5 mt-4">
-          <div className="card" style={{ borderColor: 'rgba(56,189,248,0.2)' }}>
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-sm text-slate-500">Rest Timer</div>
-                <div className="text-3xl font-bold text-protocol-400">{formatTime(restTimer)}</div>
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setRestTimer((t) => (t || 0) + 30)}
-                  className="btn btn-secondary text-sm px-3"
-                >
-                  +30s
-                </button>
-                <button
-                  onClick={() => {
-                    setTimerRunning(false)
-                    setRestTimer(null)
-                  }}
-                  className="btn btn-secondary text-sm px-3"
-                >
-                  Skip
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Exercise Cards */}
       <div className="px-2.5 pt-4 flex flex-col gap-3">
         {exerciseGroups.map((ex) => (
@@ -207,19 +160,9 @@ export default function Workout() {
             targetRir={template.target_rir}
             onUpdateSet={updateSet}
             onCompleteSet={completeSet}
+            onUncompleteSet={uncompleteSet}
           />
         ))}
-
-        {/* Notes */}
-        <div className="card">
-          <label className="text-sm text-slate-500 block mb-2">Notes (optional)</label>
-          <textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder="Any notes about this workout..."
-            className="input min-h-[80px]"
-          />
-        </div>
 
         {/* Save Button */}
         <button
@@ -240,9 +183,10 @@ interface ExerciseCardProps {
   targetRir: number
   onUpdateSet: (exerciseId: string, setNum: number, field: keyof WorkingSet, value: number | boolean) => void
   onCompleteSet: (exerciseId: string, setNum: number) => void
+  onUncompleteSet: (exerciseId: string, setNum: number) => void
 }
 
-function ExerciseCard({ exercise, sets, targetRir, onUpdateSet, onCompleteSet }: ExerciseCardProps) {
+function ExerciseCard({ exercise, sets, targetRir, onUpdateSet, onCompleteSet, onUncompleteSet }: ExerciseCardProps) {
   const color = getMuscleColor(exercise.muscle_group)
 
   return (
@@ -284,6 +228,7 @@ function ExerciseCard({ exercise, sets, targetRir, onUpdateSet, onCompleteSet }:
             targetRir={targetRir}
             onUpdate={onUpdateSet}
             onComplete={onCompleteSet}
+            onUncomplete={onUncompleteSet}
           />
         ))}
       </div>
@@ -297,6 +242,7 @@ interface SetRowProps {
   targetRir: number
   onUpdate: (exerciseId: string, setNum: number, field: keyof WorkingSet, value: number | boolean) => void
   onComplete: (exerciseId: string, setNum: number) => void
+  onUncomplete: (exerciseId: string, setNum: number) => void
 }
 
 type SetState = 'pending' | 'logged' | 'exceeded' | 'under'
@@ -331,7 +277,7 @@ const SET_STYLES: Record<SetState, { inputBg: string; inputBorder: string; textC
   },
 }
 
-function SetRow({ set, exercise, onUpdate, onComplete }: SetRowProps) {
+function SetRow({ set, exercise, onUpdate, onComplete, onUncomplete }: SetRowProps) {
   const state = getSetState(set)
   const styles = SET_STYLES[state]
 
@@ -374,7 +320,7 @@ function SetRow({ set, exercise, onUpdate, onComplete }: SetRowProps) {
       {/* Check / State button */}
       <div className="w-12 flex justify-center">
         {set.completed ? (
-          <CompletedButton state={state} />
+          <CompletedButton state={state} onClick={() => onUncomplete(exercise.exercise_id, set.set_num)} />
         ) : (
           <button
             onClick={() => {
@@ -395,36 +341,39 @@ function SetRow({ set, exercise, onUpdate, onComplete }: SetRowProps) {
   )
 }
 
-function CompletedButton({ state }: { state: SetState }) {
+function CompletedButton({ state, onClick }: { state: SetState; onClick: () => void }) {
   if (state === 'exceeded') {
     return (
-      <div
+      <button
+        onClick={onClick}
         className="w-9 h-9 rounded-lg flex items-center justify-center check-pop"
         style={{ background: '#7c3aed' }}
       >
         <ArrowUpIcon className="w-4 h-4 text-white" />
-      </div>
+      </button>
     )
   }
 
   if (state === 'under') {
     return (
-      <div
+      <button
+        onClick={onClick}
         className="w-9 h-9 rounded-lg flex items-center justify-center check-pop"
         style={{ background: '#dc2626' }}
       >
         <ArrowDownIcon className="w-4 h-4 text-white" />
-      </div>
+      </button>
     )
   }
 
   // logged (met target)
   return (
-    <div
+    <button
+      onClick={onClick}
       className="w-9 h-9 rounded-lg flex items-center justify-center check-pop"
       style={{ background: '#0284c7' }}
     >
       <CheckIcon className="w-4 h-4 text-white" />
-    </div>
+    </button>
   )
 }
