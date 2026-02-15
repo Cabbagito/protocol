@@ -1,12 +1,10 @@
 import { Link, useLocation } from 'react-router-dom'
 import { clsx } from 'clsx'
-import { HomeIcon, ChartIcon, CalendarIcon, DumbbellIcon } from './Icons'
+import { HomeIcon, DumbbellIcon } from './Icons'
 
 const navItems = [
   { path: '/', label: 'Home', icon: HomeIcon },
-  { path: '/mesocycles', label: 'Training', icon: ChartIcon },
-  { path: '/splits', label: 'Splits', icon: CalendarIcon },
-  { path: '/exercises', label: 'Exercises', icon: DumbbellIcon },
+  { path: '/workout', label: 'Workout', icon: DumbbellIcon },
 ]
 
 export default function Layout({ children }: { children: React.ReactNode }) {
@@ -29,7 +27,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       >
         <div className="flex justify-around items-center h-16 max-w-lg mx-auto">
           {navItems.map((item) => {
-            const isActive = location.pathname === item.path
+            const isActive =
+              item.path === '/'
+                ? location.pathname === '/'
+                : location.pathname.startsWith(item.path)
             return (
               <Link
                 key={item.path}

@@ -11,9 +11,11 @@ const Splits = lazy(() => import('./pages/Splits'))
 const SplitDetail = lazy(() => import('./pages/SplitDetail'))
 const Mesocycles = lazy(() => import('./pages/Mesocycles'))
 const MesocycleDetail = lazy(() => import('./pages/MesocycleDetail'))
+const WorkoutHub = lazy(() => import('./pages/WorkoutHub'))
 const Workout = lazy(() => import('./pages/Workout'))
 const WorkoutDetail = lazy(() => import('./pages/WorkoutDetail'))
 const Progress = lazy(() => import('./pages/Progress'))
+const Settings = lazy(() => import('./pages/Settings'))
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -71,9 +73,11 @@ export default function App() {
                       <Route path="/splits/:id" element={<SplitDetail />} />
                       <Route path="/mesocycles" element={<Mesocycles />} />
                       <Route path="/mesocycles/:id" element={<MesocycleDetail />} />
+                      <Route path="/workout" element={<WorkoutHub />} />
                       <Route path="/workout/:mesocycleId" element={<Workout />} />
                       <Route path="/workouts/:mesocycleId/:weekIndex/:sessionIndex" element={<WorkoutDetail />} />
                       <Route path="/progress" element={<Progress />} />
+                      <Route path="/settings" element={<Settings />} />
                     </Routes>
                   </Suspense>
                 </Layout>
