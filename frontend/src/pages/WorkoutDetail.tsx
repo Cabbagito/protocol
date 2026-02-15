@@ -1,24 +1,18 @@
 import { useParams, useNavigate } from 'react-router-dom'
-import { useToast } from '../components/Toast'
-import { ChevronLeftIcon, TrashIcon } from '../components/Icons'
-import { useWorkout, useDeleteWorkout } from '../api/hooks'
+import { ChevronLeftIcon } from '../components/Icons'
+import { useWorkoutDetail } from '../api/hooks'
+import MuscleGroupBadge from '../components/MuscleGroupBadge'
 
 export default function WorkoutDetail() {
-  const toast = useToast()
-  const { id } = useParams<{ id: string }>()
+  const { mesocycleId, weekIndex: weekStr, sessionIndex: sessionStr } = useParams<{
+    mesocycleId: string
+    weekIndex: string
+    sessionIndex: string
+  }>()
   const navigate = useNavigate()
-  const { data: workout, isLoading } = useWorkout(id!)
-  const deleteWorkout = useDeleteWorkout()
-
-  const handleDelete = async () => {
-    if (!confirm('Delete this workout?')) return
-    try {
-      await deleteWorkout.mutateAsync(id!)
-      navigate(-1)
-    } catch {
-      toast.showError('Failed to delete workout')
-    }
-  }
+  const weekIndex = parseInt(weekStr ?? '0')
+  const sessionIndex = parseInt(sessionStr ?? '0')
+  const { data: workout, isLoading } = useWorkoutDetail(mesocycleId!, weekIndex, sessionIndex)
 
   if (isLoading) {
     return <div className="text-slate-400 text-center py-8">Loading...</div>
@@ -28,19 +22,10 @@ export default function WorkoutDetail() {
     return <div className="text-slate-400 text-center py-8">Workout not found</div>
   }
 
-  // Group sets by exercise
-  const exerciseGroups: { [key: string]: { name: string; sets: typeof workout.sets } } = {}
-  for (const set of workout.sets) {
-    if (!exerciseGroups[set.exercise_id]) {
-      exerciseGroups[set.exercise_id] = { name: set.exercise_name || 'Unknown', sets: [] }
-    }
-    exerciseGroups[set.exercise_id]!.sets.push(set)
-  }
-
-  const totalVolume = workout.sets.reduce(
-    (sum, s) => sum + (s.completed ? s.weight * s.reps : 0),
-    0
+  const loggedSets = workout.exercises.flatMap((ex) =>
+    ex.sets.filter((s) => s.logged).map((s) => ({ ...s, weight: s.weight ?? 0, reps: s.reps ?? 0 }))
   )
+  const totalVolume = loggedSets.reduce((sum, s) => sum + s.weight * s.reps, 0)
 
   return (
     <div className="space-y-4">
@@ -49,14 +34,12 @@ export default function WorkoutDetail() {
           <ChevronLeftIcon className="w-6 h-6" />
         </button>
         <div className="flex-1">
-          <h1 className="text-xl font-bold">{workout.session_name || 'Workout'}</h1>
+          <h1 className="text-xl font-bold">{workout.session_name}</h1>
           <div className="text-sm text-slate-400">
-            Week {workout.week_number} &middot; {new Date(workout.date).toLocaleDateString()}
+            Week {workout.week_number}
+            {workout.date && <> &middot; {new Date(workout.date).toLocaleDateString()}</>}
           </div>
         </div>
-        <button onClick={handleDelete} className="text-slate-400 hover:text-red-400 p-2">
-          <TrashIcon className="w-5 h-5" />
-        </button>
       </header>
 
       {/* Summary */}
@@ -64,7 +47,7 @@ export default function WorkoutDetail() {
         <div className="grid grid-cols-2 gap-4 text-center">
           <div>
             <div className="text-2xl font-bold text-protocol-400">
-              {workout.sets.filter((s) => s.completed).length}
+              {loggedSets.length}
             </div>
             <div className="text-sm text-slate-400">Sets</div>
           </div>
@@ -78,27 +61,33 @@ export default function WorkoutDetail() {
       </div>
 
       {/* Exercises */}
-      {Object.entries(exerciseGroups).map(([exerciseId, group]) => (
-        <div key={exerciseId} className="card">
-          <h3 className="font-medium mb-2">{group.name}</h3>
-          <div className="space-y-1">
-            {group.sets.map((set, idx) => (
-              <div
-                key={idx}
-                className={`flex items-center gap-3 text-sm ${
-                  set.completed ? '' : 'text-slate-500 line-through'
-                }`}
-              >
-                <span className="text-slate-500 w-6">#{set.set_num}</span>
-                <span className="flex-1">{set.weight}kg x {set.reps}</span>
-                {set.rir !== null && set.rir !== undefined && (
-                  <span className="text-slate-400">RiR {set.rir}</span>
-                )}
-              </div>
-            ))}
+      {workout.exercises.map((exercise) => {
+        const exerciseLoggedSets = exercise.sets.filter((s) => s.logged)
+        if (exerciseLoggedSets.length === 0) return null
+
+        return (
+          <div key={exercise.exercise_id} className="card">
+            <div className="flex items-center gap-2 mb-2">
+              <h3 className="font-medium flex-1">{exercise.exercise_name}</h3>
+              <MuscleGroupBadge muscleGroup={exercise.muscle_group} />
+            </div>
+            <div className="space-y-1">
+              {exerciseLoggedSets.map((set) => (
+                <div
+                  key={set.set_num}
+                  className="flex items-center gap-3 text-sm"
+                >
+                  <span className="text-slate-500 w-6">#{set.set_num}</span>
+                  <span className="flex-1">{set.weight}kg x {set.reps}</span>
+                  {set.rir !== null && set.rir !== undefined && (
+                    <span className="text-slate-400">RiR {set.rir}</span>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-      ))}
+        )
+      })}
 
       {/* Notes */}
       {workout.notes && (

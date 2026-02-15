@@ -19,8 +19,6 @@ class SessionExerciseCreate(BaseModel):
     exercise_id: str
     order: int = Field(ge=0)
     sets: int = Field(default=3, ge=1, le=10)
-    rep_min: int = Field(default=8, ge=1, le=100)
-    rep_max: int = Field(default=12, ge=1, le=100)
 
 
 class SessionExerciseResponse(BaseModel):
@@ -29,8 +27,6 @@ class SessionExerciseResponse(BaseModel):
     exercise_name: str
     order: int
     sets: int
-    rep_min: int
-    rep_max: int
 
     class Config:
         from_attributes = True
@@ -235,8 +231,6 @@ async def add_session(
                 exercise_id=ex.exercise_id,
                 order=ex.order,
                 sets=ex.sets,
-                rep_min=ex.rep_min,
-                rep_max=ex.rep_max,
             )
             db.add(db_exercise)
 
@@ -294,8 +288,6 @@ async def update_session(
                 exercise_id=ex.exercise_id,
                 order=ex.order,
                 sets=ex.sets,
-                rep_min=ex.rep_min,
-                rep_max=ex.rep_max,
             )
             db.add(db_exercise)
 
@@ -383,8 +375,6 @@ def _session_to_response(session: Session) -> dict:
                 "exercise_name": ex.exercise.name,
                 "order": ex.order,
                 "sets": ex.sets,
-                "rep_min": ex.rep_min,
-                "rep_max": ex.rep_max,
             }
             for ex in session.exercises
         ],

@@ -1,27 +1,39 @@
 import { Link } from 'react-router-dom'
-import { useActiveMesocycle, useSplit, useWorkouts } from '../api/hooks'
+import { useActiveMesocycle, useWorkoutHistory } from '../api/hooks'
 import { ArrowRightIcon, ProtocolLogo } from '../components/Icons'
 import ProgressBar from '../components/ProgressBar'
+import type { MesoSession } from '../types'
 
 export default function Dashboard() {
   const { data: mesocycle, isLoading: mesoLoading } = useActiveMesocycle()
-  const { data: split } = useSplit(mesocycle?.split_id ?? '')
-  const { data: recentWorkouts = [] } = useWorkouts(
-    mesocycle ? { mesocycleId: mesocycle.id, limit: 5 } : { limit: 5 }
-  )
+  const { data: recentWorkouts = [] } = useWorkoutHistory(mesocycle?.id ?? '')
 
   const isDeloadWeek = mesocycle?.current_rir === -1
 
-  const getTodaysSuggestion = () => {
-    if (!split || !mesocycle) return null
-    const trainingSessions = split.sessions.filter((s) => !s.is_rest_day)
-    if (trainingSessions.length === 0) return null
-    const dayOfWeek = new Date().getDay()
-    const sessionIndex = dayOfWeek % trainingSessions.length
-    return trainingSessions[sessionIndex]
+  // Find next unlogged session from the structure
+  const getNextSession = (): {
+    weekIndex: number
+    sessionIndex: number
+    session: MesoSession
+  } | null => {
+    if (!mesocycle) return null
+    for (let wi = 0; wi < mesocycle.structure.weeks.length; wi++) {
+      const week = mesocycle.structure.weeks[wi]!
+      for (let si = 0; si < week.sessions.length; si++) {
+        const session = week.sessions[si]!
+        const allLogged =
+          session.exercises.length > 0 &&
+          session.exercises.every((ex) => ex.sets.every((s) => s.logged))
+        if (!allLogged) {
+          return { weekIndex: wi, sessionIndex: si, session }
+        }
+      }
+    }
+    return null
   }
 
-  const suggestedSession = getTodaysSuggestion()
+  const nextSession = getNextSession()
+  const currentWeekIndex = mesocycle ? mesocycle.current_week - 1 : -1
 
   if (mesoLoading) {
     return <div className="text-slate-500 text-center py-8">Loading...</div>
@@ -83,26 +95,26 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Today's Workout */}
-      {mesocycle && suggestedSession && (
+      {/* Next Workout */}
+      {mesocycle && nextSession && (
         <div className="card">
           <div className="flex items-start justify-between mb-3">
-            <h2 className="font-semibold text-slate-200">Today's Workout</h2>
+            <h2 className="font-semibold text-slate-200">Next Workout</h2>
             <Link to="/progress" className="text-protocol-400 text-sm">
               Progress
             </Link>
           </div>
 
           <Link
-            to={`/workout/${mesocycle.id}/${suggestedSession.id}`}
+            to={`/workout/${mesocycle.id}?week=${nextSession.weekIndex}&session=${nextSession.sessionIndex}`}
             className="block rounded-lg p-4 transition-colors"
             style={{ background: '#132438', border: '1px solid rgba(255,255,255,0.04)' }}
           >
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-lg font-semibold text-slate-200">{suggestedSession.name}</div>
+                <div className="text-lg font-semibold text-slate-200">{nextSession.session.session_name}</div>
                 <div className="text-sm text-slate-500 mt-1">
-                  {suggestedSession.exercises.length} exercises
+                  {nextSession.session.exercises.length} exercises
                 </div>
               </div>
               <div className="text-protocol-400">
@@ -119,26 +131,38 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* All Sessions */}
-      {mesocycle && split && (
+      {/* All Sessions (current week) */}
+      {mesocycle && mesocycle.structure.weeks[currentWeekIndex] && (
         <div className="card">
-          <h2 className="font-semibold mb-3 text-slate-200">Start Any Workout</h2>
+          <h2 className="font-semibold mb-3 text-slate-200">Week {mesocycle.current_week} Sessions</h2>
           <div className="grid grid-cols-2 gap-2">
-            {split.sessions
-              .filter((s) => !s.is_rest_day)
-              .map((session) => (
+            {mesocycle.structure.weeks[currentWeekIndex]!.sessions.map((session, si) => {
+              const allLogged =
+                session.exercises.length > 0 &&
+                session.exercises.every((ex) => ex.sets.every((s) => s.logged))
+
+              return (
                 <Link
-                  key={session.id}
-                  to={`/workout/${mesocycle.id}/${session.id}`}
+                  key={si}
+                  to={
+                    allLogged
+                      ? `/workouts/${mesocycle.id}/${currentWeekIndex}/${si}`
+                      : `/workout/${mesocycle.id}?week=${currentWeekIndex}&session=${si}`
+                  }
                   className="rounded-lg p-3 text-sm transition-colors hover:bg-navy-input"
                   style={{ background: '#132438', border: '1px solid rgba(255,255,255,0.04)' }}
                 >
-                  <div className="font-medium text-slate-200">{session.name}</div>
+                  <div className="font-medium text-slate-200">{session.session_name}</div>
                   <div className="text-xs text-slate-600 mt-0.5">
-                    {session.exercises.length} exercises
+                    {allLogged ? (
+                      <span className="text-green-400">Completed</span>
+                    ) : (
+                      `${session.exercises.length} exercises`
+                    )}
                   </div>
                 </Link>
-              ))}
+              )
+            })}
           </div>
         </div>
       )}
@@ -148,23 +172,23 @@ export default function Dashboard() {
         <div className="card">
           <h2 className="font-semibold mb-3 text-slate-200">Recent Workouts</h2>
           <div className="space-y-2">
-            {recentWorkouts.map((workout) => (
+            {recentWorkouts.slice(-5).reverse().map((workout, idx) => (
               <Link
-                key={workout.id}
-                to={`/workouts/${workout.id}`}
+                key={idx}
+                to={`/workouts/${mesocycle!.id}/${workout.week_index}/${workout.session_index}`}
                 className="flex items-center justify-between rounded-lg p-3 transition-colors hover:bg-navy-input"
                 style={{ background: '#132438', border: '1px solid rgba(255,255,255,0.04)' }}
               >
                 <div>
                   <div className="font-medium text-sm text-slate-200">
-                    {workout.session_name || 'Workout'}
+                    {workout.session_name}
                   </div>
                   <div className="text-xs text-slate-600">
                     {workout.total_sets} sets &middot; {Math.round(workout.total_volume).toLocaleString()}kg
                   </div>
                 </div>
                 <div className="text-xs text-slate-600">
-                  {formatRelativeDate(workout.date)}
+                  {workout.date ? formatRelativeDate(workout.date) : `Week ${workout.week_number}`}
                 </div>
               </Link>
             ))}

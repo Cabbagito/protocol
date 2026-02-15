@@ -17,14 +17,12 @@ from app.routers import auth, exercises, health, mesocycles, splits, workouts
 async def lifespan(app: FastAPI):
     # Startup: create tables if they don't exist
     async with engine.begin() as conn:
+        if settings.dev_reset_db:
+            # Use CASCADE to handle removed tables (e.g. workout_logs) that
+            # still have FK references in the DB but are no longer in models.
+            await conn.execute(text("DROP SCHEMA public CASCADE"))
+            await conn.execute(text("CREATE SCHEMA public"))
         await conn.run_sync(base.Base.metadata.create_all)
-        # Add seed_key columns to existing tables (no-op if already present)
-        await conn.execute(
-            text("ALTER TABLE exercises ADD COLUMN IF NOT EXISTS seed_key VARCHAR(100) UNIQUE")
-        )
-        await conn.execute(
-            text("ALTER TABLE splits ADD COLUMN IF NOT EXISTS seed_key VARCHAR(100) UNIQUE")
-        )
 
     # Seed exercises and default splits
     async with async_session() as session:

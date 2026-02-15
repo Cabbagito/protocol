@@ -3,7 +3,7 @@
 export interface Exercise {
   id: string
   name: string
-  muscle_groups: string[]
+  muscle_group: string
   equipment_type: EquipmentType
 }
 
@@ -21,8 +21,6 @@ export interface SessionExercise {
   exercise_name: string
   order: number
   sets: number
-  rep_min: number
-  rep_max: number
 }
 
 export interface Session {
@@ -57,6 +55,44 @@ export interface MesocycleListItem {
   started_at: string
 }
 
+// Mesocycle structure types
+
+export interface MesoSet {
+  set_num: number
+  weight: number | null
+  reps: number | null
+  target_reps: number
+  suggested_weight: number | null
+  rir: number | null
+  logged: boolean
+}
+
+export interface MesoExercise {
+  exercise_id: string
+  exercise_name: string
+  muscle_group: string
+  equipment_type: string
+  sets: MesoSet[]
+}
+
+export interface MesoSession {
+  session_name: string
+  day_order: number
+  date: string | null
+  notes: string | null
+  exercises: MesoExercise[]
+}
+
+export interface MesoWeek {
+  week_number: number
+  rir: number
+  sessions: MesoSession[]
+}
+
+export interface MesoStructure {
+  weeks: MesoWeek[]
+}
+
 export interface Mesocycle {
   id: string
   name: string
@@ -69,58 +105,49 @@ export interface Mesocycle {
   is_active: boolean
   started_at: string
   workouts_completed: number
+  structure: MesoStructure
 }
 
-// Workouts
-
-export interface ExerciseInSession {
-  exercise_id: string
-  exercise_name: string
-  muscle_groups: string[]
-  equipment_type: string
-  order: number
-  target_sets: number
-  target_rep_min: number
-  target_rep_max: number
-  last_weight: number | null
-  suggested_weight: number | null
-  progression_note: string | null
-}
+// Workout template (from /workouts/template endpoint)
 
 export interface WorkoutTemplate {
-  session_id: string
   session_name: string
   week_number: number
   target_rir: number
-  exercises: ExerciseInSession[]
+  week_index: number
+  session_index: number
+  exercises: MesoExercise[]
 }
 
-export interface SetData {
-  exercise_id: string
-  exercise_name?: string
-  set_num: number
-  weight: number
-  reps: number
-  rir?: number | null
-  completed: boolean
-}
+// Workout history item
 
-export interface WorkoutLog {
-  id: string
-  mesocycle_id: string
-  session_id: string | null
-  session_name: string | null
+export interface WorkoutHistoryItem {
+  week_index: number
+  session_index: number
+  session_name: string
   week_number: number
-  date: string
-  notes: string | null
-  sets: SetData[]
-}
-
-export interface WorkoutListItem {
-  id: string
-  session_name: string | null
-  week_number: number
-  date: string
+  date: string | null
   total_sets: number
   total_volume: number
+}
+
+// Workout detail (viewing a logged session)
+
+export interface WorkoutDetailResponse {
+  session_name: string
+  week_number: number
+  date: string | null
+  notes: string | null
+  exercises: MesoExercise[]
+}
+
+// Exercise progress
+
+export interface ProgressEntry {
+  date: string
+  week_number: number
+  max_weight: number
+  total_reps: number
+  total_sets: number
+  volume: number
 }

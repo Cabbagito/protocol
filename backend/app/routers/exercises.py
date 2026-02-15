@@ -12,14 +12,14 @@ router = APIRouter()
 
 class ExerciseCreate(BaseModel):
     name: str = Field(min_length=1, max_length=100)
-    muscle_groups: list[str] = Field(min_length=1)
+    muscle_group: str = Field(min_length=1)
     equipment_type: str = Field(min_length=1)
 
 
 class ExerciseResponse(BaseModel):
     id: str
     name: str
-    muscle_groups: list[str]
+    muscle_group: str
     equipment_type: str
 
     class Config:
@@ -44,7 +44,7 @@ async def create_exercise(
 ):
     db_exercise = Exercise(
         name=exercise.name,
-        muscle_groups=exercise.muscle_groups,
+        muscle_group=exercise.muscle_group,
         equipment_type=exercise.equipment_type,
     )
     db.add(db_exercise)
@@ -79,7 +79,7 @@ async def update_exercise(
         raise HTTPException(status_code=404, detail="Exercise not found")
 
     exercise.name = exercise_update.name
-    exercise.muscle_groups = exercise_update.muscle_groups
+    exercise.muscle_group = exercise_update.muscle_group
     exercise.equipment_type = exercise_update.equipment_type
 
     await db.commit()

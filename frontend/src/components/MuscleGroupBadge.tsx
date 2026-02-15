@@ -1,13 +1,12 @@
 import { getMuscleColor } from '../lib/muscleColors'
 
 interface MuscleGroupBadgeProps {
-  muscleGroups: string[]
+  muscleGroup: string
 }
 
-export default function MuscleGroupBadge({ muscleGroups }: MuscleGroupBadgeProps) {
-  if (!muscleGroups.length) return null
-  const label = muscleGroups[0]
-  const color = getMuscleColor(muscleGroups)
+export default function MuscleGroupBadge({ muscleGroup }: MuscleGroupBadgeProps) {
+  if (!muscleGroup) return null
+  const color = getMuscleColor(muscleGroup)
 
   return (
     <span
@@ -18,7 +17,7 @@ export default function MuscleGroupBadge({ muscleGroups }: MuscleGroupBadgeProps
         border: `1px solid ${color.border}`,
       }}
     >
-      {label}
+      {muscleGroup}
     </span>
   )
 }

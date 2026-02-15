@@ -64,23 +64,45 @@ bun run lint
 ## Data Model
 
 Three domains planned:
-1. **Gym:** Exercise -> SessionExercise -> Session -> Split -> Mesocycle -> WorkoutLog
+1. **Gym:** Exercise, Split/Session/SessionExercise, Mesocycle (with JSONB structure)
 2. **Diet:** FoodItem, FoodLog, DailyTargets (with Claude Vision for photo estimation)
 3. **Glucose:** GlucoseSettings, GlucoseLog (insulin calculations)
 
 **Currently implemented (Phase 1 - Gym MVP):**
-- Exercise CRUD (`/api/exercises`) — pre-seeded with ~50 common exercises
-- Split CRUD with sessions (`/api/splits`) — sessions contain exercises with set/rep config
-- Mesocycle management (`/api/mesocycles`) — auto-calculated RiR scheme, one active at a time
-- Workout logging (`/api/workouts`) — log sets, progression suggestions, exercise progress tracking
+
+**Exercise** (`/api/exercises`): Pre-seeded ~50 exercises. Each has a single `muscle_group` string (one of: back, biceps, front delt, rear delt, side delt, chest, triceps, quads, hamstrings, glutes, calves, abs, traps, forearms) and `equipment_type` (barbell, dumbbell, machine, cable, bodyweight).
+
+**Split** (`/api/splits`): Training template with ordered sessions. Each session has exercises with `sets` count (no rep ranges — rep targets are set per-set in the mesocycle structure).
+
+**Mesocycle** (`/api/mesocycles`): Core training block. Stores a `structure` JSONB column containing the entire nested document: `weeks[] → sessions[] → exercises[] → sets[]`. Each set has `weight`, `reps`, `target_reps`, `suggested_weight`, `rir`, and `logged` flag. No separate WorkoutLog table — all workout data lives in the structure.
+
+Key derived fields (computed from structure, not stored): `total_weeks`, `current_week`, `rir_scheme`, `current_rir`, `workouts_completed`.
+
+**"Where we left off" algorithm:** Scans structure for the first session with any unlogged sets — determines current position automatically.
+
+**Progression:** Computed eagerly when a session is saved. If all sets hit `target_reps`, next week's `suggested_weight` increases by equipment-specific increment (barbell 2.5, dumbbell 2.0, machine 5.0, cable 2.5).
+
+**Workout endpoints** (`/api/workouts`):
+- `GET /template/{meso_id}` — auto-detect next session
+- `GET /template/{meso_id}/{week}/{session}` — specific session
+- `POST /log` — log sets into structure, triggers progression
+- `GET /history/{meso_id}` — list of completed sessions
+- `GET /detail/{meso_id}/{week}/{session}` — view logged session
+- `GET /progress/{exercise_id}` — weight progression across all mesos
+
+**DB reset:** Set `DEV_RESET_DB=true` to drop all tables and reseed on startup. Used for development; production uses incremental seeding.
 
 **Frontend pages:**
 - Dashboard, Exercises, Splits, SplitDetail, Mesocycles, MesocycleDetail
 - Workout (log with rest timer), WorkoutDetail, Progress (charts)
 
+**Frontend routes:**
+- `/workout/:mesocycleId` — log workout (auto-detects next session, supports `?week=N&session=N` query params for specific session)
+- `/workouts/:mesocycleId/:weekIndex/:sessionIndex` — view completed workout detail
+
 ## Environment Variables
 
-**Backend:** `DATABASE_URL`, `APP_PASSWORD`, `SECRET_KEY`, `CORS_ORIGINS`, `ANTHROPIC_API_KEY` (future)
+**Backend:** `DATABASE_URL`, `APP_PASSWORD`, `SECRET_KEY`, `CORS_ORIGINS`, `DEV_RESET_DB` (drops all tables and reseeds on startup), `ANTHROPIC_API_KEY` (future)
 
 **Railway production:** Same as above, plus `PORT=8000` (set by Railway). `DATABASE_URL` points to Supabase pooled connection string.
 

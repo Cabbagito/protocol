@@ -1,25 +1,16 @@
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useToast } from '../components/Toast'
-import { ChevronLeftIcon } from '../components/Icons'
-import { useMesocycle, useSplit, useWorkouts, useAdvanceWeek, useUpdateMesocycle } from '../api/hooks'
+import { ChevronLeftIcon, CheckIcon } from '../components/Icons'
+import { useMesocycle, useWorkoutHistory, useUpdateMesocycle } from '../api/hooks'
+import type { MesoSession } from '../types'
 
 export default function MesocycleDetail() {
   const toast = useToast()
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { data: mesocycle, isLoading } = useMesocycle(id!)
-  const { data: split } = useSplit(mesocycle?.split_id ?? '')
-  const { data: workouts = [] } = useWorkouts({ mesocycleId: id })
-  const advanceWeek = useAdvanceWeek(id!)
+  const { data: history = [] } = useWorkoutHistory(id!)
   const updateMesocycle = useUpdateMesocycle(id!)
-
-  const handleAdvanceWeek = async () => {
-    try {
-      await advanceWeek.mutateAsync()
-    } catch {
-      toast.showError('Failed to advance week')
-    }
-  }
 
   const handleToggleActive = async () => {
     if (!mesocycle) return
@@ -41,6 +32,25 @@ export default function MesocycleDetail() {
   }
 
   const isDeloadWeek = mesocycle.current_rir === -1
+  const currentWeekIndex = mesocycle.current_week - 1
+
+  // Find the next unlogged session for the "Continue" button
+  const getNextSession = (): { weekIndex: number; sessionIndex: number; session: MesoSession } | null => {
+    for (let wi = 0; wi < mesocycle.structure.weeks.length; wi++) {
+      const week = mesocycle.structure.weeks[wi]!
+      for (let si = 0; si < week.sessions.length; si++) {
+        const session = week.sessions[si]!
+        const allLogged = session.exercises.length > 0 &&
+          session.exercises.every((ex) => ex.sets.every((s) => s.logged))
+        if (!allLogged) {
+          return { weekIndex: wi, sessionIndex: si, session }
+        }
+      }
+    }
+    return null
+  }
+
+  const nextSession = getNextSession()
 
   return (
     <div className="space-y-4">
@@ -113,41 +123,85 @@ export default function MesocycleDetail() {
         </div>
 
         {/* Actions */}
-        <div className="flex gap-2 mt-4">
+        <div className="mt-4">
           <button
             onClick={handleToggleActive}
-            className={`btn flex-1 ${mesocycle.is_active ? 'btn-secondary' : 'btn-primary'}`}
+            className={`btn w-full ${mesocycle.is_active ? 'btn-secondary' : 'btn-primary'}`}
           >
             {mesocycle.is_active ? 'Archive' : 'Reactivate'}
           </button>
-          {mesocycle.current_week < mesocycle.total_weeks && (
-            <button
-              onClick={handleAdvanceWeek}
-              className="btn btn-primary flex-1"
-            >
-              Advance to Week {mesocycle.current_week + 1}
-            </button>
-          )}
         </div>
       </div>
 
-      {/* Start Workout */}
-      {mesocycle.is_active && split && (
+      {/* Continue Workout */}
+      {mesocycle.is_active && nextSession && (
+        <Link
+          to={`/workout/${mesocycle.id}?week=${nextSession.weekIndex}&session=${nextSession.sessionIndex}`}
+          className="card block hover:bg-slate-800/50 transition-colors"
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-sm text-slate-500">Next Workout</div>
+              <div className="text-lg font-semibold text-slate-200">
+                {nextSession.session.session_name}
+              </div>
+              <div className="text-sm text-slate-500">
+                Week {mesocycle.structure.weeks[nextSession.weekIndex]!.week_number}
+                {' '}&middot;{' '}
+                {nextSession.session.exercises.length} exercises
+              </div>
+            </div>
+            <div className="btn btn-primary text-sm">Start</div>
+          </div>
+        </Link>
+      )}
+
+      {/* Current Week Sessions */}
+      {mesocycle.is_active && mesocycle.structure.weeks[currentWeekIndex] && (
         <div className="card">
-          <h2 className="font-medium mb-3">Start Workout</h2>
+          <h2 className="font-medium mb-3">Week {mesocycle.current_week} Sessions</h2>
           <div className="space-y-2">
-            {split.sessions.filter((s) => !s.is_rest_day).map((session) => (
-              <Link
-                key={session.id}
-                to={`/workout/${mesocycle.id}/${session.id}`}
-                className="block bg-slate-800 hover:bg-slate-700 rounded p-3 transition-colors"
-              >
-                <div className="font-medium">{session.name}</div>
-                <div className="text-sm text-slate-400">
-                  {session.exercises.length} exercises
-                </div>
-              </Link>
-            ))}
+            {mesocycle.structure.weeks[currentWeekIndex]!.sessions.map((session, si) => {
+              const allLogged = session.exercises.length > 0 &&
+                session.exercises.every((ex) => ex.sets.every((s) => s.logged))
+
+              if (allLogged) {
+                return (
+                  <Link
+                    key={si}
+                    to={`/workouts/${mesocycle.id}/${currentWeekIndex}/${si}`}
+                    className="flex items-center justify-between bg-slate-800 hover:bg-slate-700 rounded p-3 transition-colors"
+                  >
+                    <div>
+                      <div className="font-medium text-slate-300">{session.session_name}</div>
+                      <div className="text-sm text-slate-500">
+                        {session.exercises.length} exercises
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-green-400">
+                      <CheckIcon className="w-4 h-4" />
+                      Done
+                    </div>
+                  </Link>
+                )
+              }
+
+              return (
+                <Link
+                  key={si}
+                  to={`/workout/${mesocycle.id}?week=${currentWeekIndex}&session=${si}`}
+                  className="flex items-center justify-between bg-slate-800 hover:bg-slate-700 rounded p-3 transition-colors"
+                >
+                  <div>
+                    <div className="font-medium">{session.session_name}</div>
+                    <div className="text-sm text-slate-500">
+                      {session.exercises.length} exercises
+                    </div>
+                  </div>
+                  <div className="text-sm text-slate-500">Pending</div>
+                </Link>
+              )
+            })}
           </div>
         </div>
       )}
@@ -155,26 +209,28 @@ export default function MesocycleDetail() {
       {/* Recent Workouts */}
       <div className="card">
         <h2 className="font-medium mb-3">Recent Workouts</h2>
-        {workouts.length === 0 ? (
+        {history.length === 0 ? (
           <div className="text-slate-500 text-sm">No workouts logged yet.</div>
         ) : (
           <div className="space-y-2">
-            {workouts.slice(0, 10).map((workout) => (
+            {history.slice(-10).reverse().map((workout, idx) => (
               <Link
-                key={workout.id}
-                to={`/workouts/${workout.id}`}
+                key={idx}
+                to={`/workouts/${mesocycle.id}/${workout.week_index}/${workout.session_index}`}
                 className="block bg-slate-800 hover:bg-slate-700 rounded p-3 transition-colors"
               >
                 <div className="flex justify-between items-center">
                   <div>
-                    <div className="font-medium">{workout.session_name || 'Workout'}</div>
+                    <div className="font-medium">{workout.session_name}</div>
                     <div className="text-sm text-slate-400">
                       Week {workout.week_number} &middot; {workout.total_sets} sets
                     </div>
                   </div>
-                  <div className="text-sm text-slate-500">
-                    {new Date(workout.date).toLocaleDateString()}
-                  </div>
+                  {workout.date && (
+                    <div className="text-sm text-slate-500">
+                      {new Date(workout.date).toLocaleDateString()}
+                    </div>
+                  )}
                 </div>
               </Link>
             ))}

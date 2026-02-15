@@ -3,52 +3,18 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
-from sqlalchemy import func, select, update
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.database import get_db
 from app.core.security import get_current_user
-from app.models.mesocycle import Mesocycle, WorkoutLog
-from app.models.split import Split
+from app.core.seed import build_mesocycle_structure, get_current_position
+from app.models.exercise import Exercise
+from app.models.mesocycle import Mesocycle
+from app.models.split import Session, SessionExercise, Split
 
 router = APIRouter()
-
-
-def calculate_rir_scheme(total_weeks: int) -> list[int]:
-    """Calculate RiR scheme based on total weeks.
-
-    Standard approach:
-    - 4 weeks: [3, 2, 1, 0] (week 4 = deload at RiR 0)
-    - 5 weeks: [3, 2, 1, 0, deload]
-    - 6 weeks: [3, 2, 2, 1, 0, deload]
-
-    The last week is always a deload week (marked as -1).
-    """
-    if total_weeks <= 1:
-        return [0]
-
-    if total_weeks == 2:
-        return [2, -1]  # -1 = deload
-
-    if total_weeks == 3:
-        return [3, 1, -1]
-
-    if total_weeks == 4:
-        return [3, 2, 1, -1]
-
-    if total_weeks == 5:
-        return [3, 2, 1, 0, -1]
-
-    # 6+ weeks: start at RiR 3, gradually decrease, end with deload
-    training_weeks = total_weeks - 1  # Last week is deload
-    scheme = []
-    for i in range(training_weeks):
-        # Linearly decrease from 3 to 0
-        rir = max(0, 3 - int(i * 4 / training_weeks))
-        scheme.append(rir)
-    scheme.append(-1)  # Deload week
-    return scheme
 
 
 # --- Pydantic Schemas ---
@@ -63,7 +29,6 @@ class MesocycleCreate(BaseModel):
 
 class MesocycleUpdate(BaseModel):
     name: str | None = None
-    current_week: int | None = None
     is_active: bool | None = None
 
 
@@ -92,6 +57,7 @@ class MesocycleResponse(BaseModel):
     is_active: bool
     started_at: date_type
     workouts_completed: int
+    structure: dict
 
     class Config:
         from_attributes = True
@@ -114,18 +80,7 @@ async def list_mesocycles(
     result = await db.execute(query)
     mesocycles = result.scalars().all()
 
-    return [
-        {
-            "id": m.id,
-            "name": m.name,
-            "split_name": m.split.name,
-            "total_weeks": m.total_weeks,
-            "current_week": m.current_week,
-            "is_active": m.is_active,
-            "started_at": m.started_at,
-        }
-        for m in mesocycles
-    ]
+    return [_mesocycle_to_list_item(m) for m in mesocycles]
 
 
 @router.post("", response_model=MesocycleResponse, status_code=status.HTTP_201_CREATED)
@@ -134,8 +89,16 @@ async def create_mesocycle(
     db: AsyncSession = Depends(get_db),
     _: str = Depends(get_current_user),
 ):
-    # Verify split exists
-    result = await db.execute(select(Split).where(Split.id == data.split_id))
+    # Verify split exists and load sessions with exercises
+    result = await db.execute(
+        select(Split)
+        .options(
+            selectinload(Split.sessions)
+            .selectinload(Session.exercises)
+            .selectinload(SessionExercise.exercise)
+        )
+        .where(Split.id == data.split_id)
+    )
     split = result.scalar_one_or_none()
     if not split:
         raise HTTPException(status_code=404, detail="Split not found")
@@ -143,23 +106,29 @@ async def create_mesocycle(
     # Bulk-deactivate any currently active mesocycles
     await db.execute(update(Mesocycle).where(Mesocycle.is_active.is_(True)).values(is_active=False))
 
-    # Calculate RiR scheme
-    rir_scheme = calculate_rir_scheme(data.total_weeks)
+    # Build exercise lookup by id
+    exercise_ids = [se.exercise_id for s in split.sessions for se in s.exercises]
+    if exercise_ids:
+        result = await db.execute(select(Exercise).where(Exercise.id.in_(exercise_ids)))
+        exercises_by_id = {e.id: e for e in result.scalars().all()}
+    else:
+        exercises_by_id = {}
+
+    # Build the JSONB structure
+    structure = build_mesocycle_structure(split.sessions, exercises_by_id, data.total_weeks)
 
     mesocycle = Mesocycle(
         split_id=data.split_id,
         name=data.name,
-        total_weeks=data.total_weeks,
-        rir_scheme=rir_scheme,
-        current_week=1,
         started_at=data.started_at or date_type.today(),
         is_active=True,
+        structure=structure,
     )
     db.add(mesocycle)
     await db.commit()
     await db.refresh(mesocycle)
 
-    return _mesocycle_to_response(mesocycle, split.name, 0)
+    return _mesocycle_to_response(mesocycle, split.name)
 
 
 @router.get("/active", response_model=Optional[MesocycleResponse])
@@ -167,29 +136,17 @@ async def get_active_mesocycle(
     db: AsyncSession = Depends(get_db),
     _: str = Depends(get_current_user),
 ):
-    # Use a count subquery instead of loading all workout logs into memory
-    workout_count_subq = (
-        select(func.count(WorkoutLog.id))
-        .where(WorkoutLog.mesocycle_id == Mesocycle.id)
-        .correlate(Mesocycle)
-        .scalar_subquery()
-    )
     result = await db.execute(
-        select(Mesocycle, workout_count_subq.label("workout_count"))
+        select(Mesocycle)
         .options(selectinload(Mesocycle.split))
         .where(Mesocycle.is_active.is_(True))
     )
-    row = result.one_or_none()
+    mesocycle = result.scalar_one_or_none()
 
-    if not row:
+    if not mesocycle:
         return None
 
-    mesocycle, workout_count = row
-    return _mesocycle_to_response(
-        mesocycle,
-        mesocycle.split.name,
-        workout_count,
-    )
+    return _mesocycle_to_response(mesocycle, mesocycle.split.name)
 
 
 @router.get("/{mesocycle_id}", response_model=MesocycleResponse)
@@ -198,28 +155,17 @@ async def get_mesocycle(
     db: AsyncSession = Depends(get_db),
     _: str = Depends(get_current_user),
 ):
-    workout_count_subq = (
-        select(func.count(WorkoutLog.id))
-        .where(WorkoutLog.mesocycle_id == Mesocycle.id)
-        .correlate(Mesocycle)
-        .scalar_subquery()
-    )
     result = await db.execute(
-        select(Mesocycle, workout_count_subq.label("workout_count"))
+        select(Mesocycle)
         .options(selectinload(Mesocycle.split))
         .where(Mesocycle.id == mesocycle_id)
     )
-    row = result.one_or_none()
+    mesocycle = result.scalar_one_or_none()
 
-    if not row:
+    if not mesocycle:
         raise HTTPException(status_code=404, detail="Mesocycle not found")
 
-    mesocycle, workout_count = row
-    return _mesocycle_to_response(
-        mesocycle,
-        mesocycle.split.name,
-        workout_count,
-    )
+    return _mesocycle_to_response(mesocycle, mesocycle.split.name)
 
 
 @router.put("/{mesocycle_id}", response_model=MesocycleResponse)
@@ -229,35 +175,21 @@ async def update_mesocycle(
     db: AsyncSession = Depends(get_db),
     _: str = Depends(get_current_user),
 ):
-    workout_count_subq = (
-        select(func.count(WorkoutLog.id))
-        .where(WorkoutLog.mesocycle_id == Mesocycle.id)
-        .correlate(Mesocycle)
-        .scalar_subquery()
-    )
     result = await db.execute(
-        select(Mesocycle, workout_count_subq.label("workout_count"))
+        select(Mesocycle)
         .options(selectinload(Mesocycle.split))
         .where(Mesocycle.id == mesocycle_id)
     )
-    row = result.one_or_none()
+    mesocycle = result.scalar_one_or_none()
 
-    if not row:
+    if not mesocycle:
         raise HTTPException(status_code=404, detail="Mesocycle not found")
-
-    mesocycle, workout_count = row
 
     if data.name is not None:
         mesocycle.name = data.name
 
-    if data.current_week is not None:
-        if data.current_week < 1 or data.current_week > mesocycle.total_weeks:
-            raise HTTPException(status_code=400, detail="Invalid week number")
-        mesocycle.current_week = data.current_week
-
     if data.is_active is not None:
         if data.is_active:
-            # Bulk-deactivate any other active mesocycles
             await db.execute(
                 update(Mesocycle)
                 .where(Mesocycle.is_active.is_(True), Mesocycle.id != mesocycle_id)
@@ -268,50 +200,7 @@ async def update_mesocycle(
     await db.commit()
     await db.refresh(mesocycle)
 
-    # Re-count workouts after commit
-    count_result = await db.execute(
-        select(func.count(WorkoutLog.id)).where(WorkoutLog.mesocycle_id == mesocycle_id)
-    )
-    final_count = count_result.scalar() or 0
-
-    return _mesocycle_to_response(
-        mesocycle,
-        mesocycle.split.name,
-        final_count,
-    )
-
-
-@router.post("/{mesocycle_id}/advance-week", response_model=MesocycleResponse)
-async def advance_week(
-    mesocycle_id: str,
-    db: AsyncSession = Depends(get_db),
-    _: str = Depends(get_current_user),
-):
-    result = await db.execute(
-        select(Mesocycle).options(selectinload(Mesocycle.split)).where(Mesocycle.id == mesocycle_id)
-    )
-    mesocycle = result.scalar_one_or_none()
-
-    if not mesocycle:
-        raise HTTPException(status_code=404, detail="Mesocycle not found")
-
-    if mesocycle.current_week >= mesocycle.total_weeks:
-        raise HTTPException(status_code=400, detail="Already at final week")
-
-    mesocycle.current_week += 1
-    await db.commit()
-    await db.refresh(mesocycle)
-
-    count_result = await db.execute(
-        select(func.count(WorkoutLog.id)).where(WorkoutLog.mesocycle_id == mesocycle_id)
-    )
-    workout_count = count_result.scalar() or 0
-
-    return _mesocycle_to_response(
-        mesocycle,
-        mesocycle.split.name,
-        workout_count,
-    )
+    return _mesocycle_to_response(mesocycle, mesocycle.split.name)
 
 
 @router.delete("/{mesocycle_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -333,21 +222,71 @@ async def delete_mesocycle(
 # --- Helper Functions ---
 
 
-def _mesocycle_to_response(mesocycle: Mesocycle, split_name: str, workouts_completed: int) -> dict:
-    if mesocycle.rir_scheme and mesocycle.current_week <= len(mesocycle.rir_scheme):
-        current_rir = mesocycle.rir_scheme[mesocycle.current_week - 1]
+def _derive_fields(structure: dict) -> dict:
+    """Derive total_weeks, current_week, rir_scheme, workouts_completed from structure."""
+    weeks = structure.get("weeks", [])
+    total_weeks = len(weeks)
+    rir_scheme = [w.get("rir", 0) for w in weeks]
+
+    pos = get_current_position(structure)
+    if pos.get("completed"):
+        current_week = total_weeks
     else:
-        current_rir = 0
+        current_week = pos["week_index"] + 1
+
+    current_rir = rir_scheme[current_week - 1] if rir_scheme else 0
+
+    # Count fully-logged sessions
+    workouts_completed = 0
+    for week in weeks:
+        for session in week.get("sessions", []):
+            all_logged = all(
+                s["logged"]
+                for ex in session.get("exercises", [])
+                for s in ex.get("sets", [])
+            )
+            if all_logged and any(
+                s["logged"]
+                for ex in session.get("exercises", [])
+                for s in ex.get("sets", [])
+            ):
+                workouts_completed += 1
+
+    return {
+        "total_weeks": total_weeks,
+        "rir_scheme": rir_scheme,
+        "current_week": current_week,
+        "current_rir": current_rir,
+        "workouts_completed": workouts_completed,
+    }
+
+
+def _mesocycle_to_response(mesocycle: Mesocycle, split_name: str) -> dict:
+    derived = _derive_fields(mesocycle.structure)
     return {
         "id": mesocycle.id,
         "name": mesocycle.name,
         "split_id": mesocycle.split_id,
         "split_name": split_name,
-        "total_weeks": mesocycle.total_weeks,
-        "rir_scheme": mesocycle.rir_scheme,
-        "current_week": mesocycle.current_week,
-        "current_rir": current_rir,
+        "total_weeks": derived["total_weeks"],
+        "rir_scheme": derived["rir_scheme"],
+        "current_week": derived["current_week"],
+        "current_rir": derived["current_rir"],
         "is_active": mesocycle.is_active,
         "started_at": mesocycle.started_at,
-        "workouts_completed": workouts_completed,
+        "workouts_completed": derived["workouts_completed"],
+        "structure": mesocycle.structure,
+    }
+
+
+def _mesocycle_to_list_item(mesocycle: Mesocycle) -> dict:
+    derived = _derive_fields(mesocycle.structure)
+    return {
+        "id": mesocycle.id,
+        "name": mesocycle.name,
+        "split_name": mesocycle.split.name,
+        "total_weeks": derived["total_weeks"],
+        "current_week": derived["current_week"],
+        "is_active": mesocycle.is_active,
+        "started_at": mesocycle.started_at,
     }

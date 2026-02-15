@@ -44,8 +44,6 @@ class SessionExercise(Base, TimestampMixin):
     exercise_id: Mapped[str] = mapped_column(String(36), ForeignKey("exercises.id", ondelete="CASCADE"), nullable=False)
     order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     sets: Mapped[int] = mapped_column(Integer, nullable=False, default=3)
-    rep_min: Mapped[int] = mapped_column(Integer, nullable=False, default=8)
-    rep_max: Mapped[int] = mapped_column(Integer, nullable=False, default=12)
 
     session: Mapped["Session"] = relationship(back_populates="exercises")
     exercise: Mapped["Exercise"] = relationship()

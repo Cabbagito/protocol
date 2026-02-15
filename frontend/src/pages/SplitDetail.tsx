@@ -17,8 +17,6 @@ interface SessionExerciseInput {
   exercise_id: string
   order: number
   sets: number
-  rep_min: number
-  rep_max: number
 }
 
 export default function SplitDetail() {
@@ -167,7 +165,7 @@ export default function SplitDetail() {
                         <div key={ex.id} className="text-sm text-slate-400 flex items-center gap-2">
                           <span>{ex.exercise_name}</span>
                           <span className="text-slate-500">
-                            {ex.sets}x{ex.rep_min}-{ex.rep_max}
+                            {ex.sets} sets
                           </span>
                         </div>
                       ))}
@@ -227,8 +225,6 @@ function SessionForm({ splitId, session, onSave, onCancel }: SessionFormProps) {
       exercise_id: ex.exercise_id,
       order: ex.order,
       sets: ex.sets,
-      rep_min: ex.rep_min,
-      rep_max: ex.rep_max,
     })) ?? []
   )
   const { data: availableExercises = [] } = useExercises()
@@ -243,8 +239,6 @@ function SessionForm({ splitId, session, onSave, onCancel }: SessionFormProps) {
         exercise_id: availableExercises[0]!.id,
         order: exercises.length,
         sets: 3,
-        rep_min: 8,
-        rep_max: 12,
       },
     ])
   }
@@ -380,26 +374,6 @@ function SessionForm({ splitId, session, onSave, onCancel }: SessionFormProps) {
                         min="1"
                         value={ex.sets}
                         onChange={(e) => handleExerciseChange(index, 'sets', parseInt(e.target.value) || 1)}
-                        className="input text-sm"
-                      />
-                    </div>
-                    <div className="flex-1">
-                      <label className="text-xs text-slate-500">Min Reps</label>
-                      <input
-                        type="number"
-                        min="1"
-                        value={ex.rep_min}
-                        onChange={(e) => handleExerciseChange(index, 'rep_min', parseInt(e.target.value) || 1)}
-                        className="input text-sm"
-                      />
-                    </div>
-                    <div className="flex-1">
-                      <label className="text-xs text-slate-500">Max Reps</label>
-                      <input
-                        type="number"
-                        min="1"
-                        value={ex.rep_max}
-                        onChange={(e) => handleExerciseChange(index, 'rep_max', parseInt(e.target.value) || 1)}
                         className="input text-sm"
                       />
                     </div>

@@ -21,12 +21,26 @@ const MUSCLE_COLORS: Record<string, MuscleColor> = {
     border: 'rgba(99,102,241,0.15)',
     cardBorder: 'rgba(99,102,241,0.35)',
   },
-  shoulders: {
+  'front delt': {
     primary: '#a855f7',
     light: '#c084fc',
     bg: 'rgba(168,85,247,0.1)',
     border: 'rgba(168,85,247,0.15)',
     cardBorder: 'rgba(168,85,247,0.35)',
+  },
+  'rear delt': {
+    primary: '#d946ef',
+    light: '#e879f9',
+    bg: 'rgba(217,70,239,0.1)',
+    border: 'rgba(217,70,239,0.15)',
+    cardBorder: 'rgba(217,70,239,0.35)',
+  },
+  'side delt': {
+    primary: '#9333ea',
+    light: '#a855f7',
+    bg: 'rgba(147,51,234,0.1)',
+    border: 'rgba(147,51,234,0.15)',
+    cardBorder: 'rgba(147,51,234,0.35)',
   },
   chest: {
     primary: '#f97316',
@@ -70,7 +84,7 @@ const MUSCLE_COLORS: Record<string, MuscleColor> = {
     border: 'rgba(6,182,212,0.15)',
     cardBorder: 'rgba(6,182,212,0.35)',
   },
-  core: {
+  abs: {
     primary: '#f59e0b',
     light: '#fbbf24',
     bg: 'rgba(245,158,11,0.1)',
@@ -101,10 +115,8 @@ const DEFAULT_COLOR: MuscleColor = {
   cardBorder: 'rgba(100,116,139,0.35)',
 }
 
-export function getMuscleColor(muscleGroups: string[]): MuscleColor {
-  if (!muscleGroups || !muscleGroups.length) return DEFAULT_COLOR
-  const first = muscleGroups[0]
-  if (!first) return DEFAULT_COLOR
-  const key = first.toLowerCase()
+export function getMuscleColor(muscleGroup: string): MuscleColor {
+  if (!muscleGroup) return DEFAULT_COLOR
+  const key = muscleGroup.toLowerCase()
   return MUSCLE_COLORS[key] ?? DEFAULT_COLOR
 }

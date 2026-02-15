@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useToast } from '../components/Toast'
 import { useExercises, useCreateExercise } from '../api/hooks'
+import MuscleGroupBadge from '../components/MuscleGroupBadge'
 
 export default function Exercises() {
   const { data: exercises = [], isLoading } = useExercises()
@@ -37,9 +38,12 @@ export default function Exercises() {
         <div className="space-y-2">
           {exercises.map((exercise) => (
             <div key={exercise.id} className="card">
-              <div className="font-medium">{exercise.name}</div>
-              <div className="text-sm text-slate-400 mt-1">
-                {exercise.muscle_groups.join(', ')} &middot; {exercise.equipment_type}
+              <div className="flex items-center gap-2">
+                <div className="font-medium flex-1">{exercise.name}</div>
+                <MuscleGroupBadge muscleGroup={exercise.muscle_group} />
+              </div>
+              <div className="text-sm text-slate-500 mt-1 capitalize">
+                {exercise.equipment_type}
               </div>
             </div>
           ))}
@@ -49,6 +53,12 @@ export default function Exercises() {
   )
 }
 
+const MUSCLE_GROUPS = [
+  'back', 'biceps', 'front delt', 'rear delt', 'side delt',
+  'chest', 'triceps', 'quads', 'hamstrings', 'glutes',
+  'calves', 'abs', 'traps', 'forearms',
+]
+
 interface ExerciseFormProps {
   onSave: () => void
   onCancel: () => void
@@ -57,7 +67,7 @@ interface ExerciseFormProps {
 function ExerciseForm({ onSave, onCancel }: ExerciseFormProps) {
   const toast = useToast()
   const [name, setName] = useState('')
-  const [muscleGroups, setMuscleGroups] = useState('')
+  const [muscleGroup, setMuscleGroup] = useState('chest')
   const [equipmentType, setEquipmentType] = useState('barbell')
   const createExercise = useCreateExercise()
 
@@ -67,7 +77,7 @@ function ExerciseForm({ onSave, onCancel }: ExerciseFormProps) {
     try {
       await createExercise.mutateAsync({
         name,
-        muscle_groups: muscleGroups.split(',').map((s) => s.trim()).filter(Boolean),
+        muscle_group: muscleGroup,
         equipment_type: equipmentType,
       })
       onSave()
@@ -86,13 +96,17 @@ function ExerciseForm({ onSave, onCancel }: ExerciseFormProps) {
         className="input"
         autoFocus
       />
-      <input
-        type="text"
-        value={muscleGroups}
-        onChange={(e) => setMuscleGroups(e.target.value)}
-        placeholder="Muscle groups (comma separated)"
+      <select
+        value={muscleGroup}
+        onChange={(e) => setMuscleGroup(e.target.value)}
         className="input"
-      />
+      >
+        {MUSCLE_GROUPS.map((mg) => (
+          <option key={mg} value={mg}>
+            {mg}
+          </option>
+        ))}
+      </select>
       <select
         value={equipmentType}
         onChange={(e) => setEquipmentType(e.target.value)}

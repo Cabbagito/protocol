@@ -1,26 +1,39 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { useToast } from '../components/Toast'
 import { ProtocolLogo, CheckIcon, ArrowUpIcon, ArrowDownIcon } from '../components/Icons'
-import { useWorkoutTemplate, useCreateWorkout } from '../api/hooks'
+import { useLogSets } from '../api/hooks'
+import { api } from '../api/client'
 import ProgressBar from '../components/ProgressBar'
 import RirBadge from '../components/RirBadge'
 import MuscleGroupBadge from '../components/MuscleGroupBadge'
 import { getMuscleColor } from '../lib/muscleColors'
-import type { SetData, ExerciseInSession } from '../types'
+import type { WorkoutTemplate, MesoExercise, MesoSet } from '../types'
 
-interface WorkingSet extends SetData {
+interface WorkingSet extends MesoSet {
+  exercise_id: string
   exercise_name: string
-  target_reps_min: number
-  target_reps_max: number
+  completed: boolean
 }
 
 export default function Workout() {
   const toast = useToast()
-  const { mesocycleId, sessionId } = useParams<{ mesocycleId: string; sessionId: string }>()
+  const { mesocycleId } = useParams<{ mesocycleId: string }>()
   const navigate = useNavigate()
-  const { data: template, isLoading } = useWorkoutTemplate(mesocycleId!, sessionId!)
-  const createWorkout = useCreateWorkout()
+  const [searchParams] = useSearchParams()
+  const weekParam = searchParams.get('week')
+  const sessionParam = searchParams.get('session')
+  const { data: template, isLoading } = useQuery({
+    queryKey: weekParam !== null && sessionParam !== null
+      ? ['workouts', 'template', mesocycleId, Number(weekParam), Number(sessionParam)]
+      : ['workouts', 'template', mesocycleId],
+    queryFn: () => weekParam !== null && sessionParam !== null
+      ? api.get<WorkoutTemplate>(`/workouts/template/${mesocycleId}/${weekParam}/${sessionParam}`)
+      : api.get<WorkoutTemplate>(`/workouts/template/${mesocycleId}`),
+    enabled: !!mesocycleId,
+  })
+  const logSets = useLogSets()
   const [sets, setSets] = useState<WorkingSet[]>([])
   const [notes, setNotes] = useState('')
   const [restTimer, setRestTimer] = useState<number | null>(null)
@@ -31,17 +44,15 @@ export default function Workout() {
     if (template && !initialized) {
       const initialSets: WorkingSet[] = []
       for (const ex of template.exercises) {
-        for (let i = 0; i < ex.target_sets; i++) {
+        for (const s of ex.sets) {
           initialSets.push({
+            ...s,
             exercise_id: ex.exercise_id,
             exercise_name: ex.exercise_name,
-            set_num: i + 1,
-            weight: ex.suggested_weight || ex.last_weight || 0,
-            reps: 0,
+            weight: s.suggested_weight ?? s.weight ?? 0,
+            reps: s.reps ?? 0,
             rir: template.target_rir >= 0 ? template.target_rir : null,
-            completed: false,
-            target_reps_min: ex.target_rep_min,
-            target_reps_max: ex.target_rep_max,
+            completed: s.logged,
           })
         }
       }
@@ -88,20 +99,20 @@ export default function Workout() {
   }, [])
 
   const handleSave = async () => {
-    if (!mesocycleId || !sessionId) return
+    if (!mesocycleId || !template) return
 
     try {
-      await createWorkout.mutateAsync({
+      await logSets.mutateAsync({
         mesocycle_id: mesocycleId,
-        session_id: sessionId,
+        week_index: template.week_index,
+        session_index: template.session_index,
         notes: notes || null,
         sets: sets.filter((s) => s.completed).map((s) => ({
           exercise_id: s.exercise_id,
           set_num: s.set_num,
-          weight: s.weight,
-          reps: s.reps,
+          weight: s.weight ?? 0,
+          reps: s.reps ?? 0,
           rir: s.rir,
-          completed: s.completed,
         })),
       })
       navigate(`/mesocycles/${mesocycleId}`)
@@ -129,7 +140,7 @@ export default function Workout() {
 
   const exerciseGroups = template.exercises.map((ex) => ({
     ...ex,
-    sets: sets.filter((s) => s.exercise_id === ex.exercise_id),
+    workingSets: sets.filter((s) => s.exercise_id === ex.exercise_id),
   }))
 
   return (
@@ -192,7 +203,7 @@ export default function Workout() {
           <ExerciseCard
             key={ex.exercise_id}
             exercise={ex}
-            sets={ex.sets}
+            sets={ex.workingSets}
             targetRir={template.target_rir}
             onUpdateSet={updateSet}
             onCompleteSet={completeSet}
@@ -213,10 +224,10 @@ export default function Workout() {
         {/* Save Button */}
         <button
           onClick={handleSave}
-          disabled={createWorkout.isPending || completedSets === 0}
+          disabled={logSets.isPending || completedSets === 0}
           className="btn btn-primary w-full disabled:opacity-50"
         >
-          {createWorkout.isPending ? 'Saving...' : `Save Workout (${completedSets} sets)`}
+          {logSets.isPending ? 'Saving...' : `Save Workout (${completedSets} sets)`}
         </button>
       </div>
     </div>
@@ -224,7 +235,7 @@ export default function Workout() {
 }
 
 interface ExerciseCardProps {
-  exercise: ExerciseInSession
+  exercise: MesoExercise
   sets: WorkingSet[]
   targetRir: number
   onUpdateSet: (exerciseId: string, setNum: number, field: keyof WorkingSet, value: number | boolean) => void
@@ -232,13 +243,13 @@ interface ExerciseCardProps {
 }
 
 function ExerciseCard({ exercise, sets, targetRir, onUpdateSet, onCompleteSet }: ExerciseCardProps) {
-  const color = getMuscleColor(exercise.muscle_groups)
+  const color = getMuscleColor(exercise.muscle_group)
 
   return (
     <div className="exercise-card" style={{ borderColor: color.cardBorder }}>
       {/* Muscle group badge */}
       <div className="mb-2">
-        <MuscleGroupBadge muscleGroups={exercise.muscle_groups} />
+        <MuscleGroupBadge muscleGroup={exercise.muscle_group} />
       </div>
 
       {/* Exercise name + equipment */}
@@ -246,9 +257,6 @@ function ExerciseCard({ exercise, sets, targetRir, onUpdateSet, onCompleteSet }:
         <h2 className="text-base font-semibold text-slate-200">{exercise.exercise_name}</h2>
         {exercise.equipment_type && (
           <span className="text-xs text-slate-600 capitalize">{exercise.equipment_type}</span>
-        )}
-        {exercise.progression_note && (
-          <div className="text-xs text-green-400 mt-1">{exercise.progression_note}</div>
         )}
       </div>
 
@@ -285,7 +293,7 @@ function ExerciseCard({ exercise, sets, targetRir, onUpdateSet, onCompleteSet }:
 
 interface SetRowProps {
   set: WorkingSet
-  exercise: ExerciseInSession
+  exercise: MesoExercise
   targetRir: number
   onUpdate: (exerciseId: string, setNum: number, field: keyof WorkingSet, value: number | boolean) => void
   onComplete: (exerciseId: string, setNum: number) => void
@@ -295,8 +303,8 @@ type SetState = 'pending' | 'logged' | 'exceeded' | 'under'
 
 function getSetState(set: WorkingSet): SetState {
   if (!set.completed) return 'pending'
-  if (set.reps > set.target_reps_max) return 'exceeded'
-  if (set.reps < set.target_reps_min) return 'under'
+  if ((set.reps ?? 0) > set.target_reps) return 'exceeded'
+  if ((set.reps ?? 0) < set.target_reps) return 'under'
   return 'logged'
 }
 
@@ -350,10 +358,10 @@ function SetRow({ set, exercise, onUpdate, onComplete }: SetRowProps) {
       <div className="flex-1">
         <input
           type="number"
-          value={set.completed ? set.reps : (set.reps || '')}
+          value={set.completed ? (set.reps ?? '') : (set.reps || '')}
           onChange={(e) => onUpdate(exercise.exercise_id, set.set_num, 'reps', parseInt(e.target.value) || 0)}
           readOnly={set.completed}
-          placeholder={`${set.target_reps_min}-${set.target_reps_max}`}
+          placeholder={`${set.target_reps}`}
           className="set-input reps-ghost"
           style={{
             background: styles.inputBg,
@@ -370,11 +378,11 @@ function SetRow({ set, exercise, onUpdate, onComplete }: SetRowProps) {
         ) : (
           <button
             onClick={() => {
-              if (set.weight > 0 && set.reps > 0) {
+              if ((set.weight ?? 0) > 0 && (set.reps ?? 0) > 0) {
                 onComplete(exercise.exercise_id, set.set_num)
               }
             }}
-            disabled={!set.weight || !set.reps}
+            disabled={!(set.weight ?? 0) || !(set.reps ?? 0)}
             className="w-9 h-9 rounded-lg border-2 flex items-center justify-center check-pop disabled:opacity-30 disabled:cursor-not-allowed"
             style={{ borderColor: '#1e3a52' }}
           />

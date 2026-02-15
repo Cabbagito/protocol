@@ -71,8 +71,8 @@ export default function App() {
                       <Route path="/splits/:id" element={<SplitDetail />} />
                       <Route path="/mesocycles" element={<Mesocycles />} />
                       <Route path="/mesocycles/:id" element={<MesocycleDetail />} />
-                      <Route path="/workout/:mesocycleId/:sessionId" element={<Workout />} />
-                      <Route path="/workouts/:id" element={<WorkoutDetail />} />
+                      <Route path="/workout/:mesocycleId" element={<Workout />} />
+                      <Route path="/workouts/:mesocycleId/:weekIndex/:sessionIndex" element={<WorkoutDetail />} />
                       <Route path="/progress" element={<Progress />} />
                     </Routes>
                   </Suspense>

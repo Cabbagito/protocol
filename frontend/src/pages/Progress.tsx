@@ -12,15 +12,13 @@ import {
   Bar,
 } from 'recharts'
 import { ChevronLeftIcon } from '../components/Icons'
-import { useExercises, useActiveMesocycle, useWorkouts, useExerciseProgress } from '../api/hooks'
+import { useExercises, useActiveMesocycle, useWorkoutHistory, useExerciseProgress } from '../api/hooks'
 
 export default function Progress() {
   const navigate = useNavigate()
   const { data: exercises = [], isLoading: exercisesLoading } = useExercises()
   const { data: mesocycle } = useActiveMesocycle()
-  const { data: workouts = [] } = useWorkouts(
-    mesocycle ? { mesocycleId: mesocycle.id } : {}
-  )
+  const { data: workouts = [] } = useWorkoutHistory(mesocycle?.id ?? '')
   const [selectedExercise, setSelectedExercise] = useState<string>('')
 
   // Auto-select first exercise
