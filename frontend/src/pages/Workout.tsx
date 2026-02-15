@@ -378,11 +378,14 @@ function SetRow({ set, exercise, onUpdate, onComplete }: SetRowProps) {
         ) : (
           <button
             onClick={() => {
-              if ((set.weight ?? 0) > 0 && (set.reps ?? 0) > 0) {
+              if ((set.weight ?? 0) > 0) {
+                if (!(set.reps ?? 0)) {
+                  onUpdate(exercise.exercise_id, set.set_num, 'reps', set.target_reps)
+                }
                 onComplete(exercise.exercise_id, set.set_num)
               }
             }}
-            disabled={!(set.weight ?? 0) || !(set.reps ?? 0)}
+            disabled={!(set.weight ?? 0)}
             className="w-9 h-9 rounded-lg border-2 flex items-center justify-center check-pop disabled:opacity-30 disabled:cursor-not-allowed"
             style={{ borderColor: '#1e3a52' }}
           />
