@@ -276,4 +276,8 @@
     0%, 100% { box-shadow: 0 0 0 3px rgba(234,179,8,0.15); }
     50%      { box-shadow: 0 0 0 3px rgba(234,179,8,0.35); }
   }
+  @keyframes pulse-viewing {
+    0%, 100% { box-shadow: 0 0 0 3px rgba(148,163,184,0.15); }
+    50%      { box-shadow: 0 0 0 3px rgba(148,163,184,0.35); }
+  }
 }

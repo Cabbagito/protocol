@@ -1,7 +1,8 @@
 import { useNavigate, Link } from 'react-router-dom'
+import { getCurrentPosition } from '../lib/mesoUtils'
 import type { Mesocycle } from '../types'
 
-type CellState = 'done' | 'current' | 'pending' | 'deload-done' | 'deload-current' | 'deload-pending'
+type CellState = 'done' | 'current' | 'pending' | 'deload-done' | 'deload-current' | 'deload-pending' | 'viewing' | 'deload-viewing'
 
 const cellStyles: Record<CellState, React.CSSProperties> = {
   done: {
@@ -30,6 +31,16 @@ const cellStyles: Record<CellState, React.CSSProperties> = {
     background: 'rgba(234,179,8,0.06)',
     border: '1.5px solid rgba(234,179,8,0.12)',
   },
+  viewing: {
+    background: 'rgba(148,163,184,0.08)',
+    border: '2px solid #64748b',
+    animation: 'pulse-viewing 2s ease-in-out infinite',
+  },
+  'deload-viewing': {
+    background: 'rgba(148,163,184,0.08)',
+    border: '2px solid #64748b',
+    animation: 'pulse-viewing 2s ease-in-out infinite',
+  },
 }
 
 function CheckIcon({ color }: { color: string }) {
@@ -40,30 +51,23 @@ function CheckIcon({ color }: { color: string }) {
   )
 }
 
-export default function MesoGrid({ mesocycle, compact = false }: { mesocycle: Mesocycle; compact?: boolean }) {
+interface MesoGridProps {
+  mesocycle: Mesocycle
+  compact?: boolean
+  viewingWeek?: number
+  viewingSession?: number
+}
+
+export default function MesoGrid({ mesocycle, compact = false, viewingWeek, viewingSession }: MesoGridProps) {
   const navigate = useNavigate()
 
   const weeks = mesocycle.structure.weeks
   const numWeeks = weeks.length
   const sessionNames = weeks[0]?.sessions.map(s => s.session_name) ?? []
 
-  // Find the first unlogged session
-  let currentWi = -1
-  let currentSi = -1
-  outer: for (let wi = 0; wi < numWeeks; wi++) {
-    const week = weeks[wi]!
-    for (let si = 0; si < week.sessions.length; si++) {
-      const session = week.sessions[si]!
-      const isLogged =
-        session.exercises.length > 0 &&
-        session.exercises.every(ex => ex.sets.every(s => s.logged))
-      if (!isLogged) {
-        currentWi = wi
-        currentSi = si
-        break outer
-      }
-    }
-  }
+  const currentPos = getCurrentPosition(mesocycle.structure)
+  const currentWi = currentPos?.weekIndex ?? -1
+  const currentSi = currentPos?.sessionIndex ?? -1
 
   function getCellState(wi: number, si: number): CellState {
     const session = weeks[wi]!.sessions[si]!
@@ -72,14 +76,18 @@ export default function MesoGrid({ mesocycle, compact = false }: { mesocycle: Me
       session.exercises.every(ex => ex.sets.every(s => s.logged))
     const isDeload = mesocycle.rir_scheme[wi] === -1
     const isCurrent = wi === currentWi && si === currentSi
+    const isViewing = viewingWeek !== undefined && viewingSession !== undefined &&
+      wi === viewingWeek && si === viewingSession
 
     if (isDeload) {
       if (isLogged) return 'deload-done'
       if (isCurrent) return 'deload-current'
+      if (isViewing) return 'deload-viewing'
       return 'deload-pending'
     }
     if (isLogged) return 'done'
     if (isCurrent) return 'current'
+    if (isViewing) return 'viewing'
     return 'pending'
   }
 
@@ -154,6 +162,7 @@ export default function MesoGrid({ mesocycle, compact = false }: { mesocycle: Me
               const state = getCellState(wi, si)
               const isCurrent = state === 'current' || state === 'deload-current'
               const isDone = state === 'done' || state === 'deload-done'
+              const isViewing = state === 'viewing' || state === 'deload-viewing'
 
               return (
                 <button
@@ -184,6 +193,16 @@ export default function MesoGrid({ mesocycle, compact = false }: { mesocycle: Me
                         height: 8,
                         borderRadius: '50%',
                         background: state === 'deload-current' ? '#eab308' : '#0284c7',
+                      }}
+                    />
+                  )}
+                  {isViewing && (
+                    <div
+                      style={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: '50%',
+                        background: '#64748b',
                       }}
                     />
                   )}

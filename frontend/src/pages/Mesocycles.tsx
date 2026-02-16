@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useToast } from '../components/Toast'
 import { ChevronRightIcon } from '../components/Icons'
 import AppHeader from '../components/AppHeader'
+import MesoGrid from '../components/MesoGrid'
 import { useMesocycles, useCreateMesocycle, useSplits, useActiveMesocycle } from '../api/hooks'
 import type { MesocycleListItem, Mesocycle } from '../types'
 
@@ -128,148 +129,8 @@ function ActiveMesoCard({ meso, fullMeso }: { meso: MesocycleListItem; fullMeso:
       </div>
 
       {/* Dot grid */}
-      {fullMeso && <MesoGrid structure={fullMeso.structure} />}
+      {fullMeso && <MesoGrid mesocycle={fullMeso} compact />}
     </Link>
-  )
-}
-
-// --- Meso Grid (dot grid) ---
-
-function MesoGrid({ structure }: { structure: Mesocycle['structure'] }) {
-  const weeks = structure.weeks
-  if (!weeks || weeks.length === 0) return null
-
-  // Session labels from first week
-  const sessionLabels = weeks[0]!.sessions.map((s) => s.session_name)
-  const totalWeeks = weeks.length
-
-  // Find "current" position: first session with any unlogged sets
-  let currentWeek = -1
-  let currentSession = -1
-  let found = false
-  for (let wi = 0; wi < weeks.length && !found; wi++) {
-    const week = weeks[wi]!
-    for (let si = 0; si < week.sessions.length && !found; si++) {
-      const session = week.sessions[si]!
-      const allLogged = session.exercises.length > 0 &&
-        session.exercises.every((ex) => ex.sets.every((s) => s.logged))
-      if (!allLogged) {
-        currentWeek = wi
-        currentSession = si
-        found = true
-      }
-    }
-  }
-
-  return (
-    <div className="overflow-x-auto scrollbar-hide" style={{ background: '#0a1626', borderRadius: 8, padding: '10px 12px' }}>
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: `40px repeat(${totalWeeks}, 1fr)`,
-          gap: 5,
-          alignItems: 'center',
-          minWidth: 'max-content',
-        }}
-      >
-        {/* Header row */}
-        <div />
-        {weeks.map((week, wi) => {
-          const isDeload = week.rir === -1
-          return (
-            <div key={wi} className="text-center">
-              <div className="text-[10px] font-semibold" style={{ color: isDeload ? '#eab308' : '#64748b' }}>
-                W{week.week_number}
-              </div>
-              <div className="text-[8px] font-normal" style={{ color: isDeload ? 'rgba(234,179,8,0.5)' : '#475569' }}>
-                {isDeload ? 'DL' : `R${week.rir}`}
-              </div>
-            </div>
-          )
-        })}
-
-        {/* Session rows */}
-        {sessionLabels.map((label, si) => (
-          <MesoGridRow
-            key={si}
-            label={label}
-            sessionIndex={si}
-            weeks={weeks}
-            currentWeek={currentWeek}
-            currentSession={currentSession}
-          />
-        ))}
-      </div>
-    </div>
-  )
-}
-
-function MesoGridRow({
-  label,
-  sessionIndex,
-  weeks,
-  currentWeek,
-  currentSession,
-}: {
-  label: string
-  sessionIndex: number
-  weeks: Mesocycle['structure']['weeks']
-  currentWeek: number
-  currentSession: number
-}) {
-  return (
-    <>
-      <div className="text-[10px] font-medium" style={{ color: '#94a3b8' }}>{label}</div>
-      {weeks.map((week, wi) => {
-        const session = week.sessions[sessionIndex]
-        if (!session) {
-          return <div key={wi} className="flex justify-center"><div className="w-6 h-6" /></div>
-        }
-
-        const allLogged = session.exercises.length > 0 &&
-          session.exercises.every((ex) => ex.sets.every((s) => s.logged))
-        const isCurrent = wi === currentWeek && sessionIndex === currentSession
-        const isDeload = week.rir === -1
-
-        let dotStyle: React.CSSProperties
-
-        if (allLogged) {
-          // Done — solid green
-          dotStyle = { background: '#4ade80' }
-        } else if (isCurrent) {
-          // Current — pulsing blue ring
-          dotStyle = {
-            background: 'rgba(2,132,199,0.15)',
-            border: '2px solid #0284c7',
-            animation: 'pulse-current 2s ease-in-out infinite',
-          }
-        } else if (isDeload) {
-          // Deload — faint amber
-          dotStyle = {
-            background: 'rgba(234,179,8,0.06)',
-            border: '1.5px solid rgba(234,179,8,0.12)',
-          }
-        } else {
-          // Pending — hollow dark
-          dotStyle = {
-            background: '#162a3e',
-            border: '1.5px solid #244868',
-          }
-        }
-
-        return (
-          <div key={wi} className="flex justify-center">
-            <div className="w-6 h-6 rounded-full" style={dotStyle}>
-              {isCurrent && (
-                <div className="w-full h-full flex items-center justify-center">
-                  <div className="w-2 h-2 rounded-full" style={{ background: '#38bdf8' }} />
-                </div>
-              )}
-            </div>
-          </div>
-        )
-      })}
-    </>
   )
 }
 
