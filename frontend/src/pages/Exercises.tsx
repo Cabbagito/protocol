@@ -14,6 +14,13 @@ const MUSCLE_GROUPS = [
   'calves', 'abs', 'traps', 'forearms',
 ]
 
+const MUSCLE_GROUP_ROWS: { label: string; groups: string[] }[] = [
+  { label: 'Push', groups: ['chest', 'front delt', 'side delt', 'triceps'] },
+  { label: 'Pull', groups: ['back', 'rear delt', 'biceps', 'traps', 'forearms'] },
+  { label: 'Legs', groups: ['quads', 'hamstrings', 'glutes', 'calves'] },
+  { label: 'Core', groups: ['abs'] },
+]
+
 const EQUIPMENT_TYPES: EquipmentType[] = [
   'barbell', 'dumbbell', 'machine', 'cable', 'bodyweight',
 ]
@@ -145,25 +152,34 @@ function MuscleGroupChips({
   onToggle: (mg: string) => void
 }) {
   return (
-    <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1 -mx-1 px-1">
-      {MUSCLE_GROUPS.map((mg) => {
-        const color = getMuscleColor(mg)
-        const isSelected = selected.has(mg)
-        return (
-          <button
-            key={mg}
-            onClick={() => onToggle(mg)}
-            className="shrink-0 text-xs font-semibold uppercase tracking-wider px-2.5 py-1 rounded-full transition-colors"
-            style={{
-              color: isSelected ? color.light : '#94a3b8',
-              background: isSelected ? color.bg : 'transparent',
-              border: `1px solid ${isSelected ? color.primary : 'rgba(148,163,184,0.2)'}`,
-            }}
-          >
-            {mg}
-          </button>
-        )
-      })}
+    <div className="space-y-2">
+      {MUSCLE_GROUP_ROWS.map((row) => (
+        <div key={row.label} className="flex items-center gap-2">
+          <span className="text-[10px] font-medium uppercase tracking-wider text-slate-500 w-8 shrink-0">
+            {row.label}
+          </span>
+          <div className="flex flex-wrap gap-1.5">
+            {row.groups.map((mg) => {
+              const color = getMuscleColor(mg)
+              const isSelected = selected.has(mg)
+              return (
+                <button
+                  key={mg}
+                  onClick={() => onToggle(mg)}
+                  className="text-xs font-semibold uppercase tracking-wider px-2.5 py-1 rounded-full transition-colors"
+                  style={{
+                    color: isSelected ? color.light : '#94a3b8',
+                    background: isSelected ? color.bg : 'transparent',
+                    border: `1px solid ${isSelected ? color.primary : 'rgba(148,163,184,0.2)'}`,
+                  }}
+                >
+                  {mg}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      ))}
     </div>
   )
 }
