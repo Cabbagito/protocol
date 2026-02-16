@@ -438,8 +438,31 @@ _DEMO_WEIGHTS: dict[str, float] = {
 }
 
 
+def _log_session(meso_session: dict, exercises_by_id: dict, session_date: str,
+                  rir: int, *, use_suggested: bool = False) -> None:
+    """Fill a mesocycle session with realistic logged data.
+
+    If use_suggested is True, uses the suggested_weight (set by compute_progression)
+    rather than the demo weights table.
+    """
+    meso_session["date"] = session_date
+    for exercise in meso_session["exercises"]:
+        ex_obj = exercises_by_id.get(exercise["exercise_id"])
+        seed_key = ex_obj.seed_key if ex_obj else None
+        base_weight = _DEMO_WEIGHTS.get(seed_key, 20)
+        for s in exercise["sets"]:
+            if use_suggested and s.get("suggested_weight"):
+                weight = s["suggested_weight"]
+            else:
+                weight = base_weight
+            s["weight"] = weight
+            s["reps"] = 10
+            s["rir"] = rir
+            s["logged"] = True
+
+
 async def seed_demo_mesocycle(session: AsyncSession) -> None:
-    """Seed a demo mesocycle with week-1 workout data logged in the structure."""
+    """Seed a demo mesocycle with weeks 1-2 fully logged and week 3 partially logged."""
     # Look up the Hero Split
     result = await session.execute(
         select(Split).where(Split.seed_key == HERO_SPLIT["seed_key"])
@@ -461,30 +484,38 @@ async def seed_demo_mesocycle(session: AsyncSession) -> None:
     # Load exercise lookup
     result = await session.execute(select(Exercise).where(Exercise.seed_key.isnot(None)))
     exercises_by_id = {e.id: e for e in result.scalars().all()}
-    exercises_by_seed_key = {e.seed_key: e for e in exercises_by_id.values()}
 
     # Build the structure
     total_weeks = 4
     structure = build_mesocycle_structure(sessions, exercises_by_id, total_weeks)
 
-    # Fill in week 1 with demo data (all sets logged)
-    start_date = date.today() - timedelta(days=14)
+    # --- Week 1: all 5 sessions logged (RiR 3) ---
+    start_date = date.today() - timedelta(days=16)
     week1 = structure["weeks"][0]
     for day_idx, meso_session in enumerate(week1["sessions"]):
-        meso_session["date"] = (start_date + timedelta(days=day_idx)).isoformat()
-        for exercise in meso_session["exercises"]:
-            # Find seed_key to look up demo weight
-            ex_obj = exercises_by_id.get(exercise["exercise_id"])
-            seed_key = ex_obj.seed_key if ex_obj else None
-            weight = _DEMO_WEIGHTS.get(seed_key, 20)
-            for s in exercise["sets"]:
-                s["weight"] = weight
-                s["reps"] = 10
-                s["rir"] = 3
-                s["logged"] = True
+        day = (start_date + timedelta(days=day_idx)).isoformat()
+        _log_session(meso_session, exercises_by_id, day, rir=3)
 
-    # Compute progression for week 2+
+    # Compute progression so week 2 gets suggested weights
     compute_progression(structure)
+
+    # --- Week 2: all 5 sessions logged (RiR 2), using suggested weights ---
+    week2_start = date.today() - timedelta(days=9)
+    week2 = structure["weeks"][1]
+    for day_idx, meso_session in enumerate(week2["sessions"]):
+        day = (week2_start + timedelta(days=day_idx)).isoformat()
+        _log_session(meso_session, exercises_by_id, day, rir=2, use_suggested=True)
+
+    # Compute progression so week 3 gets suggested weights
+    compute_progression(structure)
+
+    # --- Week 3: first 2 sessions logged (Pull, Push), Legs is next ---
+    week3_start = date.today() - timedelta(days=2)
+    week3 = structure["weeks"][2]
+    for day_idx in range(2):  # only first 2 sessions
+        meso_session = week3["sessions"][day_idx]
+        day = (week3_start + timedelta(days=day_idx)).isoformat()
+        _log_session(meso_session, exercises_by_id, day, rir=1, use_suggested=True)
 
     meso = Mesocycle(
         split_id=split.id,
@@ -495,7 +526,7 @@ async def seed_demo_mesocycle(session: AsyncSession) -> None:
     )
     session.add(meso)
     await session.commit()
-    logger.info("Seeded demo mesocycle '%s' with week-1 data logged", meso.name)
+    logger.info("Seeded demo mesocycle '%s' with weeks 1-2 + partial week 3 logged", meso.name)
 
 
 async def reset_and_reseed(session: AsyncSession) -> None:
