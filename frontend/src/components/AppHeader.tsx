@@ -29,8 +29,9 @@ export default function AppHeader({
 
   return (
     <div
-      className="sticky top-0 z-40 relative"
+      className="sticky z-40 relative"
       style={{
+        top: 'env(safe-area-inset-top, 0px)',
         background: '#0d1b2a',
         borderBottom: hasProgressBar ? 'none' : '1px solid rgba(255,255,255,0.04)',
       }}
