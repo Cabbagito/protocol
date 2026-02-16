@@ -167,7 +167,7 @@ async def log_sets(
     for s in data.sets:
         logged_map[(s.exercise_id, s.set_num)] = s
 
-    # Apply logged data to the structure
+    # Apply logged data to the structure (and un-log sets not in payload)
     for exercise in session.get("exercises", []):
         for set_data in exercise.get("sets", []):
             key = (exercise["exercise_id"], set_data["set_num"])
@@ -177,6 +177,8 @@ async def log_sets(
                 set_data["reps"] = log.reps
                 set_data["rir"] = log.rir
                 set_data["logged"] = True
+            else:
+                set_data["logged"] = False
 
     # Recompute progression for future weeks
     compute_progression(structure)

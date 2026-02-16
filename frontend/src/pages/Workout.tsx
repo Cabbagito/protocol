@@ -117,7 +117,6 @@ export default function Workout() {
   const triggerAutoSave = useCallback((currentSets: WorkingSet[]) => {
     if (!mesocycleId || !template) return
     const completed = currentSets.filter(s => s.completed)
-    if (completed.length === 0) return
 
     pendingSavesRef.current++
     setIsSaving(true)
@@ -142,11 +141,11 @@ export default function Workout() {
     })
   }, [mesocycleId, template, logSets, toast])
 
-  // Trigger auto-save when completed count increases
+  // Trigger auto-save when completed count changes (log or un-log)
   useEffect(() => {
     if (!initialized) return
     const count = sets.filter(s => s.completed).length
-    if (count > prevCompletedRef.current) {
+    if (count !== prevCompletedRef.current) {
       triggerAutoSave(sets)
     }
     prevCompletedRef.current = count
