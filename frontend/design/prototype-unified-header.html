@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Protocol — Unified Header Exploration</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background: #050a10;
+    color: #e2e8f0;
+    -webkit-font-smoothing: antialiased;
+  }
+  .mono { font-family: 'JetBrains Mono', monospace; }
+
+  /* Phone frame */
+  .phone {
+    width: 375px;
+    height: 680px;
+    background: #0d1b2a;
+    border-radius: 20px;
+    overflow: hidden;
+    position: relative;
+    border: 1px solid rgba(255,255,255,0.06);
+    flex-shrink: 0;
+  }
+  .phone-vignette {
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse at center, transparent 60%, #070d15 100%);
+    pointer-events: none; z-index: 50;
+    border-radius: 20px;
+  }
+  .phone-content {
+    position: relative;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Bottom nav */
+  .bottom-nav {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    background: rgba(13,27,42,0.95);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-top: 1px solid rgba(255,255,255,0.06);
+    z-index: 40;
+  }
+
+  /* Progress bar glow */
+  .progress-glow {
+    box-shadow: 0 0 8px rgba(74,222,128,0.5), 0 0 2px rgba(74,222,128,0.8);
+  }
+
+  /* Drawer transition */
+  .drawer { overflow: hidden; transition: max-height 0.3s ease-in-out; }
+
+  /* Section labels — sit above the phone frame */
+  .section-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #475569;
+    margin-bottom: 8px;
+  }
+
+  /* Wrapper for label + phone */
+  .phone-wrapper {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Variation heading */
+  .var-heading {
+    font-size: 13px;
+    font-weight: 600;
+    color: #cbd5e1;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .var-desc {
+    font-size: 11px;
+    color: #475569;
+    margin-bottom: 16px;
+    line-height: 1.5;
+  }
+
+  /* Scroll container for phone grid */
+  .phones-row {
+    display: flex;
+    gap: 14px;
+    overflow-x: auto;
+    padding-bottom: 8px;
+  }
+  .phones-row::-webkit-scrollbar { display: none; }
+
+  /* Content placeholder styles */
+  .placeholder-line {
+    height: 10px;
+    background: rgba(30,58,82,0.5);
+    border-radius: 4px;
+    margin-bottom: 8px;
+  }
+  .placeholder-card {
+    background: #0f1d2e;
+    border: 1px solid #1e3a52;
+    border-radius: 10px;
+    padding: 14px;
+    margin-bottom: 10px;
+  }
+
+  /* Logo inline SVG helper */
+  .logo-svg { display: inline-block; flex-shrink: 0; }
+</style>
+</head>
+<body>
+
+<div style="max-width: 1680px; margin: 0 auto; padding: 32px 24px;">
+  <!-- Page title -->
+  <div style="margin-bottom: 40px;">
+    <h1 style="font-size: 22px; font-weight: 700; color: #e2e8f0; margin-bottom: 6px;">Unified Header — Exploration</h1>
+    <p style="font-size: 13px; color: #475569; line-height: 1.6; max-width: 640px;">
+      Three approaches to a consistent header across Dashboard, List pages, Detail pages, and active Workout. Each row shows the same variation in all four page contexts.
+    </p>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       VARIATION A — LOGO-ANCHORED
+       Logo always visible on the left. Back chevron overlays on sub-pages.
+       Workout mode adds RIR badge + progress bar below.
+       ═══════════════════════════════════════════════════════════════ -->
+  <div style="margin-bottom: 48px;">
+    <div class="var-heading">A — Logo-Anchored</div>
+    <div class="var-desc">
+      Logo always present on the left — acts as home button on sub-pages. Back chevron appears to the left of the logo on detail/workout pages.
+      All headers are sticky with a subtle bottom border. Workout mode appends RIR + progress bar as an extension of the same header block.
+    </div>
+    <div class="phones-row">
+
+      <!-- A1: Dashboard -->
+      <div class="phone-wrapper">
+        <div class="section-label">Dashboard</div>
+        <div class="phone">
+          <div class="phone-content">
+            <!-- Header -->
+            <div style="background:#0d1b2a; border-bottom: 1px solid rgba(255,255,255,0.04); position: sticky; top:0; z-index:30;">
+              <div style="padding: 20px 16px 14px; display:flex; align-items:center; gap:12px;">
+                <!-- Logo -->
+                <svg class="logo-svg" width="36" height="36" viewBox="0 0 100 100" fill="none"><circle cx="50" cy="50" r="45" stroke="#0ea5e9" stroke-width="4"/><circle cx="50" cy="50" r="32" stroke="#0ea5e9" stroke-width="3" opacity="0.6"/><circle cx="50" cy="50" r="8" fill="#0ea5e9"/><line x1="50" y1="5" x2="50" y2="18" stroke="#0ea5e9" stroke-width="3" stroke-linecap="round"/><line x1="50" y1="82" x2="50" y2="95" stroke="#0ea5e9" stroke-width="3" stroke-linecap="round"/><line x1="5" y1="50" x2="18" y2="50" stroke="#0ea5e9" stroke-width="3" stroke-linecap="round"/><line x1="82" y1="50" x2="95" y2="50" stroke="#0ea5e9" stroke-width="3" stroke-linecap="round"/></svg>
+                <div>
+                  <div style="font-size:15px; font-weight:600; color:#e2e8f0;">Protocol</div>
+                  <div style="font-size:11px; color:#475569;">Monday, February 16</div>
+                </div>
+              </div>
+            </div>
+            <!-- Body -->
+            <div style="padding:16px; flex:1; overflow-y:auto; padding-bottom:80px;">
+              <div class="placeholder-card"><div class="placeholder-line" style="width:60%"></div><div class="placeholder-line" style="width:80%"></div><div class="placeholder-line" style="width:40%"></div></div>
+              <div class="placeholder-card"><div class="placeholder-line" style="width:50%"></div><div class="placeholder-line" style="width:70%"></div></div>
+              <div class="placeholder-card"><div class="placeholder-line" style="width:65%"></div><div class="placeholder-line" style="width:45%"></div></div>
+            </div>
+            <!-- Bottom Nav -->
+            <div class="bottom-nav">
+              <div style="display:flex; justify-content:space-around; align-items:center; height:56px;">
+                <div style="display:flex; flex-direction:column; align-items:center; color:#38bdf8;">
+                  <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+                  <span style="font-size:10px; margin-top:3px;">Home</span>
+                </div>
+                <div style="display:flex; flex-direction:column; align-items:center; color:#475569;">
+                  <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 12h8M12 8v8"/></svg>
+                  <span style="font-size:10px; margin-top:3px;">Workout</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="phone-vignette"></div>
+        </div>
+      </div>
+
+      <!-- A2: List page -->
+      <div class="phone-wrapper">
+        <div class="section-label">List — Exercises</div>
+        <div class="phone">
+          <div class="phone-content">
+            <div style="background:#0d1b2a; border-bottom: 1px solid rgba(255,255,255,0.04); position: sticky; top:0; z-index:30;">
+              <div style="padding: 20px 16px 14px; display:flex; align-items:center; gap:12px;">
+                <svg class="logo-svg" width="36" height="36" viewBox="0 0 100 100" fill="none"><circle cx="50" cy="50" r="45" stroke="#0ea5e9" stroke-width="4"/><circle cx="50" cy="50" r="32" stroke="#0ea5e9" stroke-width="3" opacity="0.6"/><circle cx="50" cy="50" r="8" fill="#0ea5e9"/><line x1="50" y1="5" x2="50" y2="18" stroke="#0ea5e9" stroke-width="3" stroke-linecap="round"/><line x1="50" y1="82" x2="50" y2="95" stroke="#0ea5e9" stroke-width="3" stroke-linecap="round"/><line x1="5" y1="50" x2="18" y2="50" stroke="#0ea5e9" stroke-width="3" stroke-linecap="round"/><line x1="82" y1="50" x2="95" y2="50" stroke="#0ea5e9" stroke-width="3" stroke-linecap="round"/></svg>
+                <div style="flex:1;">
+                  <div style="font-size:15px; font-weight:600; color:#e2e8f0;">Exercises</div>
+                  <div style="font-size:11px; color:#475569;">48 exercises</div>
+                </div>
+                <!-- Action button -->
+                <div style="display:flex; align-items:center; gap:4px; padding:6px 12px; border-radius:8px; background:rgba(14,165,233,0.08); border:1px solid rgba(14,165,233,0.12); cursor:pointer;">
+                  <svg width="14" height="14" fill="none" stroke="#38bdf8" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" d="M12 4v16m8-8H4"/></svg>
+                  <span style="font-size:12px; font-weight:500; color:#38bdf8;">Add</span>
+                </div>
+              </div>
+            </div>
+            <div style="padding:16px; flex:1; overflow-y:auto; padding-bottom:80px;">
+              <div class="placeholder-card"><div class="placeholder-line" style="width:55%"></div><div class="placeholder-line" style="width:30%"></div></div>
+              <div class="placeholder-card"><div class="placeholder-line" style="width:65%"></div><div class="placeholder-line" style="width:35%"></div></div>
+              <div class="placeholder-card"><div class="placeholder-line" style="width:50%"></div><div class="placeholder-line" style="width:40%"></div></div>
+              <div class="placeholder-card"><div class="placeholder-line" style="width:60%"></div><div class="placeholder-line" style="width:25%"></div></div>
+            </div>
+            <div class="bottom-nav">
+              <div style="display:flex; justify-content:space-around; align-items:center; height:56px;">
+                <div style="display:flex; flex-direction:column; align-items:center; color:#475569;"><svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg><span style="font-size:10px; margin-top:3px;">Home</span></div>
+                <div style="display:flex; flex-direction:column; align-items:center; color:#475569;"><svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 12h8M12 8v8"/></svg><span style="font-size:10px; margin-top:3px;">Workout</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="phone-vignette"></div>
+        </div>
+      </div>
+
+      <!-- A3: Detail page -->
+      <div class="phone-wrapper">
+        <div class="section-label">Detail — Mesocycle</div>
+        <div class="phone">
+          <div class="phone-content">
+            <div style="background:#0d1b2a; border-bottom: 1px solid rgba(255,255,255,0.04); position: sticky; top:0; z-index:30;">
+              <div style="padding: 20px 16px 14px; display:flex; align-items:center; gap:8px;">
+                <!-- Back chevron -->
+                <svg width="22" height="22" fill="none" stroke="#475569" stroke-width="2" viewBox="0 0 24 24" style="flex-shrink:0; cursor:pointer;"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                <!-- Logo -->
+                <svg class="logo-svg" width="36" height="36" viewBox="0 0 100 100" fill="none"><circle cx="50" cy="50" r="45" stroke="#0ea5e9" stroke-width="4"/><circle cx="50" cy="50" r="32" stroke="#0ea5e9" stroke-width="3" opacity="0.6"/><circle cx="50" cy="50" r="8" fill="#0ea5e9"/><line x1="50" y1="5" x2="50" y2="18" stroke="#0ea5e9" stroke-width="3" stroke-linecap="round"/><line x1="50" y1="82" x2="50" y2="95" stroke="#0ea5e9" stroke-width="3" stroke-linecap="round"/><line x1="5" y1="50" x2="18" y2="50" stroke="#0ea5e9" stroke-width="3" stroke-linecap="round"/><line x1="82" y1="50" x2="95" y2="50" stroke="#0ea5e9" stroke-width="3" stroke-linecap="round"/></svg>
+                <div style="flex:1;">
+                  <div style="font-size:15px; font-weight:600; color:#e2e8f0;">Hypertrophy Block</div>
+                  <div style="font-size:11px; color:#475569;">Push / Pull / Legs</div>
+                </div>
+              </div>
+            </div>
+            <div style="padding:16px; flex:1; overflow-y:auto; padding-bottom:80px;">
+              <div class="placeholder-card"><div class="placeholder-line" style="width:70%"></div><div class="placeholder-line" style="width:90%"></div><div class="placeholder-line" style="width:50%"></div></div>
+              <div class="placeholder-card"><div class="placeholder-line" style="width:60%"></div><div class="placeholder-line" style="width:40%"></div></div>
+            </div>
+            <div class="bottom-nav">
+              <div style="display:flex; justify-content:space-around; align-items:center; height:56px;">
+                <div style="display:flex; flex-direction:column; align-items:center; color:#475569;"><svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg><span style="font-size:10px; margin-top:3px;">Home</span></div>
+                <div style="display:flex; flex-direction:column; align-items:center; color:#475569;"><svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 12h8M12 8v8"/></svg><span style="font-size:10px; margin-top:3px;">Workout</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="phone-vignette"></div>
+        </div>
+      </div>
+
+      <!-- A4: Workout -->
+      <div class="phone-wrapper">
+        <div class="section-label">Workout</div>
+        <div class="phone">
+          <div class="phone-content">
+            <div style="background:#0d1b2a; position: sticky; top:0; z-index:30;">
+              <div style="padding: 20px 16px 12px; display:flex; align-items:center; gap:8px;">
+                <!-- Back chevron -->
+                <svg width="22" height="22" fill="none" stroke="#475569" stroke-width="2" viewBox="0 0 24 24" style="flex-shrink:0; cursor:pointer;"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                <!-- Logo -->
+                <svg class="logo-svg" width="36" height="36" viewBox="0 0 100 100" fill="none"><circle cx="50" cy="50" r="45" stroke="#0ea5e9" stroke-width="4"/><circle cx="50" cy="50" r="32" stroke="#0ea5e9" stroke-width="3" opacity="0.6"/><circle cx="50" cy="50" r="8" fill="#0ea5e9"/><line x1="50" y1="5" x2="50" y2="18" stroke="#0ea5e9" stroke-width="3" stroke-linecap="round"/><line x1="50" y1="82" x2="50" y2="95" stroke="#0ea5e9" stroke-width="3" stroke-linecap="round"/><line x1="5" y1="50" x2="18" y2="50" stroke="#0ea5e9" stroke-width="3" stroke-linecap="round"/><line x1="82" y1="50" x2="95" y2="50" stroke="#0ea5e9" stroke-width="3" stroke-linecap="round"/></svg>
+                <div style="flex:1; min-width:0;">
+                  <div style="font-size:15px; font-weight:600; color:#e2e8f0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Push Day</div>
+                  <div style="font-size:11px; color:#475569;">Week 3</div>
+                </div>
+                <!-- RIR Badge -->
+                <div style="display:flex; flex-direction:column; align-items:center; flex-shrink:0;">
+                  <span style="font-size:10px; font-weight:500; text-transform:uppercase; letter-spacing:0.08em; color:#475569; margin-bottom:3px;">RiR</span>
+                  <div style="width:40px; height:40px; border-radius:12px; display:flex; align-items:center; justify-content:center; background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.15);">
+                    <span class="mono" style="font-size:18px; font-weight:700; color:#38bdf8;">2</span>
+                  </div>
+                </div>
+                <!-- Expand chevron -->
+                <svg width="18" height="18" fill="none" stroke="#475569" stroke-width="2" viewBox="0 0 24 24" style="flex-shrink:0; cursor:pointer;"><path stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6"/></svg>
+              </div>
+              <!-- Progress bar -->
+              <div style="height:3px; width:100%; background:#162a3e; position:relative;">
+                <div style="position:absolute; left:0; top:0; height:100%; width:65%; background:#4ade80; border-radius: 0 9999px 9999px 0;" class="progress-glow"></div>
+              </div>
+            </div>
+            <div style="padding:12px; flex:1; overflow-y:auto; padding-bottom:80px;">
+              <div class="placeholder-card" style="border-color: rgba(249,115,22,0.35);"><div class="placeholder-line" style="width:45%; background:rgba(249,115,22,0.3);"></div><div class="placeholder-line" style="width:80%"></div><div class="placeholder-line" style="width:80%"></div><div class="placeholder-line" style="width:80%"></div></div>
+              <div class="placeholder-card" style="border-color: rgba(236,72,153,0.35);"><div class="placeholder-line" style="width:50%; background:rgba(236,72,153,0.3);"></div><div class="placeholder-line" style="width:80%"></div><div class="placeholder-line" style="width:80%"></div></div>
+            </div>
+            <div class="bottom-nav">
+              <div style="display:flex; justify-content:space-around; align-items:center; height:56px;">
+                <div style="display:flex; flex-direction:column; align-items:center; color:#475569;"><svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg><span style="font-size:10px; margin-top:3px;">Home</span></div>
+                <div style="display:flex; flex-direction:column; align-items:center; color:#38bdf8;"><svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 12h8M12 8v8"/></svg><span style="font-size:10px; margin-top:3px;">Workout</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="phone-vignette"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       VARIATION B — MINIMAL BAR
+       Thin always-sticky bar. Small logo icon on left, title centered.
+       Back button replaces logo. Workout expands height.
+       ═══════════════════════════════════════════════════════════════ -->
+  <div style="margin-bottom: 48px;">
+    <div class="var-heading">B — Minimal Bar</div>
+    <div class="var-desc">
+      Compact, always-sticky bar. Logo shrinks to a small 24px icon on the left. Page title is centered.
+      On sub-pages, a back arrow replaces the logo. Workout mode expands the bar vertically to fit RIR + progress bar below the title row.
+    </div>
+    <div class="phones-row">
+
+      <!-- B1: Dashboard -->
+      <div class="phone-wrapper">
+        <div class="section-label">Dashboard</div>
+        <div class="phone">
+          <div class="phone-content">
+            <div style="background:#0d1b2a; border-bottom: 1px solid rgba(255,255,255,0.04); position: sticky; top:0; z-index:30;">
+              <div style="padding: 16px 16px 12px; display:flex; align-items:center;">
+                <!-- Small logo -->
+                <svg width="24" height="24" viewBox="0 0 100 100" fill="none" style="flex-shrink:0;"><circle cx="50" cy="50" r="45" stroke="#0ea5e9" stroke-width="5"/><circle cx="50" cy="50" r="32" stroke="#0ea5e9" stroke-width="4" opacity="0.6"/><circle cx="50" cy="50" r="8" fill="#0ea5e9"/><line x1="50" y1="5" x2="50" y2="18" stroke="#0ea5e9" stroke-width="4" stroke-linecap="round"/><line x1="50" y1="82" x2="50" y2="95" stroke="#0ea5e9" stroke-width="4" stroke-linecap="round"/><line x1="5" y1="50" x2="18" y2="50" stroke="#0ea5e9" stroke-width="4" stroke-linecap="round"/><line x1="82" y1="50" x2="95" y2="50" stroke="#0ea5e9" stroke-width="4" stroke-linecap="round"/></svg>
+                <!-- Centered title -->
+                <div style="flex:1; text-align:center;">
+                  <div style="font-size:15px; font-weight:600; color:#e2e8f0;">Protocol</div>
+                </div>
+                <!-- Date right-aligned -->
+                <span style="font-size:11px; color:#475569; white-space:nowrap;">Feb 16</span>
+              </div>
+            </div>
+            <div style="padding:16px; flex:1; overflow-y:auto; padding-bottom:80px;">
+              <div class="placeholder-card"><div class="placeholder-line" style="width:60%"></div><div class="placeholder-line" style="width:80%"></div><div class="placeholder-line" style="width:40%"></div></div>
+              <div class="placeholder-card"><div class="placeholder-line" style="width:50%"></div><div class="placeholder-line" style="width:70%"></div></div>
+              <div class="placeholder-card"><div class="placeholder-line" style="width:65%"></div><div class="placeholder-line" style="width:45%"></div></div>
+            </div>
+            <div class="bottom-nav">
+              <div style="display:flex; justify-content:space-around; align-items:center; height:56px;">
+                <div style="display:flex; flex-direction:column; align-items:center; color:#38bdf8;"><svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg><span style="font-size:10px; margin-top:3px;">Home</span></div>
+                <div style="display:flex; flex-direction:column; align-items:center; color:#475569;"><svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 12h8M12 8v8"/></svg><span style="font-size:10px; margin-top:3px;">Workout</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="phone-vignette"></div>
+        </div>
+      </div>
+
+      <!-- B2: List page -->
+      <div class="phone-wrapper">
+        <div class="section-label">List — Exercises</div>
+        <div class="phone">
+          <div class="phone-content">
+            <div style="background:#0d1b2a; border-bottom: 1px solid rgba(255,255,255,0.04); position: sticky; top:0; z-index:30;">
+              <div style="padding: 16px 16px 12px; display:flex; align-items:center;">
+                <svg width="24" height="24" viewBox="0 0 100 100" fill="none" style="flex-shrink:0;"><circle cx="50" cy="50" r="45" stroke="#0ea5e9" stroke-width="5"/><circle cx="50" cy="50" r="32" stroke="#0ea5e9" stroke-width="4" opacity="0.6"/><circle cx="50" cy="50" r="8" fill="#0ea5e9"/><line x1="50" y1="5" x2="50" y2="18" stroke="#0ea5e9" stroke-width="4" stroke-linecap="round"/><line x1="50" y1="82" x2="50" y2="95" stroke="#0ea5e9" stroke-width="4" stroke-linecap="round"/><line x1="5" y1="50" x2="18" y2="50" stroke="#0ea5e9" stroke-width="4" stroke-linecap="round"/><line x1="82" y1="50" x2="95" y2="50" stroke="#0ea5e9" stroke-width="4" stroke-linecap="round"/></svg>
+                <div style="flex:1; text-align:center;">
+                  <div style="font-size:15px; font-weight:600; color:#e2e8f0;">Exercises</div>
+                </div>
+                <div style="display:flex; align-items:center; gap:3px; cursor:pointer;">
+                  <svg width="16" height="16" fill="none" stroke="#38bdf8" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" d="M12 4v16m8-8H4"/></svg>
+                </div>
+              </div>
+            </div>
+            <div style="padding:16px; flex:1; overflow-y:auto; padding-bottom:80px;">
+              <div class="placeholder-card"><div class="placeholder-line" style="width:55%"></div><div class="placeholder-line" style="width:30%"></div></div>
+              <div class="placeholder-card"><div class="placeholder-line" style="width:65%"></div><div class="placeholder-line" style="width:35%"></div></div>
+              <div class="placeholder-card"><div class="placeholder-line" style="width:50%"></div><div class="placeholder-line" style="width:40%"></div></div>
+              <div class="placeholder-card"><div class="placeholder-line" style="width:60%"></div><div class="placeholder-line" style="width:25%"></div></div>
+            </div>
+            <div class="bottom-nav">
+              <div style="display:flex; justify-content:space-around; align-items:center; height:56px;">
+                <div style="display:flex; flex-direction:column; align-items:center; color:#475569;"><svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg><span style="font-size:10px; margin-top:3px;">Home</span></div>
+                <div style="display:flex; flex-direction:column; align-items:center; color:#475569;"><svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 12h8M12 8v8"/></svg><span style="font-size:10px; margin-top:3px;">Workout</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="phone-vignette"></div>
+        </div>
+      </div>
+
+      <!-- B3: Detail page -->
+      <div class="phone-wrapper">
+        <div class="section-label">Detail — Mesocycle</div>
+        <div class="phone">
+          <div class="phone-content">
+            <div style="background:#0d1b2a; border-bottom: 1px solid rgba(255,255,255,0.04); position: sticky; top:0; z-index:30;">
+              <div style="padding: 16px 16px 12px; display:flex; align-items:center;">
+                <!-- Back replaces logo -->
+                <svg width="22" height="22" fill="none" stroke="#475569" stroke-width="2" viewBox="0 0 24 24" style="flex-shrink:0; cursor:pointer;"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                <div style="flex:1; text-align:center;">
+                  <div style="font-size:15px; font-weight:600; color:#e2e8f0;">Hypertrophy Block</div>
+                </div>
+                <!-- Spacer to keep title centered -->
+                <div style="width:22px;"></div>
+              </div>
+            </div>
+            <div style="padding:16px; flex:1; overflow-y:auto; padding-bottom:80px;">
+              <div class="placeholder-card"><div class="placeholder-line" style="width:70%"></div><div class="placeholder-line" style="width:90%"></div><div class="placeholder-line" style="width:50%"></div></div>
+              <div class="placeholder-card"><div class="placeholder-line" style="width:60%"></div><div class="placeholder-line" style="width:40%"></div></div>
+            </div>
+            <div class="bottom-nav">
+              <div style="display:flex; justify-content:space-around; align-items:center; height:56px;">
+                <div style="display:flex; flex-direction:column; align-items:center; color:#475569;"><svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg><span style="font-size:10px; margin-top:3px;">Home</span></div>
+                <div style="display:flex; flex-direction:column; align-items:center; color:#475569;"><svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 12h8M12 8v8"/></svg><span style="font-size:10px; margin-top:3px;">Workout</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="phone-vignette"></div>
+        </div>
+      </div>
+
+      <!-- B4: Workout -->
+      <div class="phone-wrapper">
+        <div class="section-label">Workout</div>
+        <div class="phone">
+          <div class="phone-content">
+            <div style="background:#0d1b2a; position: sticky; top:0; z-index:30;">
+              <!-- Row 1: back + centered title + RIR -->
+              <div style="padding: 16px 16px 0; display:flex; align-items:center;">
+                <svg width="22" height="22" fill="none" stroke="#475569" stroke-width="2" viewBox="0 0 24 24" style="flex-shrink:0; cursor:pointer;"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                <div style="flex:1; text-align:center;">
+                  <div style="font-size:15px; font-weight:600; color:#e2e8f0;">Push Day</div>
+                  <div style="font-size:11px; color:#475569;">Week 3</div>
+                </div>
+                <!-- Compact RIR -->
+                <div style="display:flex; align-items:center; gap:5px; flex-shrink:0;">
+                  <span style="font-size:10px; font-weight:500; text-transform:uppercase; letter-spacing:0.08em; color:#475569;">RiR</span>
+                  <div style="width:32px; height:32px; border-radius:10px; display:flex; align-items:center; justify-content:center; background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.15);">
+                    <span class="mono" style="font-size:15px; font-weight:700; color:#38bdf8;">2</span>
+                  </div>
+                </div>
+              </div>
+              <!-- Row 2: sets counter + expand -->
+              <div style="padding: 8px 16px 10px; display:flex; align-items:center; justify-content:space-between;">
+                <span style="font-size:11px; color:#475569;" class="mono">8 / 12 sets</span>
+                <svg width="16" height="16" fill="none" stroke="#475569" stroke-width="2" viewBox="0 0 24 24" style="cursor:pointer;"><path stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6"/></svg>
+              </div>
+              <!-- Progress bar -->
+              <div style="height:3px; width:100%; background:#162a3e; position:relative;">
+                <div style="position:absolute; left:0; top:0; height:100%; width:65%; background:#4ade80; border-radius: 0 9999px 9999px 0;" class="progress-glow"></div>
+              </div>
+            </div>
+            <div style="padding:12px; flex:1; overflow-y:auto; padding-bottom:80px;">
+              <div class="placeholder-card" style="border-color: rgba(249,115,22,0.35);"><div class="placeholder-line" style="width:45%; background:rgba(249,115,22,0.3);"></div><div class="placeholder-line" style="width:80%"></div><div class="placeholder-line" style="width:80%"></div><div class="placeholder-line" style="width:80%"></div></div>
+              <div class="placeholder-card" style="border-color: rgba(236,72,153,0.35);"><div class="placeholder-line" style="width:50%; background:rgba(236,72,153,0.3);"></div><div class="placeholder-line" style="width:80%"></div><div class="placeholder-line" style="width:80%"></div></div>
+            </div>
+            <div class="bottom-nav">
+              <div style="display:flex; justify-content:space-around; align-items:center; height:56px;">
+                <div style="display:flex; flex-direction:column; align-items:center; color:#475569;"><svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg><span style="font-size:10px; margin-top:3px;">Home</span></div>
+                <div style="display:flex; flex-direction:column; align-items:center; color:#38bdf8;"><svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 12h8M12 8v8"/></svg><span style="font-size:10px; margin-top:3px;">Workout</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="phone-vignette"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       VARIATION C — CONTEXTUAL STRIP
+       No logo except on dashboard. Slim sticky strip with page title.
+       Workout mode transforms into full workout header.
+       ═══════════════════════════════════════════════════════════════ -->
+  <div style="margin-bottom: 48px;">
+    <div class="var-heading">C — Contextual Strip</div>
+    <div class="var-desc">
+      Dashboard gets the full logo treatment. All other pages use a slim, text-only sticky strip — just the page title left-aligned with optional back/action.
+      The strip is ultra-minimal to maximize content space. Workout mode transforms it into the full header with RIR + progress. The contrast makes the workout feel like "entering a mode."
+    </div>
+    <div class="phones-row">
+
+      <!-- C1: Dashboard -->
+      <div class="phone-wrapper">
+        <div class="section-label">Dashboard</div>
+        <div class="phone">
+          <div class="phone-content">
+            <div style="background:#0d1b2a; position: sticky; top:0; z-index:30;">
+              <div style="padding: 20px 16px 16px; display:flex; align-items:center; gap:12px;">
+                <svg class="logo-svg" width="36" height="36" viewBox="0 0 100 100" fill="none"><circle cx="50" cy="50" r="45" stroke="#0ea5e9" stroke-width="4"/><circle cx="50" cy="50" r="32" stroke="#0ea5e9" stroke-width="3" opacity="0.6"/><circle cx="50" cy="50" r="8" fill="#0ea5e9"/><line x1="50" y1="5" x2="50" y2="18" stroke="#0ea5e9" stroke-width="3" stroke-linecap="round"/><line x1="50" y1="82" x2="50" y2="95" stroke="#0ea5e9" stroke-width="3" stroke-linecap="round"/><line x1="5" y1="50" x2="18" y2="50" stroke="#0ea5e9" stroke-width="3" stroke-linecap="round"/><line x1="82" y1="50" x2="95" y2="50" stroke="#0ea5e9" stroke-width="3" stroke-linecap="round"/></svg>
+                <div>
+                  <div style="font-size:15px; font-weight:600; color:#e2e8f0;">Protocol</div>
+                  <div style="font-size:11px; color:#475569;">Monday, February 16</div>
+                </div>
+              </div>
+              <!-- Thin divider -->
+              <div style="height:1px; background: rgba(255,255,255,0.04);"></div>
+            </div>
+            <div style="padding:16px; flex:1; overflow-y:auto; padding-bottom:80px;">
+              <div class="placeholder-card"><div class="placeholder-line" style="width:60%"></div><div class="placeholder-line" style="width:80%"></div><div class="placeholder-line" style="width:40%"></div></div>
+              <div class="placeholder-card"><div class="placeholder-line" style="width:50%"></div><div class="placeholder-line" style="width:70%"></div></div>
+              <div class="placeholder-card"><div class="placeholder-line" style="width:65%"></div><div class="placeholder-line" style="width:45%"></div></div>
+            </div>
+            <div class="bottom-nav">
+              <div style="display:flex; justify-content:space-around; align-items:center; height:56px;">
+                <div style="display:flex; flex-direction:column; align-items:center; color:#38bdf8;"><svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg><span style="font-size:10px; margin-top:3px;">Home</span></div>
+                <div style="display:flex; flex-direction:column; align-items:center; color:#475569;"><svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 12h8M12 8v8"/></svg><span style="font-size:10px; margin-top:3px;">Workout</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="phone-vignette"></div>
+        </div>
+      </div>
+
+      <!-- C2: List page -->
+      <div class="phone-wrapper">
+        <div class="section-label">List — Exercises</div>
+        <div class="phone">
+          <div class="phone-content">
+            <div style="background:#0d1b2a; border-bottom: 1px solid rgba(255,255,255,0.04); position: sticky; top:0; z-index:30;">
+              <div style="padding: 16px 16px 12px; display:flex; align-items:center; justify-content:space-between;">
+                <div style="font-size:15px; font-weight:600; color:#e2e8f0;">Exercises</div>
+                <div style="display:flex; align-items:center; gap:4px; cursor:pointer;">
+                  <svg width="14" height="14" fill="none" stroke="#38bdf8" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" d="M12 4v16m8-8H4"/></svg>
+                  <span style="font-size:12px; font-weight:500; color:#38bdf8;">Add</span>
+                </div>
+              </div>
+            </div>
+            <div style="padding:16px; flex:1; overflow-y:auto; padding-bottom:80px;">
+              <div class="placeholder-card"><div class="placeholder-line" style="width:55%"></div><div class="placeholder-line" style="width:30%"></div></div>
+              <div class="placeholder-card"><div class="placeholder-line" style="width:65%"></div><div class="placeholder-line" style="width:35%"></div></div>
+              <div class="placeholder-card"><div class="placeholder-line" style="width:50%"></div><div class="placeholder-line" style="width:40%"></div></div>
+              <div class="placeholder-card"><div class="placeholder-line" style="width:60%"></div><div class="placeholder-line" style="width:25%"></div></div>
+            </div>
+            <div class="bottom-nav">
+              <div style="display:flex; justify-content:space-around; align-items:center; height:56px;">
+                <div style="display:flex; flex-direction:column; align-items:center; color:#475569;"><svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg><span style="font-size:10px; margin-top:3px;">Home</span></div>
+                <div style="display:flex; flex-direction:column; align-items:center; color:#475569;"><svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 12h8M12 8v8"/></svg><span style="font-size:10px; margin-top:3px;">Workout</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="phone-vignette"></div>
+        </div>
+      </div>
+
+      <!-- C3: Detail page -->
+      <div class="phone-wrapper">
+        <div class="section-label">Detail — Mesocycle</div>
+        <div class="phone">
+          <div class="phone-content">
+            <div style="background:#0d1b2a; border-bottom: 1px solid rgba(255,255,255,0.04); position: sticky; top:0; z-index:30;">
+              <div style="padding: 16px 16px 12px; display:flex; align-items:center; gap:8px;">
+                <svg width="20" height="20" fill="none" stroke="#475569" stroke-width="2" viewBox="0 0 24 24" style="flex-shrink:0; cursor:pointer;"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                <div style="flex:1;">
+                  <div style="font-size:15px; font-weight:600; color:#e2e8f0;">Hypertrophy Block</div>
+                  <div style="font-size:11px; color:#475569;">Push / Pull / Legs</div>
+                </div>
+              </div>
+            </div>
+            <div style="padding:16px; flex:1; overflow-y:auto; padding-bottom:80px;">
+              <div class="placeholder-card"><div class="placeholder-line" style="width:70%"></div><div class="placeholder-line" style="width:90%"></div><div class="placeholder-line" style="width:50%"></div></div>
+              <div class="placeholder-card"><div class="placeholder-line" style="width:60%"></div><div class="placeholder-line" style="width:40%"></div></div>
+            </div>
+            <div class="bottom-nav">
+              <div style="display:flex; justify-content:space-around; align-items:center; height:56px;">
+                <div style="display:flex; flex-direction:column; align-items:center; color:#475569;"><svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg><span style="font-size:10px; margin-top:3px;">Home</span></div>
+                <div style="display:flex; flex-direction:column; align-items:center; color:#475569;"><svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 12h8M12 8v8"/></svg><span style="font-size:10px; margin-top:3px;">Workout</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="phone-vignette"></div>
+        </div>
+      </div>
+
+      <!-- C4: Workout -->
+      <div class="phone-wrapper">
+        <div class="section-label">Workout</div>
+        <div class="phone">
+          <div class="phone-content">
+            <div style="background:#0d1b2a; position: sticky; top:0; z-index:30;">
+              <div style="padding: 16px 16px 12px; display:flex; align-items:center; gap:8px;">
+                <svg width="20" height="20" fill="none" stroke="#475569" stroke-width="2" viewBox="0 0 24 24" style="flex-shrink:0; cursor:pointer;"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                <div style="flex:1; min-width:0;">
+                  <div style="font-size:15px; font-weight:600; color:#e2e8f0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Push Day</div>
+                  <div style="font-size:11px; color:#475569;">Week 3</div>
+                </div>
+                <!-- RIR Badge (full size) -->
+                <div style="display:flex; flex-direction:column; align-items:center; flex-shrink:0;">
+                  <span style="font-size:10px; font-weight:500; text-transform:uppercase; letter-spacing:0.08em; color:#475569; margin-bottom:3px;">RiR</span>
+                  <div style="width:40px; height:40px; border-radius:12px; display:flex; align-items:center; justify-content:center; background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.15);">
+                    <span class="mono" style="font-size:18px; font-weight:700; color:#38bdf8;">2</span>
+                  </div>
+                </div>
+                <svg width="16" height="16" fill="none" stroke="#475569" stroke-width="2" viewBox="0 0 24 24" style="flex-shrink:0; cursor:pointer;"><path stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6"/></svg>
+              </div>
+              <!-- Progress bar -->
+              <div style="height:3px; width:100%; background:#162a3e; position:relative;">
+                <div style="position:absolute; left:0; top:0; height:100%; width:65%; background:#4ade80; border-radius: 0 9999px 9999px 0;" class="progress-glow"></div>
+              </div>
+            </div>
+            <div style="padding:12px; flex:1; overflow-y:auto; padding-bottom:80px;">
+              <div class="placeholder-card" style="border-color: rgba(249,115,22,0.35);"><div class="placeholder-line" style="width:45%; background:rgba(249,115,22,0.3);"></div><div class="placeholder-line" style="width:80%"></div><div class="placeholder-line" style="width:80%"></div><div class="placeholder-line" style="width:80%"></div></div>
+              <div class="placeholder-card" style="border-color: rgba(236,72,153,0.35);"><div class="placeholder-line" style="width:50%; background:rgba(236,72,153,0.3);"></div><div class="placeholder-line" style="width:80%"></div><div class="placeholder-line" style="width:80%"></div></div>
+            </div>
+            <div class="bottom-nav">
+              <div style="display:flex; justify-content:space-around; align-items:center; height:56px;">
+                <div style="display:flex; flex-direction:column; align-items:center; color:#475569;"><svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg><span style="font-size:10px; margin-top:3px;">Home</span></div>
+                <div style="display:flex; flex-direction:column; align-items:center; color:#38bdf8;"><svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 12h8M12 8v8"/></svg><span style="font-size:10px; margin-top:3px;">Workout</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="phone-vignette"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       COMPARISON NOTES
+       ═══════════════════════════════════════════════════════════════ -->
+  <div style="margin-top: 48px; padding: 24px; background: #0f1d2e; border: 1px solid #1e3a52; border-radius: 12px; max-width: 800px;">
+    <h2 style="font-size: 14px; font-weight: 600; color: #e2e8f0; margin-bottom: 12px;">Design Tradeoffs</h2>
+    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; font-size: 12px; line-height: 1.6;">
+      <div>
+        <div style="font-weight: 600; color: #38bdf8; margin-bottom: 6px;">A — Logo-Anchored</div>
+        <div style="color: #475569;">
+          <div style="color:#cbd5e1; margin-bottom:4px;">+ Strong brand presence</div>
+          <div style="color:#cbd5e1; margin-bottom:4px;">+ Logo as home shortcut</div>
+          <div style="color:#cbd5e1; margin-bottom:4px;">+ Most visual consistency</div>
+          <div style="margin-top:6px;">- Header takes more vertical space</div>
+          <div>- Back + logo can feel crowded</div>
+          <div>- Logo on every page may feel heavy</div>
+        </div>
+      </div>
+      <div>
+        <div style="font-weight: 600; color: #38bdf8; margin-bottom: 6px;">B — Minimal Bar</div>
+        <div style="color: #475569;">
+          <div style="color:#cbd5e1; margin-bottom:4px;">+ Smallest footprint</div>
+          <div style="color:#cbd5e1; margin-bottom:4px;">+ Centered title = native feel</div>
+          <div style="color:#cbd5e1; margin-bottom:4px;">+ Clean swap: logo &harr; back</div>
+          <div style="margin-top:6px;">- Centered title truncates long names</div>
+          <div>- Tiny logo loses detail</div>
+          <div>- Workout expansion feels bigger jump</div>
+        </div>
+      </div>
+      <div>
+        <div style="font-weight: 600; color: #38bdf8; margin-bottom: 6px;">C — Contextual Strip</div>
+        <div style="color: #475569;">
+          <div style="color:#cbd5e1; margin-bottom:4px;">+ Max content space on sub-pages</div>
+          <div style="color:#cbd5e1; margin-bottom:4px;">+ Workout feels like "entering a mode"</div>
+          <div style="color:#cbd5e1; margin-bottom:4px;">+ Closest to current implementation</div>
+          <div style="margin-top:6px;">- Less unified — dashboard ≠ sub-pages</div>
+          <div>- No persistent brand element</div>
+          <div>- List/detail headers very bare</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>
