@@ -90,7 +90,7 @@ export default function SplitDetail() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="px-4 pt-5 space-y-4">
       <header className="flex items-center gap-2">
         <button onClick={() => navigate('/splits')} className="text-slate-400 hover:text-slate-200">
           <ChevronLeftIcon className="w-6 h-6" />
