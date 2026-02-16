@@ -2,6 +2,76 @@ import { useParams } from 'react-router-dom'
 import AppHeader from '../components/AppHeader'
 import { useWorkoutDetail } from '../api/hooks'
 import MuscleGroupBadge from '../components/MuscleGroupBadge'
+import RirBadge from '../components/RirBadge'
+import { getMuscleColor } from '../lib/muscleColors'
+import type { MesoExercise, MesoSet } from '../types'
+
+type SetState = 'met' | 'exceeded' | 'under'
+
+function getSetState(set: MesoSet): SetState {
+  const reps = set.reps ?? 0
+  if (reps > set.target_reps) return 'exceeded'
+  if (reps >= set.target_reps) return 'met'
+  return 'under'
+}
+
+const SET_COLORS: Record<SetState, { text: string; icon: string; bg: string }> = {
+  met: { text: '#38bdf8', icon: '#0ea5e9', bg: 'rgba(12,45,78,0.4)' },
+  exceeded: { text: '#c084fc', icon: '#a855f7', bg: 'rgba(168,85,247,0.06)' },
+  under: { text: '#f87171', icon: '#ef4444', bg: 'rgba(239,68,68,0.04)' },
+}
+
+function SetStatusIcon({ state }: { state: SetState }) {
+  if (state === 'met') {
+    return (
+      <svg className="w-3.5 h-3.5" style={{ color: SET_COLORS.met.icon }} fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+      </svg>
+    )
+  }
+  if (state === 'exceeded') {
+    return (
+      <svg className="w-3.5 h-3.5" style={{ color: SET_COLORS.exceeded.icon }} fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" />
+      </svg>
+    )
+  }
+  return (
+    <svg className="w-3.5 h-3.5" style={{ color: SET_COLORS.under.icon }} fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+    </svg>
+  )
+}
+
+function computeExerciseSummary(exercise: MesoExercise) {
+  const logged = exercise.sets.filter((s) => s.logged)
+  if (logged.length === 0) return null
+
+  let bestSet = logged[0]!
+  let bestVolume = (bestSet.weight ?? 0) * (bestSet.reps ?? 0)
+  let totalVolume = 0
+
+  for (const s of logged) {
+    const vol = (s.weight ?? 0) * (s.reps ?? 0)
+    totalVolume += vol
+    if (vol > bestVolume) {
+      bestVolume = vol
+      bestSet = s
+    }
+  }
+
+  // Weight gain: compare actual weight used vs suggested_weight on first set
+  const actualWeight = bestSet.weight ?? 0
+  const suggested = logged[0]!.suggested_weight
+  const weightGain = suggested != null && actualWeight > suggested ? actualWeight - suggested : null
+
+  return {
+    bestWeight: bestSet.weight ?? 0,
+    bestReps: bestSet.reps ?? 0,
+    totalVolume,
+    weightGain,
+  }
+}
 
 export default function WorkoutDetail() {
   const { mesocycleId, weekIndex: weekStr, sessionIndex: sessionStr } = useParams<{
@@ -21,73 +91,290 @@ export default function WorkoutDetail() {
     return <div className="text-slate-400 text-center py-8">Workout not found</div>
   }
 
-  const loggedSets = workout.exercises.flatMap((ex) =>
-    ex.sets.filter((s) => s.logged).map((s) => ({ ...s, weight: s.weight ?? 0, reps: s.reps ?? 0 }))
+  // Collect all logged sets across exercises
+  const allLoggedSets = workout.exercises.flatMap((ex) =>
+    ex.sets.filter((s) => s.logged)
   )
-  const totalVolume = loggedSets.reduce((sum, s) => sum + s.weight * s.reps, 0)
+  const totalSets = allLoggedSets.length
+  const totalVolume = allLoggedSets.reduce((sum, s) => sum + (s.weight ?? 0) * (s.reps ?? 0), 0)
+  const exerciseCount = workout.exercises.filter((ex) => ex.sets.some((s) => s.logged)).length
+
+  // On-target percentage (reps >= target_reps)
+  const onTargetCount = allLoggedSets.filter((s) => (s.reps ?? 0) >= s.target_reps).length
+  const onTargetPct = totalSets > 0 ? Math.round((onTargetCount / totalSets) * 100) : 0
+
+  // Performance breakdown
+  const metCount = allLoggedSets.filter((s) => (s.reps ?? 0) === s.target_reps).length
+  const exceededCount = allLoggedSets.filter((s) => (s.reps ?? 0) > s.target_reps).length
+  const underCount = allLoggedSets.filter((s) => (s.reps ?? 0) < s.target_reps).length
+  const perfTotal = metCount + exceededCount + underCount
+  const metPct = perfTotal > 0 ? (metCount / perfTotal) * 100 : 0
+  const exceededPct = perfTotal > 0 ? (exceededCount / perfTotal) * 100 : 0
+  const underPct = perfTotal > 0 ? (underCount / perfTotal) * 100 : 0
+
+  // Derive RiR from first logged set
+  const firstLoggedSet = allLoggedSets[0]
+  const rir = firstLoggedSet?.rir ?? null
+
+  // Format volume for display
+  const formatVolume = (v: number) => {
+    if (v >= 1000) return `${(v / 1000).toFixed(1).replace(/\.0$/, '')}k`
+    return v.toLocaleString()
+  }
+
+  // Volume by muscle group
+  const muscleVolume: Record<string, number> = {}
+  for (const ex of workout.exercises) {
+    const loggedCount = ex.sets.filter((s) => s.logged).length
+    if (loggedCount > 0) {
+      const group = ex.muscle_group || 'other'
+      muscleVolume[group] = (muscleVolume[group] ?? 0) + loggedCount
+    }
+  }
+  const muscleEntries = Object.entries(muscleVolume).sort(([, a], [, b]) => b - a)
+  const maxMuscleSets = muscleEntries.length > 0 ? muscleEntries[0]![1] : 1
 
   return (
     <div>
       <AppHeader
         title={workout.session_name}
         breadcrumb={{ label: 'Mesocycle', to: `/mesocycles/${mesocycleId}` }}
+        rightContent={rir !== null ? <RirBadge rir={rir} /> : undefined}
       />
 
-      <div className="px-4 space-y-4">
-      {/* Summary */}
-      <div className="card bg-slate-800">
-        <div className="grid grid-cols-2 gap-4 text-center">
-          <div>
-            <div className="text-2xl font-bold text-protocol-400">
-              {loggedSets.length}
+      <div className="px-4 space-y-3 pb-10">
+        {/* Session Summary Scoreboard */}
+        <div className="card stagger">
+          <div className="grid grid-cols-4 gap-2 text-center">
+            <div>
+              <div className="mono text-[22px] font-bold" style={{ color: '#38bdf8' }}>
+                {totalSets}
+              </div>
+              <div className="text-[9px] font-medium uppercase tracking-wider text-slate-600">Sets</div>
             </div>
-            <div className="text-sm text-slate-400">Sets</div>
-          </div>
-          <div>
-            <div className="text-2xl font-bold text-protocol-400">
-              {Math.round(totalVolume).toLocaleString()}
+            <div>
+              <div className="mono text-[22px] font-bold text-slate-200">
+                {formatVolume(Math.round(totalVolume))}
+              </div>
+              <div className="text-[9px] font-medium uppercase tracking-wider text-slate-600">Volume</div>
             </div>
-            <div className="text-sm text-slate-400">Volume (kg)</div>
+            <div>
+              <div className="mono text-[22px] font-bold text-slate-300">
+                {exerciseCount}
+              </div>
+              <div className="text-[9px] font-medium uppercase tracking-wider text-slate-600">Exercises</div>
+            </div>
+            <div>
+              <div className="mono text-[22px] font-bold" style={{ color: '#4ade80' }}>
+                {onTargetPct}<span className="text-[14px]">%</span>
+              </div>
+              <div className="text-[9px] font-medium uppercase tracking-wider text-slate-600">On Target</div>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Exercises */}
-      {workout.exercises.map((exercise) => {
-        const exerciseLoggedSets = exercise.sets.filter((s) => s.logged)
-        if (exerciseLoggedSets.length === 0) return null
-
-        return (
-          <div key={exercise.exercise_id} className="card">
-            <div className="flex items-center gap-2 mb-2">
-              <h3 className="font-medium flex-1">{exercise.exercise_name}</h3>
-              <MuscleGroupBadge muscleGroup={exercise.muscle_group} />
-            </div>
-            <div className="space-y-1">
-              {exerciseLoggedSets.map((set) => (
+        {/* Performance Breakdown */}
+        {perfTotal > 0 && (
+          <div className="card stagger" style={{ padding: '12px 16px' }}>
+            {/* Proportional bar */}
+            <div
+              className="flex mb-3 overflow-hidden"
+              style={{ height: 6, borderRadius: 3, background: '#162a3e' }}
+            >
+              {metPct > 0 && (
                 <div
-                  key={set.set_num}
-                  className="flex items-center gap-3 text-sm"
+                  style={{
+                    width: `${metPct}%`,
+                    background: '#0ea5e9',
+                    borderRadius: exceededPct === 0 && underPct === 0 ? 3 : undefined,
+                    borderTopLeftRadius: 3,
+                    borderBottomLeftRadius: 3,
+                  }}
+                />
+              )}
+              {exceededPct > 0 && (
+                <div style={{ width: `${exceededPct}%`, background: '#a855f7' }} />
+              )}
+              {underPct > 0 && (
+                <div
+                  style={{
+                    width: `${underPct}%`,
+                    background: '#ef4444',
+                    borderTopRightRadius: 3,
+                    borderBottomRightRadius: 3,
+                  }}
+                />
+              )}
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <div className="w-2 h-2 rounded-full" style={{ background: '#0ea5e9' }} />
+                <span className="text-[10px] text-slate-400">Hit target</span>
+                <span className="mono text-[11px] font-semibold" style={{ color: '#38bdf8' }}>{metCount}</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-2 h-2 rounded-full" style={{ background: '#a855f7' }} />
+                <span className="text-[10px] text-slate-400">Exceeded</span>
+                <span className="mono text-[11px] font-semibold" style={{ color: '#c084fc' }}>{exceededCount}</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-2 h-2 rounded-full" style={{ background: '#ef4444' }} />
+                <span className="text-[10px] text-slate-400">Under</span>
+                <span className="mono text-[11px] font-semibold" style={{ color: '#f87171' }}>{underCount}</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Section label */}
+        <div className="stagger pt-1">
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-600">Exercises</span>
+        </div>
+
+        {/* Exercise Cards */}
+        {workout.exercises.map((exercise) => {
+          const loggedSets = exercise.sets.filter((s) => s.logged)
+          if (loggedSets.length === 0) return null
+
+          const color = getMuscleColor(exercise.muscle_group)
+          const summary = computeExerciseSummary(exercise)
+
+          return (
+            <div
+              key={exercise.exercise_id}
+              className="exercise-card stagger"
+              style={{ borderColor: color.cardBorder }}
+            >
+              {/* Exercise header */}
+              <div className="flex items-center gap-2 mb-1">
+                <MuscleGroupBadge muscleGroup={exercise.muscle_group} />
+                <span className="text-[10px] text-slate-600 capitalize">{exercise.equipment_type}</span>
+              </div>
+              <h2 className="text-base font-semibold text-slate-200 mb-2">{exercise.exercise_name}</h2>
+
+              {/* Sets grid */}
+              <div className="panel-frosted">
+                {/* Column headers */}
+                <div
+                  className="grid items-center gap-1"
+                  style={{ gridTemplateColumns: '28px 1fr 1fr 1fr 28px', padding: '4px 8px 2px' }}
                 >
-                  <span className="text-slate-500 w-6">#{set.set_num}</span>
-                  <span className="flex-1">{set.weight}kg x {set.reps}</span>
-                  {set.rir !== null && set.rir !== undefined && (
-                    <span className="text-slate-400">RiR {set.rir}</span>
+                  <div className="text-[9px] font-medium uppercase tracking-wider text-center text-slate-700">#</div>
+                  <div className="text-[9px] font-medium uppercase tracking-wider text-center text-slate-700">Weight</div>
+                  <div className="text-[9px] font-medium uppercase tracking-wider text-center text-slate-700">Reps</div>
+                  <div className="text-[9px] font-medium uppercase tracking-wider text-center text-slate-700">Target</div>
+                  <div />
+                </div>
+
+                {/* Set rows */}
+                {loggedSets.map((set, i) => {
+                  const state = getSetState(set)
+                  const colors = SET_COLORS[state]
+                  return (
+                    <div
+                      key={set.set_num}
+                      className="grid items-center gap-1 rounded-md"
+                      style={{
+                        gridTemplateColumns: '28px 1fr 1fr 1fr 28px',
+                        padding: '6px 8px',
+                        background: i % 2 === 0 ? colors.bg : undefined,
+                      }}
+                    >
+                      <div className="mono text-[11px] text-center text-slate-600">{set.set_num}</div>
+                      <div className="mono text-[13px] font-medium text-center" style={{ color: colors.text }}>
+                        {set.weight ?? 0}
+                      </div>
+                      <div className="mono text-[13px] font-medium text-center" style={{ color: colors.text }}>
+                        {set.reps ?? 0}
+                      </div>
+                      <div className="mono text-[11px] text-center text-slate-600">{set.target_reps}</div>
+                      <div className="flex justify-center">
+                        <SetStatusIcon state={state} />
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* Exercise summary footer */}
+              {summary && (
+                <div
+                  className="mt-2 px-3 py-2 flex items-center justify-between rounded-md"
+                  style={{ background: 'rgba(22,42,62,0.5)', border: '1px solid rgba(255,255,255,0.03)' }}
+                >
+                  <div className="flex items-center gap-3">
+                    <div>
+                      <div className="text-[9px] uppercase tracking-wider text-slate-700">Best Set</div>
+                      <div className="mono text-[12px] font-semibold text-slate-300">
+                        {summary.bestWeight} &times; {summary.bestReps}
+                      </div>
+                    </div>
+                    <div style={{ width: 1, height: 20, background: '#1e3a52' }} />
+                    <div>
+                      <div className="text-[9px] uppercase tracking-wider text-slate-700">Volume</div>
+                      <div className="mono text-[12px] font-semibold text-slate-300">
+                        {summary.totalVolume.toLocaleString()}
+                      </div>
+                    </div>
+                  </div>
+                  {summary.weightGain != null && (
+                    <div className="flex items-center gap-1">
+                      <svg className="w-3 h-3" style={{ color: '#22c55e' }} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" />
+                      </svg>
+                      <span className="mono text-[11px] font-semibold" style={{ color: '#22c55e' }}>
+                        +{summary.weightGain % 1 === 0 ? summary.weightGain.toFixed(1) : summary.weightGain}
+                      </span>
+                    </div>
                   )}
                 </div>
-              ))}
+              )}
             </div>
-          </div>
-        )
-      })}
+          )
+        })}
 
-      {/* Notes */}
-      {workout.notes && (
-        <div className="card">
-          <h3 className="font-medium mb-2">Notes</h3>
-          <p className="text-slate-400 text-sm whitespace-pre-wrap">{workout.notes}</p>
-        </div>
-      )}
+        {/* Volume by Muscle */}
+        {muscleEntries.length > 0 && (
+          <>
+            <div className="stagger pt-1">
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-600">
+                Volume by Muscle
+              </span>
+            </div>
+            <div className="card stagger" style={{ padding: 12 }}>
+              <div className="space-y-2">
+                {muscleEntries.map(([group, count]) => {
+                  const color = getMuscleColor(group)
+                  const widthPct = (count / maxMuscleSets) * 100
+                  return (
+                    <div key={group} className="flex items-center gap-2">
+                      <div
+                        className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                        style={{ background: color.primary }}
+                      />
+                      <span className="text-[10px] w-16 text-slate-400 capitalize">{group}</span>
+                      <div className="flex-1 h-[4px] rounded-full" style={{ background: '#162a3e' }}>
+                        <div
+                          className="h-full rounded-full vol-bar"
+                          style={{ width: `${widthPct}%`, background: color.primary, opacity: 0.7 }}
+                        />
+                      </div>
+                      <span className="mono text-[10px] w-8 text-right text-slate-500">{count}</span>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Notes */}
+        {workout.notes && (
+          <div className="card stagger">
+            <h3 className="font-medium mb-2">Notes</h3>
+            <p className="text-slate-400 text-sm whitespace-pre-wrap">{workout.notes}</p>
+          </div>
+        )}
       </div>
     </div>
   )
