@@ -1,5 +1,3 @@
 {
-  "enabledPlugins": {
-    "supabase@claude-plugins-official": true
-  }
+  "enabledPlugins": {}
 }
