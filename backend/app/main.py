@@ -1,8 +1,9 @@
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 
@@ -69,8 +70,26 @@ app.include_router(workouts.router, prefix="/api/workouts", tags=["workouts"])
 # In Docker: /app/app/main.py → /app/frontend/dist
 # In dev:    backend/app/main.py → frontend/dist
 _app_dir = Path(__file__).resolve().parent.parent
+_static_dir: Path | None = None
 for _base in [_app_dir, _app_dir.parent]:
     _static = _base / "frontend" / "dist"
     if _static.exists():
-        app.mount("/", StaticFiles(directory=_static, html=True), name="static")
+        _static_dir = _static
+        app.mount("/assets", StaticFiles(directory=_static / "assets"), name="static-assets")
         break
+
+
+# SPA fallback: serve static files if they exist on disk, otherwise
+# return index.html so client-side routing works on hard refresh.
+@app.api_route("/{path:path}", methods=["GET"], include_in_schema=False)
+async def spa_fallback(request: Request, path: str):
+    if _static_dir:
+        # Serve actual static files (favicon.svg, sw.js, manifest, etc.)
+        file = _static_dir / path
+        if file.is_file():
+            return FileResponse(file)
+        # Otherwise fall back to index.html for SPA routing
+        index = _static_dir / "index.html"
+        if index.exists():
+            return FileResponse(index)
+    return {"detail": "Not Found"}
