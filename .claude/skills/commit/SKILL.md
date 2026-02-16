@@ -16,6 +16,5 @@ Stage changes, generate a conventional commit message, commit, and push to the c
    - If no argument is provided, generate a concise conventional commit message from the diff. Focus on the "why" not the "what".
 4. **Stage files:** Add relevant changed files by name. Do NOT use `git add .` or `git add -A` — explicitly list files to avoid accidentally staging secrets, `.env` files, or other sensitive files.
 5. **Commit** the changes. Do NOT include a `Co-Authored-By` footer.
-6. **Check the current branch.** If on `main`, warn the user that Railway auto-deploys from main and ask for confirmation before pushing.
-7. **Push** to the current branch with `git push`.
-8. Show the final commit hash and summary.
+6. **Push** to the current branch with `git push`.
+7. Show the final commit hash and summary.
