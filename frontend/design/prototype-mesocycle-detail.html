@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Mesocycle Detail — Focused</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    html { background: #070d15; }
+    body {
+      overscroll-behavior: none;
+      font-family: 'Inter', system-ui, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+      background: #0d1b2a;
+      min-height: 100vh;
+    }
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 100;
+      background: radial-gradient(ellipse at center, transparent 60%, #070d15 100%);
+    }
+
+    .mono { font-family: 'JetBrains Mono', 'SF Mono', monospace; }
+
+    @keyframes pulse-current {
+      0%, 100% { box-shadow: 0 0 4px rgba(56,189,248,0.3), 0 0 8px rgba(56,189,248,0.15); }
+      50%      { box-shadow: 0 0 8px rgba(56,189,248,0.6), 0 0 16px rgba(56,189,248,0.3); }
+    }
+
+    @keyframes fade-up {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .stagger { animation: fade-up 0.35s ease both; }
+    .stagger:nth-child(1)  { animation-delay: 0.04s; }
+    .stagger:nth-child(2)  { animation-delay: 0.08s; }
+    .stagger:nth-child(3)  { animation-delay: 0.12s; }
+    .stagger:nth-child(4)  { animation-delay: 0.16s; }
+    .stagger:nth-child(5)  { animation-delay: 0.20s; }
+    .stagger:nth-child(6)  { animation-delay: 0.24s; }
+    .stagger:nth-child(7)  { animation-delay: 0.28s; }
+    .stagger:nth-child(8)  { animation-delay: 0.32s; }
+
+    .tile-tappable { transition: transform 0.1s ease; cursor: pointer; }
+    .tile-tappable:active { transform: scale(0.93); }
+
+    .card {
+      background: #0f1d2e;
+      border-radius: 12px;
+      border: 1px solid #1e3a52;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+      padding: 14px;
+    }
+
+    .inner-panel {
+      background: #132438;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.04);
+    }
+
+    .section-label {
+      color: #475569;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .grid-scroll {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+    .grid-scroll::-webkit-scrollbar { display: none; }
+
+    .list-row {
+      transition: background 0.15s ease;
+      cursor: pointer;
+    }
+    .list-row:active {
+      background: rgba(56,189,248,0.04);
+    }
+
+    .sparkline { fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+    .sparkline-area { stroke: none; }
+
+    .vol-bar {
+      height: 4px;
+      border-radius: 2px;
+      transition: width 0.6s ease;
+    }
+
+    .btn-primary {
+      background: #0ea5e9;
+      color: white;
+      font-weight: 600;
+      border-radius: 10px;
+      padding: 10px 20px;
+      font-size: 14px;
+      transition: all 0.15s ease;
+      cursor: pointer;
+      border: none;
+    }
+    .btn-primary:active { transform: scale(0.97); background: #0284c7; }
+
+    .btn-secondary {
+      background: transparent;
+      color: #94a3b8;
+      font-weight: 500;
+      border-radius: 10px;
+      padding: 10px 20px;
+      font-size: 13px;
+      border: 1px solid #1e3a52;
+      transition: all 0.15s ease;
+      cursor: pointer;
+    }
+    .btn-secondary:active { transform: scale(0.97); background: rgba(30,58,82,0.3); }
+
+    .scroll-h {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+    .scroll-h::-webkit-scrollbar { display: none; }
+
+    @keyframes shimmer-cta {
+      0% { background-position: -200% center; }
+      100% { background-position: 200% center; }
+    }
+
+    .cta-shimmer {
+      background: linear-gradient(110deg, #0ea5e9 30%, #38bdf8 50%, #0ea5e9 70%);
+      background-size: 200% 100%;
+      animation: shimmer-cta 3s ease-in-out infinite;
+    }
+  </style>
+</head>
+
+<body class="min-h-screen max-w-md mx-auto relative pb-20">
+
+
+  <!-- HEADER -->
+  <div class="px-4 pt-4 pb-1">
+    <div class="flex items-center gap-2 mb-3">
+      <svg class="w-4 h-4" style="color: #475569;" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+      <span class="text-[11px] font-medium" style="color: #475569;">Mesocycles</span>
+    </div>
+    <div class="flex items-center gap-2 mb-0.5">
+      <h1 class="text-[17px] font-bold" style="color: #e2e8f0;">February Hypertrophy</h1>
+      <span class="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded" style="color: #4ade80; background: rgba(74,222,128,0.1); border: 1px solid rgba(74,222,128,0.2);">Active</span>
+    </div>
+    <div class="text-[11px]" style="color: #475569;">Push / Pull / Legs · 4 weeks</div>
+  </div>
+
+
+  <!-- DOT GRID -->
+  <div class="mx-4 mt-4 card stagger" style="padding: 16px;">
+    <!-- Progress -->
+    <div class="flex items-center gap-3 mb-2">
+      <div class="flex-1">
+        <div class="flex items-center gap-2 mb-1">
+          <span class="mono text-[20px] font-bold" style="color: #4ade80;">40%</span>
+          <span class="text-[10px]" style="color: #475569;">complete</span>
+        </div>
+        <div class="h-1.5 rounded-full overflow-hidden" style="background: #162a3e;">
+          <div class="h-full rounded-full" style="width: 40%; background: #4ade80; box-shadow: 0 0 8px rgba(74,222,128,0.5), 0 0 2px rgba(74,222,128,0.8);"></div>
+        </div>
+      </div>
+      <div class="text-right">
+        <div class="mono text-[12px] font-semibold" style="color: #94a3b8;">8 / 20</div>
+        <div class="text-[9px]" style="color: #475569;">workouts</div>
+      </div>
+    </div>
+
+    <div class="text-[10px] mb-3" style="color: #475569;">Week 2 · RiR 2 · Session 4 of 5</div>
+
+    <div class="inner-panel px-3 py-3">
+      <div class="grid-scroll">
+        <div style="display: grid; grid-template-columns: 40px repeat(4, 1fr); gap: 5px; align-items: center; min-width: max-content;">
+          <!-- Header -->
+          <div></div>
+          <div class="text-center text-[10px] font-semibold" style="color: #64748b;">W1<span class="block text-[8px] font-normal" style="color: #475569;">R3</span></div>
+          <div class="text-center text-[10px] font-semibold" style="color: #64748b;">W2<span class="block text-[8px] font-normal" style="color: #475569;">R2</span></div>
+          <div class="text-center text-[10px] font-semibold" style="color: #64748b;">W3<span class="block text-[8px] font-normal" style="color: #475569;">R1</span></div>
+          <div class="text-center text-[10px] font-semibold" style="color: #eab308;">W4<span class="block text-[8px] font-normal" style="color: rgba(234,179,8,0.5);">DL</span></div>
+
+          <!-- Pull -->
+          <div class="text-[10px] font-medium" style="color: #94a3b8;">Pull</div>
+          <div class="flex justify-center"><div class="tile-tappable w-6 h-6 rounded-full" style="background: #4ade80;"></div></div>
+          <div class="flex justify-center"><div class="tile-tappable w-6 h-6 rounded-full" style="background: #4ade80;"></div></div>
+          <div class="flex justify-center"><div class="tile-tappable w-6 h-6 rounded-full" style="background: #162a3e; border: 1.5px solid #1e3a52;"></div></div>
+          <div class="flex justify-center"><div class="tile-tappable w-6 h-6 rounded-full" style="background: rgba(234,179,8,0.06); border: 1.5px solid rgba(234,179,8,0.12);"></div></div>
+
+          <!-- Push -->
+          <div class="text-[10px] font-medium" style="color: #94a3b8;">Push</div>
+          <div class="flex justify-center"><div class="tile-tappable w-6 h-6 rounded-full" style="background: #4ade80;"></div></div>
+          <div class="flex justify-center"><div class="tile-tappable w-6 h-6 rounded-full" style="background: #4ade80;"></div></div>
+          <div class="flex justify-center"><div class="tile-tappable w-6 h-6 rounded-full" style="background: #162a3e; border: 1.5px solid #1e3a52;"></div></div>
+          <div class="flex justify-center"><div class="tile-tappable w-6 h-6 rounded-full" style="background: rgba(234,179,8,0.06); border: 1.5px solid rgba(234,179,8,0.12);"></div></div>
+
+          <!-- Legs -->
+          <div class="text-[10px] font-medium" style="color: #94a3b8;">Legs</div>
+          <div class="flex justify-center"><div class="tile-tappable w-6 h-6 rounded-full" style="background: #4ade80;"></div></div>
+          <div class="flex justify-center"><div class="tile-tappable w-6 h-6 rounded-full" style="background: #4ade80;"></div></div>
+          <div class="flex justify-center"><div class="tile-tappable w-6 h-6 rounded-full" style="background: #162a3e; border: 1.5px solid #1e3a52;"></div></div>
+          <div class="flex justify-center"><div class="tile-tappable w-6 h-6 rounded-full" style="background: rgba(234,179,8,0.06); border: 1.5px solid rgba(234,179,8,0.12);"></div></div>
+
+          <!-- Pull 2 (current) -->
+          <div class="text-[10px] font-medium" style="color: #94a3b8;">Pull</div>
+          <div class="flex justify-center"><div class="tile-tappable w-6 h-6 rounded-full" style="background: #4ade80;"></div></div>
+          <div class="flex justify-center"><div class="tile-tappable w-6 h-6 rounded-full flex items-center justify-center" style="background: rgba(2,132,199,0.15); border: 2px solid #0284c7; animation: pulse-current 2s ease-in-out infinite;"><div class="w-2 h-2 rounded-full" style="background: #38bdf8;"></div></div></div>
+          <div class="flex justify-center"><div class="tile-tappable w-6 h-6 rounded-full" style="background: #162a3e; border: 1.5px solid #1e3a52;"></div></div>
+          <div class="flex justify-center"><div class="tile-tappable w-6 h-6 rounded-full" style="background: rgba(234,179,8,0.06); border: 1.5px solid rgba(234,179,8,0.12);"></div></div>
+
+          <!-- Push 2 -->
+          <div class="text-[10px] font-medium" style="color: #94a3b8;">Push</div>
+          <div class="flex justify-center"><div class="tile-tappable w-6 h-6 rounded-full" style="background: #4ade80;"></div></div>
+          <div class="flex justify-center"><div class="tile-tappable w-6 h-6 rounded-full" style="background: #162a3e; border: 1.5px solid #1e3a52;"></div></div>
+          <div class="flex justify-center"><div class="tile-tappable w-6 h-6 rounded-full" style="background: #162a3e; border: 1.5px solid #1e3a52;"></div></div>
+          <div class="flex justify-center"><div class="tile-tappable w-6 h-6 rounded-full" style="background: rgba(234,179,8,0.06); border: 1.5px solid rgba(234,179,8,0.12);"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- CTA -->
+  <div class="mx-4 mt-3 stagger">
+    <div class="card tile-tappable" style="border-color: rgba(14,165,233,0.25); padding: 16px;">
+      <div class="flex items-center gap-3 mb-3">
+        <div class="w-9 h-9 rounded-xl flex items-center justify-center" style="background: rgba(14,165,233,0.1); border: 1.5px solid rgba(14,165,233,0.25);">
+          <svg class="w-4 h-4" style="color: #38bdf8;" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/></svg>
+        </div>
+        <div class="flex-1">
+          <div class="text-[15px] font-semibold" style="color: #e2e8f0;">Pull — Week 2</div>
+          <div class="text-[11px]" style="color: #475569;">5 exercises · RiR 2</div>
+        </div>
+      </div>
+      <div class="text-[10px] mb-3 pl-12" style="color: #334155;">Lat Pulldown · Seated Cable Row · Face Pull · Hammer Curl · Barbell Curl</div>
+      <button class="btn-primary cta-shimmer w-full text-center">Start Workout</button>
+    </div>
+  </div>
+
+
+  <!-- EXERCISE PROGRESSIONS — Horizontal scroll cards -->
+  <div class="mx-4 mt-5 stagger">
+    <span class="section-label">Progression</span>
+  </div>
+
+  <div class="scroll-h flex gap-2.5 mt-2 px-4 pb-2">
+    <!-- Bench Press -->
+    <div class="card shrink-0" style="width: 160px; padding: 12px;">
+      <div class="flex items-center gap-1.5 mb-1">
+        <div class="w-1.5 h-1.5 rounded-full" style="background: #f97316;"></div>
+        <span class="text-[10px] font-semibold uppercase tracking-wider" style="color: #fb923c;">Chest</span>
+      </div>
+      <div class="text-[12px] font-medium mb-2" style="color: #e2e8f0;">Bench Press</div>
+      <svg width="136" height="40" viewBox="0 0 136 40">
+        <defs>
+          <linearGradient id="grad-bench" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#f97316" stop-opacity="0.15"/>
+            <stop offset="100%" stop-color="#f97316" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+        <path d="M4,32 L36,22 L68,14 L100,8 L100,38 L4,38 Z" fill="url(#grad-bench)"/>
+        <polyline class="sparkline" stroke="#f97316" points="4,32 36,22 68,14 100,8"/>
+        <circle cx="100" cy="8" r="3" fill="#f97316"/>
+        <text x="4" y="38" fill="#334155" font-size="8" font-family="JetBrains Mono">W1</text>
+        <text x="36" y="38" fill="#334155" font-size="8" font-family="JetBrains Mono">W2</text>
+        <text x="68" y="38" fill="#475569" font-size="8" font-family="JetBrains Mono">W3</text>
+        <text x="100" y="38" fill="#475569" font-size="8" font-family="JetBrains Mono">W4</text>
+      </svg>
+      <div class="flex items-baseline gap-1 mt-1">
+        <span class="mono text-[16px] font-bold" style="color: #fb923c;">85</span>
+        <span class="text-[9px]" style="color: #475569;">kg</span>
+        <span class="mono text-[9px] ml-auto" style="color: #22c55e;">+5.0</span>
+      </div>
+    </div>
+
+    <!-- Lat Pulldown -->
+    <div class="card shrink-0" style="width: 160px; padding: 12px;">
+      <div class="flex items-center gap-1.5 mb-1">
+        <div class="w-1.5 h-1.5 rounded-full" style="background: #14b8a6;"></div>
+        <span class="text-[10px] font-semibold uppercase tracking-wider" style="color: #2dd4bf;">Back</span>
+      </div>
+      <div class="text-[12px] font-medium mb-2" style="color: #e2e8f0;">Lat Pulldown</div>
+      <svg width="136" height="40" viewBox="0 0 136 40">
+        <defs>
+          <linearGradient id="grad-lat" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#14b8a6" stop-opacity="0.15"/>
+            <stop offset="100%" stop-color="#14b8a6" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+        <path d="M4,30 L36,18 L68,14 L100,14 L100,38 L4,38 Z" fill="url(#grad-lat)"/>
+        <polyline class="sparkline" stroke="#14b8a6" points="4,30 36,18 68,14 100,14"/>
+        <circle cx="100" cy="14" r="3" fill="#14b8a6"/>
+        <text x="4" y="38" fill="#334155" font-size="8" font-family="JetBrains Mono">W1</text>
+        <text x="36" y="38" fill="#334155" font-size="8" font-family="JetBrains Mono">W2</text>
+        <text x="68" y="38" fill="#475569" font-size="8" font-family="JetBrains Mono">W3</text>
+        <text x="100" y="38" fill="#475569" font-size="8" font-family="JetBrains Mono">W4</text>
+      </svg>
+      <div class="flex items-baseline gap-1 mt-1">
+        <span class="mono text-[16px] font-bold" style="color: #2dd4bf;">67.5</span>
+        <span class="text-[9px]" style="color: #475569;">kg</span>
+        <span class="mono text-[9px] ml-auto" style="color: #22c55e;">+2.5</span>
+      </div>
+    </div>
+
+    <!-- Barbell Squat -->
+    <div class="card shrink-0" style="width: 160px; padding: 12px;">
+      <div class="flex items-center gap-1.5 mb-1">
+        <div class="w-1.5 h-1.5 rounded-full" style="background: #eab308;"></div>
+        <span class="text-[10px] font-semibold uppercase tracking-wider" style="color: #facc15;">Quads</span>
+      </div>
+      <div class="text-[12px] font-medium mb-2" style="color: #e2e8f0;">Barbell Squat</div>
+      <svg width="136" height="40" viewBox="0 0 136 40">
+        <defs>
+          <linearGradient id="grad-sq" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#eab308" stop-opacity="0.15"/>
+            <stop offset="100%" stop-color="#eab308" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+        <path d="M4,30 L36,22 L68,10 L100,6 L100,38 L4,38 Z" fill="url(#grad-sq)"/>
+        <polyline class="sparkline" stroke="#eab308" points="4,30 36,22 68,10 100,6"/>
+        <circle cx="100" cy="6" r="3" fill="#eab308"/>
+        <text x="4" y="38" fill="#334155" font-size="8" font-family="JetBrains Mono">W1</text>
+        <text x="36" y="38" fill="#334155" font-size="8" font-family="JetBrains Mono">W2</text>
+        <text x="68" y="38" fill="#475569" font-size="8" font-family="JetBrains Mono">W3</text>
+        <text x="100" y="38" fill="#475569" font-size="8" font-family="JetBrains Mono">W4</text>
+      </svg>
+      <div class="flex items-baseline gap-1 mt-1">
+        <span class="mono text-[16px] font-bold" style="color: #facc15;">100</span>
+        <span class="text-[9px]" style="color: #475569;">kg</span>
+        <span class="mono text-[9px] ml-auto" style="color: #22c55e;">+7.5</span>
+      </div>
+    </div>
+
+    <!-- DB Lateral Raise -->
+    <div class="card shrink-0" style="width: 160px; padding: 12px;">
+      <div class="flex items-center gap-1.5 mb-1">
+        <div class="w-1.5 h-1.5 rounded-full" style="background: #a855f7;"></div>
+        <span class="text-[10px] font-semibold uppercase tracking-wider" style="color: #c084fc;">Shoulders</span>
+      </div>
+      <div class="text-[12px] font-medium mb-2" style="color: #e2e8f0;">DB Lateral Raise</div>
+      <svg width="136" height="40" viewBox="0 0 136 40">
+        <defs>
+          <linearGradient id="grad-sh" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#a855f7" stop-opacity="0.15"/>
+            <stop offset="100%" stop-color="#a855f7" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+        <path d="M4,24 L36,20 L68,16 L100,12 L100,38 L4,38 Z" fill="url(#grad-sh)"/>
+        <polyline class="sparkline" stroke="#a855f7" points="4,24 36,20 68,16 100,12"/>
+        <circle cx="100" cy="12" r="3" fill="#a855f7"/>
+        <text x="4" y="38" fill="#334155" font-size="8" font-family="JetBrains Mono">W1</text>
+        <text x="36" y="38" fill="#334155" font-size="8" font-family="JetBrains Mono">W2</text>
+        <text x="68" y="38" fill="#475569" font-size="8" font-family="JetBrains Mono">W3</text>
+        <text x="100" y="38" fill="#475569" font-size="8" font-family="JetBrains Mono">W4</text>
+      </svg>
+      <div class="flex items-baseline gap-1 mt-1">
+        <span class="mono text-[16px] font-bold" style="color: #c084fc;">14</span>
+        <span class="text-[9px]" style="color: #475569;">kg</span>
+        <span class="mono text-[9px] ml-auto" style="color: #22c55e;">+2.0</span>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- VOLUME + WEEK SESSIONS — Side by side -->
+  <div class="mx-4 mt-3 stagger">
+    <div class="flex gap-2.5">
+      <!-- Volume -->
+      <div class="card flex-1" style="padding: 10px 12px;">
+        <span class="section-label">Volume</span>
+        <div class="space-y-1.5 mt-2">
+          <div class="flex items-center gap-1.5">
+            <span class="text-[9px] w-9 text-right" style="color: #475569;">Back</span>
+            <div class="flex-1 h-[4px] rounded-full" style="background: #162a3e;">
+              <div class="vol-bar rounded-full" style="width: 90%; background: #14b8a6; opacity: 0.7;"></div>
+            </div>
+            <span class="mono text-[9px]" style="color: #64748b;">10</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="text-[9px] w-9 text-right" style="color: #475569;">Chest</span>
+            <div class="flex-1 h-[4px] rounded-full" style="background: #162a3e;">
+              <div class="vol-bar rounded-full" style="width: 80%; background: #f97316; opacity: 0.7;"></div>
+            </div>
+            <span class="mono text-[9px]" style="color: #64748b;">9</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="text-[9px] w-9 text-right" style="color: #475569;">Quads</span>
+            <div class="flex-1 h-[4px] rounded-full" style="background: #162a3e;">
+              <div class="vol-bar rounded-full" style="width: 70%; background: #eab308; opacity: 0.7;"></div>
+            </div>
+            <span class="mono text-[9px]" style="color: #64748b;">8</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="text-[9px] w-9 text-right" style="color: #475569;">Delts</span>
+            <div class="flex-1 h-[4px] rounded-full" style="background: #162a3e;">
+              <div class="vol-bar rounded-full" style="width: 55%; background: #a855f7; opacity: 0.7;"></div>
+            </div>
+            <span class="mono text-[9px]" style="color: #64748b;">6</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="text-[9px] w-9 text-right" style="color: #475569;">Arms</span>
+            <div class="flex-1 h-[4px] rounded-full" style="background: #162a3e;">
+              <div class="vol-bar rounded-full" style="width: 50%; background: #6366f1; opacity: 0.7;"></div>
+            </div>
+            <span class="mono text-[9px]" style="color: #64748b;">6</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Week sessions -->
+      <div class="card flex-1" style="padding: 10px 12px;">
+        <span class="section-label">Week 2</span>
+        <div class="space-y-1.5 mt-2">
+          <div class="flex items-center gap-2">
+            <div class="w-4 h-4 rounded flex items-center justify-center" style="background: rgba(34,197,94,0.12);">
+              <svg class="w-2.5 h-2.5" fill="none" stroke="#4ade80" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+            </div>
+            <span class="text-[11px]" style="color: #94a3b8;">Pull</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <div class="w-4 h-4 rounded flex items-center justify-center" style="background: rgba(34,197,94,0.12);">
+              <svg class="w-2.5 h-2.5" fill="none" stroke="#4ade80" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+            </div>
+            <span class="text-[11px]" style="color: #94a3b8;">Push</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <div class="w-4 h-4 rounded flex items-center justify-center" style="background: rgba(34,197,94,0.12);">
+              <svg class="w-2.5 h-2.5" fill="none" stroke="#4ade80" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+            </div>
+            <span class="text-[11px]" style="color: #94a3b8;">Legs</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <div class="w-4 h-4 rounded flex items-center justify-center" style="background: rgba(14,165,233,0.1); border: 1px solid rgba(14,165,233,0.2);">
+              <div class="w-1.5 h-1.5 rounded-full" style="background: #38bdf8;"></div>
+            </div>
+            <span class="text-[11px] font-medium" style="color: #e2e8f0;">Pull</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <div class="w-4 h-4 rounded" style="background: #162a3e; border: 1px solid #1e3a52;"></div>
+            <span class="text-[11px]" style="color: #475569;">Push</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- RECENT WORKOUTS -->
+  <div class="mx-4 mt-3 stagger">
+    <span class="section-label">Recent</span>
+    <div class="mt-2 space-y-1">
+      <div class="flex items-center justify-between py-2.5 px-3 rounded-lg list-row" style="background: rgba(15,29,46,0.5);">
+        <div class="flex items-center gap-2">
+          <div class="w-1 h-6 rounded-full" style="background: #4ade80;"></div>
+          <div>
+            <span class="text-[12px] font-medium" style="color: #cbd5e1;">Legs</span>
+            <span class="text-[10px] ml-1.5" style="color: #334155;">W2 · 16 sets</span>
+          </div>
+        </div>
+        <span class="mono text-[10px]" style="color: #475569;">Feb 13</span>
+      </div>
+      <div class="flex items-center justify-between py-2.5 px-3 rounded-lg list-row" style="background: rgba(15,29,46,0.5);">
+        <div class="flex items-center gap-2">
+          <div class="w-1 h-6 rounded-full" style="background: #4ade80;"></div>
+          <div>
+            <span class="text-[12px] font-medium" style="color: #cbd5e1;">Push</span>
+            <span class="text-[10px] ml-1.5" style="color: #334155;">W2 · 17 sets</span>
+          </div>
+        </div>
+        <span class="mono text-[10px]" style="color: #475569;">Feb 12</span>
+      </div>
+      <div class="flex items-center justify-between py-2.5 px-3 rounded-lg list-row" style="background: rgba(15,29,46,0.5);">
+        <div class="flex items-center gap-2">
+          <div class="w-1 h-6 rounded-full" style="background: #4ade80;"></div>
+          <div>
+            <span class="text-[12px] font-medium" style="color: #cbd5e1;">Pull</span>
+            <span class="text-[10px] ml-1.5" style="color: #334155;">W2 · 18 sets</span>
+          </div>
+        </div>
+        <span class="mono text-[10px]" style="color: #475569;">Feb 10</span>
+      </div>
+      <div class="flex items-center justify-between py-2.5 px-3 rounded-lg list-row" style="background: rgba(15,29,46,0.5);">
+        <div class="flex items-center gap-2">
+          <div class="w-1 h-6 rounded-full" style="background: #4ade80;"></div>
+          <div>
+            <span class="text-[12px] font-medium" style="color: #cbd5e1;">Push</span>
+            <span class="text-[10px] ml-1.5" style="color: #334155;">W1 · 17 sets</span>
+          </div>
+        </div>
+        <span class="mono text-[10px]" style="color: #475569;">Feb 5</span>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ACTIONS -->
+  <div class="mx-4 mt-5 stagger">
+    <div class="flex gap-2">
+      <button class="btn-secondary flex-1 text-center text-[12px]">Archive</button>
+      <button class="flex-1 py-2.5 text-[12px] font-medium rounded-lg text-center" style="color: rgba(248,113,113,0.5); border: 1px solid rgba(248,113,113,0.1); background: transparent;">Delete</button>
+    </div>
+  </div>
+
+
+  <div class="h-20"></div>
+
+</body>
+</html>

@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Protocol — Future Session States v2</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background: #050a10;
+    color: #e2e8f0;
+    -webkit-font-smoothing: antialiased;
+  }
+  .mono { font-family: 'JetBrains Mono', monospace; }
+
+  /* ── Phone Frame ── */
+  .phone {
+    width: 375px;
+    height: 720px;
+    background: #0d1b2a;
+    border-radius: 20px;
+    overflow: hidden;
+    position: relative;
+    border: 1px solid rgba(255,255,255,0.06);
+    flex-shrink: 0;
+  }
+  .phone-vig {
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse at center, transparent 60%, #070d15 100%);
+    pointer-events: none; z-index: 50;
+    border-radius: 20px;
+  }
+  .phone-inner {
+    position: relative; height: 100%;
+    display: flex; flex-direction: column;
+  }
+
+  /* ── Ring Pulse Keyframes ── */
+  @keyframes pulse-current {
+    0%, 100% { box-shadow: 0 0 0 3px rgba(56,189,248,0.15); }
+    50%      { box-shadow: 0 0 0 3px rgba(56,189,248,0.35); }
+  }
+  @keyframes pulse-deload {
+    0%, 100% { box-shadow: 0 0 0 3px rgba(234,179,8,0.15); }
+    50%      { box-shadow: 0 0 0 3px rgba(234,179,8,0.35); }
+  }
+  @keyframes pulse-viewing {
+    0%, 100% { box-shadow: 0 0 0 3px rgba(148,163,184,0.15); }
+    50%      { box-shadow: 0 0 0 3px rgba(148,163,184,0.35); }
+  }
+
+  .progress-glow {
+    box-shadow: 0 0 8px rgba(74,222,128,0.5), 0 0 2px rgba(74,222,128,0.8);
+  }
+
+  /* ── Dot Cell Styles ── */
+  .dot {
+    width: 24px; height: 24px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .dot-done        { background: rgba(34,197,94,0.12); border: 1.5px solid rgba(34,197,94,0.25); }
+  .dot-current     { background: rgba(2,132,199,0.15); border: 2px solid #0284c7; animation: pulse-current 2s ease-in-out infinite; }
+  .dot-viewing     { background: rgba(148,163,184,0.08); border: 2px solid #64748b; animation: pulse-viewing 2s ease-in-out infinite; }
+  .dot-pending     { background: #162a3e; border: 1.5px solid #244868; }
+  .dot-dl-done     { background: rgba(234,179,8,0.12); border: 1.5px solid rgba(234,179,8,0.25); }
+  .dot-dl-current  { background: rgba(234,179,8,0.15); border: 2px solid #eab308; animation: pulse-deload 2s ease-in-out infinite; }
+  .dot-dl-pending  { background: rgba(234,179,8,0.06); border: 1.5px solid rgba(234,179,8,0.12); }
+
+  /* ── Inner Dot ── */
+  .inner-blue { width: 8px; height: 8px; border-radius: 50%; background: #0284c7; }
+  .inner-gray { width: 8px; height: 8px; border-radius: 50%; background: #64748b; }
+  .inner-gold { width: 8px; height: 8px; border-radius: 50%; background: #eab308; }
+
+  /* ── Check SVG ── */
+  .check-sm { width: 12px; height: 12px; }
+
+  /* ── Set Input Mocks ── */
+  .si {
+    height: 40px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 500;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .si-active   { background: #162a3e; border: 1px solid #244868; color: #cbd5e1; }
+  .si-logged   { background: #0c2d4e; border: 1px solid #164e7a; color: #38bdf8; }
+  .si-disabled { background: rgba(22,42,62,0.4); border: 1px solid rgba(30,58,82,0.4); color: #334155; }
+  .si-ghost    { color: #475569; }
+
+  /* ── Check Button ── */
+  .cb { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+  .cb-empty    { border: 2px solid #244868; }
+  .cb-done     { background: #0284c7; }
+  .cb-disabled { border: 2px solid rgba(36,72,104,0.3); opacity: 0.3; }
+
+  /* ── Layout ── */
+  .phones-row {
+    display: flex; gap: 24px; overflow-x: auto; padding-bottom: 12px;
+    scrollbar-width: thin; scrollbar-color: #1e3a52 transparent;
+  }
+  .phones-row::-webkit-scrollbar { height: 5px; }
+  .phones-row::-webkit-scrollbar-track { background: transparent; }
+  .phones-row::-webkit-scrollbar-thumb { background: #1e3a52; border-radius: 3px; }
+  .pw { flex-shrink: 0; display: flex; flex-direction: column; }
+
+  .card-m { background: #0f1d2e; border: 1px solid #1e3a52; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
+  .panel-f { background: #132438; border: 1px solid rgba(255,255,255,0.04); border-radius: 8px; }
+
+  .tag { font-size: 9px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; }
+</style>
+</head>
+<body>
+
+<div style="max-width: 1600px; margin: 0 auto; padding: 40px 28px 80px;">
+
+  <!-- ── Title ── -->
+  <div style="margin-bottom: 48px;">
+    <div class="tag" style="color: #0ea5e9; margin-bottom: 10px;">Refined Prototype</div>
+    <h1 style="font-size: 24px; font-weight: 800; color: #e2e8f0; margin-bottom: 8px;">Future Session States — v2</h1>
+    <p style="font-size: 13px; color: #475569; line-height: 1.7; max-width: 640px;">
+      Two states only: <strong style="color:#38bdf8;">current</strong> (interactive) and <strong style="color:#64748b;">locked</strong> (read-only preview).
+      Grid shows a gray "viewing" indicator when browsing a non-current cell.
+    </p>
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════
+       SECTION 1 — GRID: CURRENT vs VIEWING
+       ═══════════════════════════════════════════ -->
+  <div style="margin-bottom: 56px;">
+    <div style="font-size: 15px; font-weight: 700; color: #e2e8f0; margin-bottom: 4px;">1. Grid — Current vs Viewing</div>
+    <p style="font-size: 12px; color: #64748b; margin-bottom: 20px; max-width: 600px;">
+      Left: default state (viewing the current session). Right: browsing a future cell — gray ring appears while blue current stays visible.
+    </p>
+
+    <div class="phones-row">
+
+      <!-- Grid A: Default / Viewing Current -->
+      <div class="pw">
+        <div class="tag" style="color: #475569; margin-bottom: 10px;">Default — Viewing Current</div>
+        <div class="phone" style="height: auto;">
+          <div class="phone-inner">
+            <div style="padding: 24px 16px 28px;">
+
+              <div class="card-m" style="padding: 14px;">
+                <div style="font-size: 12px; font-weight: 600; color: #94a3b8; margin-bottom: 10px;">Hero Split</div>
+                <div style="display: grid; grid-template-columns: 42px repeat(4, 1fr); gap: 6px; align-items: center;">
+                  <!-- Header row -->
+                  <div></div>
+                  <div style="text-align:center;"><div style="font-size:10px; font-weight:600; color:#64748b;">W1</div><div style="font-size:9px; color:#475569;">R3</div></div>
+                  <div style="text-align:center;"><div style="font-size:10px; font-weight:600; color:#64748b;">W2</div><div style="font-size:9px; color:#475569;">R2</div></div>
+                  <div style="text-align:center;"><div style="font-size:10px; font-weight:600; color:#64748b;">W3</div><div style="font-size:9px; color:#475569;">R1</div></div>
+                  <div style="text-align:center;"><div style="font-size:10px; font-weight:600; color:#eab308;">W4</div><div style="font-size:9px; color:rgba(234,179,8,0.5);">DL</div></div>
+
+                  <!-- Push -->
+                  <div style="font-size:11px; font-weight:500; color:#94a3b8;">Push</div>
+                  <div style="display:flex; justify-content:center;"><div class="dot dot-done"><svg class="check-sm" fill="none" stroke="#4ade80" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div></div>
+                  <div style="display:flex; justify-content:center;"><div class="dot dot-current"><div class="inner-blue"></div></div></div>
+                  <div style="display:flex; justify-content:center;"><div class="dot dot-pending"></div></div>
+                  <div style="display:flex; justify-content:center;"><div class="dot dot-dl-pending"></div></div>
+
+                  <!-- Pull -->
+                  <div style="font-size:11px; font-weight:500; color:#94a3b8;">Pull</div>
+                  <div style="display:flex; justify-content:center;"><div class="dot dot-done"><svg class="check-sm" fill="none" stroke="#4ade80" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div></div>
+                  <div style="display:flex; justify-content:center;"><div class="dot dot-pending"></div></div>
+                  <div style="display:flex; justify-content:center;"><div class="dot dot-pending"></div></div>
+                  <div style="display:flex; justify-content:center;"><div class="dot dot-dl-pending"></div></div>
+
+                  <!-- Legs -->
+                  <div style="font-size:11px; font-weight:500; color:#94a3b8;">Legs</div>
+                  <div style="display:flex; justify-content:center;"><div class="dot dot-done"><svg class="check-sm" fill="none" stroke="#4ade80" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div></div>
+                  <div style="display:flex; justify-content:center;"><div class="dot dot-pending"></div></div>
+                  <div style="display:flex; justify-content:center;"><div class="dot dot-pending"></div></div>
+                  <div style="display:flex; justify-content:center;"><div class="dot dot-dl-pending"></div></div>
+                </div>
+              </div>
+
+              <!-- Annotation -->
+              <div style="margin-top: 14px; font-size: 11px; color: #475569; line-height: 1.6;">
+                Only the <span style="color:#38bdf8;">current</span> cell pulses. No viewing indicator needed when you're on the current session — it's implicit.
+              </div>
+            </div>
+          </div>
+          <div class="phone-vig"></div>
+        </div>
+      </div>
+
+      <!-- Grid B: Viewing Future (W3/Pull) -->
+      <div class="pw">
+        <div class="tag" style="color: #475569; margin-bottom: 10px;">Viewing Future — W3 Pull</div>
+        <div class="phone" style="height: auto;">
+          <div class="phone-inner">
+            <div style="padding: 24px 16px 28px;">
+
+              <div class="card-m" style="padding: 14px;">
+                <div style="font-size: 12px; font-weight: 600; color: #94a3b8; margin-bottom: 10px;">Hero Split</div>
+                <div style="display: grid; grid-template-columns: 42px repeat(4, 1fr); gap: 6px; align-items: center;">
+                  <div></div>
+                  <div style="text-align:center;"><div style="font-size:10px; font-weight:600; color:#64748b;">W1</div><div style="font-size:9px; color:#475569;">R3</div></div>
+                  <div style="text-align:center;"><div style="font-size:10px; font-weight:600; color:#64748b;">W2</div><div style="font-size:9px; color:#475569;">R2</div></div>
+                  <div style="text-align:center;"><div style="font-size:10px; font-weight:600; color:#64748b;">W3</div><div style="font-size:9px; color:#475569;">R1</div></div>
+                  <div style="text-align:center;"><div style="font-size:10px; font-weight:600; color:#eab308;">W4</div><div style="font-size:9px; color:rgba(234,179,8,0.5);">DL</div></div>
+
+                  <!-- Push — current still shows -->
+                  <div style="font-size:11px; font-weight:500; color:#94a3b8;">Push</div>
+                  <div style="display:flex; justify-content:center;"><div class="dot dot-done"><svg class="check-sm" fill="none" stroke="#4ade80" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div></div>
+                  <div style="display:flex; justify-content:center;"><div class="dot dot-current"><div class="inner-blue"></div></div></div>
+                  <div style="display:flex; justify-content:center;"><div class="dot dot-pending"></div></div>
+                  <div style="display:flex; justify-content:center;"><div class="dot dot-dl-pending"></div></div>
+
+                  <!-- Pull — W3 is "viewing" -->
+                  <div style="font-size:11px; font-weight:500; color:#94a3b8;">Pull</div>
+                  <div style="display:flex; justify-content:center;"><div class="dot dot-done"><svg class="check-sm" fill="none" stroke="#4ade80" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div></div>
+                  <div style="display:flex; justify-content:center;"><div class="dot dot-pending"></div></div>
+                  <div style="display:flex; justify-content:center;"><div class="dot dot-viewing"><div class="inner-gray"></div></div></div>
+                  <div style="display:flex; justify-content:center;"><div class="dot dot-dl-pending"></div></div>
+
+                  <!-- Legs -->
+                  <div style="font-size:11px; font-weight:500; color:#94a3b8;">Legs</div>
+                  <div style="display:flex; justify-content:center;"><div class="dot dot-done"><svg class="check-sm" fill="none" stroke="#4ade80" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div></div>
+                  <div style="display:flex; justify-content:center;"><div class="dot dot-pending"></div></div>
+                  <div style="display:flex; justify-content:center;"><div class="dot dot-pending"></div></div>
+                  <div style="display:flex; justify-content:center;"><div class="dot dot-dl-pending"></div></div>
+                </div>
+              </div>
+
+              <div style="margin-top: 14px; font-size: 11px; color: #475569; line-height: 1.6;">
+                <span style="color:#38bdf8;">Blue</span> = current (W2 Push).
+                <span style="color:#94a3b8;">Gray</span> = what you're viewing (W3 Pull).
+                Both visible simultaneously.
+              </div>
+            </div>
+          </div>
+          <div class="phone-vig"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════
+       SECTION 2 — WORKOUT: CURRENT vs LOCKED
+       ═══════════════════════════════════════════ -->
+  <div style="margin-bottom: 56px;">
+    <div style="font-size: 15px; font-weight: 700; color: #e2e8f0; margin-bottom: 4px;">2. Workout Page — Current vs Locked</div>
+    <p style="font-size: 12px; color: #64748b; margin-bottom: 20px; max-width: 600px;">
+      Left: existing interactive workout. Right: locked preview of a future session.
+    </p>
+
+    <div class="phones-row">
+
+      <!-- Phone A: Current Workout -->
+      <div class="pw">
+        <div class="tag" style="color: #38bdf8; margin-bottom: 10px;">Current — Interactive</div>
+        <div class="phone">
+          <div class="phone-inner">
+            <!-- Header -->
+            <div style="background: #0d1b2a; position: sticky; top: 0; z-index: 30;">
+              <div style="padding: 20px 16px 12px; display: flex; align-items: center; gap: 12px;">
+                <svg width="36" height="36" viewBox="0 0 100 100" fill="none"><circle cx="50" cy="50" r="45" stroke="#0ea5e9" stroke-width="4"/><circle cx="50" cy="50" r="32" stroke="#0ea5e9" stroke-width="3" opacity="0.6"/><circle cx="50" cy="50" r="8" fill="#0ea5e9"/><line x1="50" y1="5" x2="50" y2="18" stroke="#0ea5e9" stroke-width="3" stroke-linecap="round"/><line x1="50" y1="82" x2="50" y2="95" stroke="#0ea5e9" stroke-width="3" stroke-linecap="round"/><line x1="5" y1="50" x2="18" y2="50" stroke="#0ea5e9" stroke-width="3" stroke-linecap="round"/><line x1="82" y1="50" x2="95" y2="50" stroke="#0ea5e9" stroke-width="3" stroke-linecap="round"/></svg>
+                <div style="flex: 1; min-width: 0;">
+                  <div style="font-size: 15px; font-weight: 600; color: #e2e8f0;">Push Day</div>
+                  <div style="font-size: 11px; color: #475569;">Week 2</div>
+                </div>
+                <div style="display: flex; flex-direction: column; align-items: center; flex-shrink: 0;">
+                  <span style="font-size: 10px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.08em; color: #475569; margin-bottom: 3px;">RiR</span>
+                  <div style="width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; background: rgba(56,189,248,0.1); border: 1px solid rgba(56,189,248,0.15);">
+                    <span class="mono" style="font-size: 18px; font-weight: 700; color: #38bdf8;">2</span>
+                  </div>
+                </div>
+                <svg width="18" height="18" fill="none" stroke="#475569" stroke-width="2" viewBox="0 0 24 24" style="flex-shrink: 0;"><path stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6"/></svg>
+              </div>
+              <div style="height: 3px; width: 100%; background: #162a3e;">
+                <div style="height: 100%; width: 42%; background: #4ade80; border-radius: 0 9999px 9999px 0;" class="progress-glow"></div>
+              </div>
+            </div>
+
+            <!-- Cards -->
+            <div style="padding: 14px 12px; flex: 1; overflow-y: auto;">
+              <!-- Bench Press -->
+              <div class="card-m" style="padding: 12px; margin-bottom: 10px; border-color: rgba(249,115,22,0.35);">
+                <div style="margin-bottom: 6px;"><span style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #fb923c; background: rgba(249,115,22,0.1); border: 1px solid rgba(249,115,22,0.15); padding: 2px 8px; border-radius: 20px;">Chest</span></div>
+                <div style="font-size: 14px; font-weight: 600; color: #e2e8f0; margin-bottom: 2px;">Bench Press</div>
+                <div style="font-size: 11px; color: #475569; margin-bottom: 10px;">Barbell</div>
+                <div class="panel-f" style="padding: 6px;">
+                  <div style="display: flex; padding: 2px 8px 4px; gap: 6px;">
+                    <div style="flex: 1; text-align: center; font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; color: #475569;">Weight</div>
+                    <div style="flex: 1; text-align: center; font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; color: #475569;">Reps</div>
+                    <div style="width: 36px; text-align: center; font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; color: #475569;">Log</div>
+                  </div>
+                  <!-- Set 1: logged -->
+                  <div style="display: flex; gap: 6px; padding: 4px 8px; align-items: center;">
+                    <div style="flex: 1;"><div class="si si-logged">80</div></div>
+                    <div style="flex: 1;"><div class="si si-logged">10</div></div>
+                    <div class="cb cb-done"><svg width="14" height="14" fill="none" stroke="white" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div>
+                  </div>
+                  <!-- Set 2: pending -->
+                  <div style="display: flex; gap: 6px; padding: 4px 8px; align-items: center;">
+                    <div style="flex: 1;"><div class="si si-active">80</div></div>
+                    <div style="flex: 1;"><div class="si si-active si-ghost">10</div></div>
+                    <div class="cb cb-empty"></div>
+                  </div>
+                  <!-- Set 3: pending -->
+                  <div style="display: flex; gap: 6px; padding: 4px 8px; align-items: center;">
+                    <div style="flex: 1;"><div class="si si-active">80</div></div>
+                    <div style="flex: 1;"><div class="si si-active si-ghost">10</div></div>
+                    <div class="cb cb-empty"></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Overhead Extension -->
+              <div class="card-m" style="padding: 12px; margin-bottom: 10px; border-color: rgba(236,72,153,0.35);">
+                <div style="margin-bottom: 6px;"><span style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #f472b6; background: rgba(236,72,153,0.1); border: 1px solid rgba(236,72,153,0.15); padding: 2px 8px; border-radius: 20px;">Triceps</span></div>
+                <div style="font-size: 14px; font-weight: 600; color: #e2e8f0; margin-bottom: 2px;">Overhead Extension</div>
+                <div style="font-size: 11px; color: #475569; margin-bottom: 10px;">Cable</div>
+                <div class="panel-f" style="padding: 6px;">
+                  <div style="display: flex; padding: 2px 8px 4px; gap: 6px;">
+                    <div style="flex: 1; text-align: center; font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; color: #475569;">Weight</div>
+                    <div style="flex: 1; text-align: center; font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; color: #475569;">Reps</div>
+                    <div style="width: 36px; text-align: center; font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; color: #475569;">Log</div>
+                  </div>
+                  <div style="display: flex; gap: 6px; padding: 4px 8px; align-items: center;">
+                    <div style="flex: 1;"><div class="si si-active">25</div></div>
+                    <div style="flex: 1;"><div class="si si-active si-ghost">12</div></div>
+                    <div class="cb cb-empty"></div>
+                  </div>
+                  <div style="display: flex; gap: 6px; padding: 4px 8px; align-items: center;">
+                    <div style="flex: 1;"><div class="si si-active">25</div></div>
+                    <div style="flex: 1;"><div class="si si-active si-ghost">12</div></div>
+                    <div class="cb cb-empty"></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Side Delt Raise -->
+              <div class="card-m" style="padding: 12px; margin-bottom: 10px; border-color: rgba(168,85,247,0.35);">
+                <div style="margin-bottom: 6px;"><span style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #c084fc; background: rgba(168,85,247,0.1); border: 1px solid rgba(168,85,247,0.15); padding: 2px 8px; border-radius: 20px;">Side Delt</span></div>
+                <div style="font-size: 14px; font-weight: 600; color: #e2e8f0; margin-bottom: 2px;">Lateral Raise</div>
+                <div style="font-size: 11px; color: #475569; margin-bottom: 10px;">Dumbbell</div>
+                <div class="panel-f" style="padding: 6px;">
+                  <div style="display: flex; padding: 2px 8px 4px; gap: 6px;">
+                    <div style="flex: 1; text-align: center; font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; color: #475569;">Weight</div>
+                    <div style="flex: 1; text-align: center; font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; color: #475569;">Reps</div>
+                    <div style="width: 36px; text-align: center; font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; color: #475569;">Log</div>
+                  </div>
+                  <div style="display: flex; gap: 6px; padding: 4px 8px; align-items: center;">
+                    <div style="flex: 1;"><div class="si si-active">10</div></div>
+                    <div style="flex: 1;"><div class="si si-active si-ghost">15</div></div>
+                    <div class="cb cb-empty"></div>
+                  </div>
+                  <div style="display: flex; gap: 6px; padding: 4px 8px; align-items: center;">
+                    <div style="flex: 1;"><div class="si si-active">10</div></div>
+                    <div style="flex: 1;"><div class="si si-active si-ghost">15</div></div>
+                    <div class="cb cb-empty"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="phone-vig"></div>
+        </div>
+      </div>
+
+      <!-- Phone B: Locked Future -->
+      <div class="pw">
+        <div class="tag" style="color: #64748b; margin-bottom: 10px;">Locked — Read-Only Preview</div>
+        <div class="phone">
+          <div class="phone-inner">
+            <!-- Header — locked variant -->
+            <div style="background: #0d1b2a; position: sticky; top: 0; z-index: 30;">
+              <div style="padding: 20px 16px 12px; display: flex; align-items: center; gap: 12px;">
+                <svg width="36" height="36" viewBox="0 0 100 100" fill="none"><circle cx="50" cy="50" r="45" stroke="#0ea5e9" stroke-width="4"/><circle cx="50" cy="50" r="32" stroke="#0ea5e9" stroke-width="3" opacity="0.6"/><circle cx="50" cy="50" r="8" fill="#0ea5e9"/><line x1="50" y1="5" x2="50" y2="18" stroke="#0ea5e9" stroke-width="3" stroke-linecap="round"/><line x1="50" y1="82" x2="50" y2="95" stroke="#0ea5e9" stroke-width="3" stroke-linecap="round"/><line x1="5" y1="50" x2="18" y2="50" stroke="#0ea5e9" stroke-width="3" stroke-linecap="round"/><line x1="82" y1="50" x2="95" y2="50" stroke="#0ea5e9" stroke-width="3" stroke-linecap="round"/></svg>
+                <div style="flex: 1; min-width: 0;">
+                  <div style="font-size: 15px; font-weight: 600; color: #e2e8f0;">Pull Day</div>
+                  <div style="font-size: 11px; color: #475569;">Week 3 · RiR 1</div>
+                </div>
+                <!-- Preview badge instead of RiR -->
+                <div style="display: flex; align-items: center; gap: 5px; padding: 6px 12px; border-radius: 8px; background: rgba(148,163,184,0.06); border: 1px solid rgba(148,163,184,0.1);">
+                  <svg width="14" height="14" fill="none" stroke="#64748b" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                  <span style="font-size: 11px; font-weight: 500; color: #64748b;">Preview</span>
+                </div>
+                <svg width="18" height="18" fill="none" stroke="#475569" stroke-width="2" viewBox="0 0 24 24" style="flex-shrink: 0;"><path stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6"/></svg>
+              </div>
+              <!-- Empty progress bar -->
+              <div style="height: 3px; width: 100%; background: #162a3e; opacity: 0.4;"></div>
+            </div>
+
+            <!-- Banner -->
+            <div style="padding: 10px 12px 0;">
+              <div style="display: flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 8px; background: rgba(234,179,8,0.06); border: 1px solid rgba(234,179,8,0.12);">
+                <svg width="14" height="14" fill="none" stroke="#eab308" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+                <span style="font-size: 11px; font-weight: 500; color: #eab308;">Complete previous workouts</span>
+              </div>
+            </div>
+
+            <!-- Disabled cards -->
+            <div style="padding: 14px 12px; flex: 1; overflow-y: auto;">
+              <!-- Barbell Row -->
+              <div class="card-m" style="padding: 12px; margin-bottom: 10px; border-color: rgba(20,184,166,0.2); opacity: 0.6;">
+                <div style="margin-bottom: 6px;"><span style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #2dd4bf; background: rgba(20,184,166,0.1); border: 1px solid rgba(20,184,166,0.15); padding: 2px 8px; border-radius: 20px;">Back</span></div>
+                <div style="font-size: 14px; font-weight: 600; color: #e2e8f0; margin-bottom: 2px;">Barbell Row</div>
+                <div style="font-size: 11px; color: #475569; margin-bottom: 10px;">Barbell</div>
+                <div class="panel-f" style="padding: 6px;">
+                  <div style="display: flex; padding: 2px 8px 4px; gap: 6px;">
+                    <div style="flex: 1; text-align: center; font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; color: #334155;">Weight</div>
+                    <div style="flex: 1; text-align: center; font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; color: #334155;">Reps</div>
+                    <div style="width: 36px;"></div>
+                  </div>
+                  <div style="display: flex; gap: 6px; padding: 4px 8px; align-items: center;">
+                    <div style="flex: 1;"><div class="si si-disabled">72.5</div></div>
+                    <div style="flex: 1;"><div class="si si-disabled">10</div></div>
+                    <div class="cb cb-disabled"></div>
+                  </div>
+                  <div style="display: flex; gap: 6px; padding: 4px 8px; align-items: center;">
+                    <div style="flex: 1;"><div class="si si-disabled">72.5</div></div>
+                    <div style="flex: 1;"><div class="si si-disabled">10</div></div>
+                    <div class="cb cb-disabled"></div>
+                  </div>
+                  <div style="display: flex; gap: 6px; padding: 4px 8px; align-items: center;">
+                    <div style="flex: 1;"><div class="si si-disabled">72.5</div></div>
+                    <div style="flex: 1;"><div class="si si-disabled">10</div></div>
+                    <div class="cb cb-disabled"></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Barbell Curl -->
+              <div class="card-m" style="padding: 12px; margin-bottom: 10px; border-color: rgba(99,102,241,0.2); opacity: 0.6;">
+                <div style="margin-bottom: 6px;"><span style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #818cf8; background: rgba(99,102,241,0.1); border: 1px solid rgba(99,102,241,0.15); padding: 2px 8px; border-radius: 20px;">Biceps</span></div>
+                <div style="font-size: 14px; font-weight: 600; color: #e2e8f0; margin-bottom: 2px;">Barbell Curl</div>
+                <div style="font-size: 11px; color: #475569; margin-bottom: 10px;">Barbell</div>
+                <div class="panel-f" style="padding: 6px;">
+                  <div style="display: flex; padding: 2px 8px 4px; gap: 6px;">
+                    <div style="flex: 1; text-align: center; font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; color: #334155;">Weight</div>
+                    <div style="flex: 1; text-align: center; font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; color: #334155;">Reps</div>
+                    <div style="width: 36px;"></div>
+                  </div>
+                  <div style="display: flex; gap: 6px; padding: 4px 8px; align-items: center;">
+                    <div style="flex: 1;"><div class="si si-disabled">30</div></div>
+                    <div style="flex: 1;"><div class="si si-disabled">12</div></div>
+                    <div class="cb cb-disabled"></div>
+                  </div>
+                  <div style="display: flex; gap: 6px; padding: 4px 8px; align-items: center;">
+                    <div style="flex: 1;"><div class="si si-disabled">30</div></div>
+                    <div style="flex: 1;"><div class="si si-disabled">12</div></div>
+                    <div class="cb cb-disabled"></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Face Pull -->
+              <div class="card-m" style="padding: 12px; margin-bottom: 10px; border-color: rgba(168,85,247,0.2); opacity: 0.6;">
+                <div style="margin-bottom: 6px;"><span style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #c084fc; background: rgba(168,85,247,0.1); border: 1px solid rgba(168,85,247,0.15); padding: 2px 8px; border-radius: 20px;">Rear Delt</span></div>
+                <div style="font-size: 14px; font-weight: 600; color: #e2e8f0; margin-bottom: 2px;">Face Pull</div>
+                <div style="font-size: 11px; color: #475569; margin-bottom: 10px;">Cable</div>
+                <div class="panel-f" style="padding: 6px;">
+                  <div style="display: flex; padding: 2px 8px 4px; gap: 6px;">
+                    <div style="flex: 1; text-align: center; font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; color: #334155;">Weight</div>
+                    <div style="flex: 1; text-align: center; font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; color: #334155;">Reps</div>
+                    <div style="width: 36px;"></div>
+                  </div>
+                  <div style="display: flex; gap: 6px; padding: 4px 8px; align-items: center;">
+                    <div style="flex: 1;"><div class="si si-disabled">15</div></div>
+                    <div style="flex: 1;"><div class="si si-disabled">15</div></div>
+                    <div class="cb cb-disabled"></div>
+                  </div>
+                  <div style="display: flex; gap: 6px; padding: 4px 8px; align-items: center;">
+                    <div style="flex: 1;"><div class="si si-disabled">15</div></div>
+                    <div style="flex: 1;"><div class="si si-disabled">15</div></div>
+                    <div class="cb cb-disabled"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- CTA -->
+            <div style="padding: 0 12px 20px; position: relative; z-index: 10;">
+              <button style="width: 100%; padding: 14px; border-radius: 12px; background: #0ea5e9; color: white; font-size: 14px; font-weight: 600; border: none; cursor: pointer;">
+                Go to Current Workout
+              </button>
+              <div style="text-align: center; margin-top: 8px;">
+                <span style="font-size: 11px; color: #475569;">Push Day · Week 2 · RiR 2</span>
+              </div>
+            </div>
+          </div>
+          <div class="phone-vig"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════
+       SECTION 3 — CELL LEGEND
+       ═══════════════════════════════════════════ -->
+  <div style="margin-bottom: 40px;">
+    <div style="font-size: 15px; font-weight: 700; color: #e2e8f0; margin-bottom: 4px;">3. Cell State Legend</div>
+    <p style="font-size: 12px; color: #64748b; margin-bottom: 16px;">All possible dot states in the MesoGrid.</p>
+
+    <div class="card-m" style="padding: 20px 24px; display: inline-flex; gap: 28px; flex-wrap: wrap;">
+      <!-- Done -->
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 6px;">
+        <div class="dot dot-done"><svg class="check-sm" fill="none" stroke="#4ade80" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div>
+        <span style="font-size: 10px; font-weight: 500; color: #64748b;">Done</span>
+      </div>
+      <!-- Current -->
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 6px;">
+        <div class="dot dot-current"><div class="inner-blue"></div></div>
+        <span style="font-size: 10px; font-weight: 500; color: #64748b;">Current</span>
+      </div>
+      <!-- Viewing -->
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 6px;">
+        <div class="dot dot-viewing"><div class="inner-gray"></div></div>
+        <span style="font-size: 10px; font-weight: 500; color: #64748b;">Viewing</span>
+      </div>
+      <!-- Pending -->
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 6px;">
+        <div class="dot dot-pending"></div>
+        <span style="font-size: 10px; font-weight: 500; color: #64748b;">Pending</span>
+      </div>
+      <!-- Deload Done -->
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 6px;">
+        <div class="dot dot-dl-done"><svg class="check-sm" fill="none" stroke="#facc15" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div>
+        <span style="font-size: 10px; font-weight: 500; color: #64748b;">DL Done</span>
+      </div>
+      <!-- Deload Current -->
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 6px;">
+        <div class="dot dot-dl-current"><div class="inner-gold"></div></div>
+        <span style="font-size: 10px; font-weight: 500; color: #64748b;">DL Current</span>
+      </div>
+      <!-- Deload Pending -->
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 6px;">
+        <div class="dot dot-dl-pending"></div>
+        <span style="font-size: 10px; font-weight: 500; color: #64748b;">DL Pending</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

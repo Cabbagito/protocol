@@ -1,0 +1,1181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Protocol — Future Session States Exploration</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background: #050a10;
+    color: #e2e8f0;
+    -webkit-font-smoothing: antialiased;
+  }
+  .mono { font-family: 'JetBrains Mono', monospace; }
+
+  /* Phone frame */
+  .phone {
+    width: 375px;
+    min-height: 660px;
+    background: #0d1b2a;
+    border-radius: 20px;
+    overflow: hidden;
+    position: relative;
+    border: 1px solid rgba(255,255,255,0.06);
+    flex-shrink: 0;
+  }
+  .phone-vignette {
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse at center, transparent 60%, #070d15 100%);
+    pointer-events: none; z-index: 50;
+    border-radius: 20px;
+  }
+  .phone-content {
+    position: relative;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Animations */
+  @keyframes pulse-current {
+    0%, 100% { box-shadow: 0 0 4px rgba(56,189,248,0.3), 0 0 8px rgba(56,189,248,0.15); }
+    50%      { box-shadow: 0 0 8px rgba(56,189,248,0.6), 0 0 16px rgba(56,189,248,0.3); }
+  }
+  @keyframes pulse-deload {
+    0%, 100% { box-shadow: 0 0 4px rgba(234,179,8,0.3), 0 0 8px rgba(234,179,8,0.15); }
+    50%      { box-shadow: 0 0 8px rgba(234,179,8,0.6), 0 0 16px rgba(234,179,8,0.3); }
+  }
+  @keyframes pulse-viewing {
+    0%, 100% { box-shadow: 0 0 0 2px rgba(148,163,184,0.15); }
+    50%      { box-shadow: 0 0 0 2px rgba(148,163,184,0.35); }
+  }
+  @keyframes shimmer-lock {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+
+  .progress-glow {
+    box-shadow: 0 0 8px rgba(74,222,128,0.5), 0 0 2px rgba(74,222,128,0.8);
+  }
+
+  /* Layout */
+  .section-heading {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #475569;
+    margin-bottom: 6px;
+  }
+  .var-heading {
+    font-size: 16px;
+    font-weight: 700;
+    color: #e2e8f0;
+    margin-bottom: 6px;
+  }
+  .var-desc {
+    font-size: 12px;
+    color: #64748b;
+    margin-bottom: 22px;
+    line-height: 1.7;
+    max-width: 800px;
+  }
+  .phones-row {
+    display: flex;
+    gap: 20px;
+    overflow-x: auto;
+    padding-bottom: 12px;
+    scrollbar-width: thin;
+    scrollbar-color: #1e3a52 transparent;
+  }
+  .phones-row::-webkit-scrollbar { height: 6px; }
+  .phones-row::-webkit-scrollbar-track { background: transparent; }
+  .phones-row::-webkit-scrollbar-thumb { background: #1e3a52; border-radius: 3px; }
+  .phone-wrapper {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .phone-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #475569;
+    margin-bottom: 10px;
+  }
+
+  /* Shared card/panel */
+  .card-mock {
+    background: #0f1d2e;
+    border: 1px solid #1e3a52;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+  }
+  .panel-frosted {
+    background: #132438;
+    border: 1px solid rgba(255,255,255,0.04);
+    border-radius: 8px;
+  }
+
+  /* Dot cell base */
+  .dot {
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    transition: transform 0.1s ease;
+  }
+  .dot:active { transform: scale(0.9); }
+  .dot-done { background: rgba(34,197,94,0.12); border: 1.5px solid rgba(34,197,94,0.25); }
+  .dot-current { background: rgba(2,132,199,0.15); border: 2px solid #0284c7; animation: pulse-current 2s ease-in-out infinite; }
+  .dot-pending { background: #162a3e; border: 1.5px solid #244868; }
+  .dot-deload-pending { background: rgba(234,179,8,0.06); border: 1.5px solid rgba(234,179,8,0.12); }
+  .dot-deload-done { background: rgba(234,179,8,0.12); border: 1.5px solid rgba(234,179,8,0.25); }
+  .dot-deload-current { background: rgba(234,179,8,0.15); border: 2px solid #eab308; animation: pulse-deload 2s ease-in-out infinite; }
+
+  /* NEW: Viewing state variations */
+  .dot-viewing-ring {
+    box-shadow: 0 0 0 3px rgba(148,163,184,0.3), 0 0 0 1px rgba(148,163,184,0.1);
+    animation: pulse-viewing 2s ease-in-out infinite;
+  }
+  .dot-viewing-arrow-wrapper { position: relative; }
+  .dot-viewing-arrow {
+    position: absolute;
+    top: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0; height: 0;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 5px solid #94a3b8;
+  }
+
+  /* Column highlight for variation C */
+  .col-highlight {
+    background: rgba(148,163,184,0.04);
+    border-radius: 6px;
+  }
+
+  /* Set input mock */
+  .set-input-mock {
+    height: 40px;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 500;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .set-input-active {
+    background: #162a3e;
+    border: 1px solid #244868;
+    color: #cbd5e1;
+  }
+  .set-input-disabled {
+    background: rgba(22,42,62,0.4);
+    border: 1px solid rgba(30,58,82,0.4);
+    color: #334155;
+  }
+  .set-input-logged {
+    background: #0c2d4e;
+    border: 1px solid #164e7a;
+    color: #38bdf8;
+  }
+  .set-input-unknown {
+    background: rgba(22,42,62,0.3);
+    border: 1px dashed rgba(30,58,82,0.5);
+    color: #334155;
+  }
+
+  /* Check button mock */
+  .check-btn {
+    width: 36px; height: 36px;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .check-empty {
+    border: 2px solid #244868;
+    background: transparent;
+  }
+  .check-disabled {
+    border: 2px solid rgba(36,72,104,0.3);
+    background: transparent;
+    opacity: 0.3;
+  }
+  .check-done {
+    background: #0284c7;
+  }
+
+  /* Banner styles */
+  .preview-banner {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-size: 11px; font-weight: 500;
+  }
+  .banner-amber {
+    background: rgba(234,179,8,0.06);
+    border: 1px solid rgba(234,179,8,0.12);
+    color: #eab308;
+  }
+  .banner-slate {
+    background: rgba(148,163,184,0.06);
+    border: 1px solid rgba(148,163,184,0.08);
+    color: #94a3b8;
+  }
+  .banner-red {
+    background: rgba(239,68,68,0.05);
+    border: 1px solid rgba(239,68,68,0.1);
+    color: #f87171;
+  }
+
+  /* Locked shimmer */
+  .locked-shimmer {
+    background: linear-gradient(90deg, transparent 0%, rgba(148,163,184,0.03) 50%, transparent 100%);
+    background-size: 200% 100%;
+    animation: shimmer-lock 3s ease-in-out infinite;
+  }
+</style>
+</head>
+<body>
+
+<div style="max-width: 1900px; margin: 0 auto; padding: 40px 28px 60px;">
+
+  <!-- Document Title -->
+  <div style="margin-bottom: 48px;">
+    <div style="font-size: 9px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: #0ea5e9; margin-bottom: 10px;">Design Exploration</div>
+    <h1 style="font-size: 26px; font-weight: 800; color: #e2e8f0; margin-bottom: 10px; line-height: 1.2;">Future Session States</h1>
+    <p style="font-size: 13px; color: #64748b; line-height: 1.8; max-width: 760px;">
+      Exploring how the meso-grid and workout header should behave when a user navigates to a session
+      that isn't the "current" one. Covers visual indicators, interaction models, and locked/preview states.
+    </p>
+    <div style="margin-top: 16px; display: flex; gap: 8px; flex-wrap: wrap;">
+      <span style="font-size: 10px; font-weight: 600; color: #38bdf8; background: rgba(56,189,248,0.08); border: 1px solid rgba(56,189,248,0.12); padding: 3px 10px; border-radius: 5px;">MesoGrid</span>
+      <span style="font-size: 10px; font-weight: 600; color: #38bdf8; background: rgba(56,189,248,0.08); border: 1px solid rgba(56,189,248,0.12); padding: 3px 10px; border-radius: 5px;">AppHeader</span>
+      <span style="font-size: 10px; font-weight: 600; color: #38bdf8; background: rgba(56,189,248,0.08); border: 1px solid rgba(56,189,248,0.12); padding: 3px 10px; border-radius: 5px;">Workout Page</span>
+    </div>
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       SECTION 1: MESOGRID — "VIEWING" INDICATOR
+       ═══════════════════════════════════════════════════════════════════ -->
+  <div style="margin-bottom: 56px;">
+    <div class="var-heading">1. MesoGrid — "Viewing" Indicator</div>
+    <div class="var-desc">
+      When you tap a future session in the grid, we need to show two things simultaneously:
+      which cell is the <strong style="color:#38bdf8;">current</strong> workout (pulsing blue — existing),
+      and which cell you're <strong style="color:#94a3b8;">viewing</strong> right now (new state).
+      Scenario: W1 fully done, current = W2 Push, viewing = W3 Pull.
+    </div>
+
+    <div class="phones-row">
+
+      <!-- A: Ring Highlight -->
+      <div class="phone-wrapper">
+        <div class="phone-label">A — Ring Highlight</div>
+        <div class="phone" style="min-height: auto;">
+          <div class="phone-content">
+            <div style="padding: 24px 16px;">
+              <!-- Description -->
+              <div style="margin-bottom: 16px;">
+                <div style="font-size: 12px; font-weight: 600; color: #cbd5e1; margin-bottom: 4px;">Outer ring on viewed cell</div>
+                <div style="font-size: 11px; color: #475569; line-height: 1.5;">
+                  The cell you're viewing gets a subtle pulsing slate ring around it.
+                  Current keeps its blue pulse. Both visible simultaneously.
+                </div>
+              </div>
+              <!-- Grid -->
+              <div class="card-mock" style="padding: 14px;">
+                <div style="display: grid; grid-template-columns: 40px repeat(4, 1fr); gap: 6px; align-items: center;">
+                  <!-- Header -->
+                  <div></div>
+                  <div style="text-align:center;"><span style="font-size:10px; font-weight:600; color:#4ade80;">W1</span><br><span style="font-size:9px; color:rgba(74,222,128,0.5);">R3</span></div>
+                  <div style="text-align:center;"><span style="font-size:10px; font-weight:600; color:#38bdf8;">W2</span><br><span style="font-size:9px; color:rgba(56,189,248,0.5);">R2</span></div>
+                  <div style="text-align:center;"><span style="font-size:10px; font-weight:600; color:#64748b;">W3</span><br><span style="font-size:9px; color:#475569;">R1</span></div>
+                  <div style="text-align:center;"><span style="font-size:10px; font-weight:600; color:#eab308;">W4</span><br><span style="font-size:9px; color:rgba(234,179,8,0.5);">DL</span></div>
+
+                  <!-- Push row -->
+                  <div style="font-size:11px; font-weight:500; color:#94a3b8;">Push</div>
+                  <div style="display:flex; justify-content:center;"><div class="dot dot-done"><svg width="12" height="12" fill="none" stroke="#4ade80" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div></div>
+                  <div style="display:flex; justify-content:center;"><div class="dot dot-current"><div style="width:8px; height:8px; border-radius:50%; background:#0284c7;"></div></div></div>
+                  <div style="display:flex; justify-content:center;"><div class="dot dot-pending"></div></div>
+                  <div style="display:flex; justify-content:center;"><div class="dot dot-deload-pending"></div></div>
+
+                  <!-- Pull row -->
+                  <div style="font-size:11px; font-weight:500; color:#94a3b8;">Pull</div>
+                  <div style="display:flex; justify-content:center;"><div class="dot dot-done"><svg width="12" height="12" fill="none" stroke="#4ade80" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div></div>
+                  <div style="display:flex; justify-content:center;"><div class="dot dot-pending"></div></div>
+                  <!-- VIEWING: W3 Pull — ring highlight -->
+                  <div style="display:flex; justify-content:center;"><div class="dot dot-pending dot-viewing-ring"></div></div>
+                  <div style="display:flex; justify-content:center;"><div class="dot dot-deload-pending"></div></div>
+
+                  <!-- Legs row -->
+                  <div style="font-size:11px; font-weight:500; color:#94a3b8;">Legs</div>
+                  <div style="display:flex; justify-content:center;"><div class="dot dot-done"><svg width="12" height="12" fill="none" stroke="#4ade80" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div></div>
+                  <div style="display:flex; justify-content:center;"><div class="dot dot-pending"></div></div>
+                  <div style="display:flex; justify-content:center;"><div class="dot dot-pending"></div></div>
+                  <div style="display:flex; justify-content:center;"><div class="dot dot-deload-pending"></div></div>
+                </div>
+              </div>
+              <!-- Legend -->
+              <div style="margin-top: 12px; display: flex; gap: 16px; flex-wrap: wrap;">
+                <div style="display:flex; align-items:center; gap:5px;">
+                  <div style="width:10px; height:10px; border-radius:50%; background:rgba(2,132,199,0.15); border:2px solid #0284c7;"></div>
+                  <span style="font-size:9px; color:#475569;">Current</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:5px;">
+                  <div style="width:10px; height:10px; border-radius:50%; background:#162a3e; border:1.5px solid #244868; box-shadow: 0 0 0 2px rgba(148,163,184,0.25);"></div>
+                  <span style="font-size:9px; color:#475569;">Viewing</span>
+                </div>
+              </div>
+              <!-- Verdict -->
+              <div style="margin-top: 14px; padding: 10px 12px; background: rgba(14,165,233,0.05); border: 1px solid rgba(14,165,233,0.1); border-radius: 8px;">
+                <div style="font-size: 10px; color: #64748b; line-height: 1.6;">
+                  <span style="color: #0ea5e9; font-weight: 600;">Recommended.</span>
+                  Clean, unambiguous. The ring doesn't compete with the blue pulse.
+                  Works on both pending and done cells.
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="phone-vignette"></div>
+        </div>
+      </div>
+
+      <!-- B: Arrow/Pointer -->
+      <div class="phone-wrapper">
+        <div class="phone-label">B — Arrow Pointer</div>
+        <div class="phone" style="min-height: auto;">
+          <div class="phone-content">
+            <div style="padding: 24px 16px;">
+              <div style="margin-bottom: 16px;">
+                <div style="font-size: 12px; font-weight: 600; color: #cbd5e1; margin-bottom: 4px;">Downward arrow above viewed cell</div>
+                <div style="font-size: 11px; color: #475569; line-height: 1.5;">
+                  A small triangular arrow sits above the cell you're viewing.
+                  Clear pointer, but adds vertical space and can feel cluttered.
+                </div>
+              </div>
+              <div class="card-mock" style="padding: 14px;">
+                <div style="display: grid; grid-template-columns: 40px repeat(4, 1fr); gap: 6px; align-items: center;">
+                  <div></div>
+                  <div style="text-align:center;"><span style="font-size:10px; font-weight:600; color:#4ade80;">W1</span><br><span style="font-size:9px; color:rgba(74,222,128,0.5);">R3</span></div>
+                  <div style="text-align:center;"><span style="font-size:10px; font-weight:600; color:#38bdf8;">W2</span><br><span style="font-size:9px; color:rgba(56,189,248,0.5);">R2</span></div>
+                  <div style="text-align:center;"><span style="font-size:10px; font-weight:600; color:#64748b;">W3</span><br><span style="font-size:9px; color:#475569;">R1</span></div>
+                  <div style="text-align:center;"><span style="font-size:10px; font-weight:600; color:#eab308;">W4</span><br><span style="font-size:9px; color:rgba(234,179,8,0.5);">DL</span></div>
+
+                  <!-- Push -->
+                  <div style="font-size:11px; font-weight:500; color:#94a3b8;">Push</div>
+                  <div style="display:flex; justify-content:center;"><div class="dot dot-done"><svg width="12" height="12" fill="none" stroke="#4ade80" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div></div>
+                  <div style="display:flex; justify-content:center;"><div class="dot dot-current"><div style="width:8px; height:8px; border-radius:50%; background:#0284c7;"></div></div></div>
+                  <div style="display:flex; justify-content:center;"><div class="dot dot-pending"></div></div>
+                  <div style="display:flex; justify-content:center;"><div class="dot dot-deload-pending"></div></div>
+
+                  <!-- Pull — with arrow on W3 -->
+                  <div style="font-size:11px; font-weight:500; color:#94a3b8;">Pull</div>
+                  <div style="display:flex; justify-content:center;"><div class="dot dot-done"><svg width="12" height="12" fill="none" stroke="#4ade80" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div></div>
+                  <div style="display:flex; justify-content:center;"><div class="dot dot-pending"></div></div>
+                  <div style="display:flex; justify-content:center;">
+                    <div class="dot-viewing-arrow-wrapper">
+                      <div class="dot-viewing-arrow"></div>
+                      <div class="dot dot-pending" style="border-color: #94a3b8;"></div>
+                    </div>
+                  </div>
+                  <div style="display:flex; justify-content:center;"><div class="dot dot-deload-pending"></div></div>
+
+                  <!-- Legs -->
+                  <div style="font-size:11px; font-weight:500; color:#94a3b8;">Legs</div>
+                  <div style="display:flex; justify-content:center;"><div class="dot dot-done"><svg width="12" height="12" fill="none" stroke="#4ade80" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div></div>
+                  <div style="display:flex; justify-content:center;"><div class="dot dot-pending"></div></div>
+                  <div style="display:flex; justify-content:center;"><div class="dot dot-pending"></div></div>
+                  <div style="display:flex; justify-content:center;"><div class="dot dot-deload-pending"></div></div>
+                </div>
+              </div>
+              <div style="margin-top: 12px; display: flex; gap: 16px;">
+                <div style="display:flex; align-items:center; gap:5px;">
+                  <div style="width:10px; height:10px; border-radius:50%; background:rgba(2,132,199,0.15); border:2px solid #0284c7;"></div>
+                  <span style="font-size:9px; color:#475569;">Current</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:5px;">
+                  <div style="width:0; height:0; border-left:4px solid transparent; border-right:4px solid transparent; border-top:5px solid #94a3b8;"></div>
+                  <span style="font-size:9px; color:#475569;">Viewing</span>
+                </div>
+              </div>
+              <div style="margin-top: 14px; padding: 10px 12px; background: rgba(234,179,8,0.04); border: 1px solid rgba(234,179,8,0.1); border-radius: 8px;">
+                <div style="font-size: 10px; color: #64748b; line-height: 1.6;">
+                  <span style="color: #eab308; font-weight: 600;">Mixed.</span>
+                  Clear indicator, but the arrow takes extra space and looks busy
+                  in a compact grid. Hard to position well on small cells.
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="phone-vignette"></div>
+        </div>
+      </div>
+
+      <!-- C: Column/Row Highlight -->
+      <div class="phone-wrapper">
+        <div class="phone-label">C — Column + Row Highlight</div>
+        <div class="phone" style="min-height: auto;">
+          <div class="phone-content">
+            <div style="padding: 24px 16px;">
+              <div style="margin-bottom: 16px;">
+                <div style="font-size: 12px; font-weight: 600; color: #cbd5e1; margin-bottom: 4px;">Subtle background on intersecting column & row</div>
+                <div style="font-size: 11px; color: #475569; line-height: 1.5;">
+                  The week column and session row get a subtle highlight,
+                  creating a crosshair effect. The cell at the intersection is the viewed one.
+                </div>
+              </div>
+              <div class="card-mock" style="padding: 14px;">
+                <div style="display: grid; grid-template-columns: 40px repeat(4, 1fr); gap: 6px; align-items: center;">
+                  <div></div>
+                  <div style="text-align:center;"><span style="font-size:10px; font-weight:600; color:#4ade80;">W1</span><br><span style="font-size:9px; color:rgba(74,222,128,0.5);">R3</span></div>
+                  <div style="text-align:center;"><span style="font-size:10px; font-weight:600; color:#38bdf8;">W2</span><br><span style="font-size:9px; color:rgba(56,189,248,0.5);">R2</span></div>
+                  <!-- W3 column header highlighted -->
+                  <div style="text-align:center; background: rgba(148,163,184,0.06); border-radius: 4px; padding: 2px 0;"><span style="font-size:10px; font-weight:600; color:#94a3b8;">W3</span><br><span style="font-size:9px; color:#64748b;">R1</span></div>
+                  <div style="text-align:center;"><span style="font-size:10px; font-weight:600; color:#eab308;">W4</span><br><span style="font-size:9px; color:rgba(234,179,8,0.5);">DL</span></div>
+
+                  <!-- Push -->
+                  <div style="font-size:11px; font-weight:500; color:#94a3b8;">Push</div>
+                  <div style="display:flex; justify-content:center;"><div class="dot dot-done"><svg width="12" height="12" fill="none" stroke="#4ade80" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div></div>
+                  <div style="display:flex; justify-content:center;"><div class="dot dot-current"><div style="width:8px; height:8px; border-radius:50%; background:#0284c7;"></div></div></div>
+                  <div style="display:flex; justify-content:center; background: rgba(148,163,184,0.04); border-radius:4px; padding: 4px 0;"><div class="dot dot-pending"></div></div>
+                  <div style="display:flex; justify-content:center;"><div class="dot dot-deload-pending"></div></div>
+
+                  <!-- Pull — highlighted row + W3 column intersection -->
+                  <div style="font-size:11px; font-weight:500; color:#cbd5e1; background: rgba(148,163,184,0.06); border-radius: 4px; padding: 2px 4px;">Pull</div>
+                  <div style="display:flex; justify-content:center; background: rgba(148,163,184,0.03); border-radius:4px; padding: 4px 0;"><div class="dot dot-done"><svg width="12" height="12" fill="none" stroke="#4ade80" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div></div>
+                  <div style="display:flex; justify-content:center; background: rgba(148,163,184,0.03); border-radius:4px; padding: 4px 0;"><div class="dot dot-pending"></div></div>
+                  <!-- Intersection: both row + col highlighted -->
+                  <div style="display:flex; justify-content:center; background: rgba(148,163,184,0.08); border-radius:4px; padding: 4px 0;"><div class="dot dot-pending" style="border-color: #64748b;"></div></div>
+                  <div style="display:flex; justify-content:center; background: rgba(148,163,184,0.03); border-radius:4px; padding: 4px 0;"><div class="dot dot-deload-pending"></div></div>
+
+                  <!-- Legs -->
+                  <div style="font-size:11px; font-weight:500; color:#94a3b8;">Legs</div>
+                  <div style="display:flex; justify-content:center;"><div class="dot dot-done"><svg width="12" height="12" fill="none" stroke="#4ade80" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div></div>
+                  <div style="display:flex; justify-content:center;"><div class="dot dot-pending"></div></div>
+                  <div style="display:flex; justify-content:center; background: rgba(148,163,184,0.04); border-radius:4px; padding: 4px 0;"><div class="dot dot-pending"></div></div>
+                  <div style="display:flex; justify-content:center;"><div class="dot dot-deload-pending"></div></div>
+                </div>
+              </div>
+              <div style="margin-top: 14px; padding: 10px 12px; background: rgba(239,68,68,0.04); border: 1px solid rgba(239,68,68,0.08); border-radius: 8px;">
+                <div style="font-size: 10px; color: #64748b; line-height: 1.6;">
+                  <span style="color: #f87171; font-weight: 600;">Not recommended.</span>
+                  The crosshair effect is noisy and makes the grid harder to read.
+                  Hard to implement in the existing CSS grid layout cleanly.
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="phone-vignette"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       SECTION 2: HEADER STATES
+       ═══════════════════════════════════════════════════════════════════ -->
+  <div style="margin-bottom: 56px;">
+    <div class="var-heading">2. Header States — Current vs Future Session</div>
+    <div class="var-desc">
+      Four header states showing the progression from normal workout mode to different "future session" scenarios.
+      The header is the primary place users understand what they're looking at.
+    </div>
+
+    <div class="phones-row">
+
+      <!-- State A: Current Session (existing) -->
+      <div class="phone-wrapper">
+        <div class="phone-label">A — Current Session (existing)</div>
+        <div class="phone">
+          <div class="phone-content">
+            <!-- Header -->
+            <div style="background:#0d1b2a; position:sticky; top:0; z-index:30;">
+              <div style="padding: 20px 16px 12px; display:flex; align-items:center; gap:12px;">
+                <!-- Logo -->
+                <svg width="36" height="36" viewBox="0 0 100 100" fill="none"><circle cx="50" cy="50" r="45" stroke="#0ea5e9" stroke-width="4"/><circle cx="50" cy="50" r="32" stroke="#0ea5e9" stroke-width="3" opacity="0.6"/><circle cx="50" cy="50" r="8" fill="#0ea5e9"/><line x1="50" y1="5" x2="50" y2="18" stroke="#0ea5e9" stroke-width="3" stroke-linecap="round"/><line x1="50" y1="82" x2="50" y2="95" stroke="#0ea5e9" stroke-width="3" stroke-linecap="round"/><line x1="5" y1="50" x2="18" y2="50" stroke="#0ea5e9" stroke-width="3" stroke-linecap="round"/><line x1="82" y1="50" x2="95" y2="50" stroke="#0ea5e9" stroke-width="3" stroke-linecap="round"/></svg>
+                <div style="flex:1; min-width:0;">
+                  <div style="font-size:15px; font-weight:600; color:#e2e8f0;">Push Day</div>
+                  <div style="font-size:11px; color:#475569;">Week 2</div>
+                </div>
+                <!-- RiR Badge -->
+                <div style="display:flex; flex-direction:column; align-items:center; flex-shrink:0;">
+                  <span style="font-size:10px; font-weight:500; text-transform:uppercase; letter-spacing:0.08em; color:#475569; margin-bottom:3px;">RiR</span>
+                  <div style="width:40px; height:40px; border-radius:12px; display:flex; align-items:center; justify-content:center; background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.15);">
+                    <span class="mono" style="font-size:18px; font-weight:700; color:#38bdf8;">2</span>
+                  </div>
+                </div>
+                <svg width="18" height="18" fill="none" stroke="#475569" stroke-width="2" viewBox="0 0 24 24" style="flex-shrink:0;"><path stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6"/></svg>
+              </div>
+              <!-- Progress bar — active -->
+              <div style="height:3px; width:100%; background:#162a3e; position:relative;">
+                <div style="position:absolute; left:0; top:0; height:100%; width:42%; background:#4ade80; border-radius:0 9999px 9999px 0;" class="progress-glow"></div>
+              </div>
+            </div>
+
+            <!-- Exercise cards -->
+            <div style="padding: 14px 12px; flex:1; overflow-y:auto;">
+              <!-- Card 1 -->
+              <div class="card-mock" style="padding: 12px; margin-bottom: 10px; border-color: rgba(249,115,22,0.35);">
+                <div style="margin-bottom:6px;"><span style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.06em; color:#fb923c; background:rgba(249,115,22,0.1); border:1px solid rgba(249,115,22,0.15); padding:2px 8px; border-radius:20px;">Chest</span></div>
+                <div style="font-size:14px; font-weight:600; color:#e2e8f0; margin-bottom:2px;">Bench Press</div>
+                <div style="font-size:11px; color:#475569; margin-bottom:10px;">Barbell</div>
+                <div class="panel-frosted" style="padding:6px;">
+                  <div style="display:flex; gap:6px; padding:4px 8px; align-items:center;">
+                    <div style="flex:1;"><div class="set-input-mock set-input-logged"><span>80</span></div></div>
+                    <div style="flex:1;"><div class="set-input-mock set-input-logged"><span>10</span></div></div>
+                    <div class="check-btn check-done"><svg width="14" height="14" fill="none" stroke="white" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div>
+                  </div>
+                  <div style="display:flex; gap:6px; padding:4px 8px; align-items:center;">
+                    <div style="flex:1;"><div class="set-input-mock set-input-active"><span>80</span></div></div>
+                    <div style="flex:1;"><div class="set-input-mock set-input-active" style="color:#475569;"><span>10</span></div></div>
+                    <div class="check-btn check-empty"></div>
+                  </div>
+                  <div style="display:flex; gap:6px; padding:4px 8px; align-items:center;">
+                    <div style="flex:1;"><div class="set-input-mock set-input-active"><span>80</span></div></div>
+                    <div style="flex:1;"><div class="set-input-mock set-input-active" style="color:#475569;"><span>10</span></div></div>
+                    <div class="check-btn check-empty"></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Card 2 -->
+              <div class="card-mock" style="padding: 12px; margin-bottom: 10px; border-color: rgba(236,72,153,0.35);">
+                <div style="margin-bottom:6px;"><span style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.06em; color:#f472b6; background:rgba(236,72,153,0.1); border:1px solid rgba(236,72,153,0.15); padding:2px 8px; border-radius:20px;">Triceps</span></div>
+                <div style="font-size:14px; font-weight:600; color:#e2e8f0; margin-bottom:2px;">Overhead Extension</div>
+                <div style="font-size:11px; color:#475569; margin-bottom:10px;">Cable</div>
+                <div class="panel-frosted" style="padding:6px;">
+                  <div style="display:flex; gap:6px; padding:4px 8px; align-items:center;">
+                    <div style="flex:1;"><div class="set-input-mock set-input-active"><span>25</span></div></div>
+                    <div style="flex:1;"><div class="set-input-mock set-input-active" style="color:#475569;"><span>12</span></div></div>
+                    <div class="check-btn check-empty"></div>
+                  </div>
+                  <div style="display:flex; gap:6px; padding:4px 8px; align-items:center;">
+                    <div style="flex:1;"><div class="set-input-mock set-input-active"><span>25</span></div></div>
+                    <div style="flex:1;"><div class="set-input-mock set-input-active" style="color:#475569;"><span>12</span></div></div>
+                    <div class="check-btn check-empty"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="phone-vignette"></div>
+        </div>
+      </div>
+
+      <!-- State B: Future — Ready (has data) -->
+      <div class="phone-wrapper">
+        <div class="phone-label">B — Future: Ready (has data)</div>
+        <div class="phone">
+          <div class="phone-content">
+            <div style="background:#0d1b2a; position:sticky; top:0; z-index:30;">
+              <div style="padding: 20px 16px 12px; display:flex; align-items:center; gap:12px;">
+                <svg width="36" height="36" viewBox="0 0 100 100" fill="none"><circle cx="50" cy="50" r="45" stroke="#0ea5e9" stroke-width="4"/><circle cx="50" cy="50" r="32" stroke="#0ea5e9" stroke-width="3" opacity="0.6"/><circle cx="50" cy="50" r="8" fill="#0ea5e9"/><line x1="50" y1="5" x2="50" y2="18" stroke="#0ea5e9" stroke-width="3" stroke-linecap="round"/><line x1="50" y1="82" x2="50" y2="95" stroke="#0ea5e9" stroke-width="3" stroke-linecap="round"/><line x1="5" y1="50" x2="18" y2="50" stroke="#0ea5e9" stroke-width="3" stroke-linecap="round"/><line x1="82" y1="50" x2="95" y2="50" stroke="#0ea5e9" stroke-width="3" stroke-linecap="round"/></svg>
+                <div style="flex:1; min-width:0;">
+                  <div style="font-size:15px; font-weight:600; color:#e2e8f0;">Pull Day</div>
+                  <div style="font-size:11px; color:#475569;">Week 3</div>
+                </div>
+                <!-- Preview badge replaces RiR -->
+                <div style="display:flex; align-items:center; gap:5px; padding:6px 12px; border-radius:8px; background:rgba(148,163,184,0.06); border:1px solid rgba(148,163,184,0.1);">
+                  <svg width="14" height="14" fill="none" stroke="#94a3b8" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                  <span style="font-size:11px; font-weight:500; color:#94a3b8;">Preview</span>
+                </div>
+                <svg width="18" height="18" fill="none" stroke="#475569" stroke-width="2" viewBox="0 0 24 24" style="flex-shrink:0;"><path stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6"/></svg>
+              </div>
+              <!-- Progress bar — empty/dimmed -->
+              <div style="height:3px; width:100%; background:#162a3e; position:relative; opacity: 0.4;">
+              </div>
+            </div>
+
+            <!-- Info banner -->
+            <div style="padding: 10px 12px 0;">
+              <div class="preview-banner banner-slate">
+                <svg width="14" height="14" fill="none" stroke="#94a3b8" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path stroke-linecap="round" d="M12 8v4M12 16h.01"/></svg>
+                <span>This is a future session — you're previewing Week 3</span>
+              </div>
+            </div>
+
+            <!-- Exercise cards — slightly dimmed but readable -->
+            <div style="padding: 14px 12px; flex:1; overflow-y:auto;">
+              <div class="card-mock" style="padding: 12px; margin-bottom: 10px; border-color: rgba(20,184,166,0.25); opacity: 0.85;">
+                <div style="margin-bottom:6px;"><span style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.06em; color:#2dd4bf; background:rgba(20,184,166,0.1); border:1px solid rgba(20,184,166,0.15); padding:2px 8px; border-radius:20px;">Back</span></div>
+                <div style="font-size:14px; font-weight:600; color:#e2e8f0; margin-bottom:2px;">Barbell Row</div>
+                <div style="font-size:11px; color:#475569; margin-bottom:10px;">Barbell</div>
+                <div class="panel-frosted" style="padding:6px;">
+                  <div style="display:flex; gap:6px; padding:4px 8px; align-items:center;">
+                    <div style="flex:1;"><div class="set-input-mock set-input-disabled"><span>72.5</span></div></div>
+                    <div style="flex:1;"><div class="set-input-mock set-input-disabled"><span>10</span></div></div>
+                    <div class="check-btn check-disabled"></div>
+                  </div>
+                  <div style="display:flex; gap:6px; padding:4px 8px; align-items:center;">
+                    <div style="flex:1;"><div class="set-input-mock set-input-disabled"><span>72.5</span></div></div>
+                    <div style="flex:1;"><div class="set-input-mock set-input-disabled"><span>10</span></div></div>
+                    <div class="check-btn check-disabled"></div>
+                  </div>
+                  <div style="display:flex; gap:6px; padding:4px 8px; align-items:center;">
+                    <div style="flex:1;"><div class="set-input-mock set-input-disabled"><span>72.5</span></div></div>
+                    <div style="flex:1;"><div class="set-input-mock set-input-disabled"><span>10</span></div></div>
+                    <div class="check-btn check-disabled"></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="card-mock" style="padding: 12px; margin-bottom: 10px; border-color: rgba(99,102,241,0.25); opacity: 0.85;">
+                <div style="margin-bottom:6px;"><span style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.06em; color:#818cf8; background:rgba(99,102,241,0.1); border:1px solid rgba(99,102,241,0.15); padding:2px 8px; border-radius:20px;">Biceps</span></div>
+                <div style="font-size:14px; font-weight:600; color:#e2e8f0; margin-bottom:2px;">Barbell Curl</div>
+                <div style="font-size:11px; color:#475569; margin-bottom:10px;">Barbell</div>
+                <div class="panel-frosted" style="padding:6px;">
+                  <div style="display:flex; gap:6px; padding:4px 8px; align-items:center;">
+                    <div style="flex:1;"><div class="set-input-mock set-input-disabled"><span>30</span></div></div>
+                    <div style="flex:1;"><div class="set-input-mock set-input-disabled"><span>12</span></div></div>
+                    <div class="check-btn check-disabled"></div>
+                  </div>
+                  <div style="display:flex; gap:6px; padding:4px 8px; align-items:center;">
+                    <div style="flex:1;"><div class="set-input-mock set-input-disabled"><span>30</span></div></div>
+                    <div style="flex:1;"><div class="set-input-mock set-input-disabled"><span>12</span></div></div>
+                    <div class="check-btn check-disabled"></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- CTA to go back to current -->
+              <div style="margin-top: 12px;">
+                <button style="width:100%; padding:14px; border-radius:12px; background:#0ea5e9; color:white; font-size:14px; font-weight:600; border:none; cursor:pointer;">
+                  Go to Current Workout
+                </button>
+                <div style="text-align:center; margin-top:8px;">
+                  <span style="font-size:11px; color:#475569;">Push Day · Week 2 · RiR 2</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="phone-vignette"></div>
+        </div>
+      </div>
+
+      <!-- State C: Future — Locked -->
+      <div class="phone-wrapper">
+        <div class="phone-label">C — Future: Locked</div>
+        <div class="phone">
+          <div class="phone-content">
+            <div style="background:#0d1b2a; position:sticky; top:0; z-index:30;">
+              <div style="padding: 20px 16px 12px; display:flex; align-items:center; gap:12px;">
+                <svg width="36" height="36" viewBox="0 0 100 100" fill="none"><circle cx="50" cy="50" r="45" stroke="#0ea5e9" stroke-width="4"/><circle cx="50" cy="50" r="32" stroke="#0ea5e9" stroke-width="3" opacity="0.6"/><circle cx="50" cy="50" r="8" fill="#0ea5e9"/><line x1="50" y1="5" x2="50" y2="18" stroke="#0ea5e9" stroke-width="3" stroke-linecap="round"/><line x1="50" y1="82" x2="50" y2="95" stroke="#0ea5e9" stroke-width="3" stroke-linecap="round"/><line x1="5" y1="50" x2="18" y2="50" stroke="#0ea5e9" stroke-width="3" stroke-linecap="round"/><line x1="82" y1="50" x2="95" y2="50" stroke="#0ea5e9" stroke-width="3" stroke-linecap="round"/></svg>
+                <div style="flex:1; min-width:0;">
+                  <div style="font-size:15px; font-weight:600; color:#94a3b8;">Pull Day</div>
+                  <div style="font-size:11px; color:#334155;">Week 3</div>
+                </div>
+                <!-- Lock icon badge -->
+                <div style="display:flex; align-items:center; gap:5px; padding:6px 12px; border-radius:8px; background:rgba(100,116,139,0.06); border:1px solid rgba(100,116,139,0.1);">
+                  <svg width="14" height="14" fill="none" stroke="#64748b" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+                  <span style="font-size:11px; font-weight:500; color:#64748b;">Locked</span>
+                </div>
+              </div>
+              <div style="height:3px; width:100%; background:#162a3e; opacity:0.3;"></div>
+            </div>
+
+            <!-- Lock banner -->
+            <div style="padding: 10px 12px 0;">
+              <div class="preview-banner banner-amber">
+                <svg width="14" height="14" fill="none" stroke="#eab308" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+                <span>Complete earlier sessions to unlock this workout</span>
+              </div>
+            </div>
+
+            <!-- Exercise cards — heavily dimmed -->
+            <div style="padding: 14px 12px; flex:1; overflow-y:auto; opacity: 0.45;">
+              <div class="card-mock locked-shimmer" style="padding: 12px; margin-bottom: 10px; border-color: rgba(20,184,166,0.15);">
+                <div style="margin-bottom:6px;"><span style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.06em; color:#2dd4bf; background:rgba(20,184,166,0.1); border:1px solid rgba(20,184,166,0.15); padding:2px 8px; border-radius:20px;">Back</span></div>
+                <div style="font-size:14px; font-weight:600; color:#94a3b8; margin-bottom:2px;">Barbell Row</div>
+                <div style="font-size:11px; color:#334155; margin-bottom:10px;">Barbell</div>
+                <div class="panel-frosted" style="padding:6px;">
+                  <div style="display:flex; gap:6px; padding:4px 8px; align-items:center;">
+                    <div style="flex:1;"><div class="set-input-mock set-input-disabled"><span>72.5</span></div></div>
+                    <div style="flex:1;"><div class="set-input-mock set-input-disabled"><span>10</span></div></div>
+                    <div class="check-btn check-disabled"></div>
+                  </div>
+                  <div style="display:flex; gap:6px; padding:4px 8px; align-items:center;">
+                    <div style="flex:1;"><div class="set-input-mock set-input-disabled"><span>72.5</span></div></div>
+                    <div style="flex:1;"><div class="set-input-mock set-input-disabled"><span>10</span></div></div>
+                    <div class="check-btn check-disabled"></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="card-mock locked-shimmer" style="padding: 12px; margin-bottom: 10px; border-color: rgba(99,102,241,0.15);">
+                <div style="margin-bottom:6px;"><span style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.06em; color:#818cf8; background:rgba(99,102,241,0.1); border:1px solid rgba(99,102,241,0.15); padding:2px 8px; border-radius:20px;">Biceps</span></div>
+                <div style="font-size:14px; font-weight:600; color:#94a3b8; margin-bottom:2px;">Barbell Curl</div>
+                <div style="font-size:11px; color:#334155; margin-bottom:10px;">Barbell</div>
+                <div class="panel-frosted" style="padding:6px;">
+                  <div style="display:flex; gap:6px; padding:4px 8px; align-items:center;">
+                    <div style="flex:1;"><div class="set-input-mock set-input-disabled"><span>30</span></div></div>
+                    <div style="flex:1;"><div class="set-input-mock set-input-disabled"><span>12</span></div></div>
+                    <div class="check-btn check-disabled"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- CTA -->
+            <div style="padding: 0 12px 20px;">
+              <button style="width:100%; padding:14px; border-radius:12px; background:#0ea5e9; color:white; font-size:14px; font-weight:600; border:none; cursor:pointer;">
+                Go to Current Workout
+              </button>
+            </div>
+          </div>
+          <div class="phone-vignette"></div>
+        </div>
+      </div>
+
+      <!-- State D: Future — No Progression Data -->
+      <div class="phone-wrapper">
+        <div class="phone-label">D — Future: No Data Yet</div>
+        <div class="phone">
+          <div class="phone-content">
+            <div style="background:#0d1b2a; position:sticky; top:0; z-index:30;">
+              <div style="padding: 20px 16px 12px; display:flex; align-items:center; gap:12px;">
+                <svg width="36" height="36" viewBox="0 0 100 100" fill="none"><circle cx="50" cy="50" r="45" stroke="#0ea5e9" stroke-width="4"/><circle cx="50" cy="50" r="32" stroke="#0ea5e9" stroke-width="3" opacity="0.6"/><circle cx="50" cy="50" r="8" fill="#0ea5e9"/><line x1="50" y1="5" x2="50" y2="18" stroke="#0ea5e9" stroke-width="3" stroke-linecap="round"/><line x1="50" y1="82" x2="50" y2="95" stroke="#0ea5e9" stroke-width="3" stroke-linecap="round"/><line x1="5" y1="50" x2="18" y2="50" stroke="#0ea5e9" stroke-width="3" stroke-linecap="round"/><line x1="82" y1="50" x2="95" y2="50" stroke="#0ea5e9" stroke-width="3" stroke-linecap="round"/></svg>
+                <div style="flex:1; min-width:0;">
+                  <div style="font-size:15px; font-weight:600; color:#94a3b8;">Pull Day</div>
+                  <div style="font-size:11px; color:#334155;">Week 3</div>
+                </div>
+                <!-- Pending badge -->
+                <div style="display:flex; align-items:center; gap:5px; padding:6px 12px; border-radius:8px; background:rgba(100,116,139,0.06); border:1px solid rgba(100,116,139,0.1);">
+                  <svg width="14" height="14" fill="none" stroke="#64748b" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path stroke-linecap="round" d="M12 6v6l4 2"/></svg>
+                  <span style="font-size:11px; font-weight:500; color:#64748b;">Pending</span>
+                </div>
+              </div>
+              <div style="height:3px; width:100%; background:#162a3e; opacity:0.3;"></div>
+            </div>
+
+            <!-- Info banner -->
+            <div style="padding: 10px 12px 0;">
+              <div class="preview-banner banner-amber">
+                <svg width="14" height="14" fill="none" stroke="#eab308" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path stroke-linecap="round" d="M12 6v6l4 2"/></svg>
+                <span>Weights will update after Week 2 is logged</span>
+              </div>
+            </div>
+
+            <!-- Exercise cards with unknown weights -->
+            <div style="padding: 14px 12px; flex:1; overflow-y:auto; opacity: 0.55;">
+              <div class="card-mock" style="padding: 12px; margin-bottom: 10px; border-color: rgba(20,184,166,0.15);">
+                <div style="margin-bottom:6px;"><span style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.06em; color:#2dd4bf; background:rgba(20,184,166,0.1); border:1px solid rgba(20,184,166,0.15); padding:2px 8px; border-radius:20px;">Back</span></div>
+                <div style="font-size:14px; font-weight:600; color:#94a3b8; margin-bottom:2px;">Barbell Row</div>
+                <div style="font-size:11px; color:#334155; margin-bottom:10px;">Barbell</div>
+                <div class="panel-frosted" style="padding:6px;">
+                  <!-- Column headers -->
+                  <div style="display:flex; padding: 2px 8px 6px; gap: 6px;">
+                    <div style="flex:1; text-align:center; font-size:11px; font-weight:500; text-transform:uppercase; letter-spacing:0.06em; color:#334155;">Weight</div>
+                    <div style="flex:1; text-align:center; font-size:11px; font-weight:500; text-transform:uppercase; letter-spacing:0.06em; color:#334155;">Reps</div>
+                    <div style="width:36px;"></div>
+                  </div>
+                  <div style="display:flex; gap:6px; padding:4px 8px; align-items:center;">
+                    <div style="flex:1;"><div class="set-input-mock set-input-unknown"><span style="font-size:16px;">—</span></div></div>
+                    <div style="flex:1;"><div class="set-input-mock set-input-disabled"><span>10</span></div></div>
+                    <div class="check-btn check-disabled"></div>
+                  </div>
+                  <div style="display:flex; gap:6px; padding:4px 8px; align-items:center;">
+                    <div style="flex:1;"><div class="set-input-mock set-input-unknown"><span style="font-size:16px;">—</span></div></div>
+                    <div style="flex:1;"><div class="set-input-mock set-input-disabled"><span>10</span></div></div>
+                    <div class="check-btn check-disabled"></div>
+                  </div>
+                  <div style="display:flex; gap:6px; padding:4px 8px; align-items:center;">
+                    <div style="flex:1;"><div class="set-input-mock set-input-unknown"><span style="font-size:16px;">—</span></div></div>
+                    <div style="flex:1;"><div class="set-input-mock set-input-disabled"><span>10</span></div></div>
+                    <div class="check-btn check-disabled"></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="card-mock" style="padding: 12px; margin-bottom: 10px; border-color: rgba(99,102,241,0.15);">
+                <div style="margin-bottom:6px;"><span style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.06em; color:#818cf8; background:rgba(99,102,241,0.1); border:1px solid rgba(99,102,241,0.15); padding:2px 8px; border-radius:20px;">Biceps</span></div>
+                <div style="font-size:14px; font-weight:600; color:#94a3b8; margin-bottom:2px;">Barbell Curl</div>
+                <div style="font-size:11px; color:#334155; margin-bottom:10px;">Barbell</div>
+                <div class="panel-frosted" style="padding:6px;">
+                  <div style="display:flex; gap:6px; padding:4px 8px; align-items:center;">
+                    <div style="flex:1;"><div class="set-input-mock set-input-unknown"><span style="font-size:16px;">—</span></div></div>
+                    <div style="flex:1;"><div class="set-input-mock set-input-disabled"><span>12</span></div></div>
+                    <div class="check-btn check-disabled"></div>
+                  </div>
+                  <div style="display:flex; gap:6px; padding:4px 8px; align-items:center;">
+                    <div style="flex:1;"><div class="set-input-mock set-input-unknown"><span style="font-size:16px;">—</span></div></div>
+                    <div style="flex:1;"><div class="set-input-mock set-input-disabled"><span>12</span></div></div>
+                    <div class="check-btn check-disabled"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div style="padding: 0 12px 20px;">
+              <button style="width:100%; padding:14px; border-radius:12px; background:#0ea5e9; color:white; font-size:14px; font-weight:600; border:none; cursor:pointer;">
+                Go to Current Workout
+              </button>
+            </div>
+          </div>
+          <div class="phone-vignette"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       SECTION 3: INTERACTION DECISION
+       ═══════════════════════════════════════════════════════════════════ -->
+  <div style="margin-bottom: 56px;">
+    <div class="var-heading">3. Interaction Model — View-Only vs Full Access</div>
+    <div class="var-desc">
+      The big question: should future sessions be read-only previews, or can you actually log them out of order?
+      Both approaches have trade-offs. View-only is simpler to implement and prevents data issues, but
+      full access gives flexibility for people who train out of order.
+    </div>
+
+    <div class="phones-row">
+
+      <!-- Approach 1: View-Only -->
+      <div class="phone-wrapper">
+        <div class="phone-label" style="color: #4ade80;">Approach 1 — View-Only (Recommended)</div>
+        <div class="phone">
+          <div class="phone-content">
+            <div style="background:#0d1b2a; position:sticky; top:0; z-index:30;">
+              <div style="padding: 20px 16px 12px; display:flex; align-items:center; gap:12px;">
+                <svg width="36" height="36" viewBox="0 0 100 100" fill="none"><circle cx="50" cy="50" r="45" stroke="#0ea5e9" stroke-width="4"/><circle cx="50" cy="50" r="32" stroke="#0ea5e9" stroke-width="3" opacity="0.6"/><circle cx="50" cy="50" r="8" fill="#0ea5e9"/><line x1="50" y1="5" x2="50" y2="18" stroke="#0ea5e9" stroke-width="3" stroke-linecap="round"/><line x1="50" y1="82" x2="50" y2="95" stroke="#0ea5e9" stroke-width="3" stroke-linecap="round"/><line x1="5" y1="50" x2="18" y2="50" stroke="#0ea5e9" stroke-width="3" stroke-linecap="round"/><line x1="82" y1="50" x2="95" y2="50" stroke="#0ea5e9" stroke-width="3" stroke-linecap="round"/></svg>
+                <div style="flex:1; min-width:0;">
+                  <div style="font-size:15px; font-weight:600; color:#e2e8f0;">Pull Day</div>
+                  <div style="font-size:11px; color:#475569;">Week 3 · RiR 1</div>
+                </div>
+                <div style="display:flex; align-items:center; gap:5px; padding:6px 12px; border-radius:8px; background:rgba(148,163,184,0.06); border:1px solid rgba(148,163,184,0.1);">
+                  <svg width="14" height="14" fill="none" stroke="#94a3b8" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                  <span style="font-size:11px; font-weight:500; color:#94a3b8;">Preview</span>
+                </div>
+              </div>
+              <div style="height:3px; width:100%; background:#162a3e; opacity:0.4;"></div>
+            </div>
+
+            <!-- Banner -->
+            <div style="padding: 10px 12px 0;">
+              <div class="preview-banner banner-slate">
+                <svg width="14" height="14" fill="none" stroke="#94a3b8" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                <span>Preview — inputs are read-only</span>
+              </div>
+            </div>
+
+            <!-- Exercises — read only -->
+            <div style="padding: 14px 12px; flex:1; overflow-y:auto;">
+              <div class="card-mock" style="padding: 12px; margin-bottom: 10px; border-color: rgba(20,184,166,0.25); opacity:0.85;">
+                <div style="margin-bottom:6px;"><span style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.06em; color:#2dd4bf; background:rgba(20,184,166,0.1); border:1px solid rgba(20,184,166,0.15); padding:2px 8px; border-radius:20px;">Back</span></div>
+                <div style="font-size:14px; font-weight:600; color:#e2e8f0; margin-bottom:2px;">Barbell Row</div>
+                <div style="font-size:11px; color:#475569; margin-bottom:10px;">Barbell · 3 sets × 10 reps</div>
+                <div class="panel-frosted" style="padding:6px;">
+                  <div style="display:flex; padding: 2px 8px 4px; gap:6px;">
+                    <div style="flex:1; text-align:center; font-size:10px; font-weight:500; text-transform:uppercase; letter-spacing:0.06em; color:#475569;">Target</div>
+                    <div style="flex:1; text-align:center; font-size:10px; font-weight:500; text-transform:uppercase; letter-spacing:0.06em; color:#475569;">Reps</div>
+                    <div style="width:36px;"></div>
+                  </div>
+                  <div style="display:flex; gap:6px; padding:4px 8px; align-items:center;">
+                    <div style="flex:1;"><div class="set-input-mock set-input-disabled"><span>72.5</span></div></div>
+                    <div style="flex:1;"><div class="set-input-mock set-input-disabled"><span>10</span></div></div>
+                    <div style="width:36px; display:flex; justify-content:center;"><span style="font-size:11px; color:#334155;">1</span></div>
+                  </div>
+                  <div style="display:flex; gap:6px; padding:4px 8px; align-items:center;">
+                    <div style="flex:1;"><div class="set-input-mock set-input-disabled"><span>72.5</span></div></div>
+                    <div style="flex:1;"><div class="set-input-mock set-input-disabled"><span>10</span></div></div>
+                    <div style="width:36px; display:flex; justify-content:center;"><span style="font-size:11px; color:#334155;">2</span></div>
+                  </div>
+                  <div style="display:flex; gap:6px; padding:4px 8px; align-items:center;">
+                    <div style="flex:1;"><div class="set-input-mock set-input-disabled"><span>72.5</span></div></div>
+                    <div style="flex:1;"><div class="set-input-mock set-input-disabled"><span>10</span></div></div>
+                    <div style="width:36px; display:flex; justify-content:center;"><span style="font-size:11px; color:#334155;">3</span></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="card-mock" style="padding: 12px; margin-bottom: 10px; border-color: rgba(99,102,241,0.25); opacity:0.85;">
+                <div style="margin-bottom:6px;"><span style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.06em; color:#818cf8; background:rgba(99,102,241,0.1); border:1px solid rgba(99,102,241,0.15); padding:2px 8px; border-radius:20px;">Biceps</span></div>
+                <div style="font-size:14px; font-weight:600; color:#e2e8f0; margin-bottom:2px;">Barbell Curl</div>
+                <div style="font-size:11px; color:#475569; margin-bottom:10px;">Barbell · 2 sets × 12 reps</div>
+                <div class="panel-frosted" style="padding:6px;">
+                  <div style="display:flex; gap:6px; padding:4px 8px; align-items:center;">
+                    <div style="flex:1;"><div class="set-input-mock set-input-disabled"><span>30</span></div></div>
+                    <div style="flex:1;"><div class="set-input-mock set-input-disabled"><span>12</span></div></div>
+                    <div style="width:36px; display:flex; justify-content:center;"><span style="font-size:11px; color:#334155;">1</span></div>
+                  </div>
+                  <div style="display:flex; gap:6px; padding:4px 8px; align-items:center;">
+                    <div style="flex:1;"><div class="set-input-mock set-input-disabled"><span>30</span></div></div>
+                    <div style="flex:1;"><div class="set-input-mock set-input-disabled"><span>12</span></div></div>
+                    <div style="width:36px; display:flex; justify-content:center;"><span style="font-size:11px; color:#334155;">2</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Sticky CTA -->
+            <div style="padding: 0 12px 20px;">
+              <button style="width:100%; padding:14px; border-radius:12px; background:#0ea5e9; color:white; font-size:14px; font-weight:600; border:none; cursor:pointer;">
+                Go to Current Workout
+              </button>
+              <div style="text-align:center; margin-top:8px; font-size:11px; color:#475569;">Push Day · Week 2 · RiR 2</div>
+            </div>
+          </div>
+          <div class="phone-vignette"></div>
+        </div>
+      </div>
+
+      <!-- Approach 2: Full Access with Warning -->
+      <div class="phone-wrapper">
+        <div class="phone-label">Approach 2 — Full Access + Warning</div>
+        <div class="phone">
+          <div class="phone-content">
+            <div style="background:#0d1b2a; position:sticky; top:0; z-index:30;">
+              <div style="padding: 20px 16px 12px; display:flex; align-items:center; gap:12px;">
+                <svg width="36" height="36" viewBox="0 0 100 100" fill="none"><circle cx="50" cy="50" r="45" stroke="#0ea5e9" stroke-width="4"/><circle cx="50" cy="50" r="32" stroke="#0ea5e9" stroke-width="3" opacity="0.6"/><circle cx="50" cy="50" r="8" fill="#0ea5e9"/><line x1="50" y1="5" x2="50" y2="18" stroke="#0ea5e9" stroke-width="3" stroke-linecap="round"/><line x1="50" y1="82" x2="50" y2="95" stroke="#0ea5e9" stroke-width="3" stroke-linecap="round"/><line x1="5" y1="50" x2="18" y2="50" stroke="#0ea5e9" stroke-width="3" stroke-linecap="round"/><line x1="82" y1="50" x2="95" y2="50" stroke="#0ea5e9" stroke-width="3" stroke-linecap="round"/></svg>
+                <div style="flex:1; min-width:0;">
+                  <div style="font-size:15px; font-weight:600; color:#e2e8f0;">Pull Day</div>
+                  <div style="font-size:11px; color:#475569;">Week 3</div>
+                </div>
+                <!-- RiR badge still shows (it's interactive) -->
+                <div style="display:flex; flex-direction:column; align-items:center; flex-shrink:0;">
+                  <span style="font-size:10px; font-weight:500; text-transform:uppercase; letter-spacing:0.08em; color:#475569; margin-bottom:3px;">RiR</span>
+                  <div style="width:40px; height:40px; border-radius:12px; display:flex; align-items:center; justify-content:center; background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.15);">
+                    <span class="mono" style="font-size:18px; font-weight:700; color:#38bdf8;">1</span>
+                  </div>
+                </div>
+                <svg width="18" height="18" fill="none" stroke="#475569" stroke-width="2" viewBox="0 0 24 24" style="flex-shrink:0;"><path stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6"/></svg>
+              </div>
+              <!-- Progress bar — active but empty -->
+              <div style="height:3px; width:100%; background:#162a3e;"></div>
+            </div>
+
+            <!-- Warning banner — dismissable -->
+            <div style="padding: 10px 12px 0;">
+              <div class="preview-banner banner-amber" style="justify-content: space-between;">
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <svg width="14" height="14" fill="none" stroke="#eab308" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>
+                  <span>Not your scheduled session</span>
+                </div>
+                <svg width="14" height="14" fill="none" stroke="#eab308" stroke-width="1.5" viewBox="0 0 24 24" style="cursor:pointer; opacity:0.6;"><path stroke-linecap="round" d="M18 6L6 18M6 6l12 12"/></svg>
+              </div>
+            </div>
+
+            <!-- Exercise cards — fully interactive -->
+            <div style="padding: 14px 12px; flex:1; overflow-y:auto;">
+              <div class="card-mock" style="padding: 12px; margin-bottom: 10px; border-color: rgba(20,184,166,0.35);">
+                <div style="margin-bottom:6px;"><span style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.06em; color:#2dd4bf; background:rgba(20,184,166,0.1); border:1px solid rgba(20,184,166,0.15); padding:2px 8px; border-radius:20px;">Back</span></div>
+                <div style="font-size:14px; font-weight:600; color:#e2e8f0; margin-bottom:2px;">Barbell Row</div>
+                <div style="font-size:11px; color:#475569; margin-bottom:10px;">Barbell</div>
+                <div class="panel-frosted" style="padding:6px;">
+                  <div style="display:flex; gap:6px; padding:4px 8px; align-items:center;">
+                    <div style="flex:1;"><div class="set-input-mock set-input-active"><span>72.5</span></div></div>
+                    <div style="flex:1;"><div class="set-input-mock set-input-active" style="color:#475569;"><span>10</span></div></div>
+                    <div class="check-btn check-empty"></div>
+                  </div>
+                  <div style="display:flex; gap:6px; padding:4px 8px; align-items:center;">
+                    <div style="flex:1;"><div class="set-input-mock set-input-active"><span>72.5</span></div></div>
+                    <div style="flex:1;"><div class="set-input-mock set-input-active" style="color:#475569;"><span>10</span></div></div>
+                    <div class="check-btn check-empty"></div>
+                  </div>
+                  <div style="display:flex; gap:6px; padding:4px 8px; align-items:center;">
+                    <div style="flex:1;"><div class="set-input-mock set-input-active"><span>72.5</span></div></div>
+                    <div style="flex:1;"><div class="set-input-mock set-input-active" style="color:#475569;"><span>10</span></div></div>
+                    <div class="check-btn check-empty"></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="card-mock" style="padding: 12px; margin-bottom: 10px; border-color: rgba(99,102,241,0.35);">
+                <div style="margin-bottom:6px;"><span style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.06em; color:#818cf8; background:rgba(99,102,241,0.1); border:1px solid rgba(99,102,241,0.15); padding:2px 8px; border-radius:20px;">Biceps</span></div>
+                <div style="font-size:14px; font-weight:600; color:#e2e8f0; margin-bottom:2px;">Barbell Curl</div>
+                <div style="font-size:11px; color:#475569; margin-bottom:10px;">Barbell</div>
+                <div class="panel-frosted" style="padding:6px;">
+                  <div style="display:flex; gap:6px; padding:4px 8px; align-items:center;">
+                    <div style="flex:1;"><div class="set-input-mock set-input-active"><span>30</span></div></div>
+                    <div style="flex:1;"><div class="set-input-mock set-input-active" style="color:#475569;"><span>12</span></div></div>
+                    <div class="check-btn check-empty"></div>
+                  </div>
+                  <div style="display:flex; gap:6px; padding:4px 8px; align-items:center;">
+                    <div style="flex:1;"><div class="set-input-mock set-input-active"><span>30</span></div></div>
+                    <div style="flex:1;"><div class="set-input-mock set-input-active" style="color:#475569;"><span>12</span></div></div>
+                    <div class="check-btn check-empty"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="phone-vignette"></div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Comparison table -->
+    <div style="margin-top: 24px; max-width: 800px;">
+      <div class="card-mock" style="padding: 20px;">
+        <div style="font-size: 13px; font-weight: 600; color: #e2e8f0; margin-bottom: 14px;">Trade-off Comparison</div>
+        <div style="display: grid; grid-template-columns: 120px 1fr 1fr; gap: 1px; font-size: 11px; background: #1e3a52; border-radius: 8px; overflow: hidden;">
+          <div style="background:#132438; padding:10px; font-weight:600; color:#475569;"></div>
+          <div style="background:#132438; padding:10px; font-weight:600; color:#4ade80;">View-Only</div>
+          <div style="background:#132438; padding:10px; font-weight:600; color:#eab308;">Full Access</div>
+
+          <div style="background:#0f1d2e; padding:10px; color:#94a3b8; font-weight:500;">Complexity</div>
+          <div style="background:#0f1d2e; padding:10px; color:#64748b;">Simple — just disable inputs</div>
+          <div style="background:#0f1d2e; padding:10px; color:#64748b;">Higher — out-of-order logging, progression edge cases</div>
+
+          <div style="background:#132438; padding:10px; color:#94a3b8; font-weight:500;">Data safety</div>
+          <div style="background:#132438; padding:10px; color:#64748b;">Safe — can't corrupt progression</div>
+          <div style="background:#132438; padding:10px; color:#64748b;">Risky — progression calculations may be wrong</div>
+
+          <div style="background:#0f1d2e; padding:10px; color:#94a3b8; font-weight:500;">User value</div>
+          <div style="background:#0f1d2e; padding:10px; color:#64748b;">Can preview what's ahead</div>
+          <div style="background:#0f1d2e; padding:10px; color:#64748b;">Can train any session anytime</div>
+
+          <div style="background:#132438; padding:10px; color:#94a3b8; font-weight:500;">Verdict</div>
+          <div style="background:#132438; padding:10px; color:#4ade80; font-weight:600;">Start here. Ship this first.</div>
+          <div style="background:#132438; padding:10px; color:#64748b;">Consider for v2 if users ask</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       SECTION 4: CELL STATE LEGEND
+       ═══════════════════════════════════════════════════════════════════ -->
+  <div style="margin-bottom: 56px;">
+    <div class="var-heading">4. Complete Cell State Legend</div>
+    <div class="var-desc">
+      All possible states a cell can be in within the MesoGrid, including the new "viewing" state.
+    </div>
+
+    <div class="card-mock" style="padding: 24px; max-width: 700px;">
+      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
+
+        <!-- Done -->
+        <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
+          <div class="dot dot-done" style="cursor:default;"><svg width="12" height="12" fill="none" stroke="#4ade80" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div>
+          <div style="text-align:center;">
+            <div style="font-size:11px; font-weight:600; color:#e2e8f0;">Done</div>
+            <div style="font-size:9px; color:#475569; margin-top:2px;">Fully logged session</div>
+          </div>
+        </div>
+
+        <!-- Current -->
+        <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
+          <div class="dot dot-current" style="cursor:default;"><div style="width:8px; height:8px; border-radius:50%; background:#0284c7;"></div></div>
+          <div style="text-align:center;">
+            <div style="font-size:11px; font-weight:600; color:#e2e8f0;">Current</div>
+            <div style="font-size:9px; color:#475569; margin-top:2px;">Next session to log</div>
+          </div>
+        </div>
+
+        <!-- Viewing -->
+        <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
+          <div class="dot dot-pending dot-viewing-ring" style="cursor:default;"></div>
+          <div style="text-align:center;">
+            <div style="font-size:11px; font-weight:600; color:#e2e8f0;">Viewing</div>
+            <div style="font-size:9px; color:#475569; margin-top:2px;">Currently selected/previewed</div>
+          </div>
+        </div>
+
+        <!-- Pending -->
+        <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
+          <div class="dot dot-pending" style="cursor:default;"></div>
+          <div style="text-align:center;">
+            <div style="font-size:11px; font-weight:600; color:#e2e8f0;">Pending</div>
+            <div style="font-size:9px; color:#475569; margin-top:2px;">Future, not yet loggable</div>
+          </div>
+        </div>
+
+        <!-- Deload Done -->
+        <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
+          <div class="dot dot-deload-done" style="cursor:default;"><svg width="12" height="12" fill="none" stroke="#facc15" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div>
+          <div style="text-align:center;">
+            <div style="font-size:11px; font-weight:600; color:#e2e8f0;">Deload Done</div>
+            <div style="font-size:9px; color:#475569; margin-top:2px;">Deload week, logged</div>
+          </div>
+        </div>
+
+        <!-- Deload Current -->
+        <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
+          <div class="dot dot-deload-current" style="cursor:default;"><div style="width:8px; height:8px; border-radius:50%; background:#eab308;"></div></div>
+          <div style="text-align:center;">
+            <div style="font-size:11px; font-weight:600; color:#e2e8f0;">Deload Current</div>
+            <div style="font-size:9px; color:#475569; margin-top:2px;">Deload week, next to log</div>
+          </div>
+        </div>
+
+        <!-- Deload Pending -->
+        <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
+          <div class="dot dot-deload-pending" style="cursor:default;"></div>
+          <div style="text-align:center;">
+            <div style="font-size:11px; font-weight:600; color:#e2e8f0;">Deload Pending</div>
+            <div style="font-size:9px; color:#475569; margin-top:2px;">Deload week, future</div>
+          </div>
+        </div>
+
+        <!-- Current + Viewing (same cell) -->
+        <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
+          <div class="dot dot-current" style="cursor:default; box-shadow: 0 0 0 3px rgba(148,163,184,0.3), 0 0 4px rgba(56,189,248,0.3), 0 0 8px rgba(56,189,248,0.15);"><div style="width:8px; height:8px; border-radius:50%; background:#0284c7;"></div></div>
+          <div style="text-align:center;">
+            <div style="font-size:11px; font-weight:600; color:#e2e8f0;">Current + Viewing</div>
+            <div style="font-size:9px; color:#475569; margin-top:2px;">Viewing your current session</div>
+          </div>
+        </div>
+
+        <!-- Done + Viewing -->
+        <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
+          <div class="dot dot-done dot-viewing-ring" style="cursor:default;"><svg width="12" height="12" fill="none" stroke="#4ade80" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div>
+          <div style="text-align:center;">
+            <div style="font-size:11px; font-weight:600; color:#e2e8f0;">Done + Viewing</div>
+            <div style="font-size:9px; color:#475569; margin-top:2px;">Reviewing a past workout</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       SUMMARY & RECOMMENDATIONS
+       ═══════════════════════════════════════════════════════════════════ -->
+  <div style="max-width: 800px;">
+    <div class="card-mock" style="padding: 24px;">
+      <h2 style="font-size: 15px; font-weight: 700; color: #e2e8f0; margin-bottom: 16px;">Recommendations</h2>
+      <div style="font-size: 12px; line-height: 2; color: #64748b;">
+        <div style="display: grid; grid-template-columns: 150px 1fr; gap: 8px 20px;">
+
+          <div style="color:#cbd5e1; font-weight:600;">Grid indicator</div>
+          <div><span style="color:#38bdf8; font-weight:500;">Ring highlight (A).</span> Subtle pulsing slate ring around the viewed cell. Doesn't compete with the blue "current" pulse. Works on all cell types.</div>
+
+          <div style="color:#cbd5e1; font-weight:600;">Header treatment</div>
+          <div><span style="color:#38bdf8; font-weight:500;">"Preview" badge</span> replaces the RiR badge. Progress bar goes dim/empty. Subtitle shows week + RiR info instead.</div>
+
+          <div style="color:#cbd5e1; font-weight:600;">Interaction model</div>
+          <div><span style="color:#38bdf8; font-weight:500;">View-only for v1.</span> Future sessions are read-only. All inputs disabled. "Go to Current Workout" CTA at bottom. Prevents progression data issues.</div>
+
+          <div style="color:#cbd5e1; font-weight:600;">No-data state</div>
+          <div>Show dashes (—) for weights that haven't been computed yet. Keep target reps visible since those come from the split template and are always available.</div>
+
+          <div style="color:#cbd5e1; font-weight:600;">Navigation flow</div>
+          <div>Tap future cell in grid → opens preview. Tap "Go to Current Workout" → navigates to current. Tap a done cell → opens the existing WorkoutDetail view (no change).</div>
+
+          <div style="color:#cbd5e1; font-weight:600;">Implementation note</div>
+          <div>The Workout page already accepts <span class="mono" style="font-size:11px; color:#94a3b8;">?week=&session=</span> params. Add a <span class="mono" style="font-size:11px; color:#94a3b8;">isFutureSession</span> check by comparing against <span class="mono" style="font-size:11px; color:#94a3b8;">get_current_position()</span>. If future → disable inputs, swap header badges, show banner.</div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>
