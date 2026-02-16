@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { ProtocolLogo } from './Icons'
+import { ProtocolLogo, ChevronDownIcon } from './Icons'
 import ProgressBar from './ProgressBar'
 
 interface AppHeaderProps {
@@ -79,6 +79,13 @@ export default function AppHeader({
           >
             {rightContent}
           </div>
+        )}
+
+        {/* Drawer expand indicator */}
+        {drawerContent && (
+          <ChevronDownIcon
+            className={`w-4 h-4 flex-shrink-0 text-slate-600 transition-transform duration-300 ${drawerExpanded ? 'rotate-180' : ''}`}
+          />
         )}
       </div>
 
