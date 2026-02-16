@@ -107,6 +107,14 @@
     color: #2a4a64;
   }
 
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
   @keyframes pulse-current {
     0%, 100% { box-shadow: 0 0 4px rgba(56,189,248,0.3), 0 0 8px rgba(56,189,248,0.15); }
     50%      { box-shadow: 0 0 8px rgba(56,189,248,0.6), 0 0 16px rgba(56,189,248,0.3); }

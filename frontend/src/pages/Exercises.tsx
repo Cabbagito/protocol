@@ -1,11 +1,65 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
+import clsx from 'clsx'
 import { useToast } from '../components/Toast'
-import { useExercises, useCreateExercise } from '../api/hooks'
+import { useExercises, useCreateExercise, useExerciseProgress } from '../api/hooks'
+import { getMuscleColor } from '../lib/muscleColors'
 import MuscleGroupBadge from '../components/MuscleGroupBadge'
+import { ChevronDownIcon } from '../components/Icons'
+import ExerciseMiniChart from '../components/ExerciseMiniChart'
+import type { Exercise, EquipmentType } from '../types'
+
+const MUSCLE_GROUPS = [
+  'back', 'biceps', 'front delt', 'rear delt', 'side delt',
+  'chest', 'triceps', 'quads', 'hamstrings', 'glutes',
+  'calves', 'abs', 'traps', 'forearms',
+]
+
+const EQUIPMENT_TYPES: EquipmentType[] = [
+  'barbell', 'dumbbell', 'machine', 'cable', 'bodyweight',
+]
 
 export default function Exercises() {
   const { data: exercises = [], isLoading } = useExercises()
   const [showForm, setShowForm] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [selectedMuscleGroups, setSelectedMuscleGroups] = useState<Set<string>>(new Set())
+  const [selectedEquipmentTypes, setSelectedEquipmentTypes] = useState<Set<string>>(new Set())
+  const [expandedExerciseId, setExpandedExerciseId] = useState<string | null>(null)
+
+  const filteredExercises = useMemo(() => {
+    return exercises.filter((ex) => {
+      if (searchQuery && !ex.name.toLowerCase().includes(searchQuery.toLowerCase())) {
+        return false
+      }
+      if (selectedMuscleGroups.size > 0 && !selectedMuscleGroups.has(ex.muscle_group)) {
+        return false
+      }
+      if (selectedEquipmentTypes.size > 0 && !selectedEquipmentTypes.has(ex.equipment_type)) {
+        return false
+      }
+      return true
+    })
+  }, [exercises, searchQuery, selectedMuscleGroups, selectedEquipmentTypes])
+
+  const hasActiveFilters = searchQuery || selectedMuscleGroups.size > 0 || selectedEquipmentTypes.size > 0
+
+  function toggleMuscleGroup(mg: string) {
+    setSelectedMuscleGroups((prev) => {
+      const next = new Set(prev)
+      if (next.has(mg)) next.delete(mg)
+      else next.add(mg)
+      return next
+    })
+  }
+
+  function toggleEquipmentType(et: string) {
+    setSelectedEquipmentTypes((prev) => {
+      const next = new Set(prev)
+      if (next.has(et)) next.delete(et)
+      else next.add(et)
+      return next
+    })
+  }
 
   return (
     <div className="space-y-4">
@@ -21,31 +75,59 @@ export default function Exercises() {
 
       {showForm && (
         <ExerciseForm
-          onSave={() => {
-            setShowForm(false)
-          }}
+          onSave={() => setShowForm(false)}
           onCancel={() => setShowForm(false)}
         />
       )}
 
+      {/* Search */}
+      <input
+        type="text"
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+        placeholder="Search exercises..."
+        className="input"
+      />
+
+      {/* Muscle group chips */}
+      <MuscleGroupChips
+        selected={selectedMuscleGroups}
+        onToggle={toggleMuscleGroup}
+      />
+
+      {/* Equipment toggles */}
+      <EquipmentTypeToggles
+        selected={selectedEquipmentTypes}
+        onToggle={toggleEquipmentType}
+      />
+
+      {/* Filter count */}
+      {hasActiveFilters && (
+        <div className="text-sm text-slate-400">
+          Showing {filteredExercises.length} of {exercises.length}
+        </div>
+      )}
+
+      {/* Exercise list */}
       {isLoading ? (
         <div className="text-slate-400 text-center py-8">Loading...</div>
-      ) : exercises.length === 0 ? (
+      ) : filteredExercises.length === 0 ? (
         <div className="text-slate-400 text-center py-8">
-          No exercises yet. Add your first one!
+          {hasActiveFilters ? 'No exercises match your filters.' : 'No exercises yet. Add your first one!'}
         </div>
       ) : (
         <div className="space-y-2">
-          {exercises.map((exercise) => (
-            <div key={exercise.id} className="card">
-              <div className="flex items-center gap-2">
-                <div className="font-medium flex-1">{exercise.name}</div>
-                <MuscleGroupBadge muscleGroup={exercise.muscle_group} />
-              </div>
-              <div className="text-sm text-slate-500 mt-1 capitalize">
-                {exercise.equipment_type}
-              </div>
-            </div>
+          {filteredExercises.map((exercise) => (
+            <ExerciseCard
+              key={exercise.id}
+              exercise={exercise}
+              isExpanded={expandedExerciseId === exercise.id}
+              onToggle={() =>
+                setExpandedExerciseId(
+                  expandedExerciseId === exercise.id ? null : exercise.id
+                )
+              }
+            />
           ))}
         </div>
       )}
@@ -53,11 +135,151 @@ export default function Exercises() {
   )
 }
 
-const MUSCLE_GROUPS = [
-  'back', 'biceps', 'front delt', 'rear delt', 'side delt',
-  'chest', 'triceps', 'quads', 'hamstrings', 'glutes',
-  'calves', 'abs', 'traps', 'forearms',
-]
+// --- Muscle Group Chips ---
+
+function MuscleGroupChips({
+  selected,
+  onToggle,
+}: {
+  selected: Set<string>
+  onToggle: (mg: string) => void
+}) {
+  return (
+    <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1 -mx-1 px-1">
+      {MUSCLE_GROUPS.map((mg) => {
+        const color = getMuscleColor(mg)
+        const isSelected = selected.has(mg)
+        return (
+          <button
+            key={mg}
+            onClick={() => onToggle(mg)}
+            className="shrink-0 text-xs font-semibold uppercase tracking-wider px-2.5 py-1 rounded-full transition-colors"
+            style={{
+              color: isSelected ? color.light : '#94a3b8',
+              background: isSelected ? color.bg : 'transparent',
+              border: `1px solid ${isSelected ? color.primary : 'rgba(148,163,184,0.2)'}`,
+            }}
+          >
+            {mg}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+// --- Equipment Type Toggles ---
+
+function EquipmentTypeToggles({
+  selected,
+  onToggle,
+}: {
+  selected: Set<string>
+  onToggle: (et: string) => void
+}) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      {EQUIPMENT_TYPES.map((et) => {
+        const isSelected = selected.has(et)
+        return (
+          <button
+            key={et}
+            onClick={() => onToggle(et)}
+            className={clsx(
+              'text-xs font-medium capitalize px-3 py-1.5 rounded-lg transition-colors',
+              isSelected
+                ? 'bg-protocol-600/20 text-protocol-300 border border-protocol-500/40'
+                : 'text-slate-400 border border-slate-700 hover:border-slate-600'
+            )}
+          >
+            {et}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+// --- Exercise Card ---
+
+function ExerciseCard({
+  exercise,
+  isExpanded,
+  onToggle,
+}: {
+  exercise: Exercise
+  isExpanded: boolean
+  onToggle: () => void
+}) {
+  return (
+    <div className="card cursor-pointer" onClick={onToggle}>
+      <div className="flex items-center gap-2">
+        <div className="font-medium flex-1">{exercise.name}</div>
+        <MuscleGroupBadge muscleGroup={exercise.muscle_group} />
+        <ChevronDownIcon
+          className={clsx(
+            'w-4 h-4 text-slate-400 transition-transform duration-300',
+            isExpanded && 'rotate-180'
+          )}
+        />
+      </div>
+      <div className="text-sm text-slate-500 mt-1 capitalize">
+        {exercise.equipment_type}
+      </div>
+
+      {/* Expandable content */}
+      <div
+        className="grid transition-[grid-template-rows] duration-300"
+        style={{ gridTemplateRows: isExpanded ? '1fr' : '0fr' }}
+      >
+        <div className="overflow-hidden">
+          {isExpanded && (
+            <div className="pt-3 mt-3 border-t border-slate-700/50" onClick={(e) => e.stopPropagation()}>
+              <ExerciseExpandedContent exerciseId={exercise.id} />
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// --- Expanded Content ---
+
+function ExerciseExpandedContent({ exerciseId }: { exerciseId: string }) {
+  const { data: progressData, isLoading } = useExerciseProgress(exerciseId)
+
+  if (isLoading) {
+    return <div className="text-slate-500 text-sm text-center py-4">Loading progress...</div>
+  }
+
+  if (!progressData || progressData.length === 0) {
+    return <div className="text-slate-500 text-sm text-center py-4">No data yet</div>
+  }
+
+  const prWeight = Math.max(...progressData.map((d) => d.max_weight))
+  const lastEntry = progressData[progressData.length - 1]!
+  const lastDate = new Date(lastEntry.date).toLocaleDateString()
+
+  return (
+    <div className="space-y-3">
+      <ExerciseMiniChart data={progressData} />
+      <div className="flex justify-between text-sm">
+        <div>
+          <span className="text-slate-400">Last: </span>
+          <span className="text-slate-200 font-medium">{lastEntry.max_weight}kg</span>
+          <span className="text-slate-500 ml-1.5">{lastDate}</span>
+        </div>
+        <div>
+          <span className="text-slate-400">PR: </span>
+          <span className="text-protocol-400 font-medium">{prWeight}kg</span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// --- Exercise Form (unchanged) ---
 
 interface ExerciseFormProps {
   onSave: () => void
