@@ -4,6 +4,7 @@ import { useToast } from '../components/Toast'
 import { useExercises, useCreateExercise } from '../api/hooks'
 import { getMuscleColor } from '../lib/muscleColors'
 import { ChevronRightIcon } from '../components/Icons'
+import AppHeader from '../components/AppHeader'
 import ExerciseSparkline from '../components/ExerciseSparkline'
 import type { Exercise, EquipmentType } from '../types'
 
@@ -68,18 +69,21 @@ export default function Exercises() {
   }
 
   return (
-    <div className="px-4 pt-5 space-y-3">
-      {/* Header */}
-      <header className="flex items-center justify-between">
-        <h1 className="text-lg font-bold text-slate-200">Exercises</h1>
-        <button onClick={() => setShowForm(!showForm)} className="plus-btn">
-          <svg className="w-3.5 h-3.5" style={{ color: '#38bdf8' }} fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-          </svg>
-          <span className="text-xs font-medium" style={{ color: '#38bdf8' }}>Add</span>
-        </button>
-      </header>
+    <div>
+      <AppHeader
+        title="Exercises"
+        subtitle={`${exercises.length} exercises`}
+        rightContent={
+          <button onClick={() => setShowForm(!showForm)} className="plus-btn">
+            <svg className="w-3.5 h-3.5" style={{ color: '#38bdf8' }} fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+            </svg>
+            <span className="text-xs font-medium" style={{ color: '#38bdf8' }}>Add</span>
+          </button>
+        }
+      />
 
+      <div className="px-4 space-y-3">
       {showForm && (
         <ExerciseForm
           onSave={() => setShowForm(false)}
@@ -139,6 +143,7 @@ export default function Exercises() {
           ))}
         </div>
       )}
+      </div>
     </div>
   )
 }

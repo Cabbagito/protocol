@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useToast } from '../components/Toast'
-import { ChevronLeftIcon, ChevronUpIcon, ChevronDownIcon, PencilIcon, TrashIcon } from '../components/Icons'
+import { ChevronUpIcon, ChevronDownIcon, PencilIcon, TrashIcon } from '../components/Icons'
+import AppHeader from '../components/AppHeader'
 import {
   useSplit,
   useUpdateSplit,
@@ -90,40 +91,41 @@ export default function SplitDetail() {
   }
 
   return (
-    <div className="px-4 pt-5 space-y-4">
-      <header className="flex items-center gap-2">
-        <button onClick={() => navigate('/splits')} className="text-slate-400 hover:text-slate-200">
-          <ChevronLeftIcon className="w-6 h-6" />
-        </button>
-        {editingName ? (
-          <div className="flex-1 flex gap-2">
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="input flex-1"
-              autoFocus
-            />
-            <button onClick={handleUpdateName} className="btn btn-primary">
-              Save
-            </button>
-            <button onClick={() => setEditingName(false)} className="btn btn-secondary">
-              Cancel
-            </button>
-          </div>
-        ) : (
-          <h1
-            className="text-xl font-bold flex-1 cursor-pointer hover:text-protocol-400"
-            onClick={() => {
-              setName(split.name)
-              setEditingName(true)
-            }}
-          >
-            {split.name}
-          </h1>
-        )}
-      </header>
+    <div>
+      <AppHeader
+        title={
+          editingName ? (
+            <div className="flex gap-2 items-center">
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="input flex-1 text-[15px]"
+                autoFocus
+              />
+              <button onClick={handleUpdateName} className="btn btn-primary text-xs py-1 px-2">
+                Save
+              </button>
+              <button onClick={() => setEditingName(false)} className="btn btn-secondary text-xs py-1 px-2">
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <span
+              className="cursor-pointer hover:text-protocol-400"
+              onClick={() => {
+                setName(split.name)
+                setEditingName(true)
+              }}
+            >
+              {split.name}
+            </span>
+          )
+        }
+        breadcrumb={{ label: 'Splits', to: '/splits' }}
+      />
 
+      <div className="px-4 space-y-4">
       <div className="flex justify-between items-center">
         <h2 className="text-lg font-medium text-slate-300">Sessions</h2>
         <button
@@ -225,6 +227,7 @@ export default function SplitDetail() {
       >
         Delete Split
       </button>
+      </div>
     </div>
   )
 }

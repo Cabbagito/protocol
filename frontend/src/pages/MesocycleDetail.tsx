@@ -1,6 +1,7 @@
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useToast } from '../components/Toast'
-import { ChevronLeftIcon, CheckIcon } from '../components/Icons'
+import { CheckIcon } from '../components/Icons'
+import AppHeader from '../components/AppHeader'
 import { useMesocycle, useWorkoutHistory, useUpdateMesocycle, useDeleteMesocycle } from '../api/hooks'
 import type { MesoSession } from '../types'
 
@@ -64,24 +65,23 @@ export default function MesocycleDetail() {
   const nextSession = getNextSession()
 
   return (
-    <div className="px-4 pt-5 space-y-4">
-      <header className="flex items-center gap-2">
-        <button onClick={() => navigate('/mesocycles')} className="text-slate-400 hover:text-slate-200">
-          <ChevronLeftIcon className="w-6 h-6" />
-        </button>
-        <div className="flex-1">
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold">{mesocycle.name}</h1>
-            {mesocycle.is_active && (
-              <span className="text-xs bg-protocol-600 text-white px-2 py-0.5 rounded">
-                Active
-              </span>
-            )}
-          </div>
-          <div className="text-sm text-slate-400">{mesocycle.split_name}</div>
-        </div>
-      </header>
+    <div>
+      <AppHeader
+        title={mesocycle.name}
+        breadcrumb={{ label: 'Mesocycles', to: '/mesocycles' }}
+        rightContent={
+          mesocycle.is_active ? (
+            <span
+              className="text-[11px] font-medium px-2 py-1 rounded"
+              style={{ color: '#0ea5e9', background: 'rgba(14,165,233,0.1)' }}
+            >
+              Active
+            </span>
+          ) : undefined
+        }
+      />
 
+      <div className="px-4 space-y-4">
       {/* Week Progress */}
       <div className="card">
         <div className="flex justify-between items-center mb-3">
@@ -256,6 +256,7 @@ export default function MesocycleDetail() {
       >
         Delete Mesocycle
       </button>
+      </div>
     </div>
   )
 }

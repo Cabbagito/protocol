@@ -1,7 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useActiveMesocycle } from '../api/hooks'
 import {
-  ProtocolLogo,
   ChartIcon,
   CalendarIcon,
   DumbbellIcon,
@@ -9,6 +8,7 @@ import {
   GearIcon,
   ChevronRightIcon,
 } from '../components/Icons'
+import AppHeader from '../components/AppHeader'
 import MesoGrid from '../components/MesoGrid'
 
 const quickLinks = [
@@ -26,23 +26,17 @@ export default function Dashboard() {
     return <div className="text-slate-500 text-center py-8">Loading...</div>
   }
 
-  return (
-    <div className="px-4 pt-5 space-y-4">
-      {/* Header */}
-      <header className="flex items-center gap-3">
-        <ProtocolLogo className="w-9 h-9 flex-shrink-0" />
-        <div>
-          <h1 className="text-[15px] font-semibold text-slate-200">Protocol</h1>
-          <p className="text-[11px] text-slate-600">
-            {new Date().toLocaleDateString('en-US', {
-              weekday: 'long',
-              month: 'long',
-              day: 'numeric',
-            })}
-          </p>
-        </div>
-      </header>
+  const formattedDate = new Date().toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+  })
 
+  return (
+    <div>
+      <AppHeader title="Protocol" subtitle={formattedDate} />
+
+      <div className="px-4 space-y-4">
       {/* Active Mesocycle */}
       {mesocycle ? (
         <MesoGrid mesocycle={mesocycle} />
@@ -73,6 +67,7 @@ export default function Dashboard() {
             <ChevronRightIcon className="w-4 h-4 text-slate-600" />
           </Link>
         ))}
+      </div>
       </div>
     </div>
   )

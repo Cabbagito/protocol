@@ -1,5 +1,5 @@
-import { useParams, useNavigate } from 'react-router-dom'
-import { ChevronLeftIcon } from '../components/Icons'
+import { useParams } from 'react-router-dom'
+import AppHeader from '../components/AppHeader'
 import { useWorkoutDetail } from '../api/hooks'
 import MuscleGroupBadge from '../components/MuscleGroupBadge'
 
@@ -9,7 +9,6 @@ export default function WorkoutDetail() {
     weekIndex: string
     sessionIndex: string
   }>()
-  const navigate = useNavigate()
   const weekIndex = parseInt(weekStr ?? '0')
   const sessionIndex = parseInt(sessionStr ?? '0')
   const { data: workout, isLoading } = useWorkoutDetail(mesocycleId!, weekIndex, sessionIndex)
@@ -28,20 +27,13 @@ export default function WorkoutDetail() {
   const totalVolume = loggedSets.reduce((sum, s) => sum + s.weight * s.reps, 0)
 
   return (
-    <div className="space-y-4">
-      <header className="flex items-center gap-2">
-        <button onClick={() => navigate(-1)} className="text-slate-400 hover:text-slate-200">
-          <ChevronLeftIcon className="w-6 h-6" />
-        </button>
-        <div className="flex-1">
-          <h1 className="text-xl font-bold">{workout.session_name}</h1>
-          <div className="text-sm text-slate-400">
-            Week {workout.week_number}
-            {workout.date && <> &middot; {new Date(workout.date).toLocaleDateString()}</>}
-          </div>
-        </div>
-      </header>
+    <div>
+      <AppHeader
+        title={workout.session_name}
+        breadcrumb={{ label: 'Mesocycle', to: `/mesocycles/${mesocycleId}` }}
+      />
 
+      <div className="px-4 space-y-4">
       {/* Summary */}
       <div className="card bg-slate-800">
         <div className="grid grid-cols-2 gap-4 text-center">
@@ -96,6 +88,7 @@ export default function WorkoutDetail() {
           <p className="text-slate-400 text-sm whitespace-pre-wrap">{workout.notes}</p>
         </div>
       )}
+      </div>
     </div>
   )
 }

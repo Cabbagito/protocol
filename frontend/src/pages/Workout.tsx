@@ -2,10 +2,10 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useToast } from '../components/Toast'
-import { ProtocolLogo, CheckIcon, ArrowUpIcon, ArrowDownIcon, ChevronDownIcon } from '../components/Icons'
+import { CheckIcon, ArrowUpIcon, ArrowDownIcon } from '../components/Icons'
 import { useLogSets, useMesocycle, queryKeys } from '../api/hooks'
 import { api } from '../api/client'
-import ProgressBar from '../components/ProgressBar'
+import AppHeader from '../components/AppHeader'
 import RirBadge from '../components/RirBadge'
 import MuscleGroupBadge from '../components/MuscleGroupBadge'
 import MesoGrid from '../components/MesoGrid'
@@ -198,50 +198,16 @@ export default function Workout() {
 
   return (
     <div className="pb-4">
-      {/* Sticky Header */}
-      <div className="sticky top-0 z-40 relative" style={{ background: '#0d1b2a' }}>
-        {isSaving && (
-          <div className="absolute right-4 top-4 z-50">
-            <div className="w-2 h-2 rounded-full bg-sky-400 animate-pulse" />
-          </div>
-        )}
-        <div
-          className="px-5 pt-5 pb-4 flex items-center justify-between cursor-pointer"
-          onClick={() => setHeaderExpanded(prev => !prev)}
-        >
-          <div className="flex items-center gap-3 min-w-0">
-            <button
-              onClick={(e) => { e.stopPropagation(); navigate(-1) }}
-              className="flex-shrink-0"
-            >
-              <ProtocolLogo className="w-9 h-9" />
-            </button>
-            <div className="min-w-0">
-              <h1 className="text-[15px] font-semibold truncate text-slate-200">
-                {template.session_name}
-              </h1>
-              <span className="text-[11px] text-slate-600">
-                Week {template.week_number}
-              </span>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <RirBadge rir={template.target_rir} />
-            <ChevronDownIcon className={`w-4 h-4 text-slate-600 transition-transform duration-300 ${headerExpanded ? 'rotate-180' : ''}`} />
-          </div>
-        </div>
-        <ProgressBar percent={totalSets > 0 ? (completedSets / totalSets) * 100 : 0} />
-
-        {/* Expandable drawer */}
-        <div
-          className="overflow-hidden transition-all duration-300 ease-in-out"
-          style={{ maxHeight: headerExpanded ? '300px' : '0px' }}
-        >
-          <div className="px-4 py-3">
-            {mesocycle && <MesoGrid mesocycle={mesocycle} compact />}
-          </div>
-        </div>
-      </div>
+      <AppHeader
+        title={template.session_name}
+        subtitle={`Week ${template.week_number}`}
+        rightContent={<RirBadge rir={template.target_rir} />}
+        progressPercent={totalSets > 0 ? (completedSets / totalSets) * 100 : 0}
+        drawerContent={mesocycle && <MesoGrid mesocycle={mesocycle} compact />}
+        drawerExpanded={headerExpanded}
+        onHeaderAreaClick={() => setHeaderExpanded(prev => !prev)}
+        savingIndicator={isSaving}
+      />
 
       {/* Exercise Cards */}
       <div className="px-2.5 pt-4 flex flex-col gap-3">

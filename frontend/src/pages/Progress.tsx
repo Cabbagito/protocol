@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import {
   LineChart,
   Line,
@@ -11,11 +10,10 @@ import {
   BarChart,
   Bar,
 } from 'recharts'
-import { ChevronLeftIcon } from '../components/Icons'
+import AppHeader from '../components/AppHeader'
 import { useExercises, useActiveMesocycle, useWorkoutHistory, useExerciseProgress } from '../api/hooks'
 
 export default function Progress() {
-  const navigate = useNavigate()
   const { data: exercises = [], isLoading: exercisesLoading } = useExercises()
   const { data: mesocycle } = useActiveMesocycle()
   const { data: workouts = [] } = useWorkoutHistory(mesocycle?.id ?? '')
@@ -57,14 +55,10 @@ export default function Progress() {
   })
 
   return (
-    <div className="px-4 pt-5 space-y-4">
-      <header className="flex items-center gap-2">
-        <button onClick={() => navigate(-1)} className="text-slate-400 hover:text-slate-200">
-          <ChevronLeftIcon className="w-6 h-6" />
-        </button>
-        <h1 className="text-xl font-bold">Progress</h1>
-      </header>
+    <div>
+      <AppHeader title="Progress" />
 
+      <div className="px-4 space-y-4">
       {/* Mesocycle Summary */}
       {mesocycle && (
         <div className="card">
@@ -206,6 +200,7 @@ export default function Progress() {
             </div>
           </>
         )}
+      </div>
       </div>
     </div>
   )

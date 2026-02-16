@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useToast } from '../components/Toast'
 import { ChevronRightIcon } from '../components/Icons'
+import AppHeader from '../components/AppHeader'
 import { useMesocycles, useCreateMesocycle, useSplits, useActiveMesocycle } from '../api/hooks'
 import type { MesocycleListItem, Mesocycle } from '../types'
 
@@ -14,18 +15,21 @@ export default function Mesocycles() {
   const inactiveMesocycles = mesocycles.filter((m) => !m.is_active)
 
   return (
-    <div className="px-4 pt-5 space-y-3">
-      {/* Header */}
-      <header className="flex items-center justify-between">
-        <h1 className="text-lg font-bold text-slate-200">Mesocycles</h1>
-        <button onClick={() => setShowForm(!showForm)} className="plus-btn">
-          <svg className="w-3.5 h-3.5" style={{ color: '#38bdf8' }} fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-          </svg>
-          <span className="text-xs font-medium" style={{ color: '#38bdf8' }}>New</span>
-        </button>
-      </header>
+    <div>
+      <AppHeader
+        title="Mesocycles"
+        subtitle={`${mesocycles.length} mesocycles`}
+        rightContent={
+          <button onClick={() => setShowForm(!showForm)} className="plus-btn">
+            <svg className="w-3.5 h-3.5" style={{ color: '#38bdf8' }} fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+            </svg>
+            <span className="text-xs font-medium" style={{ color: '#38bdf8' }}>New</span>
+          </button>
+        }
+      />
 
+      <div className="px-4 space-y-3">
       {showForm && (
         <MesocycleForm
           onSave={() => setShowForm(false)}
@@ -63,6 +67,7 @@ export default function Mesocycles() {
           </button>
         </div>
       )}
+      </div>
     </div>
   )
 }
