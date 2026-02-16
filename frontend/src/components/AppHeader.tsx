@@ -44,7 +44,7 @@ export default function AppHeader({
 
       {/* Main header row */}
       <div
-        className={`px-5 pt-5 pb-4 flex items-center gap-3${onHeaderAreaClick ? ' cursor-pointer' : ''}`}
+        className={`px-5 pt-5 pb-4 flex items-center gap-3 min-h-[96px]${onHeaderAreaClick ? ' cursor-pointer' : ''}`}
         onClick={onHeaderAreaClick}
       >
         <Link
