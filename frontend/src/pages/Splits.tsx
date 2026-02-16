@@ -1,41 +1,31 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { useToast } from '../components/Toast'
-import { TrashIcon } from '../components/Icons'
-import { useSplits, useCreateSplit, useDeleteSplit } from '../api/hooks'
+import { ChevronRightIcon } from '../components/Icons'
+import { useSplits, useCreateSplit, useSplit, useExercises } from '../api/hooks'
+import { getMuscleColor } from '../lib/muscleColors'
+import type { SplitListItem } from '../types'
 
 export default function Splits() {
-  const toast = useToast()
   const { data: splits = [], isLoading } = useSplits()
   const [showForm, setShowForm] = useState(false)
-  const deleteSplit = useDeleteSplit()
-
-  const handleDelete = async (id: string) => {
-    if (!confirm('Delete this split?')) return
-    try {
-      await deleteSplit.mutateAsync(id)
-    } catch {
-      toast.showError('Failed to delete split')
-    }
-  }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
+      {/* Header */}
       <header className="flex items-center justify-between">
-        <h1 className="text-xl font-bold">Splits</h1>
-        <button
-          onClick={() => setShowForm(!showForm)}
-          className="btn btn-primary text-sm"
-        >
-          + Add
+        <h1 className="text-lg font-bold text-slate-200">Splits</h1>
+        <button onClick={() => setShowForm(!showForm)} className="plus-btn">
+          <svg className="w-3.5 h-3.5" style={{ color: '#38bdf8' }} fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+          </svg>
+          <span className="text-xs font-medium" style={{ color: '#38bdf8' }}>New</span>
         </button>
       </header>
 
       {showForm && (
         <SplitForm
-          onSave={() => {
-            setShowForm(false)
-          }}
+          onSave={() => setShowForm(false)}
           onCancel={() => setShowForm(false)}
         />
       )}
@@ -47,28 +37,152 @@ export default function Splits() {
           No splits yet. Create your first workout split!
         </div>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-3">
           {splits.map((split) => (
-            <div key={split.id} className="card flex items-center justify-between">
-              <Link to={`/splits/${split.id}`} className="flex-1">
-                <div className="font-medium">{split.name}</div>
-                <div className="text-sm text-slate-400">
-                  {split.session_count} {split.session_count === 1 ? 'session' : 'sessions'}
-                </div>
-              </Link>
-              <button
-                onClick={() => handleDelete(split.id)}
-                className="text-slate-400 hover:text-red-400 p-2"
-              >
-                <TrashIcon className="w-5 h-5" />
-              </button>
-            </div>
+            <SplitCard key={split.id} split={split} />
           ))}
+
+          {/* Add row */}
+          <button
+            onClick={() => setShowForm(true)}
+            className="add-row flex items-center justify-center gap-2 py-3 w-full stagger"
+          >
+            <svg className="w-4 h-4" style={{ color: '#38bdf8' }} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+            </svg>
+            <span className="text-xs font-medium" style={{ color: '#38bdf8' }}>New Split</span>
+          </button>
         </div>
       )}
     </div>
   )
 }
+
+// --- Split Card ---
+
+function SplitCard({ split }: { split: SplitListItem }) {
+  const { data: splitDetail, isLoading } = useSplit(split.id)
+  const { data: exercises = [] } = useExercises()
+
+  // Build exerciseId → muscleGroup map
+  const exerciseMap = useMemo(() => {
+    const map: Record<string, string> = {}
+    for (const ex of exercises) {
+      map[ex.id] = ex.muscle_group
+    }
+    return map
+  }, [exercises])
+
+  // Compute volume per muscle group across all sessions
+  const volumeData = useMemo(() => {
+    if (!splitDetail) return []
+    const volumeMap: Record<string, number> = {}
+    for (const session of splitDetail.sessions) {
+      if (session.is_rest_day) continue
+      for (const ex of session.exercises) {
+        const mg = exerciseMap[ex.exercise_id] || 'unknown'
+        volumeMap[mg] = (volumeMap[mg] || 0) + ex.sets
+      }
+    }
+    return Object.entries(volumeMap)
+      .map(([group, sets]) => ({ group, sets }))
+      .sort((a, b) => b.sets - a.sets)
+  }, [splitDetail, exerciseMap])
+
+  const maxVolume = volumeData.length > 0 ? volumeData[0]!.sets : 1
+
+  // Compute dominant muscle group per session for schedule strip colors
+  const sessionColors = useMemo(() => {
+    if (!splitDetail) return []
+    return splitDetail.sessions.map((session) => {
+      if (session.is_rest_day) return null
+      const mgSets: Record<string, number> = {}
+      for (const ex of session.exercises) {
+        const mg = exerciseMap[ex.exercise_id] || 'unknown'
+        mgSets[mg] = (mgSets[mg] || 0) + ex.sets
+      }
+      let dominant = ''
+      let maxSets = 0
+      for (const [mg, sets] of Object.entries(mgSets)) {
+        if (sets > maxSets) { dominant = mg; maxSets = sets }
+      }
+      return dominant ? getMuscleColor(dominant) : null
+    })
+  }, [splitDetail, exerciseMap])
+
+  return (
+    <Link to={`/splits/${split.id}`} className="compact-card p-4 list-row block stagger">
+      {/* Top row */}
+      <div className="flex items-center justify-between mb-3">
+        <div className="text-[15px] font-semibold text-slate-200">{split.name}</div>
+        <ChevronRightIcon className="w-4 h-4 shrink-0 text-[#334155]" />
+      </div>
+
+      {isLoading ? (
+        <div className="h-16 flex items-center justify-center">
+          <div className="text-[11px]" style={{ color: '#475569' }}>Loading...</div>
+        </div>
+      ) : splitDetail ? (
+        <>
+          {/* Schedule strip */}
+          <div className="schedule-strip flex gap-1 mb-3 pb-1" style={{ margin: '0 -4px', padding: '0 4px' }}>
+            {splitDetail.sessions.map((session, idx) => {
+              const color = sessionColors[idx]
+              return (
+                <div key={session.id} className="day-cell">
+                  <div
+                    className="day-num"
+                    style={{
+                      background: color ? `${color.bg}` : 'rgba(148,163,184,0.08)',
+                      color: color ? color.light : '#94a3b8',
+                      border: `1px solid ${color ? color.border : 'rgba(148,163,184,0.15)'}`,
+                    }}
+                  >
+                    {idx + 1}
+                  </div>
+                  <span className="day-name" style={{ color: '#64748b' }}>
+                    {session.name}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+
+          {/* Volume bars */}
+          {volumeData.length > 0 && (
+            <div className="space-y-1.5" style={{ padding: '8px 10px', background: '#0a1626', borderRadius: 8 }}>
+              {volumeData.map(({ group, sets }) => {
+                const color = getMuscleColor(group)
+                return (
+                  <div key={group} className="flex items-center gap-2">
+                    <span className="text-[9px] font-medium w-14 text-right capitalize" style={{ color: '#475569' }}>
+                      {group}
+                    </span>
+                    <div className="flex-1 h-[5px] rounded-full" style={{ background: '#162a3e' }}>
+                      <div
+                        className="vol-bar rounded-full h-full"
+                        style={{
+                          width: `${(sets / maxVolume) * 100}%`,
+                          background: color.primary,
+                          opacity: 0.7,
+                        }}
+                      />
+                    </div>
+                    <span className="mono text-[9px] w-5 text-right" style={{ color: '#475569' }}>
+                      {sets}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </>
+      ) : null}
+    </Link>
+  )
+}
+
+// --- Split Form ---
 
 interface SplitFormProps {
   onSave: () => void

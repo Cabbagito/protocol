@@ -5,6 +5,7 @@ import { ChevronLeftIcon, ChevronUpIcon, ChevronDownIcon, PencilIcon, TrashIcon 
 import {
   useSplit,
   useUpdateSplit,
+  useDeleteSplit,
   useExercises,
   useAddSession,
   useUpdateSession,
@@ -29,6 +30,7 @@ export default function SplitDetail() {
   const [showSessionForm, setShowSessionForm] = useState(false)
   const [editingSession, setEditingSession] = useState<Session | null>(null)
   const updateSplitMutation = useUpdateSplit(id!)
+  const deleteSplitMutation = useDeleteSplit()
   const deleteSessionMutation = useDeleteSession(id!)
   const reorderMutation = useReorderSessions(id!)
 
@@ -48,6 +50,16 @@ export default function SplitDetail() {
       await deleteSessionMutation.mutateAsync(sessionId)
     } catch {
       toast.showError('Failed to delete session')
+    }
+  }
+
+  const handleDeleteSplit = async () => {
+    if (!confirm('Delete this split? This cannot be undone.')) return
+    try {
+      await deleteSplitMutation.mutateAsync(id!)
+      navigate('/splits')
+    } catch {
+      toast.showError('Failed to delete split')
     }
   }
 
@@ -205,6 +217,14 @@ export default function SplitDetail() {
           ))}
         </div>
       )}
+
+      {/* Delete Split */}
+      <button
+        onClick={handleDeleteSplit}
+        className="w-full py-3 text-sm font-medium text-red-400 rounded-lg border border-red-400/20 hover:bg-red-400/5 transition-colors"
+      >
+        Delete Split
+      </button>
     </div>
   )
 }

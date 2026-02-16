@@ -38,8 +38,11 @@ class MesocycleListItem(BaseModel):
     split_name: str
     total_weeks: int
     current_week: int
+    current_rir: int
     is_active: bool
     started_at: date_type
+    workouts_completed: int
+    total_workouts: int
 
     class Config:
         from_attributes = True
@@ -281,12 +284,20 @@ def _mesocycle_to_response(mesocycle: Mesocycle, split_name: str) -> dict:
 
 def _mesocycle_to_list_item(mesocycle: Mesocycle) -> dict:
     derived = _derive_fields(mesocycle.structure)
+    weeks = mesocycle.structure.get("weeks", [])
+    total_workouts = sum(
+        len(week.get("sessions", []))
+        for week in weeks
+    )
     return {
         "id": mesocycle.id,
         "name": mesocycle.name,
         "split_name": mesocycle.split.name,
         "total_weeks": derived["total_weeks"],
         "current_week": derived["current_week"],
+        "current_rir": derived["current_rir"],
         "is_active": mesocycle.is_active,
         "started_at": mesocycle.started_at,
+        "workouts_completed": derived["workouts_completed"],
+        "total_workouts": total_workouts,
     }

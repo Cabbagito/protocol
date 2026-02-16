@@ -1,7 +1,7 @@
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useToast } from '../components/Toast'
 import { ChevronLeftIcon, CheckIcon } from '../components/Icons'
-import { useMesocycle, useWorkoutHistory, useUpdateMesocycle } from '../api/hooks'
+import { useMesocycle, useWorkoutHistory, useUpdateMesocycle, useDeleteMesocycle } from '../api/hooks'
 import type { MesoSession } from '../types'
 
 export default function MesocycleDetail() {
@@ -11,6 +11,17 @@ export default function MesocycleDetail() {
   const { data: mesocycle, isLoading } = useMesocycle(id!)
   const { data: history = [] } = useWorkoutHistory(id!)
   const updateMesocycle = useUpdateMesocycle(id!)
+  const deleteMesocycle = useDeleteMesocycle()
+
+  const handleDeleteMesocycle = async () => {
+    if (!confirm('Delete this mesocycle and all its workout logs?')) return
+    try {
+      await deleteMesocycle.mutateAsync(id!)
+      navigate('/mesocycles')
+    } catch {
+      toast.showError('Failed to delete mesocycle')
+    }
+  }
 
   const handleToggleActive = async () => {
     if (!mesocycle) return
@@ -237,6 +248,14 @@ export default function MesocycleDetail() {
           </div>
         )}
       </div>
+
+      {/* Delete Mesocycle */}
+      <button
+        onClick={handleDeleteMesocycle}
+        className="w-full py-3 text-sm font-medium text-red-400 rounded-lg border border-red-400/20 hover:bg-red-400/5 transition-colors"
+      >
+        Delete Mesocycle
+      </button>
     </div>
   )
 }

@@ -1,11 +1,10 @@
 import { useState, useMemo } from 'react'
-import clsx from 'clsx'
+import { useNavigate } from 'react-router-dom'
 import { useToast } from '../components/Toast'
-import { useExercises, useCreateExercise, useExerciseProgress } from '../api/hooks'
+import { useExercises, useCreateExercise } from '../api/hooks'
 import { getMuscleColor } from '../lib/muscleColors'
-import MuscleGroupBadge from '../components/MuscleGroupBadge'
-import { ChevronDownIcon } from '../components/Icons'
-import ExerciseMiniChart from '../components/ExerciseMiniChart'
+import { ChevronRightIcon } from '../components/Icons'
+import ExerciseSparkline from '../components/ExerciseSparkline'
 import type { Exercise, EquipmentType } from '../types'
 
 const MUSCLE_GROUPS = [
@@ -26,12 +25,12 @@ const EQUIPMENT_TYPES: EquipmentType[] = [
 ]
 
 export default function Exercises() {
+  const navigate = useNavigate()
   const { data: exercises = [], isLoading } = useExercises()
   const [showForm, setShowForm] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedMuscleGroups, setSelectedMuscleGroups] = useState<Set<string>>(new Set())
   const [selectedEquipmentTypes, setSelectedEquipmentTypes] = useState<Set<string>>(new Set())
-  const [expandedExerciseId, setExpandedExerciseId] = useState<string | null>(null)
 
   const filteredExercises = useMemo(() => {
     return exercises.filter((ex) => {
@@ -69,14 +68,15 @@ export default function Exercises() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
+      {/* Header */}
       <header className="flex items-center justify-between">
-        <h1 className="text-xl font-bold">Exercises</h1>
-        <button
-          onClick={() => setShowForm(!showForm)}
-          className="btn btn-primary text-sm"
-        >
-          + Add
+        <h1 className="text-lg font-bold text-slate-200">Exercises</h1>
+        <button onClick={() => setShowForm(!showForm)} className="plus-btn">
+          <svg className="w-3.5 h-3.5" style={{ color: '#38bdf8' }} fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+          </svg>
+          <span className="text-xs font-medium" style={{ color: '#38bdf8' }}>Add</span>
         </button>
       </header>
 
@@ -87,16 +87,21 @@ export default function Exercises() {
         />
       )}
 
-      {/* Search */}
-      <input
-        type="text"
-        value={searchQuery}
-        onChange={(e) => setSearchQuery(e.target.value)}
-        placeholder="Search exercises..."
-        className="input"
-      />
+      {/* Search bar */}
+      <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg" style={{ background: '#162a3e', border: '1px solid #1e3a52' }}>
+        <svg className="w-4 h-4 shrink-0" style={{ color: '#475569' }} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search exercises..."
+          className="bg-transparent text-sm text-slate-200 placeholder-slate-600 outline-none flex-1"
+        />
+      </div>
 
-      {/* Muscle group chips */}
+      {/* Muscle group filter chips */}
       <MuscleGroupChips
         selected={selectedMuscleGroups}
         onToggle={toggleMuscleGroup}
@@ -110,8 +115,8 @@ export default function Exercises() {
 
       {/* Filter count */}
       {hasActiveFilters && (
-        <div className="text-sm text-slate-400">
-          Showing {filteredExercises.length} of {exercises.length}
+        <div className="text-[11px]" style={{ color: '#475569' }}>
+          Showing <span style={{ color: '#94a3b8' }}>{filteredExercises.length}</span> of <span style={{ color: '#94a3b8' }}>{exercises.length}</span> exercises
         </div>
       )}
 
@@ -123,21 +128,57 @@ export default function Exercises() {
           {hasActiveFilters ? 'No exercises match your filters.' : 'No exercises yet. Add your first one!'}
         </div>
       ) : (
-        <div className="space-y-2">
-          {filteredExercises.map((exercise) => (
-            <ExerciseCard
+        <div style={{ background: '#0f1d2e', borderRadius: 12, border: '1px solid #1e3a52', overflow: 'hidden' }}>
+          {filteredExercises.map((exercise, idx) => (
+            <ExerciseRow
               key={exercise.id}
               exercise={exercise}
-              isExpanded={expandedExerciseId === exercise.id}
-              onToggle={() =>
-                setExpandedExerciseId(
-                  expandedExerciseId === exercise.id ? null : exercise.id
-                )
-              }
+              isLast={idx === filteredExercises.length - 1}
+              onClick={() => navigate('/progress')}
             />
           ))}
         </div>
       )}
+    </div>
+  )
+}
+
+// --- Exercise Row ---
+
+function ExerciseRow({
+  exercise,
+  isLast,
+  onClick,
+}: {
+  exercise: Exercise
+  isLast: boolean
+  onClick: () => void
+}) {
+  const color = getMuscleColor(exercise.muscle_group)
+
+  return (
+    <div
+      className="list-row flex items-center gap-3 px-4 py-4 stagger"
+      style={{ borderBottom: isLast ? 'none' : '1px solid rgba(30,58,82,0.5)' }}
+      onClick={onClick}
+    >
+      <div className="accent-strip" style={{ background: color.primary }} />
+      <div className="flex-1 min-w-0">
+        <div className="text-[13px] font-medium text-slate-200">{exercise.name}</div>
+        <div className="flex items-center gap-2 mt-1">
+          <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: color.light }}>
+            {exercise.muscle_group}
+          </span>
+          <span className="text-[10px]" style={{ color: '#334155' }}>&middot;</span>
+          <span className="text-[10px] capitalize" style={{ color: '#475569' }}>
+            {exercise.equipment_type}
+          </span>
+        </div>
+      </div>
+      <div className="shrink-0">
+        <ExerciseSparkline exerciseId={exercise.id} color={color.primary} />
+      </div>
+      <ChevronRightIcon className="w-4 h-4 shrink-0 text-[#334155]" />
     </div>
   )
 }
@@ -155,10 +196,10 @@ function MuscleGroupChips({
     <div className="space-y-2">
       {MUSCLE_GROUP_ROWS.map((row) => (
         <div key={row.label} className="flex items-center gap-2">
-          <span className="text-[10px] font-medium uppercase tracking-wider text-slate-500 w-8 shrink-0">
+          <span className="text-[9px] font-medium uppercase tracking-wider w-7 shrink-0" style={{ color: '#475569' }}>
             {row.label}
           </span>
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex gap-1.5 overflow-x-auto scrollbar-hide">
             {row.groups.map((mg) => {
               const color = getMuscleColor(mg)
               const isSelected = selected.has(mg)
@@ -166,11 +207,11 @@ function MuscleGroupChips({
                 <button
                   key={mg}
                   onClick={() => onToggle(mg)}
-                  className="text-xs font-semibold uppercase tracking-wider px-2.5 py-1 rounded-full transition-colors"
+                  className="filter-chip"
                   style={{
                     color: isSelected ? color.light : '#94a3b8',
                     background: isSelected ? color.bg : 'transparent',
-                    border: `1px solid ${isSelected ? color.primary : 'rgba(148,163,184,0.2)'}`,
+                    borderColor: isSelected ? color.primary : 'rgba(148,163,184,0.15)',
                   }}
                 >
                   {mg}
@@ -201,12 +242,12 @@ function EquipmentTypeToggles({
           <button
             key={et}
             onClick={() => onToggle(et)}
-            className={clsx(
-              'text-xs font-medium capitalize px-3 py-1.5 rounded-lg transition-colors',
-              isSelected
-                ? 'bg-protocol-600/20 text-protocol-300 border border-protocol-500/40'
-                : 'text-slate-400 border border-slate-700 hover:border-slate-600'
-            )}
+            className="equip-chip"
+            style={{
+              color: isSelected ? '#38bdf8' : '#94a3b8',
+              background: isSelected ? 'rgba(56,189,248,0.08)' : 'transparent',
+              borderColor: isSelected ? 'rgba(56,189,248,0.25)' : 'rgba(148,163,184,0.15)',
+            }}
           >
             {et}
           </button>
@@ -216,86 +257,7 @@ function EquipmentTypeToggles({
   )
 }
 
-// --- Exercise Card ---
-
-function ExerciseCard({
-  exercise,
-  isExpanded,
-  onToggle,
-}: {
-  exercise: Exercise
-  isExpanded: boolean
-  onToggle: () => void
-}) {
-  return (
-    <div className="card cursor-pointer" onClick={onToggle}>
-      <div className="flex items-center gap-2">
-        <div className="font-medium flex-1">{exercise.name}</div>
-        <MuscleGroupBadge muscleGroup={exercise.muscle_group} />
-        <ChevronDownIcon
-          className={clsx(
-            'w-4 h-4 text-slate-400 transition-transform duration-300',
-            isExpanded && 'rotate-180'
-          )}
-        />
-      </div>
-      <div className="text-sm text-slate-500 mt-1 capitalize">
-        {exercise.equipment_type}
-      </div>
-
-      {/* Expandable content */}
-      <div
-        className="grid transition-[grid-template-rows] duration-300"
-        style={{ gridTemplateRows: isExpanded ? '1fr' : '0fr' }}
-      >
-        <div className="overflow-hidden">
-          {isExpanded && (
-            <div className="pt-3 mt-3 border-t border-slate-700/50" onClick={(e) => e.stopPropagation()}>
-              <ExerciseExpandedContent exerciseId={exercise.id} />
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// --- Expanded Content ---
-
-function ExerciseExpandedContent({ exerciseId }: { exerciseId: string }) {
-  const { data: progressData, isLoading } = useExerciseProgress(exerciseId)
-
-  if (isLoading) {
-    return <div className="text-slate-500 text-sm text-center py-4">Loading progress...</div>
-  }
-
-  if (!progressData || progressData.length === 0) {
-    return <div className="text-slate-500 text-sm text-center py-4">No data yet</div>
-  }
-
-  const prWeight = Math.max(...progressData.map((d) => d.max_weight))
-  const lastEntry = progressData[progressData.length - 1]!
-  const lastDate = new Date(lastEntry.date).toLocaleDateString()
-
-  return (
-    <div className="space-y-3">
-      <ExerciseMiniChart data={progressData} />
-      <div className="flex justify-between text-sm">
-        <div>
-          <span className="text-slate-400">Last: </span>
-          <span className="text-slate-200 font-medium">{lastEntry.max_weight}kg</span>
-          <span className="text-slate-500 ml-1.5">{lastDate}</span>
-        </div>
-        <div>
-          <span className="text-slate-400">PR: </span>
-          <span className="text-protocol-400 font-medium">{prWeight}kg</span>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// --- Exercise Form (unchanged) ---
+// --- Exercise Form ---
 
 interface ExerciseFormProps {
   onSave: () => void

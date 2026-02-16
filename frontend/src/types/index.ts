@@ -51,8 +51,11 @@ export interface MesocycleListItem {
   split_name: string
   total_weeks: number
   current_week: number
+  current_rir: number
   is_active: boolean
   started_at: string
+  workouts_completed: number
+  total_workouts: number
 }
 
 // Mesocycle structure types
