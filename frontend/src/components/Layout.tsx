@@ -12,7 +12,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <main className="flex-1 pb-20 max-w-lg mx-auto w-full">
+      <main className="flex-1 pb-16 md:pb-20 max-w-lg mx-auto w-full">
         {children}
       </main>
 
@@ -25,7 +25,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           borderTop: '1px solid rgba(255,255,255,0.06)',
         }}
       >
-        <div className="flex justify-around items-center h-16 max-w-lg mx-auto">
+        <div className="flex justify-around items-center h-12 md:h-16 max-w-lg mx-auto">
           {navItems.map((item) => {
             const isActive =
               item.path === '/'
@@ -40,8 +40,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   isActive ? 'text-protocol-400' : 'text-slate-600 hover:text-slate-400'
                 )}
               >
-                <item.icon className="w-6 h-6" />
-                <span className="text-xs mt-1">{item.label}</span>
+                <item.icon className="w-5 h-5 md:w-6 md:h-6" />
+                <span className="text-[10px] md:text-xs mt-0.5 md:mt-1">{item.label}</span>
               </Link>
             )
           })}

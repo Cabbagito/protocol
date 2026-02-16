@@ -89,7 +89,14 @@
   }
 
   .set-input {
-    @apply w-full h-10 rounded-xl text-center text-sm font-medium focus:outline-none focus:ring-1 focus:ring-sky-500 transition-colors;
+    @apply w-full h-10 rounded-xl text-center font-medium focus:outline-none focus:ring-1 focus:ring-sky-500 transition-colors;
+    font-size: 16px;
+  }
+
+  @media (min-width: 768px) {
+    .set-input {
+      font-size: 14px;
+    }
   }
 
   .check-pop {
