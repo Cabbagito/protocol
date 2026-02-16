@@ -29,7 +29,7 @@ export default {
           card: '#0f1d2e',
           panel: '#132438',
           input: '#162a3e',
-          border: '#1e3a52',
+          border: '#244868',
         },
         muscle: {
           back: '#14b8a6',

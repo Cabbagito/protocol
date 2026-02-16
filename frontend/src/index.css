@@ -18,14 +18,19 @@
     padding-right: env(safe-area-inset-right);
   }
 
-  /* Vignette overlay */
+  /* Vignette overlay — softer on mobile, full on desktop */
   body::before {
     content: '';
     position: fixed;
     inset: 0;
     pointer-events: none;
     z-index: 100;
-    background: radial-gradient(ellipse at center, transparent 60%, #070d15 100%);
+    background: radial-gradient(ellipse at center, transparent 80%, rgba(7,13,21,0.55) 100%);
+  }
+  @media (min-width: 768px) {
+    body::before {
+      background: radial-gradient(ellipse at center, transparent 60%, #070d15 100%);
+    }
   }
 
   /* Remove number input spinners */
@@ -58,13 +63,13 @@
   .input {
     @apply w-full px-3 py-2 rounded-lg text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-protocol-500 focus:border-transparent;
     background: #162a3e;
-    border: 1px solid #1e3a52;
+    border: 1px solid #244868;
   }
 
   .card {
     background: #0f1d2e;
     border-radius: 10px;
-    border: 1.5px solid #1e3a52;
+    border: 1.5px solid #244868;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
     @apply p-4;
   }
@@ -155,7 +160,7 @@
   }
 
   .add-row {
-    border: 1.5px dashed #1e3a52;
+    border: 1.5px dashed #244868;
     border-radius: 8px;
     transition: all 0.2s ease;
     cursor: pointer;
@@ -168,7 +173,7 @@
   .compact-card {
     background: #0f1d2e;
     border-radius: 10px;
-    border: 1px solid #1e3a52;
+    border: 1px solid #244868;
     box-shadow: 0 2px 8px rgba(0,0,0,0.4);
   }
 

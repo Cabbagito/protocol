@@ -253,7 +253,7 @@ function MesoGridRow({
           // Pending — hollow dark
           dotStyle = {
             background: '#162a3e',
-            border: '1.5px solid #1e3a52',
+            border: '1.5px solid #244868',
           }
         }
 

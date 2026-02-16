@@ -92,7 +92,7 @@ export default function Exercises() {
       )}
 
       {/* Search bar */}
-      <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg" style={{ background: '#162a3e', border: '1px solid #1e3a52' }}>
+      <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg" style={{ background: '#162a3e', border: '1px solid #244868' }}>
         <svg className="w-4 h-4 shrink-0" style={{ color: '#475569' }} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
         </svg>
@@ -132,7 +132,7 @@ export default function Exercises() {
           {hasActiveFilters ? 'No exercises match your filters.' : 'No exercises yet. Add your first one!'}
         </div>
       ) : (
-        <div style={{ background: '#0f1d2e', borderRadius: 12, border: '1px solid #1e3a52', overflow: 'hidden' }}>
+        <div style={{ background: '#0f1d2e', borderRadius: 12, border: '1px solid #244868', overflow: 'hidden' }}>
           {filteredExercises.map((exercise, idx) => (
             <ExerciseRow
               key={exercise.id}

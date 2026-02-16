@@ -322,7 +322,7 @@ function getSetState(set: WorkingSet): SetState {
 const SET_STYLES: Record<SetState, { inputBg: string; inputBorder: string; textColor: string }> = {
   pending: {
     inputBg: '#162a3e',
-    inputBorder: '#1e3a52',
+    inputBorder: '#244868',
     textColor: '#cbd5e1',
   },
   logged: {
@@ -398,7 +398,7 @@ function SetRow({ set, exercise, onUpdate, onComplete, onUncomplete }: SetRowPro
             }}
             disabled={!(set.weight ?? 0)}
             className="w-9 h-9 rounded-lg border-2 flex items-center justify-center check-pop disabled:opacity-30 disabled:cursor-not-allowed"
-            style={{ borderColor: '#1e3a52' }}
+            style={{ borderColor: '#244868' }}
           />
         )}
       </div>

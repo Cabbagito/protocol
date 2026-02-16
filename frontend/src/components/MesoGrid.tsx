@@ -15,7 +15,7 @@ const cellStyles: Record<CellState, React.CSSProperties> = {
   },
   pending: {
     background: '#162a3e',
-    border: '1.5px solid #1e3a52',
+    border: '1.5px solid #244868',
   },
   'deload-done': {
     background: 'rgba(234,179,8,0.12)',
