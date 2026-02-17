@@ -9,6 +9,7 @@ from sqlalchemy.orm import selectinload
 from app.core.database import get_db
 from app.core.security import get_current_user
 from app.core.seed import compute_progression, get_current_position
+from app.models.exercise import Exercise
 from app.models.mesocycle import Mesocycle
 
 router = APIRouter()
@@ -23,6 +24,12 @@ class SetLog(BaseModel):
     weight: float = Field(ge=0)
     reps: int = Field(ge=0)
     rir: int | None = Field(default=None, ge=-1, le=5)
+    set_type: str | None = None
+
+
+class ExerciseUpdate(BaseModel):
+    exercise_id: str
+    skipped: bool | None = None
 
 
 class LogSetsRequest(BaseModel):
@@ -31,6 +38,7 @@ class LogSetsRequest(BaseModel):
     session_index: int = Field(ge=0)
     sets: list[SetLog]
     notes: str | None = None
+    exercise_updates: list[ExerciseUpdate] | None = None
 
 
 class WorkoutTemplateExercise(BaseModel):
@@ -88,6 +96,7 @@ async def get_workout_template(
         "week_index": pos["week_index"],
         "session_index": pos["session_index"],
         "exercises": session["exercises"],
+        "exercise_notes": structure.get("exercise_notes", {}),
     }
 
 
@@ -126,6 +135,7 @@ async def get_specific_template(
         "week_index": week_index,
         "session_index": session_index,
         "exercises": session["exercises"],
+        "exercise_notes": structure.get("exercise_notes", {}),
     }
 
 
@@ -162,6 +172,14 @@ async def log_sets(
     if data.notes is not None:
         session["notes"] = data.notes
 
+    # Apply exercise updates (skip/unskip)
+    if data.exercise_updates:
+        ex_update_map = {eu.exercise_id: eu for eu in data.exercise_updates}
+        for exercise in session.get("exercises", []):
+            eu = ex_update_map.get(exercise["exercise_id"])
+            if eu and eu.skipped is not None:
+                exercise["skipped"] = eu.skipped
+
     # Build a lookup of logged sets
     logged_map: dict[tuple[str, int], SetLog] = {}
     for s in data.sets:
@@ -177,6 +195,8 @@ async def log_sets(
                 set_data["reps"] = log.reps
                 set_data["rir"] = log.rir
                 set_data["logged"] = True
+                if log.set_type:
+                    set_data["set_type"] = log.set_type
             else:
                 set_data["logged"] = False
 
@@ -228,6 +248,132 @@ async def get_exercise_progress(
                     })
 
     return progress
+
+
+class ExerciseNoteRequest(BaseModel):
+    mesocycle_id: str
+    exercise_id: str
+    note: str | None = None
+
+
+@router.patch("/exercise-note")
+async def update_exercise_note(
+    data: ExerciseNoteRequest,
+    db: AsyncSession = Depends(get_db),
+    _: str = Depends(get_current_user),
+):
+    """Update or remove a meso-wide exercise note."""
+    result = await db.execute(
+        select(Mesocycle).where(Mesocycle.id == data.mesocycle_id).with_for_update()
+    )
+    mesocycle = result.scalar_one_or_none()
+    if not mesocycle:
+        raise HTTPException(status_code=404, detail="Mesocycle not found")
+
+    structure = mesocycle.structure
+    if "exercise_notes" not in structure:
+        structure["exercise_notes"] = {}
+
+    if data.note:
+        structure["exercise_notes"][data.exercise_id] = data.note
+    else:
+        structure["exercise_notes"].pop(data.exercise_id, None)
+
+    from sqlalchemy.orm.attributes import flag_modified
+    flag_modified(mesocycle, "structure")
+    await db.commit()
+
+    return {"status": "ok"}
+
+
+class ReplaceExerciseRequest(BaseModel):
+    mesocycle_id: str
+    week_index: int
+    session_index: int
+    exercise_index: int
+    old_exercise_id: str
+    new_exercise_id: str
+    apply_to_future: bool = True
+
+
+@router.post("/replace-exercise")
+async def replace_exercise(
+    data: ReplaceExerciseRequest,
+    db: AsyncSession = Depends(get_db),
+    _: str = Depends(get_current_user),
+):
+    """Replace an exercise in the mesocycle structure."""
+    result = await db.execute(
+        select(Mesocycle).where(Mesocycle.id == data.mesocycle_id).with_for_update()
+    )
+    mesocycle = result.scalar_one_or_none()
+    if not mesocycle:
+        raise HTTPException(status_code=404, detail="Mesocycle not found")
+
+    # Look up new exercise
+    ex_result = await db.execute(select(Exercise).where(Exercise.id == data.new_exercise_id))
+    new_exercise = ex_result.scalar_one_or_none()
+    if not new_exercise:
+        raise HTTPException(status_code=404, detail="New exercise not found")
+
+    structure = mesocycle.structure
+    weeks = structure.get("weeks", [])
+
+    if data.week_index >= len(weeks):
+        raise HTTPException(status_code=400, detail="Invalid week index")
+
+    week = weeks[data.week_index]
+    sessions = week.get("sessions", [])
+
+    if data.session_index >= len(sessions):
+        raise HTTPException(status_code=400, detail="Invalid session index")
+
+    session = sessions[data.session_index]
+    exercises = session.get("exercises", [])
+
+    if data.exercise_index >= len(exercises):
+        raise HTTPException(status_code=400, detail="Invalid exercise index")
+
+    target_ex = exercises[data.exercise_index]
+    if target_ex["exercise_id"] != data.old_exercise_id:
+        raise HTTPException(status_code=400, detail="Exercise ID mismatch")
+
+    session_name = session["session_name"]
+    day_order = session["day_order"]
+
+    def replace_in_exercise(ex_data: dict) -> None:
+        ex_data["exercise_id"] = new_exercise.id
+        ex_data["exercise_name"] = new_exercise.name
+        ex_data["muscle_group"] = new_exercise.muscle_group
+        ex_data["equipment_type"] = new_exercise.equipment_type
+        for s in ex_data.get("sets", []):
+            if not s.get("logged"):
+                s["weight"] = None
+                s["reps"] = None
+                s["suggested_weight"] = None
+
+    # Replace in current week
+    replace_in_exercise(target_ex)
+
+    # If apply_to_future, replace in all subsequent weeks
+    if data.apply_to_future:
+        for wi in range(data.week_index + 1, len(weeks)):
+            future_week = weeks[wi]
+            for future_session in future_week.get("sessions", []):
+                if (future_session["session_name"] == session_name
+                        and future_session["day_order"] == day_order):
+                    for fe in future_session.get("exercises", []):
+                        if fe["exercise_id"] == data.old_exercise_id:
+                            replace_in_exercise(fe)
+
+    # Re-run progression
+    compute_progression(structure)
+
+    from sqlalchemy.orm.attributes import flag_modified
+    flag_modified(mesocycle, "structure")
+    await db.commit()
+
+    return {"status": "ok"}
 
 
 @router.get("/history/{mesocycle_id}")
@@ -304,4 +450,5 @@ async def get_workout_detail(
         "date": session.get("date"),
         "notes": session.get("notes"),
         "exercises": session["exercises"],
+        "exercise_notes": structure.get("exercise_notes", {}),
     }

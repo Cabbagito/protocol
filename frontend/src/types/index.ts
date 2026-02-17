@@ -60,6 +60,8 @@ export interface MesocycleListItem {
 
 // Mesocycle structure types
 
+export type SetType = 'straight' | 'myorep' | 'myorep_match'
+
 export interface MesoSet {
   set_num: number
   weight: number | null
@@ -68,6 +70,7 @@ export interface MesoSet {
   suggested_weight: number | null
   rir: number | null
   logged: boolean
+  set_type?: SetType
 }
 
 export interface MesoExercise {
@@ -75,6 +78,7 @@ export interface MesoExercise {
   exercise_name: string
   muscle_group: string
   equipment_type: string
+  skipped?: boolean
   sets: MesoSet[]
 }
 
@@ -94,6 +98,7 @@ export interface MesoWeek {
 
 export interface MesoStructure {
   weeks: MesoWeek[]
+  exercise_notes?: Record<string, string>
 }
 
 export interface Mesocycle {
@@ -120,6 +125,7 @@ export interface WorkoutTemplate {
   week_index: number
   session_index: number
   exercises: MesoExercise[]
+  exercise_notes?: Record<string, string>
 }
 
 // Workout history item
@@ -142,6 +148,7 @@ export interface WorkoutDetailResponse {
   date: string | null
   notes: string | null
   exercises: MesoExercise[]
+  exercise_notes?: Record<string, string>
 }
 
 // Exercise progress

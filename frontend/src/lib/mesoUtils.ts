@@ -6,9 +6,9 @@ export function getCurrentPosition(structure: MesoStructure): { weekIndex: numbe
     const week = weeks[wi]!
     for (let si = 0; si < week.sessions.length; si++) {
       const session = week.sessions[si]!
-      const allLogged =
-        session.exercises.length > 0 &&
-        session.exercises.every(ex => ex.sets.every(s => s.logged))
+      const nonSkipped = session.exercises.filter(ex => !ex.skipped)
+      if (nonSkipped.length === 0) continue // all skipped = complete
+      const allLogged = nonSkipped.every(ex => ex.sets.every(s => s.logged))
       if (!allLogged) {
         return { weekIndex: wi, sessionIndex: si }
       }

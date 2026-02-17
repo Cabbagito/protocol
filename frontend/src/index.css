@@ -280,4 +280,16 @@
     0%, 100% { box-shadow: 0 0 0 3px rgba(148,163,184,0.15); }
     50%      { box-shadow: 0 0 0 3px rgba(148,163,184,0.35); }
   }
+
+  @keyframes slide-up {
+    from { transform: translateY(100%); }
+    to   { transform: translateY(0); }
+  }
+  .slide-up {
+    animation: slide-up 0.25s cubic-bezier(0.33, 1, 0.68, 1) both;
+  }
+
+  .pb-safe {
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+  }
 }

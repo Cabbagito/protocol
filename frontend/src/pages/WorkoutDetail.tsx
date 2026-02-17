@@ -21,6 +21,11 @@ const SET_COLORS: Record<SetState, { text: string; icon: string; bg: string }> =
   under: { text: '#f87171', icon: '#ef4444', bg: 'rgba(239,68,68,0.04)' },
 }
 
+const SET_TYPE_LABELS: Record<string, { label: string; color: string; bg: string }> = {
+  myorep: { label: 'MR', color: '#2dd4bf', bg: 'rgba(45,212,191,0.12)' },
+  myorep_match: { label: 'MM', color: '#fbbf24', bg: 'rgba(251,191,36,0.12)' },
+}
+
 function SetStatusIcon({ state }: { state: SetState }) {
   if (state === 'met') {
     return (
@@ -91,13 +96,16 @@ export default function WorkoutDetail() {
     return <div className="text-slate-400 text-center py-8">Workout not found</div>
   }
 
-  // Collect all logged sets across exercises
-  const allLoggedSets = workout.exercises.flatMap((ex) =>
+  const exerciseNotes = workout.exercise_notes ?? {}
+
+  // Collect all logged sets across non-skipped exercises
+  const activeExercises = workout.exercises.filter(ex => !ex.skipped)
+  const allLoggedSets = activeExercises.flatMap((ex) =>
     ex.sets.filter((s) => s.logged)
   )
   const totalSets = allLoggedSets.length
   const totalVolume = allLoggedSets.reduce((sum, s) => sum + (s.weight ?? 0) * (s.reps ?? 0), 0)
-  const exerciseCount = workout.exercises.filter((ex) => ex.sets.some((s) => s.logged)).length
+  const exerciseCount = activeExercises.filter((ex) => ex.sets.some((s) => s.logged)).length
 
   // On-target percentage (reps >= target_reps)
   const onTargetCount = allLoggedSets.filter((s) => (s.reps ?? 0) >= s.target_reps).length
@@ -124,7 +132,7 @@ export default function WorkoutDetail() {
 
   // Volume by muscle group
   const muscleVolume: Record<string, number> = {}
-  for (const ex of workout.exercises) {
+  for (const ex of activeExercises) {
     const loggedCount = ex.sets.filter((s) => s.logged).length
     if (loggedCount > 0) {
       const group = ex.muscle_group || 'other'
@@ -133,6 +141,8 @@ export default function WorkoutDetail() {
   }
   const muscleEntries = Object.entries(muscleVolume).sort(([, a], [, b]) => b - a)
   const maxMuscleSets = muscleEntries.length > 0 ? muscleEntries[0]![1] : 1
+
+  const skippedExercises = workout.exercises.filter(ex => ex.skipped)
 
   return (
     <div>
@@ -233,11 +243,34 @@ export default function WorkoutDetail() {
 
         {/* Exercise Cards */}
         {workout.exercises.map((exercise) => {
+          // Skipped exercise — compact row
+          if (exercise.skipped) {
+            return (
+              <div
+                key={exercise.exercise_id}
+                className="exercise-card stagger flex items-center justify-between"
+                style={{ borderColor: 'rgba(255,255,255,0.04)', opacity: 0.5 }}
+              >
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <MuscleGroupBadge muscleGroup={exercise.muscle_group} />
+                  <span className="text-sm font-medium text-slate-400 truncate">{exercise.exercise_name}</span>
+                </div>
+                <span
+                  className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded flex-shrink-0"
+                  style={{ background: 'rgba(148,163,184,0.1)', color: '#94a3b8' }}
+                >
+                  Skipped
+                </span>
+              </div>
+            )
+          }
+
           const loggedSets = exercise.sets.filter((s) => s.logged)
           if (loggedSets.length === 0) return null
 
           const color = getMuscleColor(exercise.muscle_group)
           const summary = computeExerciseSummary(exercise)
+          const exerciseNote = exerciseNotes[exercise.exercise_id]
 
           return (
             <div
@@ -250,14 +283,21 @@ export default function WorkoutDetail() {
                 <MuscleGroupBadge muscleGroup={exercise.muscle_group} />
                 <span className="text-[10px] text-slate-600 capitalize">{exercise.equipment_type}</span>
               </div>
-              <h2 className="text-base font-semibold text-slate-200 mb-2">{exercise.exercise_name}</h2>
+              <h2 className="text-base font-semibold text-slate-200 mb-1">{exercise.exercise_name}</h2>
+
+              {/* Exercise note */}
+              {exerciseNote && (
+                <div className="mb-2 px-2 py-1.5 rounded-md" style={{ background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.1)' }}>
+                  <p className="text-[11px] text-amber-400/80 leading-relaxed">{exerciseNote}</p>
+                </div>
+              )}
 
               {/* Sets grid */}
               <div className="panel-frosted">
                 {/* Column headers */}
                 <div
                   className="grid items-center gap-1"
-                  style={{ gridTemplateColumns: '28px 1fr 1fr 1fr 28px', padding: '4px 8px 2px' }}
+                  style={{ gridTemplateColumns: '36px 1fr 1fr 1fr 28px', padding: '4px 8px 2px' }}
                 >
                   <div className="text-[9px] font-medium uppercase tracking-wider text-center text-slate-700">#</div>
                   <div className="text-[9px] font-medium uppercase tracking-wider text-center text-slate-700">Weight</div>
@@ -270,17 +310,31 @@ export default function WorkoutDetail() {
                 {loggedSets.map((set, i) => {
                   const state = getSetState(set)
                   const colors = SET_COLORS[state]
+                  const setType = set.set_type ?? 'straight'
+                  const typeInfo = SET_TYPE_LABELS[setType]
+
                   return (
                     <div
                       key={set.set_num}
                       className="grid items-center gap-1 rounded-md"
                       style={{
-                        gridTemplateColumns: '28px 1fr 1fr 1fr 28px',
+                        gridTemplateColumns: '36px 1fr 1fr 1fr 28px',
                         padding: '6px 8px',
                         background: i % 2 === 0 ? colors.bg : undefined,
                       }}
                     >
-                      <div className="mono text-[11px] text-center text-slate-600">{set.set_num}</div>
+                      <div className="flex justify-center">
+                        {typeInfo ? (
+                          <span
+                            className="text-[10px] font-semibold px-1.5 py-0.5 rounded"
+                            style={{ background: typeInfo.bg, color: typeInfo.color }}
+                          >
+                            {typeInfo.label}
+                          </span>
+                        ) : (
+                          <span className="mono text-[11px] text-slate-600">{set.set_num}</span>
+                        )}
+                      </div>
                       <div className="mono text-[13px] font-medium text-center" style={{ color: colors.text }}>
                         {set.weight ?? 0}
                       </div>
@@ -364,6 +418,17 @@ export default function WorkoutDetail() {
                   )
                 })}
               </div>
+            </div>
+          </>
+        )}
+
+        {/* Skipped exercises summary */}
+        {skippedExercises.length > 0 && (
+          <>
+            <div className="stagger pt-1">
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-600">
+                Skipped ({skippedExercises.length})
+              </span>
             </div>
           </>
         )}

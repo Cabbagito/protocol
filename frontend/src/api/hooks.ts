@@ -261,8 +261,40 @@ export function useLogSets() {
       mesocycle_id: string
       week_index: number
       session_index: number
-      sets: { exercise_id: string; set_num: number; weight: number; reps: number; rir?: number | null }[]
+      sets: { exercise_id: string; set_num: number; weight: number; reps: number; rir?: number | null; set_type?: string | null }[]
       notes?: string | null
+      exercise_updates?: { exercise_id: string; skipped?: boolean }[] | null
     }) => api.post('/workouts/log', data),
+  })
+}
+
+export function useUpdateExerciseNote() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (data: { mesocycle_id: string; exercise_id: string; note: string | null }) =>
+      api.patch('/workouts/exercise-note', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.workouts.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.mesocycles.all })
+    },
+  })
+}
+
+export function useReplaceExercise() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (data: {
+      mesocycle_id: string
+      week_index: number
+      session_index: number
+      exercise_index: number
+      old_exercise_id: string
+      new_exercise_id: string
+      apply_to_future: boolean
+    }) => api.post('/workouts/replace-exercise', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.workouts.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.mesocycles.all })
+    },
   })
 }

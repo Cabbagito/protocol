@@ -253,9 +253,16 @@ def get_current_position(structure: dict) -> dict:
     """Find the current position in the mesocycle structure."""
     for wi, week in enumerate(structure.get("weeks", [])):
         for si, session in enumerate(week.get("sessions", [])):
+            non_skipped = [
+                ex for ex in session.get("exercises", [])
+                if not ex.get("skipped", False)
+            ]
+            if not non_skipped:
+                # All exercises skipped — session counts as complete
+                continue
             all_logged = all(
                 s["logged"]
-                for ex in session.get("exercises", [])
+                for ex in non_skipped
                 for s in ex.get("sets", [])
             )
             if not all_logged:
@@ -283,6 +290,10 @@ def compute_progression(structure: dict) -> None:
                 continue
 
             for ei, exercise in enumerate(session.get("exercises", [])):
+                # Skip if current exercise is skipped
+                if exercise.get("skipped", False):
+                    continue
+
                 # Find matching exercise in previous session
                 prev_exercise = None
                 for pe in prev_session.get("exercises", []):
@@ -290,6 +301,10 @@ def compute_progression(structure: dict) -> None:
                         prev_exercise = pe
                         break
                 if not prev_exercise:
+                    continue
+
+                # Skip if previous exercise was skipped
+                if prev_exercise.get("skipped", False):
                     continue
 
                 # Check if all sets in previous week were logged and hit target_reps
