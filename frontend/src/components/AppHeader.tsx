@@ -87,18 +87,27 @@ export default function AppHeader({
 
       {/* Expandable drawer — absolutely positioned overlay, animated with translateY (GPU-only) */}
       {drawerContent && (
-        <div className="absolute left-0 right-0 overflow-hidden" style={{ top: '100%' }}>
+        <div
+          className="absolute left-0 right-0 overflow-hidden"
+          style={{ top: '100%', paddingBottom: 60 }}
+        >
           <div
             className="transition-transform duration-300 ease-in-out"
             style={{
               transform: drawerExpanded ? 'translateY(0)' : 'translateY(-100%)',
               willChange: 'transform',
-              background: '#0d1b2a',
-              borderBottom: '1px solid rgba(255,255,255,0.04)',
+              padding: '6px 8px 0',
             }}
           >
-            <div className="px-4 pt-3 pb-4">
-              {drawerContent}
+            <div style={{
+              background: '#132438',
+              borderRadius: 12,
+              boxShadow: '0 16px 48px rgba(0,0,0,0.6)',
+              border: '1.5px solid #244868',
+            }}>
+              <div className="px-4 pt-4 pb-5">
+                {drawerContent}
+              </div>
             </div>
           </div>
         </div>
