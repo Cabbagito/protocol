@@ -818,25 +818,48 @@ function SetRow({ set, exercise, allSets, onUpdate, onComplete, onUncomplete, lo
   const setType = set.set_type ?? 'straight'
   const typeInfo = SET_TYPE_LABELS[setType]
 
-  // Resolve myorep_match target: find nearest non-MM set before this one
-  const resolvedTargetReps = useMemo(() => {
-    if (setType !== 'myorep_match') return set.target_reps
+  // Resolve myorep_match reference set: find nearest non-MM set before this one
+  const mmRef = useMemo(() => {
+    if (setType !== 'myorep_match') return null
     const exerciseSets = allSets
       .filter(s => s.exercise_id === exercise.exercise_id)
       .sort((a, b) => a.set_num - b.set_num)
     for (let i = exerciseSets.findIndex(s => s.set_num === set.set_num) - 1; i >= 0; i--) {
       const ref = exerciseSets[i]!
-      if ((ref.set_type ?? 'straight') !== 'myorep_match') {
-        return ref.completed ? (ref.reps ?? set.target_reps) : set.target_reps
-      }
+      if ((ref.set_type ?? 'straight') !== 'myorep_match') return ref
     }
-    return set.target_reps
-  }, [setType, set, allSets, exercise.exercise_id])
+    return null
+  }, [setType, allSets, set.set_num, exercise.exercise_id])
+
+  const resolvedTargetReps = useMemo(() => {
+    if (!mmRef) return set.target_reps
+    return mmRef.completed ? (mmRef.reps ?? set.target_reps) : set.target_reps
+  }, [mmRef, set.target_reps])
+
+  const resolvedWeight = useMemo(() => {
+    if (!mmRef) return null
+    return mmRef.weight ?? 0
+  }, [mmRef])
+
+  const isMatchLocked = setType === 'myorep_match'
+  const mmRefLogged = mmRef?.completed ?? false
 
   const handleSetTypeChange = (newType: SetType) => {
     onUpdate(exercise.exercise_id, set.set_num, 'set_type', newType)
     if (newType === 'myorep') {
       onUpdate(exercise.exercise_id, set.set_num, 'target_reps', 20)
+    } else if (newType === 'myorep_match') {
+      // Auto-copy weight from reference set
+      const exerciseSets = allSets
+        .filter(s => s.exercise_id === exercise.exercise_id)
+        .sort((a, b) => a.set_num - b.set_num)
+      for (let i = exerciseSets.findIndex(s => s.set_num === set.set_num) - 1; i >= 0; i--) {
+        const ref = exerciseSets[i]!
+        if ((ref.set_type ?? 'straight') !== 'myorep_match') {
+          if (ref.weight) onUpdate(exercise.exercise_id, set.set_num, 'weight', ref.weight)
+          break
+        }
+      }
     } else if (newType === 'straight') {
       onUpdate(exercise.exercise_id, set.set_num, 'target_reps', 10)
     }
@@ -906,37 +929,52 @@ function SetRow({ set, exercise, allSets, onUpdate, onComplete, onUncomplete, lo
       </div>
 
       {/* Weight input */}
-      <div className="flex-1">
+      <div className="flex-1 relative">
         <input
           type="number"
           step="0.5"
-          value={set.weight || ''}
+          value={isMatchLocked ? (resolvedWeight ?? set.weight ?? '') : (set.weight || '')}
           onChange={(e) => onUpdate(exercise.exercise_id, set.set_num, 'weight', parseFloat(e.target.value) || 0)}
-          readOnly={set.completed || locked}
+          readOnly={set.completed || locked || isMatchLocked}
           className="set-input"
           style={{
-            background: styles.inputBg,
-            border: `1px solid ${styles.inputBorder}`,
-            color: styles.textColor,
+            background: isMatchLocked ? 'rgba(251,191,36,0.06)' : styles.inputBg,
+            border: `1px solid ${isMatchLocked ? 'rgba(251,191,36,0.15)' : styles.inputBorder}`,
+            color: isMatchLocked ? '#fbbf24' : styles.textColor,
+            opacity: isMatchLocked && !mmRefLogged ? 0.5 : 1,
           }}
         />
+        {isMatchLocked && (
+          <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[9px] font-semibold" style={{ color: 'rgba(251,191,36,0.5)' }}>
+            MATCH
+          </span>
+        )}
       </div>
 
       {/* Reps input */}
-      <div className="flex-1">
+      <div className="flex-1 relative">
         <input
           type="number"
-          value={set.completed ? (set.reps ?? '') : (set.reps || '')}
+          value={isMatchLocked
+            ? (set.completed ? (set.reps ?? '') : (mmRefLogged ? resolvedTargetReps : ''))
+            : (set.completed ? (set.reps ?? '') : (set.reps || ''))
+          }
           onChange={(e) => onUpdate(exercise.exercise_id, set.set_num, 'reps', parseInt(e.target.value) || 0)}
-          readOnly={set.completed || locked}
-          placeholder={`${resolvedTargetReps}`}
+          readOnly={set.completed || locked || isMatchLocked}
+          placeholder={isMatchLocked ? (mmRefLogged ? `${resolvedTargetReps}` : '...') : `${resolvedTargetReps}`}
           className="set-input reps-ghost"
           style={{
-            background: styles.inputBg,
-            border: `1px solid ${styles.inputBorder}`,
-            color: styles.textColor,
+            background: isMatchLocked ? 'rgba(251,191,36,0.06)' : styles.inputBg,
+            border: `1px solid ${isMatchLocked ? 'rgba(251,191,36,0.15)' : styles.inputBorder}`,
+            color: isMatchLocked ? '#fbbf24' : styles.textColor,
+            opacity: isMatchLocked && !mmRefLogged ? 0.5 : 1,
           }}
         />
+        {isMatchLocked && (
+          <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[9px] font-semibold" style={{ color: 'rgba(251,191,36,0.5)' }}>
+            MATCH
+          </span>
+        )}
       </div>
 
       {/* Check / State button */}
@@ -951,16 +989,20 @@ function SetRow({ set, exercise, allSets, onUpdate, onComplete, onUncomplete, lo
         ) : (
           <button
             onClick={() => {
-              if ((set.weight ?? 0) > 0) {
-                if (!(set.reps ?? 0)) {
+              const effectiveWeight = isMatchLocked ? (resolvedWeight ?? set.weight ?? 0) : (set.weight ?? 0)
+              if (effectiveWeight > 0) {
+                if (isMatchLocked) {
+                  onUpdate(exercise.exercise_id, set.set_num, 'weight', effectiveWeight)
+                  onUpdate(exercise.exercise_id, set.set_num, 'reps', resolvedTargetReps)
+                } else if (!(set.reps ?? 0)) {
                   onUpdate(exercise.exercise_id, set.set_num, 'reps', resolvedTargetReps)
                 }
                 onComplete(exercise.exercise_id, set.set_num)
               }
             }}
-            disabled={!(set.weight ?? 0)}
+            disabled={isMatchLocked ? !mmRefLogged : !(set.weight ?? 0)}
             className="w-9 h-9 rounded-lg border-2 flex items-center justify-center check-pop disabled:opacity-30 disabled:cursor-not-allowed"
-            style={{ borderColor: '#244868' }}
+            style={{ borderColor: isMatchLocked ? 'rgba(251,191,36,0.3)' : '#244868' }}
           />
         )}
       </div>
