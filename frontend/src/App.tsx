@@ -1,21 +1,64 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
-import { useState, useEffect, lazy, Suspense } from 'react'
+import { useState, useEffect, lazy, Suspense, Component, type ReactNode } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import Layout from './components/Layout'
 import { getToken } from './lib/auth'
 
-const Login = lazy(() => import('./pages/Login'))
-const Dashboard = lazy(() => import('./pages/Dashboard'))
-const Exercises = lazy(() => import('./pages/Exercises'))
-const Splits = lazy(() => import('./pages/Splits'))
-const SplitDetail = lazy(() => import('./pages/SplitDetail'))
-const Mesocycles = lazy(() => import('./pages/Mesocycles'))
-const MesocycleDetail = lazy(() => import('./pages/MesocycleDetail'))
-const WorkoutHub = lazy(() => import('./pages/WorkoutHub'))
-const Workout = lazy(() => import('./pages/Workout'))
-const WorkoutDetail = lazy(() => import('./pages/WorkoutDetail'))
-const Progress = lazy(() => import('./pages/Progress'))
-const Settings = lazy(() => import('./pages/Settings'))
+// Wrap React.lazy to auto-reload on chunk load errors (stale deploys)
+function lazyWithRetry(importFn: () => Promise<{ default: React.ComponentType<any> }>) {
+  return lazy(() =>
+    importFn().catch(() => {
+      const hasReloaded = sessionStorage.getItem('chunk_reload')
+      if (!hasReloaded) {
+        sessionStorage.setItem('chunk_reload', '1')
+        window.location.reload()
+        return new Promise(() => {}) // never resolves — page is reloading
+      }
+      sessionStorage.removeItem('chunk_reload')
+      return Promise.reject(new Error('Failed to load page after reload'))
+    })
+  )
+}
+
+// Clear reload flag on successful page loads
+sessionStorage.removeItem('chunk_reload')
+
+const Login = lazyWithRetry(() => import('./pages/Login'))
+const Dashboard = lazyWithRetry(() => import('./pages/Dashboard'))
+const Exercises = lazyWithRetry(() => import('./pages/Exercises'))
+const Splits = lazyWithRetry(() => import('./pages/Splits'))
+const SplitDetail = lazyWithRetry(() => import('./pages/SplitDetail'))
+const Mesocycles = lazyWithRetry(() => import('./pages/Mesocycles'))
+const MesocycleDetail = lazyWithRetry(() => import('./pages/MesocycleDetail'))
+const WorkoutHub = lazyWithRetry(() => import('./pages/WorkoutHub'))
+const Workout = lazyWithRetry(() => import('./pages/Workout'))
+const WorkoutDetail = lazyWithRetry(() => import('./pages/WorkoutDetail'))
+const Progress = lazyWithRetry(() => import('./pages/Progress'))
+const Settings = lazyWithRetry(() => import('./pages/Settings'))
+
+// Error boundary for chunk load failures that persist after reload
+class ChunkErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
+  state = { hasError: false }
+  static getDerivedStateFromError() { return { hasError: true } }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen flex items-center justify-center p-6">
+          <div className="text-center">
+            <p className="text-slate-300 mb-4">A new version is available.</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="btn btn-primary"
+            >
+              Reload app
+            </button>
+          </div>
+        </div>
+      )
+    }
+    return this.props.children
+  }
+}
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -57,6 +100,7 @@ export default function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <ChunkErrorBoundary>
       <Suspense fallback={<PageLoader />}>
         <Routes>
           <Route path="/login" element={<Login onLogin={() => setIsAuthenticated(true)} />} />
@@ -86,6 +130,7 @@ export default function App() {
           />
         </Routes>
       </Suspense>
+      </ChunkErrorBoundary>
     </QueryClientProvider>
   )
 }
