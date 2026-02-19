@@ -1,4 +1,5 @@
 import { Link, useLocation } from 'react-router-dom'
+import { useEffect } from 'react'
 import { clsx } from 'clsx'
 import { HomeIcon, DumbbellIcon } from './Icons'
 
@@ -8,7 +9,11 @@ const navItems = [
 ]
 
 export default function Layout({ children }: { children: React.ReactNode }) {
-  const location = useLocation()
+  const { pathname } = useLocation()
+
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [pathname])
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -29,8 +34,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           {navItems.map((item) => {
             const isActive =
               item.path === '/'
-                ? location.pathname === '/'
-                : location.pathname.startsWith(item.path)
+                ? pathname === '/'
+                : pathname.startsWith(item.path)
             return (
               <Link
                 key={item.path}
