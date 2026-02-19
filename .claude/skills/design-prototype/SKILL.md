@@ -40,3 +40,7 @@ The `frontend/design/` directory holds single-file HTML prototypes used for brai
    - Open it again
 
 The goal is rapid visual exploration. Keep the feedback loop tight — generate, review, refine.
+
+## After Prototyping
+
+When the user approves a design and moves to implementation (planning or coding), **commit the prototype HTML file first** so the design is preserved in version control before the React implementation begins. Use a commit message like `chore: add prototype for {feature}`.
