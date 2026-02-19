@@ -369,7 +369,6 @@ export default function Workout() {
         )}
         drawerExpanded={headerExpanded}
         onHeaderAreaClick={() => setHeaderExpanded(prev => !prev)}
-        savingIndicator={isSaving}
       />
 
       {/* Future session banner */}

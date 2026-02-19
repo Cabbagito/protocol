@@ -11,7 +11,6 @@ interface AppHeaderProps {
   drawerContent?: React.ReactNode
   drawerExpanded?: boolean
   onHeaderAreaClick?: () => void
-  savingIndicator?: boolean
 }
 
 export default function AppHeader({
@@ -23,7 +22,6 @@ export default function AppHeader({
   drawerContent,
   drawerExpanded,
   onHeaderAreaClick,
-  savingIndicator,
 }: AppHeaderProps) {
   const hasProgressBar = progressPercent !== undefined
 
@@ -37,13 +35,6 @@ export default function AppHeader({
         borderBottom: hasProgressBar ? 'none' : '1px solid rgba(255,255,255,0.04)',
       }}
     >
-      {/* Saving indicator */}
-      {savingIndicator && (
-        <div className="absolute right-4 top-4 z-50">
-          <div className="w-2 h-2 rounded-full bg-sky-400 animate-pulse" />
-        </div>
-      )}
-
       {/* Main header row */}
       <div
         className={`px-5 pt-5 pb-4 flex items-center gap-3 min-h-[96px]${onHeaderAreaClick ? ' cursor-pointer' : ''}`}
