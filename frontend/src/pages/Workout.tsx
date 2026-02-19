@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useToast } from '../components/Toast'
-import { CheckIcon, ArrowUpIcon, ArrowDownIcon } from '../components/Icons'
+// Icons inlined in CompletedButton
 import { useLogSets, useMesocycle, useExercises, useUpdateExerciseNote, useReplaceExercise, queryKeys } from '../api/hooks'
 import { api } from '../api/client'
 import AppHeader from '../components/AppHeader'
@@ -63,6 +63,16 @@ export default function Workout() {
   const prevCompletedRef = useRef(0)
   const prevSkippedRef = useRef<string>('')
 
+  // Animation phase tracking
+  const animPhaseRef = useRef<Map<string, 'saving' | 'success'>>(new Map())
+  const [, setAnimTick] = useState(0)
+  const bumpAnim = useCallback(() => setAnimTick(n => n + 1), [])
+  const setAnimKey = useCallback((exerciseId: string, setNum: number) => `${exerciseId}:${setNum}`, [])
+  const clearAnim = useCallback((exerciseId: string, setNum: number) => {
+    animPhaseRef.current.delete(`${exerciseId}:${setNum}`)
+    bumpAnim()
+  }, [bumpAnim])
+
   const currentPos = useMemo(() => {
     if (!mesocycle) return null
     return getCurrentPosition(mesocycle.structure)
@@ -82,6 +92,7 @@ export default function Workout() {
     setExerciseNotes({})
     prevCompletedRef.current = 0
     prevSkippedRef.current = ''
+    animPhaseRef.current.clear()
   }, [weekParam, sessionParam])
 
   useEffect(() => {
@@ -125,6 +136,8 @@ export default function Workout() {
 
   const completeSet = useCallback((exerciseId: string, setNum: number) => {
     if (isFutureSession) return
+    animPhaseRef.current.set(setAnimKey(exerciseId, setNum), 'saving')
+    bumpAnim()
     setSets((prev) =>
       prev.map((s) =>
         s.exercise_id === exerciseId && s.set_num === setNum
@@ -132,10 +145,12 @@ export default function Workout() {
           : s
       )
     )
-  }, [isFutureSession])
+  }, [isFutureSession, setAnimKey, bumpAnim])
 
   const uncompleteSet = useCallback((exerciseId: string, setNum: number) => {
     if (isFutureSession) return
+    animPhaseRef.current.delete(setAnimKey(exerciseId, setNum))
+    bumpAnim()
     setSets((prev) =>
       prev.map((s) =>
         s.exercise_id === exerciseId && s.set_num === setNum
@@ -143,7 +158,7 @@ export default function Workout() {
           : s
       )
     )
-  }, [isFutureSession])
+  }, [isFutureSession, setAnimKey, bumpAnim])
 
   // Auto-save
   const triggerAutoSave = useCallback((currentSets: WorkingSet[], currentSkipped?: Set<string>) => {
@@ -156,6 +171,11 @@ export default function Workout() {
       exercise_id: ex.exercise_id,
       skipped: skipped.has(ex.exercise_id),
     }))
+
+    // Snapshot keys currently in 'saving' phase
+    const savingKeys = [...animPhaseRef.current.entries()]
+      .filter(([, phase]) => phase === 'saving')
+      .map(([key]) => key)
 
     pendingSavesRef.current++
     setIsSaving(true)
@@ -176,11 +196,32 @@ export default function Workout() {
       exercise_updates: exerciseUpdates,
     }).catch(() => {
       toast.showError('Auto-save failed')
+      // On error, remove saving keys so no success animation plays
+      for (const key of savingKeys) animPhaseRef.current.delete(key)
+      bumpAnim()
     }).finally(() => {
       pendingSavesRef.current--
       if (pendingSavesRef.current === 0) setIsSaving(false)
+
+      // Transition remaining 'saving' → 'success'
+      for (const key of savingKeys) {
+        if (animPhaseRef.current.get(key) === 'saving') {
+          animPhaseRef.current.set(key, 'success')
+        }
+      }
+      bumpAnim()
+
+      // Clean up 'success' entries after animation completes
+      setTimeout(() => {
+        for (const key of savingKeys) {
+          if (animPhaseRef.current.get(key) === 'success') {
+            animPhaseRef.current.delete(key)
+          }
+        }
+        bumpAnim()
+      }, 600)
     })
-  }, [mesocycleId, template, logSets, toast, isFutureSession, skippedExercises])
+  }, [mesocycleId, template, logSets, toast, isFutureSession, skippedExercises, bumpAnim])
 
   // Trigger auto-save when completed count or skipped set changes
   useEffect(() => {
@@ -368,6 +409,8 @@ export default function Workout() {
             note={exerciseNotes[ex.exercise_id]}
             onEditNote={() => setNoteModal({ exerciseId: ex.exercise_id, exerciseName: ex.exercise_name })}
             onReplace={() => setReplaceModal({ exerciseId: ex.exercise_id, exerciseIndex: ex.exerciseIndex, muscleGroup: ex.muscle_group })}
+            animPhaseRef={animPhaseRef}
+            onClearAnim={clearAnim}
           />
         ))}
       </div>
@@ -622,9 +665,11 @@ interface ExerciseCardProps {
   note?: string
   onEditNote: () => void
   onReplace: () => void
+  animPhaseRef: React.MutableRefObject<Map<string, 'saving' | 'success'>>
+  onClearAnim: (exerciseId: string, setNum: number) => void
 }
 
-function ExerciseCard({ exercise, sets, allSets, targetRir, onUpdateSet, onCompleteSet, onUncompleteSet, locked, skipped, onToggleSkip, note, onEditNote, onReplace }: ExerciseCardProps) {
+function ExerciseCard({ exercise, sets, allSets, targetRir, onUpdateSet, onCompleteSet, onUncompleteSet, locked, skipped, onToggleSkip, note, onEditNote, onReplace, animPhaseRef, onClearAnim }: ExerciseCardProps) {
   const [menuOpen, setMenuOpen] = useState(false)
   const color = getMuscleColor(exercise.muscle_group)
 
@@ -731,6 +776,8 @@ function ExerciseCard({ exercise, sets, allSets, targetRir, onUpdateSet, onCompl
             onComplete={onCompleteSet}
             onUncomplete={onUncompleteSet}
             locked={locked}
+            animPhaseRef={animPhaseRef}
+            onClearAnim={onClearAnim}
           />
         ))}
       </div>
@@ -772,6 +819,8 @@ interface SetRowProps {
   onComplete: (exerciseId: string, setNum: number) => void
   onUncomplete: (exerciseId: string, setNum: number) => void
   locked?: boolean
+  animPhaseRef: React.MutableRefObject<Map<string, 'saving' | 'success'>>
+  onClearAnim: (exerciseId: string, setNum: number) => void
 }
 
 type SetState = 'pending' | 'logged' | 'exceeded' | 'under'
@@ -814,7 +863,7 @@ const SET_TYPE_LABELS: Record<string, { label: string; color: string; bg: string
 
 const STRAIGHT_PILL = { color: '#cbd5e1', bg: 'rgba(255,255,255,0.04)', border: 'rgba(255,255,255,0.12)' }
 
-function SetRow({ set, exercise, allSets, onUpdate, onComplete, onUncomplete, locked }: SetRowProps) {
+function SetRow({ set, exercise, allSets, onUpdate, onComplete, onUncomplete, locked, animPhaseRef, onClearAnim }: SetRowProps) {
   const [typePopoverOpen, setTypePopoverOpen] = useState(false)
   const [jiggleTarget, setJiggleTarget] = useState<'weight' | 'reps' | null>(null)
   const jiggleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -1014,69 +1063,126 @@ function SetRow({ set, exercise, allSets, onUpdate, onComplete, onUncomplete, lo
 
       {/* Check / State button */}
       <div className="w-12 flex justify-center">
-        {locked ? (
-          <div
-            className="w-9 h-9 rounded-lg border-2 flex items-center justify-center opacity-30"
-            style={{ borderColor: '#244868' }}
-          />
-        ) : set.completed ? (
-          <CompletedButton state={state} onClick={() => onUncomplete(exercise.exercise_id, set.set_num)} />
-        ) : (
-          <button
-            onClick={() => {
-              const effectiveWeight = isMatchLocked ? (resolvedWeight ?? set.weight ?? 0) : (set.weight ?? 0)
-              if (effectiveWeight > 0) {
-                if (isMatchLocked) {
-                  onUpdate(exercise.exercise_id, set.set_num, 'weight', effectiveWeight)
-                  onUpdate(exercise.exercise_id, set.set_num, 'reps', resolvedTargetReps)
-                } else if (!(set.reps ?? 0)) {
-                  onUpdate(exercise.exercise_id, set.set_num, 'reps', resolvedTargetReps)
+        {(() => {
+          const animPhase = animPhaseRef.current.get(`${set.exercise_id}:${set.set_num}`)
+          if (locked) {
+            return (
+              <div
+                className="w-9 h-9 rounded-lg border-2 flex items-center justify-center opacity-30"
+                style={{ borderColor: '#244868' }}
+              />
+            )
+          }
+          if (animPhase === 'saving') {
+            return <SavingButton state={state} />
+          }
+          if (animPhase === 'success') {
+            return (
+              <CompletedButton
+                state={state}
+                onClick={() => onUncomplete(exercise.exercise_id, set.set_num)}
+                animated
+                onAnimEnd={() => onClearAnim(exercise.exercise_id, set.set_num)}
+              />
+            )
+          }
+          if (set.completed) {
+            return <CompletedButton state={state} onClick={() => onUncomplete(exercise.exercise_id, set.set_num)} />
+          }
+          return (
+            <button
+              onClick={() => {
+                const effectiveWeight = isMatchLocked ? (resolvedWeight ?? set.weight ?? 0) : (set.weight ?? 0)
+                if (effectiveWeight > 0) {
+                  if (isMatchLocked) {
+                    onUpdate(exercise.exercise_id, set.set_num, 'weight', effectiveWeight)
+                    onUpdate(exercise.exercise_id, set.set_num, 'reps', resolvedTargetReps)
+                  } else if (!(set.reps ?? 0)) {
+                    onUpdate(exercise.exercise_id, set.set_num, 'reps', resolvedTargetReps)
+                  }
+                  onComplete(exercise.exercise_id, set.set_num)
                 }
-                onComplete(exercise.exercise_id, set.set_num)
-              }
-            }}
-            disabled={isMatchLocked ? !mmRefLogged : !(set.weight ?? 0)}
-            className="w-9 h-9 rounded-lg border-2 flex items-center justify-center check-pop disabled:opacity-30 disabled:cursor-not-allowed"
-            style={{ borderColor: isMatchLocked ? 'rgba(251,191,36,0.3)' : '#244868' }}
-          />
-        )}
+              }}
+              disabled={isMatchLocked ? !mmRefLogged : !(set.weight ?? 0)}
+              className="w-9 h-9 rounded-lg border-2 flex items-center justify-center check-pop disabled:opacity-30 disabled:cursor-not-allowed"
+              style={{ borderColor: isMatchLocked ? 'rgba(251,191,36,0.3)' : '#244868' }}
+            />
+          )
+        })()}
       </div>
     </div>
   )
 }
 
-function CompletedButton({ state, onClick }: { state: SetState; onClick: () => void }) {
-  if (state === 'exceeded') {
-    return (
-      <button
-        onClick={onClick}
-        className="w-9 h-9 rounded-lg flex items-center justify-center check-pop"
-        style={{ background: '#7c3aed' }}
-      >
-        <ArrowUpIcon className="w-4 h-4 text-white" />
-      </button>
-    )
-  }
+const SET_ANIM_CONFIG: Record<Exclude<SetState, 'pending'>, { bg: string; spinner: string; ripple: string; iconPath: string; strokeWidth: number }> = {
+  logged:   { bg: '#0284c7', spinner: '#0ea5e9', ripple: '#0ea5e9', iconPath: 'M5 13l4 4L19 7',   strokeWidth: 3 },
+  exceeded: { bg: '#7c3aed', spinner: '#a855f7', ripple: '#a855f7', iconPath: 'M5 15l7-7 7 7',    strokeWidth: 2.5 },
+  under:    { bg: '#dc2626', spinner: '#ef4444', ripple: '#ef4444', iconPath: 'M19 9l-7 7-7-7',   strokeWidth: 2.5 },
+}
 
-  if (state === 'under') {
-    return (
-      <button
-        onClick={onClick}
-        className="w-9 h-9 rounded-lg flex items-center justify-center check-pop"
-        style={{ background: '#dc2626' }}
-      >
-        <ArrowDownIcon className="w-4 h-4 text-white" />
-      </button>
-    )
-  }
+function SavingButton({ state }: { state: SetState }) {
+  const cfg = SET_ANIM_CONFIG[state === 'pending' ? 'logged' : state]
+  return (
+    <div className="w-9 h-9 relative">
+      <svg className="absolute inset-0 w-full h-full" viewBox="0 0 36 36">
+        <rect
+          x="1.5" y="1.5" width="33" height="33" rx="7"
+          fill="none"
+          stroke={cfg.spinner}
+          strokeWidth="2.5"
+          pathLength={100}
+          strokeDasharray="22 78"
+          strokeLinecap="round"
+          style={{ animation: 'set-saving-trace 0.9s linear infinite' }}
+        />
+      </svg>
+    </div>
+  )
+}
+
+function CompletedButton({ state, onClick, animated, onAnimEnd }: {
+  state: SetState
+  onClick: () => void
+  animated?: boolean
+  onAnimEnd?: () => void
+}) {
+  const cfg = SET_ANIM_CONFIG[state === 'pending' ? 'logged' : state]
+
+  useEffect(() => {
+    if (!animated || !onAnimEnd) return
+    const t = setTimeout(onAnimEnd, 600)
+    return () => clearTimeout(t)
+  }, [animated, onAnimEnd])
 
   return (
     <button
       onClick={onClick}
-      className="w-9 h-9 rounded-lg flex items-center justify-center check-pop"
-      style={{ background: '#0284c7' }}
+      className="w-9 h-9 rounded-lg flex items-center justify-center check-pop relative overflow-hidden"
+      style={{ background: cfg.bg }}
     >
-      <CheckIcon className="w-4 h-4 text-white" />
+      {animated && (
+        <span
+          className="absolute inset-0 rounded-lg"
+          style={{
+            background: cfg.ripple,
+            animation: 'set-success-ripple 0.45s forwards',
+          }}
+        />
+      )}
+      <svg className="w-4 h-4 relative z-10" viewBox="0 0 24 24" fill="none">
+        <path
+          d={cfg.iconPath}
+          stroke="white"
+          strokeWidth={cfg.strokeWidth}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          {...(animated ? {
+            strokeDasharray: 30,
+            strokeDashoffset: 30,
+            style: { animation: 'set-success-draw 0.28s 0.06s forwards' },
+          } : {})}
+        />
+      </svg>
     </button>
   )
 }
