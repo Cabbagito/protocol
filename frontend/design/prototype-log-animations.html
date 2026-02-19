@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Set Logging Animations – Final – Protocol</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    html { background: #070d15; }
+    body {
+      overscroll-behavior: none;
+      font-family: 'Inter', system-ui, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+      background: #0d1b2a;
+      min-height: 100vh;
+    }
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 100;
+      background: radial-gradient(ellipse at center, transparent 60%, #070d15 100%);
+    }
+    input[type="number"]::-webkit-outer-spin-button,
+    input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
+
+    .mono { font-family: 'JetBrains Mono', monospace; }
+
+    .exercise-card {
+      background: #0f1d2e;
+      border-radius: 10px;
+      border: 1.5px solid;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    }
+    .sets-wrap {
+      background: #132438;
+      border: 1px solid rgba(255,255,255,0.04);
+      border-radius: 8px;
+      padding: 4px;
+    }
+    .set-input {
+      width: 100%;
+      height: 40px;
+      border-radius: 12px;
+      text-align: center;
+      font-size: 14px;
+      font-weight: 500;
+      font-family: 'JetBrains Mono', monospace;
+      outline: none;
+      transition: background 0.3s, border-color 0.3s, color 0.3s;
+    }
+
+    .section-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #475569;
+      padding: 0 4px;
+    }
+    .section-divider {
+      height: 1px;
+      background: linear-gradient(to right, transparent, #1e3a52, transparent);
+      margin: 32px 0 20px;
+    }
+
+    /* Base check button */
+    .check-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      position: relative;
+      border: 2px solid #244868;
+      background: transparent;
+      overflow: visible;
+      flex-shrink: 0;
+    }
+    .check-btn:active:not(.saving) { transform: scale(0.92); }
+
+    /* SVG Border Spinner */
+    @keyframes dashTrace {
+      0% { stroke-dashoffset: 0; }
+      100% { stroke-dashoffset: -100; }
+    }
+    .spinner-svg {
+      position: absolute;
+      top: -2px; left: -2px;
+      pointer-events: none;
+    }
+    .spinner-svg rect {
+      stroke-dasharray: 22 78;
+      stroke-linecap: round;
+      animation: dashTrace 0.9s linear infinite;
+    }
+
+    /* Ripple ring */
+    @keyframes rippleExpand {
+      0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0.5; }
+      100% { transform: translate(-50%, -50%) scale(2.2); opacity: 0; }
+    }
+    .ripple-ring {
+      position: absolute;
+      top: 50%; left: 50%;
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      pointer-events: none;
+      animation: rippleExpand 0.45s cubic-bezier(0.2, 0.6, 0.3, 1) forwards;
+    }
+
+    /* Icon draw animation */
+    @keyframes drawIcon {
+      0% { stroke-dashoffset: 30; }
+      100% { stroke-dashoffset: 0; }
+    }
+    .draw-icon {
+      stroke-dasharray: 30;
+      stroke-dashoffset: 30;
+      animation: drawIcon 0.28s cubic-bezier(0.4, 0, 0.2, 1) 0.06s forwards;
+    }
+
+    .reset-btn {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      color: #475569;
+      padding: 6px 14px;
+      border-radius: 6px;
+      border: 1px solid rgba(255,255,255,0.06);
+      background: rgba(255,255,255,0.03);
+      cursor: pointer;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .reset-btn:hover { color: #64748b; border-color: rgba(255,255,255,0.1); }
+  </style>
+</head>
+
+<body class="min-h-screen max-w-[428px] mx-auto relative pb-16">
+
+  <!-- Page header -->
+  <div class="px-5 pt-6 pb-1">
+    <h1 class="text-[13px] font-bold uppercase tracking-widest" style="color: #38bdf8;">Log Animations – Final</h1>
+    <p class="text-[11px] mt-1.5 leading-relaxed" style="color: #475569;">
+      SVG border spinner while saving (1s) → ripple burst + icon draw on success. All three set states shown with correct colors.
+    </p>
+  </div>
+
+  <!-- ============================== -->
+  <!-- 1. MET TARGET (reps = target)  -->
+  <!-- ============================== -->
+  <div class="px-4 pt-6">
+    <div class="section-label mb-3">1 · Met Target — reps = 10, target = 10</div>
+    <p class="text-[11px] mb-3 px-1" style="color: #64748b;">Blue check. Reps match target exactly.</p>
+
+    <div class="exercise-card px-3 pt-3 pb-2.5" style="border-color: rgba(249,115,22,0.35);">
+      <div class="mb-2">
+        <span class="text-[11px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded" style="color: #fb923c; background: rgba(249,115,22,0.1); border: 1px solid rgba(249,115,22,0.15);">Chest</span>
+      </div>
+      <div class="mb-3">
+        <h2 class="text-base font-semibold" style="color: #e2e8f0;">Bench Press</h2>
+        <span class="text-xs" style="color: #475569;">Barbell</span>
+      </div>
+      <div class="sets-wrap" id="sets-met"></div>
+    </div>
+    <div class="flex justify-end mt-2 px-1">
+      <button class="reset-btn" onclick="resetCard('met')">Reset</button>
+    </div>
+  </div>
+
+  <div class="section-divider"></div>
+
+  <!-- ============================== -->
+  <!-- 2. EXCEEDED (reps > target)    -->
+  <!-- ============================== -->
+  <div class="px-4">
+    <div class="section-label mb-3">2 · Exceeded — reps = 12, target = 10</div>
+    <p class="text-[11px] mb-3 px-1" style="color: #64748b;">Purple up-arrow. Beat the target.</p>
+
+    <div class="exercise-card px-3 pt-3 pb-2.5" style="border-color: rgba(249,115,22,0.35);">
+      <div class="mb-2">
+        <span class="text-[11px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded" style="color: #fb923c; background: rgba(249,115,22,0.1); border: 1px solid rgba(249,115,22,0.15);">Chest</span>
+      </div>
+      <div class="mb-3">
+        <h2 class="text-base font-semibold" style="color: #e2e8f0;">Bench Press</h2>
+        <span class="text-xs" style="color: #475569;">Barbell</span>
+      </div>
+      <div class="sets-wrap" id="sets-exceeded"></div>
+    </div>
+    <div class="flex justify-end mt-2 px-1">
+      <button class="reset-btn" onclick="resetCard('exceeded')">Reset</button>
+    </div>
+  </div>
+
+  <div class="section-divider"></div>
+
+  <!-- ============================== -->
+  <!-- 3. UNDER (reps < target)       -->
+  <!-- ============================== -->
+  <div class="px-4">
+    <div class="section-label mb-3">3 · Under — reps = 8, target = 10</div>
+    <p class="text-[11px] mb-3 px-1" style="color: #64748b;">Red down-arrow. Missed the target.</p>
+
+    <div class="exercise-card px-3 pt-3 pb-2.5" style="border-color: rgba(249,115,22,0.35);">
+      <div class="mb-2">
+        <span class="text-[11px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded" style="color: #fb923c; background: rgba(249,115,22,0.1); border: 1px solid rgba(249,115,22,0.15);">Chest</span>
+      </div>
+      <div class="mb-3">
+        <h2 class="text-base font-semibold" style="color: #e2e8f0;">Bench Press</h2>
+        <span class="text-xs" style="color: #475569;">Barbell</span>
+      </div>
+      <div class="sets-wrap" id="sets-under"></div>
+    </div>
+    <div class="flex justify-end mt-2 px-1">
+      <button class="reset-btn" onclick="resetCard('under')">Reset</button>
+    </div>
+  </div>
+
+  <div class="section-divider"></div>
+
+  <!-- ============================== -->
+  <!-- 4. MIXED (all three states)    -->
+  <!-- ============================== -->
+  <div class="px-4 pb-8">
+    <div class="section-label mb-3">4 · Mixed — realistic workout scenario</div>
+    <p class="text-[11px] mb-3 px-1" style="color: #64748b;">Set 1: met (10), Set 2: exceeded (12), Set 3: under (8). Target = 10 for all.</p>
+
+    <div class="exercise-card px-3 pt-3 pb-2.5" style="border-color: rgba(249,115,22,0.35);">
+      <div class="mb-2">
+        <span class="text-[11px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded" style="color: #fb923c; background: rgba(249,115,22,0.1); border: 1px solid rgba(249,115,22,0.15);">Chest</span>
+      </div>
+      <div class="mb-3">
+        <h2 class="text-base font-semibold" style="color: #e2e8f0;">Bench Press</h2>
+        <span class="text-xs" style="color: #475569;">Barbell</span>
+      </div>
+      <div class="sets-wrap" id="sets-mixed"></div>
+    </div>
+    <div class="flex justify-end mt-2 px-1">
+      <button class="reset-btn" onclick="resetCard('mixed')">Reset</button>
+    </div>
+  </div>
+
+<script>
+const SAVE_DELAY = 1000;
+const TARGET_REPS = 10;
+
+// State colors per result
+const COLORS = {
+  met: {
+    btnBg: '#0284c7',
+    spinner: '#0ea5e9',
+    ripple: '#0ea5e9',
+    inputBg: '#0c2d4e',
+    inputBorder: '#164e7a',
+    inputText: '#38bdf8',
+  },
+  exceeded: {
+    btnBg: '#7c3aed',
+    spinner: '#a855f7',
+    ripple: '#a855f7',
+    inputBg: 'rgba(168,85,247,0.08)',
+    inputBorder: 'rgba(168,85,247,0.2)',
+    inputText: '#c084fc',
+  },
+  under: {
+    btnBg: '#dc2626',
+    spinner: '#ef4444',
+    ripple: '#ef4444',
+    inputBg: 'rgba(239,68,68,0.06)',
+    inputBorder: 'rgba(239,68,68,0.15)',
+    inputText: '#f87171',
+  },
+};
+
+// SVG icons per state (with draw-icon class for stroke animation)
+const ICONS = {
+  met: `<svg class="w-4 h-4" fill="none" stroke="white" stroke-width="3" viewBox="0 0 24 24">
+    <path class="draw-icon" stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>`,
+  exceeded: `<svg class="w-4 h-4" fill="none" stroke="white" stroke-width="2.5" viewBox="0 0 24 24">
+    <path class="draw-icon" stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7"/></svg>`,
+  under: `<svg class="w-4 h-4" fill="none" stroke="white" stroke-width="2.5" viewBox="0 0 24 24">
+    <path class="draw-icon" stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>`,
+};
+
+const PENDING = { inputBg: '#162a3e', inputBorder: '#1e3a52', textColor: '#cbd5e1' };
+
+// Card configs: each card has sets with specific reps
+const CARDS = {
+  met:      { sets: [{ reps: 10 }, { reps: 10 }, { reps: 10 }] },
+  exceeded: { sets: [{ reps: 12 }, { reps: 12 }, { reps: 12 }] },
+  under:    { sets: [{ reps: 8 },  { reps: 8 },  { reps: 8 }] },
+  mixed:    { sets: [{ reps: 10 }, { reps: 12 }, { reps: 8 }] },
+};
+
+function getSetState(reps) {
+  if (reps > TARGET_REPS) return 'exceeded';
+  if (reps < TARGET_REPS) return 'under';
+  return 'met';
+}
+
+// Track state: 'idle' | 'saving' | 'done'
+const cardState = {};
+Object.keys(CARDS).forEach(id => {
+  cardState[id] = CARDS[id].sets.map(() => 'idle');
+});
+
+function buildSetsHTML(cardId) {
+  const container = document.getElementById(`sets-${cardId}`);
+  const config = CARDS[cardId];
+  let html = `
+    <div class="flex items-center mb-2 px-2 pt-1">
+      <div class="w-8 text-center text-[11px] font-medium uppercase tracking-wider" style="color: #475569;">#</div>
+      <div class="flex-1 text-center text-[11px] font-medium uppercase tracking-wider" style="color: #475569;">Weight</div>
+      <div class="flex-1 text-center text-[11px] font-medium uppercase tracking-wider" style="color: #475569;">Reps</div>
+      <div class="w-12 text-center text-[11px] font-medium uppercase tracking-wider" style="color: #475569;">Log</div>
+    </div>
+  `;
+
+  config.sets.forEach((set, i) => {
+    html += `
+      <div class="flex items-center gap-2 mb-1.5 rounded-lg px-2 py-1.5 relative" id="row-${cardId}-${i}">
+        <div class="w-8 flex justify-center">
+          <span class="min-w-[28px] h-7 rounded-md flex items-center justify-center text-[11px] font-semibold mono"
+            style="color: #cbd5e1; border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.04);">
+            ${i + 1}
+          </span>
+        </div>
+        <div class="flex-1">
+          <input type="number" value="80" readonly class="set-input" id="weight-${cardId}-${i}"
+            style="background: ${PENDING.inputBg}; border: 1px solid ${PENDING.inputBorder}; color: ${PENDING.textColor};" />
+        </div>
+        <div class="flex-1">
+          <input type="number" value="${set.reps}" readonly class="set-input" id="reps-${cardId}-${i}"
+            style="background: ${PENDING.inputBg}; border: 1px solid ${PENDING.inputBorder}; color: ${PENDING.textColor};" />
+        </div>
+        <div class="w-12 flex justify-center">
+          <button class="check-btn" id="btn-${cardId}-${i}" onclick="logSet('${cardId}', ${i})"></button>
+        </div>
+      </div>
+    `;
+  });
+  container.innerHTML = html;
+}
+
+function logSet(cardId, index) {
+  if (cardState[cardId][index] !== 'idle') return;
+  cardState[cardId][index] = 'saving';
+
+  const btn = document.getElementById(`btn-${cardId}-${index}`);
+  const reps = CARDS[cardId].sets[index].reps;
+  const result = getSetState(reps);
+  const colors = COLORS[result];
+
+  btn.classList.add('saving');
+
+  // Start SVG border spinner (colored to match expected state)
+  const svgNS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(svgNS, 'svg');
+  svg.setAttribute('class', 'spinner-svg');
+  svg.setAttribute('width', '40');
+  svg.setAttribute('height', '40');
+  svg.setAttribute('viewBox', '0 0 40 40');
+  svg.id = 'wait-el';
+  const rect = document.createElementNS(svgNS, 'rect');
+  rect.setAttribute('x', '2');
+  rect.setAttribute('y', '2');
+  rect.setAttribute('width', '36');
+  rect.setAttribute('height', '36');
+  rect.setAttribute('rx', '8');
+  rect.setAttribute('ry', '8');
+  rect.setAttribute('fill', 'none');
+  rect.setAttribute('stroke', colors.spinner);
+  rect.setAttribute('stroke-width', '2');
+  rect.setAttribute('pathLength', '100');
+  svg.appendChild(rect);
+  btn.appendChild(svg);
+  btn.style.borderColor = 'transparent';
+
+  // Simulate BE delay → success
+  setTimeout(() => {
+    cardState[cardId][index] = 'done';
+
+    // Remove spinner
+    btn.classList.remove('saving');
+    const waitEl = btn.querySelector('#wait-el');
+    if (waitEl) waitEl.remove();
+
+    // Play success
+    playSuccess(cardId, index, btn, result);
+  }, SAVE_DELAY);
+}
+
+function playSuccess(cardId, index, btn, result) {
+  const colors = COLORS[result];
+  const weightInput = document.getElementById(`weight-${cardId}-${index}`);
+  const repsInput = document.getElementById(`reps-${cardId}-${index}`);
+
+  // Fill button
+  btn.style.borderColor = 'transparent';
+  btn.style.background = colors.btnBg;
+  btn.style.cursor = 'default';
+
+  // Draw icon
+  btn.innerHTML = ICONS[result];
+
+  // Ripple ring (colored to match state)
+  const ring = document.createElement('div');
+  ring.className = 'ripple-ring';
+  ring.style.borderColor = colors.ripple;
+  btn.appendChild(ring);
+  setTimeout(() => ring.remove(), 500);
+
+  // Transition inputs
+  weightInput.style.background = colors.inputBg;
+  weightInput.style.borderColor = colors.inputBorder;
+  weightInput.style.color = colors.inputText;
+  repsInput.style.background = colors.inputBg;
+  repsInput.style.borderColor = colors.inputBorder;
+  repsInput.style.color = colors.inputText;
+}
+
+function resetCard(cardId) {
+  cardState[cardId] = CARDS[cardId].sets.map(() => 'idle');
+  buildSetsHTML(cardId);
+}
+
+// Init
+Object.keys(CARDS).forEach(buildSetsHTML);
+</script>
+
+</body>
+</html>
