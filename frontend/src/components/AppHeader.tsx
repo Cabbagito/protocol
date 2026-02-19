@@ -97,7 +97,7 @@ export default function AppHeader({
               borderBottom: '1px solid rgba(255,255,255,0.04)',
             }}
           >
-            <div className="px-4 py-3">
+            <div className="px-4 pt-3 pb-4">
               {drawerContent}
             </div>
           </div>
