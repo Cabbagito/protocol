@@ -88,11 +88,13 @@ export default function AppHeader({
       {/* Expandable drawer */}
       {drawerContent && (
         <div
-          className="overflow-hidden transition-all duration-300 ease-in-out"
-          style={{ maxHeight: drawerExpanded ? '300px' : '0px' }}
+          className="grid transition-[grid-template-rows] duration-300 ease-in-out"
+          style={{ gridTemplateRows: drawerExpanded ? '1fr' : '0fr' }}
         >
-          <div className="px-4 py-3">
-            {drawerContent}
+          <div className="overflow-hidden min-h-0">
+            <div className="px-4 py-3">
+              {drawerContent}
+            </div>
           </div>
         </div>
       )}

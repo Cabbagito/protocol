@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { getCurrentPosition } from '../lib/mesoUtils'
 import type { Mesocycle } from '../types'
@@ -12,7 +13,9 @@ const cellStyles: Record<CellState, React.CSSProperties> = {
   current: {
     background: 'rgba(2,132,199,0.15)',
     border: '2px solid #0284c7',
+    boxShadow: '0 0 0 3px rgba(56,189,248,0.35)',
     animation: 'pulse-current 2s ease-in-out infinite',
+    willChange: 'opacity',
   },
   pending: {
     background: '#162a3e',
@@ -25,7 +28,9 @@ const cellStyles: Record<CellState, React.CSSProperties> = {
   'deload-current': {
     background: 'rgba(234,179,8,0.15)',
     border: '2px solid #eab308',
+    boxShadow: '0 0 0 3px rgba(234,179,8,0.35)',
     animation: 'pulse-deload 2s ease-in-out infinite',
+    willChange: 'opacity',
   },
   'deload-pending': {
     background: 'rgba(234,179,8,0.06)',
@@ -34,12 +39,16 @@ const cellStyles: Record<CellState, React.CSSProperties> = {
   viewing: {
     background: 'rgba(148,163,184,0.08)',
     border: '2px solid #64748b',
+    boxShadow: '0 0 0 3px rgba(148,163,184,0.35)',
     animation: 'pulse-viewing 2s ease-in-out infinite',
+    willChange: 'opacity',
   },
   'deload-viewing': {
     background: 'rgba(148,163,184,0.08)',
     border: '2px solid #64748b',
+    boxShadow: '0 0 0 3px rgba(148,163,184,0.35)',
     animation: 'pulse-viewing 2s ease-in-out infinite',
+    willChange: 'opacity',
   },
 }
 
@@ -65,7 +74,7 @@ export default function MesoGrid({ mesocycle, compact = false, viewingWeek, view
   const numWeeks = weeks.length
   const sessionNames = weeks[0]?.sessions.map(s => s.session_name) ?? []
 
-  const currentPos = getCurrentPosition(mesocycle.structure)
+  const currentPos = useMemo(() => getCurrentPosition(mesocycle.structure), [mesocycle.structure])
   const currentWi = currentPos?.weekIndex ?? -1
   const currentSi = currentPos?.sessionIndex ?? -1
 
@@ -114,7 +123,6 @@ export default function MesoGrid({ mesocycle, compact = false, viewingWeek, view
       className="overflow-x-auto"
       style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
     >
-      <style>{`.meso-grid-scroll::-webkit-scrollbar { display: none; }`}</style>
       <div
         className="meso-grid-scroll"
         style={{

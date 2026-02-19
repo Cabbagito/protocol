@@ -8,7 +8,7 @@ export default function ProgressBar({ percent }: ProgressBarProps) {
   return (
     <div className="relative h-[3px] w-full" style={{ background: '#162a3e' }}>
       <div
-        className="absolute left-0 top-0 h-full rounded-r-full progress-glow transition-all duration-500"
+        className="absolute left-0 top-0 h-full rounded-r-full progress-glow transition-[width] duration-500"
         style={{ width: `${clamped}%`, background: '#4ade80' }}
       />
     </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo, memo } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useToast } from '../components/Toast'
@@ -812,7 +812,7 @@ function ExerciseCard({ exercise, sets, allSets, targetRir, onUpdateSet, onCompl
             onComplete={onCompleteSet}
             onUncomplete={onUncompleteSet}
             locked={locked}
-            animPhaseRef={animPhaseRef}
+            animPhase={animPhaseRef.current.get(`${exercise.exercise_id}:${set.set_num}`)}
             onClearAnim={onClearAnim}
           />
         ))}
@@ -855,7 +855,7 @@ interface SetRowProps {
   onComplete: (exerciseId: string, setNum: number) => void
   onUncomplete: (exerciseId: string, setNum: number) => void
   locked?: boolean
-  animPhaseRef: React.MutableRefObject<Map<string, 'saving' | 'success'>>
+  animPhase?: 'saving' | 'success'
   onClearAnim: (exerciseId: string, setNum: number) => void
 }
 
@@ -899,7 +899,7 @@ const SET_TYPE_LABELS: Record<string, { label: string; color: string; bg: string
 
 const STRAIGHT_PILL = { color: '#cbd5e1', bg: 'rgba(255,255,255,0.04)', border: 'rgba(255,255,255,0.12)' }
 
-function SetRow({ set, exercise, allSets, onUpdate, onComplete, onUncomplete, locked, animPhaseRef, onClearAnim }: SetRowProps) {
+const SetRow = memo(function SetRow({ set, exercise, allSets, onUpdate, onComplete, onUncomplete, locked, animPhase, onClearAnim }: SetRowProps) {
   const [typePopoverOpen, setTypePopoverOpen] = useState(false)
   const [jiggleTarget, setJiggleTarget] = useState<'weight' | 'reps' | null>(null)
   const jiggleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -1100,7 +1100,6 @@ function SetRow({ set, exercise, allSets, onUpdate, onComplete, onUncomplete, lo
       {/* Check / State button */}
       <div className="w-12 flex justify-center">
         {(() => {
-          const animPhase = animPhaseRef.current.get(`${set.exercise_id}:${set.set_num}`)
           if (locked) {
             return (
               <div
@@ -1148,7 +1147,7 @@ function SetRow({ set, exercise, allSets, onUpdate, onComplete, onUncomplete, lo
       </div>
     </div>
   )
-}
+})
 
 const SET_ANIM_CONFIG: Record<Exclude<SetState, 'pending'>, { bg: string; spinner: string; ripple: string; iconPath: string; strokeWidth: number }> = {
   logged:   { bg: '#0284c7', spinner: '#0ea5e9', ripple: '#0ea5e9', iconPath: 'M5 13l4 4L19 7',   strokeWidth: 3 },

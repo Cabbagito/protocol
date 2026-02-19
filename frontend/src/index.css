@@ -308,16 +308,16 @@
   .mono { font-family: 'JetBrains Mono', 'SF Mono', monospace; }
 
   @keyframes pulse-current {
-    0%, 100% { box-shadow: 0 0 0 3px rgba(56,189,248,0.15); }
-    50%      { box-shadow: 0 0 0 3px rgba(56,189,248,0.35); }
+    0%, 100% { opacity: 0.43; }
+    50%      { opacity: 1; }
   }
   @keyframes pulse-deload {
-    0%, 100% { box-shadow: 0 0 0 3px rgba(234,179,8,0.15); }
-    50%      { box-shadow: 0 0 0 3px rgba(234,179,8,0.35); }
+    0%, 100% { opacity: 0.43; }
+    50%      { opacity: 1; }
   }
   @keyframes pulse-viewing {
-    0%, 100% { box-shadow: 0 0 0 3px rgba(148,163,184,0.15); }
-    50%      { box-shadow: 0 0 0 3px rgba(148,163,184,0.35); }
+    0%, 100% { opacity: 0.43; }
+    50%      { opacity: 1; }
   }
 
   @keyframes slide-up {
@@ -327,6 +327,8 @@
   .slide-up {
     animation: slide-up 0.25s cubic-bezier(0.33, 1, 0.68, 1) both;
   }
+
+  .meso-grid-scroll::-webkit-scrollbar { display: none; }
 
   .pb-safe {
     padding-bottom: max(12px, env(safe-area-inset-bottom));
