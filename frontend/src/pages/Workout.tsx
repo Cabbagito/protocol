@@ -778,6 +778,7 @@ type SetState = 'pending' | 'logged' | 'exceeded' | 'under'
 
 function getSetState(set: WorkingSet): SetState {
   if (!set.completed) return 'pending'
+  if (set.set_type === 'myorep_match') return 'logged'
   if ((set.reps ?? 0) > set.target_reps) return 'exceeded'
   if ((set.reps ?? 0) < set.target_reps) return 'under'
   return 'logged'
@@ -806,17 +807,32 @@ const SET_STYLES: Record<SetState, { inputBg: string; inputBorder: string; textC
   },
 }
 
-const SET_TYPE_LABELS: Record<string, { label: string; color: string; bg: string }> = {
-  myorep: { label: 'MR', color: '#2dd4bf', bg: 'rgba(45,212,191,0.12)' },
-  myorep_match: { label: 'MM', color: '#fbbf24', bg: 'rgba(251,191,36,0.12)' },
+const SET_TYPE_LABELS: Record<string, { label: string; color: string; bg: string; border: string; rowBg: string }> = {
+  myorep: { label: 'MR', color: '#2dd4bf', bg: 'rgba(45,212,191,0.12)', border: 'rgba(45,212,191,0.3)', rowBg: 'rgba(45,212,191,0.04)' },
+  myorep_match: { label: 'MM', color: '#fbbf24', bg: 'rgba(251,191,36,0.12)', border: 'rgba(251,191,36,0.3)', rowBg: 'rgba(251,191,36,0.05)' },
 }
+
+const STRAIGHT_PILL = { color: '#cbd5e1', bg: 'rgba(255,255,255,0.04)', border: 'rgba(255,255,255,0.12)' }
 
 function SetRow({ set, exercise, allSets, onUpdate, onComplete, onUncomplete, locked }: SetRowProps) {
   const [typePopoverOpen, setTypePopoverOpen] = useState(false)
+  const [jiggleTarget, setJiggleTarget] = useState<'weight' | 'reps' | null>(null)
+  const jiggleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const state = getSetState(set)
   const styles = SET_STYLES[state]
   const setType = set.set_type ?? 'straight'
   const typeInfo = SET_TYPE_LABELS[setType]
+
+  // Cleanup jiggle timer on unmount
+  useEffect(() => {
+    return () => { if (jiggleTimerRef.current) clearTimeout(jiggleTimerRef.current) }
+  }, [])
+
+  const triggerLockJiggle = useCallback((target: 'weight' | 'reps') => {
+    setJiggleTarget(target)
+    if (jiggleTimerRef.current) clearTimeout(jiggleTimerRef.current)
+    jiggleTimerRef.current = setTimeout(() => setJiggleTarget(null), 700)
+  }, [])
 
   // Resolve myorep_match reference set: find nearest non-MM set before this one
   const mmRef = useMemo(() => {
@@ -843,6 +859,7 @@ function SetRow({ set, exercise, allSets, onUpdate, onComplete, onUncomplete, lo
 
   const isMatchLocked = setType === 'myorep_match'
   const mmRefLogged = mmRef?.completed ?? false
+  const mmWaiting = isMatchLocked && !mmRefLogged && !set.completed
 
   const handleSetTypeChange = (newType: SetType) => {
     onUpdate(exercise.exercise_id, set.set_num, 'set_type', newType)
@@ -868,19 +885,27 @@ function SetRow({ set, exercise, allSets, onUpdate, onComplete, onUncomplete, lo
 
   const isFirstSet = set.set_num === 1
 
+  // Row tint
+  const rowBg = typeInfo
+    ? (isMatchLocked && mmWaiting ? 'rgba(251,191,36,0.03)' : typeInfo.rowBg)
+    : undefined
+
   return (
-    <div className="flex items-center gap-2 mb-1.5 rounded-lg px-2 py-1.5">
+    <div className="flex items-center gap-2 mb-1.5 rounded-lg px-2 py-1.5" style={{ background: rowBg }}>
       {/* Set number / type indicator */}
       <div className="w-8 flex justify-center relative">
         <button
           onClick={() => !locked && !set.completed && setTypePopoverOpen(!typePopoverOpen)}
           disabled={locked || set.completed}
-          className="min-w-[24px] h-6 rounded flex items-center justify-center text-[11px] font-semibold disabled:cursor-default"
+          className="min-w-[28px] h-7 rounded-md flex items-center justify-center text-[11px] font-semibold disabled:cursor-default"
           style={typeInfo ? {
             background: typeInfo.bg,
             color: typeInfo.color,
+            border: `1px solid ${typeInfo.border}`,
           } : {
-            color: '#475569',
+            color: STRAIGHT_PILL.color,
+            background: STRAIGHT_PILL.bg,
+            border: `1px solid ${STRAIGHT_PILL.border}`,
           }}
         >
           {typeInfo ? typeInfo.label : set.set_num}
@@ -943,11 +968,19 @@ function SetRow({ set, exercise, allSets, onUpdate, onComplete, onUncomplete, lo
             color: isMatchLocked ? '#fbbf24' : styles.textColor,
             opacity: isMatchLocked && !mmRefLogged ? 0.5 : 1,
           }}
+          onClick={() => { if (isMatchLocked && !set.completed) triggerLockJiggle('weight') }}
         />
-        {isMatchLocked && (
-          <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[9px] font-semibold" style={{ color: 'rgba(251,191,36,0.5)' }}>
-            MATCH
-          </span>
+        {/* Pulsing lock when waiting */}
+        {mmWaiting && !jiggleTarget && (
+          <svg className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 lock-pulse pointer-events-none" style={{ color: '#fbbf24' }} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
+          </svg>
+        )}
+        {/* Jiggle lock on tap */}
+        {jiggleTarget === 'weight' && (
+          <svg className="absolute left-1/2 top-1/2 w-5 h-5 lock-jiggle pointer-events-none" style={{ color: '#fbbf24' }} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
+          </svg>
         )}
       </div>
 
@@ -969,11 +1002,13 @@ function SetRow({ set, exercise, allSets, onUpdate, onComplete, onUncomplete, lo
             color: isMatchLocked ? '#fbbf24' : styles.textColor,
             opacity: isMatchLocked && !mmRefLogged ? 0.5 : 1,
           }}
+          onClick={() => { if (isMatchLocked && !set.completed) triggerLockJiggle('weight') }}
         />
-        {isMatchLocked && (
-          <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[9px] font-semibold" style={{ color: 'rgba(251,191,36,0.5)' }}>
-            MATCH
-          </span>
+        {/* Pulsing lock when waiting */}
+        {mmWaiting && !jiggleTarget && (
+          <svg className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 lock-pulse pointer-events-none" style={{ color: '#fbbf24' }} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
+          </svg>
         )}
       </div>
 

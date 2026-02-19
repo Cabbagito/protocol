@@ -119,6 +119,27 @@
     color: #2a4a64;
   }
 
+  @keyframes lock-jiggle {
+    0%   { transform: translate(-50%, -50%) rotate(0deg);   opacity: 1; }
+    15%  { transform: translate(-50%, -50%) rotate(-12deg);  opacity: 1; }
+    30%  { transform: translate(-50%, -50%) rotate(10deg);   opacity: 1; }
+    45%  { transform: translate(-50%, -50%) rotate(-8deg);   opacity: 0.8; }
+    60%  { transform: translate(-50%, -50%) rotate(6deg);    opacity: 0.6; }
+    80%  { transform: translate(-50%, -50%) rotate(0deg);    opacity: 0.3; }
+    100% { transform: translate(-50%, -50%) rotate(0deg);    opacity: 0; }
+  }
+  .lock-jiggle {
+    animation: lock-jiggle 0.7s ease forwards;
+  }
+
+  @keyframes lock-pulse {
+    0%, 100% { opacity: 0.35; }
+    50%      { opacity: 0.6; }
+  }
+  .lock-pulse {
+    animation: lock-pulse 2s ease-in-out infinite;
+  }
+
   .scrollbar-hide {
     -ms-overflow-style: none;
     scrollbar-width: none;

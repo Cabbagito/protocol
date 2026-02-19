@@ -9,6 +9,7 @@ import type { MesoExercise, MesoSet } from '../types'
 type SetState = 'met' | 'exceeded' | 'under'
 
 function getSetState(set: MesoSet): SetState {
+  if (set.set_type === 'myorep_match') return 'met'
   const reps = set.reps ?? 0
   if (reps > set.target_reps) return 'exceeded'
   if (reps >= set.target_reps) return 'met'
@@ -21,10 +22,12 @@ const SET_COLORS: Record<SetState, { text: string; icon: string; bg: string }> =
   under: { text: '#f87171', icon: '#ef4444', bg: 'rgba(239,68,68,0.04)' },
 }
 
-const SET_TYPE_LABELS: Record<string, { label: string; color: string; bg: string }> = {
-  myorep: { label: 'MR', color: '#2dd4bf', bg: 'rgba(45,212,191,0.12)' },
-  myorep_match: { label: 'MM', color: '#fbbf24', bg: 'rgba(251,191,36,0.12)' },
+const SET_TYPE_LABELS: Record<string, { label: string; color: string; bg: string; border: string; rowBg: string }> = {
+  myorep: { label: 'MR', color: '#2dd4bf', bg: 'rgba(45,212,191,0.12)', border: 'rgba(45,212,191,0.3)', rowBg: 'rgba(45,212,191,0.04)' },
+  myorep_match: { label: 'MM', color: '#fbbf24', bg: 'rgba(251,191,36,0.12)', border: 'rgba(251,191,36,0.3)', rowBg: 'rgba(251,191,36,0.05)' },
 }
+
+const STRAIGHT_PILL = { color: '#cbd5e1', bg: 'rgba(255,255,255,0.04)', border: 'rgba(255,255,255,0.12)' }
 
 function SetStatusIcon({ state }: { state: SetState }) {
   if (state === 'met') {
@@ -107,14 +110,14 @@ export default function WorkoutDetail() {
   const totalVolume = allLoggedSets.reduce((sum, s) => sum + (s.weight ?? 0) * (s.reps ?? 0), 0)
   const exerciseCount = activeExercises.filter((ex) => ex.sets.some((s) => s.logged)).length
 
-  // On-target percentage (reps >= target_reps)
-  const onTargetCount = allLoggedSets.filter((s) => (s.reps ?? 0) >= s.target_reps).length
-  const onTargetPct = totalSets > 0 ? Math.round((onTargetCount / totalSets) * 100) : 0
+  // Performance breakdown using getSetState so MM sets are always 'met'
+  const metCount = allLoggedSets.filter((s) => getSetState(s) === 'met').length
+  const exceededCount = allLoggedSets.filter((s) => getSetState(s) === 'exceeded').length
+  const underCount = allLoggedSets.filter((s) => getSetState(s) === 'under').length
 
-  // Performance breakdown
-  const metCount = allLoggedSets.filter((s) => (s.reps ?? 0) === s.target_reps).length
-  const exceededCount = allLoggedSets.filter((s) => (s.reps ?? 0) > s.target_reps).length
-  const underCount = allLoggedSets.filter((s) => (s.reps ?? 0) < s.target_reps).length
+  // On-target percentage (met + exceeded)
+  const onTargetCount = metCount + exceededCount
+  const onTargetPct = totalSets > 0 ? Math.round((onTargetCount / totalSets) * 100) : 0
   const perfTotal = metCount + exceededCount + underCount
   const metPct = perfTotal > 0 ? (metCount / perfTotal) * 100 : 0
   const exceededPct = perfTotal > 0 ? (exceededCount / perfTotal) * 100 : 0
@@ -320,19 +323,24 @@ export default function WorkoutDetail() {
                       style={{
                         gridTemplateColumns: '36px 1fr 1fr 1fr 28px',
                         padding: '6px 8px',
-                        background: i % 2 === 0 ? colors.bg : undefined,
+                        background: typeInfo ? typeInfo.rowBg : (i % 2 === 0 ? colors.bg : undefined),
                       }}
                     >
                       <div className="flex justify-center">
                         {typeInfo ? (
                           <span
-                            className="text-[10px] font-semibold px-1.5 py-0.5 rounded"
-                            style={{ background: typeInfo.bg, color: typeInfo.color }}
+                            className="inline-flex items-center justify-center min-w-[28px] h-7 rounded-md text-[10px] font-semibold"
+                            style={{ background: typeInfo.bg, color: typeInfo.color, border: `1px solid ${typeInfo.border}` }}
                           >
                             {typeInfo.label}
                           </span>
                         ) : (
-                          <span className="mono text-[11px] text-slate-600">{set.set_num}</span>
+                          <span
+                            className="inline-flex items-center justify-center min-w-[28px] h-7 rounded-md mono text-[11px]"
+                            style={{ color: STRAIGHT_PILL.color, background: STRAIGHT_PILL.bg, border: `1px solid ${STRAIGHT_PILL.border}` }}
+                          >
+                            {set.set_num}
+                          </span>
                         )}
                       </div>
                       <div className="mono text-[13px] font-medium text-center" style={{ color: colors.text }}>
