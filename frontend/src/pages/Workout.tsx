@@ -194,6 +194,43 @@ export default function Workout() {
       })),
       notes: null,
       exercise_updates: exerciseUpdates,
+    }).then(() => {
+      // Update cached templates so navigating away and back shows correct logged state
+      const loggedKeys = new Set(
+        completed.map(s => `${s.exercise_id}:${s.set_num}`)
+      )
+      const skippedIds = new Set(
+        exerciseUpdates.filter(eu => eu.skipped).map(eu => eu.exercise_id)
+      )
+
+      queryClient.setQueriesData<WorkoutTemplate>(
+        { queryKey: ['workouts', 'template', mesocycleId] },
+        (old) => {
+          if (!old) return old
+          return {
+            ...old,
+            exercises: old.exercises.map(ex => ({
+              ...ex,
+              skipped: skippedIds.has(ex.exercise_id),
+              sets: ex.sets.map(s => {
+                const key = `${ex.exercise_id}:${s.set_num}`
+                if (loggedKeys.has(key)) {
+                  const logged = completed.find(
+                    c => c.exercise_id === ex.exercise_id && c.set_num === s.set_num
+                  )!
+                  return { ...s, weight: logged.weight, reps: logged.reps, rir: logged.rir, logged: true, set_type: logged.set_type ?? s.set_type }
+                }
+                return { ...s, logged: false }
+              }),
+            })),
+          }
+        }
+      )
+
+      // Invalidate mesocycle caches (they compute derived fields server-side)
+      queryClient.invalidateQueries({ queryKey: queryKeys.mesocycles.detail(mesocycleId) })
+      queryClient.invalidateQueries({ queryKey: queryKeys.mesocycles.active })
+      queryClient.invalidateQueries({ queryKey: queryKeys.workouts.history(mesocycleId) })
     }).catch(() => {
       toast.showError('Auto-save failed')
       // On error, remove saving keys so no success animation plays
@@ -221,7 +258,7 @@ export default function Workout() {
         bumpAnim()
       }, 600)
     })
-  }, [mesocycleId, template, logSets, toast, isFutureSession, skippedExercises, bumpAnim])
+  }, [mesocycleId, template, logSets, toast, isFutureSession, skippedExercises, bumpAnim, queryClient])
 
   // Trigger auto-save when completed count or skipped set changes
   useEffect(() => {
