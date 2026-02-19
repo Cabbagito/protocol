@@ -85,13 +85,18 @@ export default function AppHeader({
       {/* Progress bar (replaces border) */}
       {hasProgressBar && <ProgressBar percent={progressPercent} />}
 
-      {/* Expandable drawer */}
+      {/* Expandable drawer — absolutely positioned overlay, animated with translateY (GPU-only) */}
       {drawerContent && (
-        <div
-          className="grid transition-[grid-template-rows] duration-300 ease-in-out"
-          style={{ gridTemplateRows: drawerExpanded ? '1fr' : '0fr' }}
-        >
-          <div className="overflow-hidden min-h-0">
+        <div className="absolute left-0 right-0 overflow-hidden" style={{ top: '100%' }}>
+          <div
+            className="transition-transform duration-300 ease-in-out"
+            style={{
+              transform: drawerExpanded ? 'translateY(0)' : 'translateY(-100%)',
+              willChange: 'transform',
+              background: '#0d1b2a',
+              borderBottom: '1px solid rgba(255,255,255,0.04)',
+            }}
+          >
             <div className="px-4 py-3">
               {drawerContent}
             </div>
