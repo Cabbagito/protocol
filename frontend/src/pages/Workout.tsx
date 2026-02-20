@@ -5,6 +5,7 @@ import { useToast } from '../components/Toast'
 // Icons inlined in CompletedButton
 import { useLogSets, useMesocycle, useExercises, useUpdateExerciseNote, useReplaceExercise, queryKeys } from '../api/hooks'
 import { api } from '../api/client'
+import PageLoader from '../components/PageLoader'
 import AppHeader from '../components/AppHeader'
 import RirBadge from '../components/RirBadge'
 import MuscleGroupBadge from '../components/MuscleGroupBadge'
@@ -354,7 +355,7 @@ export default function Workout() {
   }, [mesocycle, currentPos])
 
   if (isLoading) {
-    return <div className="text-slate-500 text-center py-8">Loading workout...</div>
+    return <PageLoader className="min-h-[60vh]" />
   }
 
   if (!template) {

@@ -97,7 +97,7 @@ export default function App() {
     <SplashScreen>
     <QueryClientProvider client={queryClient}>
       <ChunkErrorBoundary>
-      <Suspense fallback={<PageLoader />}>
+      <Suspense fallback={<PageLoader className="min-h-[60vh]" />}>
         <Routes>
           <Route path="/login" element={<Login onLogin={() => setIsAuthenticated(true)} />} />
           <Route
@@ -105,7 +105,7 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <Layout>
-                  <Suspense fallback={<PageLoader />}>
+                  <Suspense fallback={<PageLoader className="min-h-[60vh]" />}>
                     <Routes>
                       <Route path="/" element={<Dashboard />} />
                       <Route path="/exercises" element={<Exercises />} />

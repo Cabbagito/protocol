@@ -4,6 +4,7 @@ import { useToast } from '../components/Toast'
 import { ChevronRightIcon } from '../components/Icons'
 import AppHeader from '../components/AppHeader'
 import PageLoader from '../components/PageLoader'
+import ProtocolMark from '../components/ProtocolMark'
 import { useSplits, useCreateSplit, useSplit, useExercises } from '../api/hooks'
 import { getMuscleColor } from '../lib/muscleColors'
 import type { SplitListItem } from '../types'
@@ -126,7 +127,7 @@ function SplitCard({ split }: { split: SplitListItem }) {
 
       {isLoading ? (
         <div className="h-16 flex items-center justify-center">
-          <div className="text-[11px]" style={{ color: '#475569' }}>Loading...</div>
+          <ProtocolMark mode="loading" className="w-10 h-10" />
         </div>
       ) : splitDetail ? (
         <>
