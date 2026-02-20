@@ -51,6 +51,9 @@ htmlcov/
 # Claude Code
 .claude/worktrees/
 
+# Playwright
+.playwright-mcp/
+
 # Temporary files
 tmp/
 temp/
