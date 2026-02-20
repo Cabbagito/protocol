@@ -88,7 +88,7 @@ export default function AppHeader({
       {/* Expandable drawer — absolutely positioned overlay, animated with translateY (GPU-only) */}
       {drawerContent && (
         <div
-          className="absolute left-0 right-0 overflow-hidden"
+          className="absolute left-0 right-0 overflow-hidden pointer-events-none"
           style={{ top: '100%', paddingBottom: 60 }}
         >
           <div
@@ -99,7 +99,7 @@ export default function AppHeader({
               padding: '6px 8px 0',
             }}
           >
-            <div style={{
+            <div className="pointer-events-auto" style={{
               background: '#132438',
               borderRadius: 12,
               boxShadow: '0 16px 48px rgba(0,0,0,0.6)',
