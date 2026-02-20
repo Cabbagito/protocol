@@ -19,6 +19,7 @@ export default function Progress() {
   const { data: mesocycle } = useActiveMesocycle()
   const { data: workouts = [] } = useWorkoutHistory(mesocycle?.id ?? '')
   const [selectedExercise, setSelectedExercise] = useState<string>('')
+  const [metric, setMetric] = useState<'strength' | 'stimulus'>('strength')
 
   // Auto-select first exercise
   if (exercises.length > 0 && !selectedExercise) {
@@ -126,7 +127,7 @@ export default function Progress() {
         <select
           value={selectedExercise}
           onChange={(e) => setSelectedExercise(e.target.value)}
-          className="input mb-4"
+          className="input mb-3"
         >
           {exercises.map((ex) => (
             <option key={ex.id} value={ex.id}>
@@ -135,13 +136,30 @@ export default function Progress() {
           ))}
         </select>
 
+        {/* Strength / Stimulus toggle */}
+        <div className="flex rounded-lg overflow-hidden mb-4" style={{ border: '1px solid #1e3a52' }}>
+          {(['strength', 'stimulus'] as const).map((m) => (
+            <button
+              key={m}
+              onClick={() => setMetric(m)}
+              className="flex-1 py-1.5 text-[12px] font-medium transition-colors"
+              style={{
+                background: metric === m ? 'rgba(139,92,246,0.15)' : 'transparent',
+                color: metric === m ? '#a78bfa' : '#64748b',
+              }}
+            >
+              {m === 'strength' ? 'Strength' : 'Stimulus'}
+            </button>
+          ))}
+        </div>
+
         {progressData.length === 0 ? (
           <div className="text-slate-500 text-sm text-center py-8">
             No data yet for this exercise.
           </div>
         ) : (
           <>
-            {/* Weight Progress Chart */}
+            {/* Progress Chart */}
             <div className="h-48 mb-4">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={progressData}>
@@ -155,7 +173,16 @@ export default function Progress() {
                       return `${d.getMonth() + 1}/${d.getDate()}`
                     }}
                   />
-                  <YAxis stroke="#94a3b8" fontSize={12} domain={['auto', 'auto']} />
+                  <YAxis
+                    stroke="#94a3b8"
+                    fontSize={12}
+                    domain={['auto', 'auto']}
+                    tickFormatter={metric === 'stimulus' ? (v: number) => {
+                      if (v >= 10000) return `${(v / 1000).toFixed(0)}k`
+                      if (v >= 1000) return `${(v / 1000).toFixed(1)}k`
+                      return v.toFixed(0)
+                    } : undefined}
+                  />
                   <Tooltip
                     contentStyle={{
                       backgroundColor: '#1e293b',
@@ -163,12 +190,15 @@ export default function Progress() {
                       borderRadius: '8px',
                     }}
                     labelStyle={{ color: '#f1f5f9' }}
-                    formatter={(value: number) => [`${value} kg`, 'Max Weight']}
+                    formatter={(value: number) => [
+                      metric === 'strength' ? `${value} kg` : `${Math.round(value).toLocaleString()} kg`,
+                      metric === 'strength' ? 'Est. 1RM' : 'Volume',
+                    ]}
                     labelFormatter={(value) => new Date(value).toLocaleDateString()}
                   />
                   <Line
                     type="monotone"
-                    dataKey="max_weight"
+                    dataKey={metric === 'strength' ? 'best_e1rm' : 'volume'}
                     stroke="#8b5cf6"
                     strokeWidth={2}
                     dot={{ fill: '#8b5cf6', strokeWidth: 0 }}
@@ -179,25 +209,49 @@ export default function Progress() {
 
             {/* Stats */}
             <div className="grid grid-cols-2 gap-4 text-center">
-              <div className="bg-slate-800 rounded p-3">
-                <div className="text-xl font-bold text-protocol-400">
-                  {progressData.length > 0
-                    ? Math.max(...progressData.map((d) => d.max_weight))
-                    : 0}
-                  kg
-                </div>
-                <div className="text-xs text-slate-400">PR Weight</div>
-              </div>
-              <div className="bg-slate-800 rounded p-3">
-                <div className="text-xl font-bold text-protocol-400">
-                  {progressData.length > 0
-                    ? Math.round(
-                        progressData.reduce((sum, d) => sum + d.volume, 0) / progressData.length
-                      ).toLocaleString()
-                    : 0}
-                </div>
-                <div className="text-xs text-slate-400">Avg Volume</div>
-              </div>
+              {metric === 'strength' ? (
+                <>
+                  <div className="bg-slate-800 rounded p-3">
+                    <div className="text-xl font-bold text-protocol-400">
+                      {Math.max(...progressData.map((d) => d.best_e1rm)).toFixed(1)}
+                      <span className="text-sm ml-0.5">kg</span>
+                    </div>
+                    <div className="text-xs text-slate-400">PR Est. 1RM</div>
+                  </div>
+                  <div className="bg-slate-800 rounded p-3">
+                    <div className="text-xl font-bold text-protocol-400">
+                      {Math.max(...progressData.map((d) => d.max_weight))}
+                      <span className="text-sm ml-0.5">kg</span>
+                    </div>
+                    <div className="text-xs text-slate-400">PR Weight</div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="bg-slate-800 rounded p-3">
+                    <div className="text-xl font-bold text-protocol-400">
+                      {(() => {
+                        const peak = Math.max(...progressData.map((d) => d.volume))
+                        if (peak >= 10000) return `${(peak / 1000).toFixed(0)}k`
+                        if (peak >= 1000) return `${(peak / 1000).toFixed(1)}k`
+                        return peak.toFixed(0)
+                      })()}
+                    </div>
+                    <div className="text-xs text-slate-400">Peak Volume</div>
+                  </div>
+                  <div className="bg-slate-800 rounded p-3">
+                    <div className="text-xl font-bold text-protocol-400">
+                      {(() => {
+                        const avg = Math.round(progressData.reduce((sum, d) => sum + d.volume, 0) / progressData.length)
+                        if (avg >= 10000) return `${(avg / 1000).toFixed(0)}k`
+                        if (avg >= 1000) return `${(avg / 1000).toFixed(1)}k`
+                        return avg.toFixed(0)
+                      })()}
+                    </div>
+                    <div className="text-xs text-slate-400">Avg Volume</div>
+                  </div>
+                </>
+              )}
             </div>
           </>
         )}

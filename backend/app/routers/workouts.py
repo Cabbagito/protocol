@@ -60,6 +60,7 @@ class ProgressEntry(BaseModel):
     date: str
     week_number: int
     max_weight: float
+    best_e1rm: float
     total_reps: int
     total_sets: int
     volume: float
@@ -247,6 +248,10 @@ async def get_exercise_progress(
                     if not logged_sets:
                         continue
                     max_weight = max(s.get("weight", 0) or 0 for s in logged_sets)
+                    best_e1rm = max(
+                        (s.get("weight", 0) or 0) * (1 + (s.get("reps", 0) or 0) / 30)
+                        for s in logged_sets
+                    )
                     total_reps = sum(s.get("reps", 0) or 0 for s in logged_sets)
                     total_sets = len(logged_sets)
                     volume = sum(
@@ -257,6 +262,7 @@ async def get_exercise_progress(
                         "date": session.get("date") or meso.started_at.isoformat(),
                         "week_number": week["week_number"],
                         "max_weight": max_weight,
+                        "best_e1rm": round(best_e1rm, 1),
                         "total_reps": total_reps,
                         "total_sets": total_sets,
                         "volume": volume,

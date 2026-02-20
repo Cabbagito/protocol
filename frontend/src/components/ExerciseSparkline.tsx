@@ -13,7 +13,7 @@ export default function ExerciseSparkline({ exerciseId, color }: ExerciseSparkli
   }
 
   const points = progressData.slice(-6)
-  const weights = points.map((p) => p.max_weight)
+  const weights = points.map((p) => p.best_e1rm)
   const min = Math.min(...weights)
   const max = Math.max(...weights)
   const range = max - min || 1
@@ -21,7 +21,7 @@ export default function ExerciseSparkline({ exerciseId, color }: ExerciseSparkli
   const svgPoints = points
     .map((p, i) => {
       const x = 2 + (i / Math.max(points.length - 1, 1)) * 44
-      const y = 18 - ((p.max_weight - min) / range) * 14
+      const y = 18 - ((p.best_e1rm - min) / range) * 14
       return `${x},${y}`
     })
     .join(' ')

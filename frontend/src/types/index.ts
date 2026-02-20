@@ -157,6 +157,7 @@ export interface ProgressEntry {
   date: string
   week_number: number
   max_weight: number
+  best_e1rm: number
   total_reps: number
   total_sets: number
   volume: number

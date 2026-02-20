@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useToast } from '../components/Toast'
 import AppHeader from '../components/AppHeader'
@@ -15,13 +16,27 @@ interface ExerciseProgression {
   exerciseId: string
   exerciseName: string
   muscleGroup: string
-  weights: { weekNum: number; weight: number }[]
-  currentWeight: number
-  delta: number
+  strengthData: { weekNum: number; value: number }[]
+  currentE1rm: number
+  e1rmDelta: number
+  stimulusData: { weekNum: number; value: number }[]
+  currentVolume: number
+  volumeDelta: number
+}
+
+function formatVolume(v: number): string {
+  if (v >= 10000) return `${(v / 1000).toFixed(0)}k`
+  if (v >= 1000) return `${(v / 1000).toFixed(1)}k`
+  return v.toFixed(0)
 }
 
 function getExerciseProgression(mesocycle: Mesocycle): ExerciseProgression[] {
-  const exerciseMap = new Map<string, { name: string; muscleGroup: string; weekWeights: Map<number, number> }>()
+  const exerciseMap = new Map<string, {
+    name: string
+    muscleGroup: string
+    weekE1rm: Map<number, number>
+    weekVolume: Map<number, number>
+  }>()
 
   for (const week of mesocycle.structure.weeks) {
     for (const session of week.sessions) {
@@ -30,16 +45,20 @@ function getExerciseProgression(mesocycle: Mesocycle): ExerciseProgression[] {
           exerciseMap.set(exercise.exercise_id, {
             name: exercise.exercise_name,
             muscleGroup: exercise.muscle_group,
-            weekWeights: new Map(),
+            weekE1rm: new Map(),
+            weekVolume: new Map(),
           })
         }
         const entry = exerciseMap.get(exercise.exercise_id)!
         for (const set of exercise.sets) {
           if (set.logged && set.weight !== null && set.weight > 0) {
-            const existing = entry.weekWeights.get(week.week_number) ?? 0
-            if (set.weight > existing) {
-              entry.weekWeights.set(week.week_number, set.weight)
+            const e1rm = set.weight * (1 + (set.reps ?? 0) / 30)
+            const existing = entry.weekE1rm.get(week.week_number) ?? 0
+            if (e1rm > existing) {
+              entry.weekE1rm.set(week.week_number, e1rm)
             }
+            const vol = set.weight * (set.reps ?? 0)
+            entry.weekVolume.set(week.week_number, (entry.weekVolume.get(week.week_number) ?? 0) + vol)
           }
         }
       }
@@ -48,23 +67,31 @@ function getExerciseProgression(mesocycle: Mesocycle): ExerciseProgression[] {
 
   const results: ExerciseProgression[] = []
   for (const [id, entry] of exerciseMap) {
-    if (entry.weekWeights.size < 2) continue
-    const sorted = [...entry.weekWeights.entries()].sort((a, b) => a[0] - b[0])
-    const weights = sorted.map(([weekNum, weight]) => ({ weekNum, weight }))
-    const first = weights[0]!.weight
-    const last = weights[weights.length - 1]!.weight
+    if (entry.weekE1rm.size < 2) continue
+    const sortedE1rm = [...entry.weekE1rm.entries()].sort((a, b) => a[0] - b[0])
+    const strengthData = sortedE1rm.map(([weekNum, value]) => ({ weekNum, value: Math.round(value * 10) / 10 }))
+    const sortedVol = [...entry.weekVolume.entries()].sort((a, b) => a[0] - b[0])
+    const stimulusData = sortedVol.map(([weekNum, value]) => ({ weekNum, value: Math.round(value) }))
+
+    const firstE1rm = strengthData[0]!.value
+    const lastE1rm = strengthData[strengthData.length - 1]!.value
+    const firstVol = stimulusData[0]!.value
+    const lastVol = stimulusData[stimulusData.length - 1]!.value
+
     results.push({
       exerciseId: id,
       exerciseName: entry.name,
       muscleGroup: entry.muscleGroup,
-      weights,
-      currentWeight: last,
-      delta: last - first,
+      strengthData,
+      currentE1rm: lastE1rm,
+      e1rmDelta: lastE1rm - firstE1rm,
+      stimulusData,
+      currentVolume: lastVol,
+      volumeDelta: lastVol - firstVol,
     })
   }
 
-  // Sort by total volume (most data points first), then by delta
-  results.sort((a, b) => b.weights.length - a.weights.length || b.delta - a.delta)
+  results.sort((a, b) => b.strengthData.length - a.strengthData.length || b.e1rmDelta - a.e1rmDelta)
   return results.slice(0, 6)
 }
 
@@ -159,6 +186,7 @@ export default function MesocycleDetail() {
   const { data: history = [] } = useWorkoutHistory(id!)
   const updateMesocycle = useUpdateMesocycle(id!)
   const deleteMesocycle = useDeleteMesocycle()
+  const [progressionMetric, setProgressionMetric] = useState<'strength' | 'stimulus'>('strength')
 
   const handleDeleteMesocycle = async () => {
     if (!confirm('Delete this mesocycle and all its workout logs?')) return
@@ -340,19 +368,40 @@ export default function MesocycleDetail() {
         {/* Exercise Progression */}
         {progression.length > 0 && (
           <div className="mt-5">
-            <span
-              className="text-[10px] font-semibold uppercase tracking-wider"
-              style={{ color: '#475569', letterSpacing: '0.08em' }}
-            >
-              Progression
-            </span>
+            <div className="flex items-center justify-between mb-2">
+              <span
+                className="text-[10px] font-semibold uppercase tracking-wider"
+                style={{ color: '#475569', letterSpacing: '0.08em' }}
+              >
+                Progression
+              </span>
+              <div className="flex rounded-md overflow-hidden" style={{ border: '1px solid #1e3a52' }}>
+                {(['strength', 'stimulus'] as const).map((m) => (
+                  <button
+                    key={m}
+                    onClick={() => setProgressionMetric(m)}
+                    className="px-2.5 py-0.5 text-[9px] font-medium transition-colors"
+                    style={{
+                      background: progressionMetric === m ? 'rgba(139,92,246,0.15)' : 'transparent',
+                      color: progressionMetric === m ? '#a78bfa' : '#475569',
+                    }}
+                  >
+                    {m === 'strength' ? 'Strength' : 'Stimulus'}
+                  </button>
+                ))}
+              </div>
+            </div>
             <div
-              className="-mx-4 px-4 mt-2 pb-2 flex gap-2.5 overflow-x-auto"
+              className="-mx-4 px-4 pb-2 flex gap-2.5 overflow-x-auto"
               style={{ scrollbarWidth: 'none', overscrollBehaviorX: 'contain' }}
             >
               <style>{`.prog-scroll::-webkit-scrollbar { display: none; }`}</style>
               {progression.map((ex) => {
                 const color = getMuscleColor(ex.muscleGroup)
+                const isStrength = progressionMetric === 'strength'
+                const data = isStrength ? ex.strengthData : ex.stimulusData
+                const current = isStrength ? ex.currentE1rm : ex.currentVolume
+                const delta = isStrength ? ex.e1rmDelta : ex.volumeDelta
                 return (
                   <div key={ex.exerciseId} className="card shrink-0" style={{ width: 160, padding: 12 }}>
                     <div className="flex items-center gap-1.5 mb-1">
@@ -367,17 +416,19 @@ export default function MesocycleDetail() {
                     <div className="text-[12px] font-medium mb-2 truncate" style={{ color: '#e2e8f0' }}>
                       {ex.exerciseName}
                     </div>
-                    <MesoSparkline weights={ex.weights.map((w) => w.weight)} color={color.primary} />
+                    <MesoSparkline weights={data.map((d) => d.value)} color={color.primary} />
                     <div className="flex items-baseline gap-1 mt-1">
                       <span className="font-mono text-[16px] font-bold" style={{ color: color.light }}>
-                        {ex.currentWeight}
+                        {isStrength ? current.toFixed(1) : formatVolume(current)}
                       </span>
-                      <span className="text-[9px]" style={{ color: '#475569' }}>kg</span>
+                      <span className="text-[9px]" style={{ color: '#475569' }}>
+                        {isStrength ? 'kg' : 'kg'}
+                      </span>
                       <span
                         className="font-mono text-[9px] ml-auto"
-                        style={{ color: ex.delta >= 0 ? '#22c55e' : '#ef4444' }}
+                        style={{ color: delta >= 0 ? '#22c55e' : '#ef4444' }}
                       >
-                        {ex.delta >= 0 ? '+' : ''}{ex.delta.toFixed(1)}
+                        {delta >= 0 ? '+' : '-'}{isStrength ? Math.abs(delta).toFixed(1) : formatVolume(Math.abs(delta))}
                       </span>
                     </div>
                   </div>
