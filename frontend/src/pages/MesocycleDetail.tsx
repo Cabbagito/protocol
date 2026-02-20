@@ -189,7 +189,11 @@ export default function MesocycleDetail() {
     return <div className="text-slate-400 text-center py-8">Mesocycle not found</div>
   }
 
-  const totalWorkouts = mesocycle.structure.weeks.length * (mesocycle.structure.weeks[0]?.sessions.length ?? 0)
+  const totalWorkouts = mesocycle.structure.weeks.reduce((count, week) =>
+    count + week.sessions.filter(session =>
+      session.exercises.some(ex => !ex.skipped)
+    ).length, 0
+  )
   const progressPercent = totalWorkouts > 0 ? Math.round((mesocycle.workouts_completed / totalWorkouts) * 100) : 0
 
   const currentPos = getCurrentPosition(mesocycle.structure)
@@ -203,8 +207,9 @@ export default function MesocycleDetail() {
       const week = mesocycle.structure.weeks[wi]!
       for (let si = 0; si < week.sessions.length; si++) {
         const session = week.sessions[si]!
-        const allLogged = session.exercises.length > 0 &&
-          session.exercises.every((ex) => ex.sets.every((s) => s.logged))
+        const nonSkipped = session.exercises.filter(ex => !ex.skipped)
+        if (nonSkipped.length === 0) continue
+        const allLogged = nonSkipped.every((ex) => ex.sets.every((s) => s.logged))
         if (!allLogged) {
           return { weekIndex: wi, sessionIndex: si, session }
         }
@@ -424,8 +429,9 @@ export default function MesocycleDetail() {
             </span>
             <div className="space-y-1.5 mt-2">
               {currentWeek?.sessions.map((session, si) => {
-                const allLogged = session.exercises.length > 0 &&
-                  session.exercises.every((ex) => ex.sets.every((s) => s.logged))
+                const nonSkipped = session.exercises.filter(ex => !ex.skipped)
+                const allLogged = nonSkipped.length > 0 &&
+                  nonSkipped.every((ex) => ex.sets.every((s) => s.logged))
                 const isCurrent = currentPos !== null &&
                   currentWeekIndex === currentPos.weekIndex &&
                   si === currentPos.sessionIndex

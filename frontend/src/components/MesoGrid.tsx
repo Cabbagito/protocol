@@ -80,9 +80,10 @@ export default function MesoGrid({ mesocycle, compact = false, viewingWeek, view
 
   function getCellState(wi: number, si: number): CellState {
     const session = weeks[wi]!.sessions[si]!
+    const nonSkipped = session.exercises.filter(ex => !ex.skipped)
     const isLogged =
-      session.exercises.length > 0 &&
-      session.exercises.every(ex => ex.sets.every(s => s.logged))
+      nonSkipped.length > 0 &&
+      nonSkipped.every(ex => ex.sets.every(s => s.logged))
     const isDeload = mesocycle.rir_scheme[wi] === -1
     const isCurrent = wi === currentWi && si === currentSi
     const isViewing = viewingWeek !== undefined && viewingSession !== undefined &&
@@ -102,9 +103,10 @@ export default function MesoGrid({ mesocycle, compact = false, viewingWeek, view
 
   function handleClick(wi: number, si: number) {
     const session = weeks[wi]!.sessions[si]!
+    const nonSkipped = session.exercises.filter(ex => !ex.skipped)
     const isLogged =
-      session.exercises.length > 0 &&
-      session.exercises.every(ex => ex.sets.every(s => s.logged))
+      nonSkipped.length > 0 &&
+      nonSkipped.every(ex => ex.sets.every(s => s.logged))
 
     if (isLogged) {
       navigate(`/workouts/${mesocycle.id}/${wi}/${si}`)
