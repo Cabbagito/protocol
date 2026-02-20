@@ -9,6 +9,7 @@ import {
   ChevronRightIcon,
 } from '../components/Icons'
 import AppHeader from '../components/AppHeader'
+import PageLoader from '../components/PageLoader'
 import MesoGrid from '../components/MesoGrid'
 
 const quickLinks = [
@@ -23,7 +24,7 @@ export default function Dashboard() {
   const { data: mesocycle, isLoading: mesoLoading } = useActiveMesocycle()
 
   if (mesoLoading) {
-    return <div className="text-slate-500 text-center py-8">Loading...</div>
+    return <PageLoader />
   }
 
   const formattedDate = new Date().toLocaleDateString('en-US', {

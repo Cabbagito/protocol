@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Protocol — Final Design System</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Outfit:wght@300;400;500;600;700;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root { --cyan: #0ea5e9; --violet: #8b5cf6; --dark: #0f172a; --darker: #060a13; }
+  body { background: var(--darker); color: #e2e8f0; font-family: 'DM Sans', sans-serif; }
+
+  /* ===== LAYOUT ===== */
+  .page { padding: 0 40px 80px; }
+  .section { max-width: 1200px; margin: 0 auto 96px; }
+  .section-num { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #8b5cf6; opacity: 0.5; letter-spacing: 2px; }
+  .section-label { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: #0ea5e9; opacity: 0.7; }
+  .section-title { font-family: 'Outfit', sans-serif; font-size: 28px; font-weight: 600; color: #cbd5e1; margin-bottom: 8px; }
+  .section-desc { font-size: 14px; color: #64748b; margin-bottom: 40px; max-width: 640px; line-height: 1.7; }
+  .section-header { display: flex; align-items: baseline; gap: 16px; margin-bottom: 10px; }
+  .label { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #64748b; letter-spacing: 1.5px; text-transform: uppercase; }
+  .sep { border: none; height: 1px; background: linear-gradient(90deg, transparent, #1e293b, transparent); margin: 0 auto 96px; max-width: 400px; }
+  .logo-row { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; }
+  .logo-cell { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  .swatch {
+    border-radius: 20px; display: flex; align-items: center; justify-content: center;
+    border: 1px solid rgba(255,255,255,0.06);
+    transition: transform 0.25s ease, box-shadow 0.25s ease; overflow: hidden;
+  }
+  .swatch:hover { transform: scale(1.03); box-shadow: 0 12px 40px rgba(0,0,0,0.3); }
+  .anim-stage {
+    background: var(--dark); border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 24px; padding: 48px 40px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    min-height: 300px; margin-bottom: 16px; overflow: hidden;
+  }
+  .anim-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #64748b; letter-spacing: 2px; text-transform: uppercase; text-align: center; margin-bottom: 8px; }
+  .anim-note { font-size: 11px; color: #475569; text-align: center; margin-top: 16px; max-width: 280px; line-height: 1.5; }
+  .anim-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 20px; }
+
+  /* ===== HERO ===== */
+  .hero {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    min-height: 55vh; padding: 80px 40px 50px; position: relative;
+  }
+  .hero::before {
+    content: ''; position: absolute; width: 500px; height: 500px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(14,165,233,0.06) 0%, rgba(139,92,246,0.03) 40%, transparent 70%);
+    top: 50%; left: 50%; transform: translate(-50%, -50%);
+  }
+  .hero-logo { width: 150px; height: 150px; margin-bottom: 32px; z-index: 1; }
+  .hero-title {
+    font-family: 'Outfit', sans-serif; font-size: 48px; font-weight: 700;
+    background: linear-gradient(135deg, var(--cyan), var(--violet));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    margin-bottom: 8px; z-index: 1;
+  }
+  .hero-sub { font-family: 'Outfit', sans-serif; font-size: 15px; font-weight: 300; color: #64748b; letter-spacing: 5px; text-transform: uppercase; z-index: 1; }
+
+  /* ===== PHONE ===== */
+  .phone-frame {
+    width: 340px; background: var(--dark); border-radius: 40px;
+    border: 2px solid #1e293b; overflow: hidden; box-shadow: 0 24px 80px rgba(0,0,0,0.5);
+  }
+  .phone-notch-bar { height: 44px; display: flex; align-items: center; justify-content: center; }
+  .phone-notch { width: 100px; height: 26px; background: var(--darker); border-radius: 0 0 16px 16px; }
+  .phone-indicator { width: 120px; height: 4px; background: #334155; border-radius: 2px; margin: 12px auto 8px; }
+
+  /* ========================================================= */
+  /* CASCADE SHIMMER (idle)                                     */
+  /* ========================================================= */
+  @keyframes cascade-back {
+    0%, 100% { fill: #0ea5e9; } 33% { fill: #22d3ee; } 66% { fill: #8b5cf6; }
+  }
+  @keyframes cascade-mid {
+    0%, 100% { fill: #1d9dd8; } 33% { fill: #0ea5e9; } 66% { fill: #a78bfa; }
+  }
+  @keyframes cascade-fs {
+    0%, 100% { stop-color: #0ea5e9; } 25% { stop-color: #22d3ee; } 50% { stop-color: #6366f1; } 75% { stop-color: #8b5cf6; }
+  }
+  @keyframes cascade-fe {
+    0%, 100% { stop-color: #8b5cf6; } 25% { stop-color: #0ea5e9; } 50% { stop-color: #22d3ee; } 75% { stop-color: #6366f1; }
+  }
+  .cascade-back { animation: cascade-back 4s ease-in-out infinite; }
+  .cascade-mid { animation: cascade-mid 4s ease-in-out infinite 0.6s; }
+  .cascade-fs { animation: cascade-fs 4s ease-in-out infinite 1.2s; }
+  .cascade-fe { animation: cascade-fe 4s ease-in-out infinite 1.2s; }
+
+  /* ========================================================= */
+  /* LOADING: BREATHE + SHIMMER + ORBIT                        */
+  /* ========================================================= */
+  @keyframes lb-back {
+    0%, 100% { opacity: 0.12; transform: translate(6px, 4px) scale(1); }
+    50% { opacity: 0.22; transform: translate(8px, 5px) scale(1.015); }
+  }
+  @keyframes lb-mid {
+    0%, 100% { opacity: 0.35; transform: translate(3px, 2px) scale(1); }
+    50% { opacity: 0.5; transform: translate(4px, 3px) scale(1.008); }
+  }
+  @keyframes lb-front {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.003); }
+  }
+  .lb-back { animation: lb-back 3s ease-in-out infinite; }
+  .lb-mid { animation: lb-mid 3s ease-in-out infinite 0.2s; }
+  .lb-front { animation: lb-front 3s ease-in-out infinite 0.4s; }
+
+  @keyframes l-shim-s { 0%, 100% { stop-color: #0ea5e9; } 50% { stop-color: #22d3ee; } }
+  @keyframes l-shim-e { 0%, 100% { stop-color: #8b5cf6; } 50% { stop-color: #6366f1; } }
+  .l-shim-s { animation: l-shim-s 3s ease-in-out infinite; }
+  .l-shim-e { animation: l-shim-e 3s ease-in-out infinite; }
+
+  @keyframes orb-1 { 0% { transform: rotate(0deg) translateX(58px) rotate(0deg); } 100% { transform: rotate(360deg) translateX(58px) rotate(-360deg); } }
+  @keyframes orb-2 { 0% { transform: rotate(120deg) translateX(58px) rotate(-120deg); } 100% { transform: rotate(480deg) translateX(58px) rotate(-480deg); } }
+  @keyframes orb-3 { 0% { transform: rotate(240deg) translateX(58px) rotate(-240deg); } 100% { transform: rotate(600deg) translateX(58px) rotate(-600deg); } }
+  .orb-1 { animation: orb-1 2.8s linear infinite; }
+  .orb-2 { animation: orb-2 2.8s linear infinite; }
+  .orb-3 { animation: orb-3 2.8s linear infinite; }
+
+  /* ========================================================= */
+  /* SPLASH — FIXED ORBITS (nested rotation + translation)     */
+  /* ========================================================= */
+
+  /*
+   * Architecture: each dot = <g class="orbit-rotation"> wrapping <circle class="fly-entry">
+   * The <g> handles rotation around center (orbiting).
+   * The <circle> handles translateX (fly in from far → settle at radius 58).
+   * This avoids the center-snap problem entirely.
+   *
+   * Dot 1 starts at 0°   → flies in from right
+   * Dot 2 starts at 120° → flies in from lower-left (rotated frame)
+   * Dot 3 starts at 240° → flies in from upper-left (rotated frame)
+   *
+   * All travel ~260° then stop. Since they start 120° apart, they end 120° apart.
+   */
+
+  /* --- Orbit rotations --- */
+  /* Key fix: rotation STARTS before entry finishes (overlap), so the dot */
+  /* is already in gentle circular motion as it slides into place.        */
+  /* Bezier is nearly linear at start (matching entry speed) then very    */
+  /* long gentle tail-off. More total degrees = longer coast.             */
+  @keyframes d1-orbit {
+    0%, 6% { transform: rotate(0deg); animation-timing-function: cubic-bezier(0.28, 0.45, 0.12, 1); }
+    100% { transform: rotate(340deg); }
+  }
+  @keyframes d2-orbit {
+    0%, 8% { transform: rotate(120deg); animation-timing-function: cubic-bezier(0.28, 0.45, 0.12, 1); }
+    100% { transform: rotate(460deg); }
+  }
+  @keyframes d3-orbit {
+    0%, 10% { transform: rotate(240deg); animation-timing-function: cubic-bezier(0.28, 0.45, 0.12, 1); }
+    100% { transform: rotate(580deg); }
+  }
+  .d1-orbit { animation: d1-orbit 3.8s linear infinite; transform-origin: center; }
+  .d2-orbit { animation: d2-orbit 3.8s linear infinite; transform-origin: center; }
+  .d3-orbit { animation: d3-orbit 3.8s linear infinite; transform-origin: center; }
+
+  /* --- Fly-in entries: tangential, from OFF-SCREEN --- */
+  /* Start far enough that dots are outside SVG viewBox when opacity      */
+  /* hits 1. ease-out means the fast travel happens while clipped,        */
+  /* visible portion is the same gentle arrival speed as before.          */
+  @keyframes d1-entry {
+    0% { transform: translate(58px, -320px); opacity: 0; }
+    5% { opacity: 1; }
+    20% { transform: translate(58px, 0px); }
+    100% { transform: translate(58px, 0px); opacity: 1; }
+  }
+  @keyframes d2-entry {
+    0%, 3% { transform: translate(58px, -300px); opacity: 0; }
+    8% { opacity: 1; }
+    23% { transform: translate(58px, 0px); }
+    100% { transform: translate(58px, 0px); opacity: 1; }
+  }
+  @keyframes d3-entry {
+    0%, 6% { transform: translate(58px, -280px); opacity: 0; }
+    11% { opacity: 1; }
+    26% { transform: translate(58px, 0px); }
+    100% { transform: translate(58px, 0px); opacity: 1; }
+  }
+  .d1-entry { animation: d1-entry 3.8s ease-out infinite; }
+  .d2-entry { animation: d2-entry 3.8s ease-out infinite; }
+  .d3-entry { animation: d3-entry 3.8s ease-out infinite; }
+
+  /* Orbit track fades in */
+  @keyframes spl-track-in {
+    0%, 10% { opacity: 0; } 25% { opacity: 0.4; } 100% { opacity: 0.4; }
+  }
+  .spl-track { animation: spl-track-in 3.8s ease-out infinite; }
+
+  /* Pulse rings (on logo land ~40%) */
+  @keyframes spl-pulse-1 {
+    0%, 35% { r: 10; opacity: 0; stroke-width: 4; }
+    42% { opacity: 0.4; }
+    75% { r: 90; opacity: 0; stroke-width: 0.5; }
+    100% { r: 90; opacity: 0; }
+  }
+  @keyframes spl-pulse-2 {
+    0%, 40% { r: 8; opacity: 0; stroke-width: 3; }
+    48% { opacity: 0.25; }
+    80% { r: 75; opacity: 0; stroke-width: 0.5; }
+    100% { r: 75; opacity: 0; }
+  }
+  .spl-pulse-1 { animation: spl-pulse-1 3.8s ease-out infinite; }
+  .spl-pulse-2 { animation: spl-pulse-2 3.8s ease-out infinite; }
+
+  /* Logo layers assemble */
+  @keyframes spl-lb {
+    0%, 22% { opacity: 0; transform: translate(24px, 18px) scale(0.6); }
+    48% { opacity: 0.15; transform: translate(6px, 4px) scale(1); }
+    100% { opacity: 0.15; transform: translate(6px, 4px) scale(1); }
+  }
+  @keyframes spl-lm {
+    0%, 27% { opacity: 0; transform: translate(16px, 12px) scale(0.7); }
+    53% { opacity: 0.4; transform: translate(3px, 2px) scale(1); }
+    100% { opacity: 0.4; transform: translate(3px, 2px) scale(1); }
+  }
+  @keyframes spl-lf {
+    0%, 32% { opacity: 0; transform: scale(0.5); }
+    55% { opacity: 1; transform: scale(1.06); }
+    63% { transform: scale(0.97); }
+    70% { transform: scale(1.01); }
+    76%, 100% { opacity: 1; transform: scale(1); }
+  }
+  .spl-lb { animation: spl-lb 3.8s cubic-bezier(0.22, 1, 0.36, 1) infinite; }
+  .spl-lm { animation: spl-lm 3.8s cubic-bezier(0.22, 1, 0.36, 1) infinite; }
+  .spl-lf { animation: spl-lf 3.8s cubic-bezier(0.34, 1.56, 0.64, 1) infinite; }
+
+  /* Flash on logo land */
+  @keyframes spl-flash {
+    0%, 50% { opacity: 0; } 56% { opacity: 0.1; } 68% { opacity: 0; } 100% { opacity: 0; }
+  }
+  .spl-flash { animation: spl-flash 3.8s ease-out infinite; }
+
+  /* Side lines */
+  @keyframes spl-line-l {
+    0%, 42% { width: 0; opacity: 0; } 65% { width: 70px; opacity: 0.2; } 100% { width: 70px; opacity: 0.06; }
+  }
+  @keyframes spl-line-r {
+    0%, 42% { width: 0; opacity: 0; } 65% { width: 70px; opacity: 0.2; } 100% { width: 70px; opacity: 0.06; }
+  }
+  .spl-line-l { animation: spl-line-l 3.8s ease-out infinite; transform-origin: right center; }
+  .spl-line-r { animation: spl-line-r 3.8s ease-out infinite; transform-origin: left center; }
+
+  /* Wordmark */
+  @keyframes spl-word {
+    0%, 48% { opacity: 0; transform: translateY(12px); letter-spacing: 10px; }
+    72% { opacity: 1; transform: translateY(0); letter-spacing: -1px; }
+    100% { opacity: 1; transform: translateY(0); letter-spacing: -1px; }
+  }
+  .spl-word { animation: spl-word 3.8s ease-out infinite; }
+</style>
+</head>
+<body>
+
+<!-- ================================================================ -->
+<!-- HERO -->
+<!-- ================================================================ -->
+<div class="hero">
+  <svg class="hero-logo" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="hG" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" class="cascade-fs"/><stop offset="100%" class="cascade-fe"/></linearGradient>
+      <radialGradient id="hV" cx="42%" cy="38%" r="62%"><stop offset="0%" stop-color="#0f172a" stop-opacity="0"/><stop offset="100%" stop-color="#000" stop-opacity="0.4"/></radialGradient>
+    </defs>
+    <rect width="100" height="100" rx="22" fill="#0f172a"/><rect width="100" height="100" rx="22" fill="url(#hV)"/>
+    <path class="cascade-back" d="M36 80 L36 24 L58 24 C69 24 76 31 76 40 C76 49 69 56 58 56 L48 56 L48 80 Z M48 34 L56 34 C62 34 64 37 64 40 C64 43 62 46 56 46 L48 46 Z" fill="#0ea5e9" opacity="0.15"/>
+    <path class="cascade-mid" d="M33 78 L33 22 L55 22 C66 22 73 29 73 38 C73 47 66 54 55 54 L45 54 L45 78 Z M45 32 L53 32 C59 32 61 35 61 38 C61 41 59 44 53 44 L45 44 Z" fill="#0ea5e9" opacity="0.4"/>
+    <path d="M30 76 L30 20 L52 20 C63 20 70 27 70 36 C70 45 63 52 52 52 L42 52 L42 76 Z M42 30 L50 30 C56 30 58 33 58 36 C58 39 56 42 50 42 L42 42 Z" fill="url(#hG)"/>
+  </svg>
+  <div class="hero-title">Protocol</div>
+  <div class="hero-sub">Final Design System</div>
+</div>
+
+<div class="page">
+
+<!-- ================================================================ -->
+<!-- 01: IDLE — CASCADE SHIMMER -->
+<!-- ================================================================ -->
+<div class="section">
+  <div class="section-header"><span class="section-num">01</span><span class="section-label">Idle</span></div>
+  <div class="section-title">Cascade Shimmer</div>
+  <div class="section-desc">Color wave cascades back→mid→front with 0.6s offset. No size change. Always-on in app header. Spotlight vignette baked in.</div>
+  <div class="anim-grid">
+    <div>
+      <div class="anim-label">Large Preview</div>
+      <div class="anim-stage">
+        <svg width="140" height="140" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="iG" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" class="cascade-fs"/><stop offset="100%" class="cascade-fe"/></linearGradient>
+            <radialGradient id="iV" cx="42%" cy="38%" r="62%"><stop offset="0%" stop-color="#0f172a" stop-opacity="0"/><stop offset="100%" stop-color="#000" stop-opacity="0.4"/></radialGradient>
+          </defs>
+          <rect width="100" height="100" rx="22" fill="#0f172a"/><rect width="100" height="100" rx="22" fill="url(#iV)"/>
+          <path class="cascade-back" d="M36 80 L36 24 L58 24 C69 24 76 31 76 40 C76 49 69 56 58 56 L48 56 L48 80 Z M48 34 L56 34 C62 34 64 37 64 40 C64 43 62 46 56 46 L48 46 Z" fill="#0ea5e9" opacity="0.15"/>
+          <path class="cascade-mid" d="M33 78 L33 22 L55 22 C66 22 73 29 73 38 C73 47 66 54 55 54 L45 54 L45 78 Z M45 32 L53 32 C59 32 61 35 61 38 C61 41 59 44 53 44 L45 44 Z" fill="#0ea5e9" opacity="0.4"/>
+          <path d="M30 76 L30 20 L52 20 C63 20 70 27 70 36 C70 45 63 52 52 52 L42 52 L42 76 Z M42 30 L50 30 C56 30 58 33 58 36 C58 39 56 42 50 42 L42 42 Z" fill="url(#iG)"/>
+        </svg>
+      </div>
+    </div>
+    <div>
+      <div class="anim-label">In App Header</div>
+      <div class="anim-stage">
+        <div style="display: flex; align-items: center; gap: 12px; background: #0c1322; padding: 12px 20px; border-radius: 14px; border: 1px solid #1e293b;">
+          <svg width="40" height="40" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="iHG" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" class="cascade-fs"/><stop offset="100%" class="cascade-fe"/></linearGradient>
+              <radialGradient id="iHV" cx="42%" cy="38%" r="62%"><stop offset="0%" stop-color="#0f172a" stop-opacity="0"/><stop offset="100%" stop-color="#000" stop-opacity="0.4"/></radialGradient>
+            </defs>
+            <rect width="100" height="100" rx="22" fill="#0f172a"/><rect width="100" height="100" rx="22" fill="url(#iHV)"/>
+            <path class="cascade-back" d="M36 80 L36 24 L58 24 C69 24 76 31 76 40 C76 49 69 56 58 56 L48 56 L48 80 Z M48 34 L56 34 C62 34 64 37 64 40 C64 43 62 46 56 46 L48 46 Z" fill="#0ea5e9" opacity="0.15"/>
+            <path class="cascade-mid" d="M33 78 L33 22 L55 22 C66 22 73 29 73 38 C73 47 66 54 55 54 L45 54 L45 78 Z M45 32 L53 32 C59 32 61 35 61 38 C61 41 59 44 53 44 L45 44 Z" fill="#0ea5e9" opacity="0.4"/>
+            <path d="M30 76 L30 20 L52 20 C63 20 70 27 70 36 C70 45 63 52 52 52 L42 52 L42 76 Z M42 30 L50 30 C56 30 58 33 58 36 C58 39 56 42 50 42 L42 42 Z" fill="url(#iHG)"/>
+          </svg>
+          <div>
+            <div style="font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 600; color: #f1f5f9;">Protocol</div>
+            <div style="font-size: 12px; color: #64748b;">Friday, February 20</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<hr class="sep">
+
+<!-- ================================================================ -->
+<!-- 02: COLOR VARIANTS -->
+<!-- ================================================================ -->
+<div class="section">
+  <div class="section-header"><span class="section-num">02</span><span class="section-label">Color Variants</span></div>
+  <div class="section-title">Background Adaptations</div>
+  <div class="section-desc">The mark with spotlight vignette across all backgrounds. Dark layers on light/colored backgrounds, gradient on dark.</div>
+  <div class="logo-row">
+    <!-- Dark -->
+    <div class="logo-cell">
+      <div class="swatch" style="width: 140px; height: 140px;">
+        <svg viewBox="0 0 100 100" width="140" height="140" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="v1g" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#0ea5e9"/><stop offset="100%" stop-color="#8b5cf6"/></linearGradient>
+            <radialGradient id="v1v" cx="42%" cy="38%" r="62%"><stop offset="0%" stop-color="#0f172a" stop-opacity="0"/><stop offset="100%" stop-color="#000" stop-opacity="0.4"/></radialGradient>
+          </defs>
+          <rect width="100" height="100" rx="22" fill="#0f172a"/><rect width="100" height="100" rx="22" fill="url(#v1v)"/>
+          <path d="M36 80 L36 24 L58 24 C69 24 76 31 76 40 C76 49 69 56 58 56 L48 56 L48 80 Z M48 34 L56 34 C62 34 64 37 64 40 C64 43 62 46 56 46 L48 46 Z" fill="url(#v1g)" opacity="0.15"/>
+          <path d="M33 78 L33 22 L55 22 C66 22 73 29 73 38 C73 47 66 54 55 54 L45 54 L45 78 Z M45 32 L53 32 C59 32 61 35 61 38 C61 41 59 44 53 44 L45 44 Z" fill="url(#v1g)" opacity="0.4"/>
+          <path d="M30 76 L30 20 L52 20 C63 20 70 27 70 36 C70 45 63 52 52 52 L42 52 L42 76 Z M42 30 L50 30 C56 30 58 33 58 36 C58 39 56 42 50 42 L42 42 Z" fill="url(#v1g)"/>
+        </svg>
+      </div>
+      <span class="label">Dark</span>
+    </div>
+    <!-- Black -->
+    <div class="logo-cell">
+      <div class="swatch" style="width: 140px; height: 140px;">
+        <svg viewBox="0 0 100 100" width="140" height="140" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="v2g" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#0ea5e9"/><stop offset="100%" stop-color="#8b5cf6"/></linearGradient>
+            <radialGradient id="v2v" cx="42%" cy="38%" r="58%"><stop offset="0%" stop-color="#0a0a0a" stop-opacity="0"/><stop offset="100%" stop-color="#000" stop-opacity="0.5"/></radialGradient>
+          </defs>
+          <rect width="100" height="100" rx="22" fill="#000"/><rect width="100" height="100" rx="22" fill="url(#v2v)"/>
+          <path d="M36 80 L36 24 L58 24 C69 24 76 31 76 40 C76 49 69 56 58 56 L48 56 L48 80 Z M48 34 L56 34 C62 34 64 37 64 40 C64 43 62 46 56 46 L48 46 Z" fill="url(#v2g)" opacity="0.15"/>
+          <path d="M33 78 L33 22 L55 22 C66 22 73 29 73 38 C73 47 66 54 55 54 L45 54 L45 78 Z M45 32 L53 32 C59 32 61 35 61 38 C61 41 59 44 53 44 L45 44 Z" fill="url(#v2g)" opacity="0.4"/>
+          <path d="M30 76 L30 20 L52 20 C63 20 70 27 70 36 C70 45 63 52 52 52 L42 52 L42 76 Z M42 30 L50 30 C56 30 58 33 58 36 C58 39 56 42 50 42 L42 42 Z" fill="url(#v2g)"/>
+        </svg>
+      </div>
+      <span class="label">Black</span>
+    </div>
+    <!-- White -->
+    <div class="logo-cell">
+      <div class="swatch" style="width: 140px; height: 140px; border-color: rgba(0,0,0,0.08);">
+        <svg viewBox="0 0 100 100" width="140" height="140" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="v3g" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#0ea5e9"/><stop offset="100%" stop-color="#8b5cf6"/></linearGradient>
+            <radialGradient id="v3v" cx="42%" cy="38%" r="65%"><stop offset="0%" stop-color="#fff" stop-opacity="0"/><stop offset="100%" stop-color="#e2e8f0" stop-opacity="0.25"/></radialGradient>
+          </defs>
+          <rect width="100" height="100" rx="22" fill="#ffffff"/><rect width="100" height="100" rx="22" fill="url(#v3v)"/>
+          <path d="M36 80 L36 24 L58 24 C69 24 76 31 76 40 C76 49 69 56 58 56 L48 56 L48 80 Z M48 34 L56 34 C62 34 64 37 64 40 C64 43 62 46 56 46 L48 46 Z" fill="url(#v3g)" opacity="0.15"/>
+          <path d="M33 78 L33 22 L55 22 C66 22 73 29 73 38 C73 47 66 54 55 54 L45 54 L45 78 Z M45 32 L53 32 C59 32 61 35 61 38 C61 41 59 44 53 44 L45 44 Z" fill="url(#v3g)" opacity="0.4"/>
+          <path d="M30 76 L30 20 L52 20 C63 20 70 27 70 36 C70 45 63 52 52 52 L42 52 L42 76 Z M42 30 L50 30 C56 30 58 33 58 36 C58 39 56 42 50 42 L42 42 Z" fill="url(#v3g)"/>
+        </svg>
+      </div>
+      <span class="label">White</span>
+    </div>
+    <!-- Cyan -->
+    <div class="logo-cell">
+      <div class="swatch" style="width: 140px; height: 140px;">
+        <svg viewBox="0 0 100 100" width="140" height="140" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <radialGradient id="v4v" cx="42%" cy="38%" r="62%"><stop offset="0%" stop-color="#0ea5e9" stop-opacity="0"/><stop offset="100%" stop-color="#0369a1" stop-opacity="0.35"/></radialGradient>
+          </defs>
+          <rect width="100" height="100" rx="22" fill="#0ea5e9"/><rect width="100" height="100" rx="22" fill="url(#v4v)"/>
+          <path d="M36 80 L36 24 L58 24 C69 24 76 31 76 40 C76 49 69 56 58 56 L48 56 L48 80 Z M48 34 L56 34 C62 34 64 37 64 40 C64 43 62 46 56 46 L48 46 Z" fill="#0f172a" opacity="0.1"/>
+          <path d="M33 78 L33 22 L55 22 C66 22 73 29 73 38 C73 47 66 54 55 54 L45 54 L45 78 Z M45 32 L53 32 C59 32 61 35 61 38 C61 41 59 44 53 44 L45 44 Z" fill="#0f172a" opacity="0.3"/>
+          <path d="M30 76 L30 20 L52 20 C63 20 70 27 70 36 C70 45 63 52 52 52 L42 52 L42 76 Z M42 30 L50 30 C56 30 58 33 58 36 C58 39 56 42 50 42 L42 42 Z" fill="#0f172a" opacity="0.85"/>
+        </svg>
+      </div>
+      <span class="label">Cyan</span>
+    </div>
+    <!-- Violet -->
+    <div class="logo-cell">
+      <div class="swatch" style="width: 140px; height: 140px;">
+        <svg viewBox="0 0 100 100" width="140" height="140" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <radialGradient id="v5v" cx="42%" cy="38%" r="62%"><stop offset="0%" stop-color="#8b5cf6" stop-opacity="0"/><stop offset="100%" stop-color="#4c1d95" stop-opacity="0.35"/></radialGradient>
+          </defs>
+          <rect width="100" height="100" rx="22" fill="#8b5cf6"/><rect width="100" height="100" rx="22" fill="url(#v5v)"/>
+          <path d="M36 80 L36 24 L58 24 C69 24 76 31 76 40 C76 49 69 56 58 56 L48 56 L48 80 Z M48 34 L56 34 C62 34 64 37 64 40 C64 43 62 46 56 46 L48 46 Z" fill="#0f172a" opacity="0.1"/>
+          <path d="M33 78 L33 22 L55 22 C66 22 73 29 73 38 C73 47 66 54 55 54 L45 54 L45 78 Z M45 32 L53 32 C59 32 61 35 61 38 C61 41 59 44 53 44 L45 44 Z" fill="#0f172a" opacity="0.3"/>
+          <path d="M30 76 L30 20 L52 20 C63 20 70 27 70 36 C70 45 63 52 52 52 L42 52 L42 76 Z M42 30 L50 30 C56 30 58 33 58 36 C58 39 56 42 50 42 L42 42 Z" fill="#0f172a" opacity="0.85"/>
+        </svg>
+      </div>
+      <span class="label">Violet</span>
+    </div>
+    <!-- Gradient -->
+    <div class="logo-cell">
+      <div class="swatch" style="width: 140px; height: 140px;">
+        <svg viewBox="0 0 100 100" width="140" height="140" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="v6bg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#0ea5e9"/><stop offset="100%" stop-color="#8b5cf6"/></linearGradient>
+            <radialGradient id="v6v" cx="42%" cy="38%" r="60%"><stop offset="0%" stop-color="#38bdf8" stop-opacity="0"/><stop offset="100%" stop-color="#1e1b4b" stop-opacity="0.3"/></radialGradient>
+          </defs>
+          <rect width="100" height="100" rx="22" fill="url(#v6bg)"/><rect width="100" height="100" rx="22" fill="url(#v6v)"/>
+          <path d="M36 80 L36 24 L58 24 C69 24 76 31 76 40 C76 49 69 56 58 56 L48 56 L48 80 Z M48 34 L56 34 C62 34 64 37 64 40 C64 43 62 46 56 46 L48 46 Z" fill="white" opacity="0.15"/>
+          <path d="M33 78 L33 22 L55 22 C66 22 73 29 73 38 C73 47 66 54 55 54 L45 54 L45 78 Z M45 32 L53 32 C59 32 61 35 61 38 C61 41 59 44 53 44 L45 44 Z" fill="white" opacity="0.4"/>
+          <path d="M30 76 L30 20 L52 20 C63 20 70 27 70 36 C70 45 63 52 52 52 L42 52 L42 76 Z M42 30 L50 30 C56 30 58 33 58 36 C58 39 56 42 50 42 L42 42 Z" fill="white" opacity="0.95"/>
+        </svg>
+      </div>
+      <span class="label">Gradient</span>
+    </div>
+  </div>
+
+  <!-- Size strip -->
+  <div style="margin-top: 32px; text-align: center;">
+    <span class="label">Scale Check</span>
+    <div style="display: flex; gap: 28px; align-items: flex-end; justify-content: center; margin-top: 16px; background: var(--dark); padding: 32px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.06);">
+      <div class="logo-cell">
+        <svg viewBox="0 0 100 100" width="96" height="96" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="sz1" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#0ea5e9"/><stop offset="100%" stop-color="#8b5cf6"/></linearGradient><radialGradient id="szv1" cx="42%" cy="38%" r="62%"><stop offset="0%" stop-color="#0f172a" stop-opacity="0"/><stop offset="100%" stop-color="#000" stop-opacity="0.4"/></radialGradient></defs><rect width="100" height="100" rx="22" fill="#0f172a"/><rect width="100" height="100" rx="22" fill="url(#szv1)"/><path d="M36 80 L36 24 L58 24 C69 24 76 31 76 40 C76 49 69 56 58 56 L48 56 L48 80 Z M48 34 L56 34 C62 34 64 37 64 40 C64 43 62 46 56 46 L48 46 Z" fill="url(#sz1)" opacity="0.15"/><path d="M33 78 L33 22 L55 22 C66 22 73 29 73 38 C73 47 66 54 55 54 L45 54 L45 78 Z M45 32 L53 32 C59 32 61 35 61 38 C61 41 59 44 53 44 L45 44 Z" fill="url(#sz1)" opacity="0.4"/><path d="M30 76 L30 20 L52 20 C63 20 70 27 70 36 C70 45 63 52 52 52 L42 52 L42 76 Z M42 30 L50 30 C56 30 58 33 58 36 C58 39 56 42 50 42 L42 42 Z" fill="url(#sz1)"/></svg>
+        <span class="label">96</span>
+      </div>
+      <div class="logo-cell">
+        <svg viewBox="0 0 100 100" width="64" height="64" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="sz2" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#0ea5e9"/><stop offset="100%" stop-color="#8b5cf6"/></linearGradient><radialGradient id="szv2" cx="42%" cy="38%" r="62%"><stop offset="0%" stop-color="#0f172a" stop-opacity="0"/><stop offset="100%" stop-color="#000" stop-opacity="0.4"/></radialGradient></defs><rect width="100" height="100" rx="22" fill="#0f172a"/><rect width="100" height="100" rx="22" fill="url(#szv2)"/><path d="M36 80 L36 24 L58 24 C69 24 76 31 76 40 C76 49 69 56 58 56 L48 56 L48 80 Z M48 34 L56 34 C62 34 64 37 64 40 C64 43 62 46 56 46 L48 46 Z" fill="url(#sz2)" opacity="0.15"/><path d="M33 78 L33 22 L55 22 C66 22 73 29 73 38 C73 47 66 54 55 54 L45 54 L45 78 Z M45 32 L53 32 C59 32 61 35 61 38 C61 41 59 44 53 44 L45 44 Z" fill="url(#sz2)" opacity="0.4"/><path d="M30 76 L30 20 L52 20 C63 20 70 27 70 36 C70 45 63 52 52 52 L42 52 L42 76 Z M42 30 L50 30 C56 30 58 33 58 36 C58 39 56 42 50 42 L42 42 Z" fill="url(#sz2)"/></svg>
+        <span class="label">64</span>
+      </div>
+      <div class="logo-cell">
+        <svg viewBox="0 0 100 100" width="48" height="48" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="sz3" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#0ea5e9"/><stop offset="100%" stop-color="#8b5cf6"/></linearGradient><radialGradient id="szv3" cx="42%" cy="38%" r="62%"><stop offset="0%" stop-color="#0f172a" stop-opacity="0"/><stop offset="100%" stop-color="#000" stop-opacity="0.4"/></radialGradient></defs><rect width="100" height="100" rx="22" fill="#0f172a"/><rect width="100" height="100" rx="22" fill="url(#szv3)"/><path d="M36 80 L36 24 L58 24 C69 24 76 31 76 40 C76 49 69 56 58 56 L48 56 L48 80 Z M48 34 L56 34 C62 34 64 37 64 40 C64 43 62 46 56 46 L48 46 Z" fill="url(#sz3)" opacity="0.15"/><path d="M33 78 L33 22 L55 22 C66 22 73 29 73 38 C73 47 66 54 55 54 L45 54 L45 78 Z M45 32 L53 32 C59 32 61 35 61 38 C61 41 59 44 53 44 L45 44 Z" fill="url(#sz3)" opacity="0.4"/><path d="M30 76 L30 20 L52 20 C63 20 70 27 70 36 C70 45 63 52 52 52 L42 52 L42 76 Z M42 30 L50 30 C56 30 58 33 58 36 C58 39 56 42 50 42 L42 42 Z" fill="url(#sz3)"/></svg>
+        <span class="label">48</span>
+      </div>
+      <div class="logo-cell">
+        <svg viewBox="0 0 100 100" width="32" height="32" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="sz4" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#0ea5e9"/><stop offset="100%" stop-color="#8b5cf6"/></linearGradient><radialGradient id="szv4" cx="42%" cy="38%" r="62%"><stop offset="0%" stop-color="#0f172a" stop-opacity="0"/><stop offset="100%" stop-color="#000" stop-opacity="0.4"/></radialGradient></defs><rect width="100" height="100" rx="22" fill="#0f172a"/><rect width="100" height="100" rx="22" fill="url(#szv4)"/><path d="M36 80 L36 24 L58 24 C69 24 76 31 76 40 C76 49 69 56 58 56 L48 56 L48 80 Z M48 34 L56 34 C62 34 64 37 64 40 C64 43 62 46 56 46 L48 46 Z" fill="url(#sz4)" opacity="0.15"/><path d="M33 78 L33 22 L55 22 C66 22 73 29 73 38 C73 47 66 54 55 54 L45 54 L45 78 Z M45 32 L53 32 C59 32 61 35 61 38 C61 41 59 44 53 44 L45 44 Z" fill="url(#sz4)" opacity="0.4"/><path d="M30 76 L30 20 L52 20 C63 20 70 27 70 36 C70 45 63 52 52 52 L42 52 L42 76 Z M42 30 L50 30 C56 30 58 33 58 36 C58 39 56 42 50 42 L42 42 Z" fill="url(#sz4)"/></svg>
+        <span class="label">32</span>
+      </div>
+      <div class="logo-cell">
+        <svg viewBox="0 0 100 100" width="20" height="20" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="sz5" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#0ea5e9"/><stop offset="100%" stop-color="#8b5cf6"/></linearGradient><radialGradient id="szv5" cx="42%" cy="38%" r="62%"><stop offset="0%" stop-color="#0f172a" stop-opacity="0"/><stop offset="100%" stop-color="#000" stop-opacity="0.4"/></radialGradient></defs><rect width="100" height="100" rx="22" fill="#0f172a"/><rect width="100" height="100" rx="22" fill="url(#szv5)"/><path d="M36 80 L36 24 L58 24 C69 24 76 31 76 40 C76 49 69 56 58 56 L48 56 L48 80 Z M48 34 L56 34 C62 34 64 37 64 40 C64 43 62 46 56 46 L48 46 Z" fill="url(#sz5)" opacity="0.15"/><path d="M33 78 L33 22 L55 22 C66 22 73 29 73 38 C73 47 66 54 55 54 L45 54 L45 78 Z M45 32 L53 32 C59 32 61 35 61 38 C61 41 59 44 53 44 L45 44 Z" fill="url(#sz5)" opacity="0.4"/><path d="M30 76 L30 20 L52 20 C63 20 70 27 70 36 C70 45 63 52 52 52 L42 52 L42 76 Z M42 30 L50 30 C56 30 58 33 58 36 C58 39 56 42 50 42 L42 42 Z" fill="url(#sz5)"/></svg>
+        <span class="label">20</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<hr class="sep">
+
+<!-- ================================================================ -->
+<!-- 03: LOADING — BREATHE + SHIMMER + ORBIT -->
+<!-- ================================================================ -->
+<div class="section">
+  <div class="section-header"><span class="section-num">03</span><span class="section-label">Loading</span></div>
+  <div class="section-title">Breathe + Shimmer + Orbit</div>
+  <div class="section-desc">Logo breathes and shimmers. Three particles orbit continuously. For data fetches, 2–15 seconds.</div>
+  <div class="anim-grid">
+    <div>
+      <div class="anim-label">Loading — Full</div>
+      <div class="anim-stage" style="min-height: 420px; background: #080d18;">
+        <svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="lG" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" class="l-shim-s"/><stop offset="100%" class="l-shim-e"/></linearGradient>
+          </defs>
+          <circle cx="100" cy="100" r="58" fill="none" stroke="#1e293b" stroke-width="1" stroke-dasharray="4 8" opacity="0.4"/>
+          <g style="transform-origin: 100px 100px;">
+            <circle class="orb-1" cx="100" cy="100" r="3.5" fill="#0ea5e9" opacity="0.9"/>
+            <circle class="orb-2" cx="100" cy="100" r="2.5" fill="#8b5cf6" opacity="0.7"/>
+            <circle class="orb-3" cx="100" cy="100" r="2" fill="#22d3ee" opacity="0.5"/>
+          </g>
+          <g transform="translate(58, 58) scale(0.84)">
+            <path class="lb-back" d="M36 80 L36 24 L58 24 C69 24 76 31 76 40 C76 49 69 56 58 56 L48 56 L48 80 Z M48 34 L56 34 C62 34 64 37 64 40 C64 43 62 46 56 46 L48 46 Z" fill="url(#lG)" opacity="0.15"/>
+            <path class="lb-mid" d="M33 78 L33 22 L55 22 C66 22 73 29 73 38 C73 47 66 54 55 54 L45 54 L45 78 Z M45 32 L53 32 C59 32 61 35 61 38 C61 41 59 44 53 44 L45 44 Z" fill="url(#lG)" opacity="0.4"/>
+            <path class="lb-front" d="M30 76 L30 20 L52 20 C63 20 70 27 70 36 C70 45 63 52 52 52 L42 52 L42 76 Z M42 30 L50 30 C56 30 58 33 58 36 C58 39 56 42 50 42 L42 42 Z" fill="url(#lG)"/>
+          </g>
+        </svg>
+      </div>
+    </div>
+    <div>
+      <div class="anim-label">Loading — Compact</div>
+      <div class="anim-stage" style="min-height: 420px; background: #080d18;">
+        <svg width="120" height="120" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="lG2" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" class="l-shim-s"/><stop offset="100%" class="l-shim-e"/></linearGradient>
+          </defs>
+          <circle cx="100" cy="100" r="58" fill="none" stroke="#1e293b" stroke-width="1.5" stroke-dasharray="4 8" opacity="0.4"/>
+          <g style="transform-origin: 100px 100px;">
+            <circle class="orb-1" cx="100" cy="100" r="4" fill="#0ea5e9" opacity="0.9"/>
+            <circle class="orb-2" cx="100" cy="100" r="3" fill="#8b5cf6" opacity="0.7"/>
+            <circle class="orb-3" cx="100" cy="100" r="2.5" fill="#22d3ee" opacity="0.5"/>
+          </g>
+          <g transform="translate(58, 58) scale(0.84)">
+            <path class="lb-back" d="M36 80 L36 24 L58 24 C69 24 76 31 76 40 C76 49 69 56 58 56 L48 56 L48 80 Z M48 34 L56 34 C62 34 64 37 64 40 C64 43 62 46 56 46 L48 46 Z" fill="url(#lG2)" opacity="0.15"/>
+            <path class="lb-mid" d="M33 78 L33 22 L55 22 C66 22 73 29 73 38 C73 47 66 54 55 54 L45 54 L45 78 Z M45 32 L53 32 C59 32 61 35 61 38 C61 41 59 44 53 44 L45 44 Z" fill="url(#lG2)" opacity="0.4"/>
+            <path class="lb-front" d="M30 76 L30 20 L52 20 C63 20 70 27 70 36 C70 45 63 52 52 52 L42 52 L42 76 Z M42 30 L50 30 C56 30 58 33 58 36 C58 39 56 42 50 42 L42 42 Z" fill="url(#lG2)"/>
+          </g>
+        </svg>
+        <p class="anim-note">Same animation at smaller scale for inline / card loading states.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<hr class="sep">
+
+<!-- ================================================================ -->
+<!-- 04: SPLASH — FIXED ORBITS -->
+<!-- ================================================================ -->
+<div class="section">
+  <div class="section-header"><span class="section-num">04</span><span class="section-label">Splash</span></div>
+  <div class="section-title">The Big Bang</div>
+  <div class="section-desc">Three dots fling in from off-screen directly to their orbit start positions (120° apart), then smoothly orbit and decelerate to a halt. Logo layers assemble with elastic bounce. Pulse rings on impact. Wordmark punches in with gradient. Loops here for preview.</div>
+
+  <div>
+    <div class="anim-label">Splash — Full Stage</div>
+    <div class="anim-stage" style="min-height: 560px; background: #050810;">
+      <svg width="400" height="370" viewBox="0 0 400 370" xmlns="http://www.w3.org/2000/svg" style="overflow: hidden;">
+        <defs>
+          <linearGradient id="sG" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#0ea5e9"/><stop offset="100%" stop-color="#8b5cf6"/></linearGradient>
+          <radialGradient id="sFlash" cx="50%" cy="43%" r="45%"><stop offset="0%" stop-color="#0ea5e9"/><stop offset="100%" stop-color="transparent"/></radialGradient>
+        </defs>
+
+        <!-- Flash -->
+        <rect class="spl-flash" width="400" height="370" fill="url(#sFlash)" opacity="0"/>
+
+        <!-- Orbit track (fades in) -->
+        <circle class="spl-track" cx="200" cy="155" r="58" fill="none" stroke="#1e293b" stroke-width="1" stroke-dasharray="4 8" opacity="0"/>
+
+        <!-- Pulse rings -->
+        <circle class="spl-pulse-1" cx="200" cy="155" r="10" fill="none" stroke="url(#sG)" stroke-width="4"/>
+        <circle class="spl-pulse-2" cx="200" cy="155" r="8" fill="none" stroke="#22d3ee" stroke-width="3" opacity="0"/>
+
+        <!-- Dot 1: orbit wrapper rotates, circle flies in radially -->
+        <g class="d1-orbit" style="transform-origin: 200px 155px;">
+          <circle class="d1-entry" cx="200" cy="155" r="4" fill="#0ea5e9" opacity="0"/>
+        </g>
+        <!-- Dot 2 -->
+        <g class="d2-orbit" style="transform-origin: 200px 155px;">
+          <circle class="d2-entry" cx="200" cy="155" r="3" fill="#8b5cf6" opacity="0"/>
+        </g>
+        <!-- Dot 3 -->
+        <g class="d3-orbit" style="transform-origin: 200px 155px;">
+          <circle class="d3-entry" cx="200" cy="155" r="2.5" fill="#22d3ee" opacity="0"/>
+        </g>
+
+        <!-- Side lines -->
+        <rect class="spl-line-l" x="52" y="154" height="2" rx="1" fill="url(#sG)" style="width: 0;"/>
+        <rect class="spl-line-r" x="278" y="154" height="2" rx="1" fill="url(#sG)" style="width: 0;"/>
+
+        <!-- Logo layers -->
+        <g transform="translate(158, 113) scale(0.84)">
+          <path class="spl-lb" d="M36 80 L36 24 L58 24 C69 24 76 31 76 40 C76 49 69 56 58 56 L48 56 L48 80 Z M48 34 L56 34 C62 34 64 37 64 40 C64 43 62 46 56 46 L48 46 Z" fill="url(#sG)" opacity="0"/>
+          <path class="spl-lm" d="M33 78 L33 22 L55 22 C66 22 73 29 73 38 C73 47 66 54 55 54 L45 54 L45 78 Z M45 32 L53 32 C59 32 61 35 61 38 C61 41 59 44 53 44 L45 44 Z" fill="url(#sG)" opacity="0"/>
+          <path class="spl-lf" d="M30 76 L30 20 L52 20 C63 20 70 27 70 36 C70 45 63 52 52 52 L42 52 L42 76 Z M42 30 L50 30 C56 30 58 33 58 36 C58 39 56 42 50 42 L42 42 Z" fill="url(#sG)" opacity="0"/>
+        </g>
+
+        <!-- Wordmark — gradient, no shadow layer -->
+        <text class="spl-word" x="200" y="246" font-family="Outfit, sans-serif" font-size="34" font-weight="700" fill="url(#sG)" text-anchor="middle" opacity="0">Protocol</text>
+      </svg>
+    </div>
+  </div>
+
+  <!-- Phone mockup -->
+  <div style="margin-top: 32px; display: flex; justify-content: center;">
+    <div>
+      <div class="anim-label">Splash — Phone Mockup</div>
+      <div class="phone-frame" style="margin-top: 12px;">
+        <div class="phone-notch-bar"><div class="phone-notch"></div></div>
+        <div class="phone-content" style="min-height: 520px; display: flex; align-items: center; justify-content: center; background: #050810; padding: 0;">
+          <svg width="300" height="340" viewBox="0 0 300 340" xmlns="http://www.w3.org/2000/svg" style="overflow: hidden;">
+            <defs>
+              <linearGradient id="sG2" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#0ea5e9"/><stop offset="100%" stop-color="#8b5cf6"/></linearGradient>
+              <radialGradient id="sFlash2" cx="50%" cy="38%" r="45%"><stop offset="0%" stop-color="#0ea5e9"/><stop offset="100%" stop-color="transparent"/></radialGradient>
+            </defs>
+
+            <rect class="spl-flash" width="300" height="340" fill="url(#sFlash2)" opacity="0"/>
+            <circle class="spl-track" cx="150" cy="130" r="52" fill="none" stroke="#1e293b" stroke-width="1" stroke-dasharray="3 7" opacity="0"/>
+            <circle class="spl-pulse-1" cx="150" cy="130" r="10" fill="none" stroke="url(#sG2)" stroke-width="3"/>
+            <circle class="spl-pulse-2" cx="150" cy="130" r="8" fill="none" stroke="#22d3ee" stroke-width="2" opacity="0"/>
+
+            <!-- Dots with nested orbit approach (using same keyframes, different center via transform-origin) -->
+            <g style="transform-origin: 150px 130px;" class="d1-orbit">
+              <circle class="d1-entry" cx="150" cy="130" r="3.5" fill="#0ea5e9" opacity="0"/>
+            </g>
+            <g style="transform-origin: 150px 130px;" class="d2-orbit">
+              <circle class="d2-entry" cx="150" cy="130" r="2.5" fill="#8b5cf6" opacity="0"/>
+            </g>
+            <g style="transform-origin: 150px 130px;" class="d3-orbit">
+              <circle class="d3-entry" cx="150" cy="130" r="2" fill="#22d3ee" opacity="0"/>
+            </g>
+
+            <rect class="spl-line-l" x="15" y="129" height="1.5" rx="1" fill="url(#sG2)" style="width: 0;"/>
+            <rect class="spl-line-r" x="218" y="129" height="1.5" rx="1" fill="url(#sG2)" style="width: 0;"/>
+
+            <g transform="translate(112, 90) scale(0.76)">
+              <path class="spl-lb" d="M36 80 L36 24 L58 24 C69 24 76 31 76 40 C76 49 69 56 58 56 L48 56 L48 80 Z M48 34 L56 34 C62 34 64 37 64 40 C64 43 62 46 56 46 L48 46 Z" fill="url(#sG2)" opacity="0"/>
+              <path class="spl-lm" d="M33 78 L33 22 L55 22 C66 22 73 29 73 38 C73 47 66 54 55 54 L45 54 L45 78 Z M45 32 L53 32 C59 32 61 35 61 38 C61 41 59 44 53 44 L45 44 Z" fill="url(#sG2)" opacity="0"/>
+              <path class="spl-lf" d="M30 76 L30 20 L52 20 C63 20 70 27 70 36 C70 45 63 52 52 52 L42 52 L42 76 Z M42 30 L50 30 C56 30 58 33 58 36 C58 39 56 42 50 42 L42 42 Z" fill="url(#sG2)" opacity="0"/>
+            </g>
+
+            <text class="spl-word" x="150" y="214" font-family="Outfit, sans-serif" font-size="26" font-weight="700" fill="url(#sG2)" text-anchor="middle" opacity="0">Protocol</text>
+          </svg>
+        </div>
+        <div class="phone-indicator"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<hr class="sep">
+
+<!-- ================================================================ -->
+<!-- 05: HIERARCHY SUMMARY -->
+<!-- ================================================================ -->
+<div class="section">
+  <div class="section-header"><span class="section-num">05</span><span class="section-label">Summary</span></div>
+  <div class="section-title">Animation Hierarchy</div>
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;">
+    <div style="background: #0c1322; border: 1px solid #1e293b; border-radius: 16px; padding: 28px;">
+      <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #0ea5e9; letter-spacing: 2px; margin-bottom: 8px;">TIER 1 — IDLE</div>
+      <div style="font-family: 'Outfit', sans-serif; font-size: 18px; font-weight: 600; color: #e2e8f0; margin-bottom: 8px;">Cascade Shimmer</div>
+      <div style="font-size: 13px; color: #64748b; line-height: 1.6;">Color wave through layers. No size change. Always-on in header. CSS-only.</div>
+      <div style="margin-top: 12px; font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #475569;">Duration: ∞ · Energy: Low</div>
+    </div>
+    <div style="background: #0c1322; border: 1px solid #1e293b; border-radius: 16px; padding: 28px;">
+      <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #a78bfa; letter-spacing: 2px; margin-bottom: 8px;">TIER 2 — LOADING</div>
+      <div style="font-family: 'Outfit', sans-serif; font-size: 18px; font-weight: 600; color: #e2e8f0; margin-bottom: 8px;">Breathe + Shimmer + Orbit</div>
+      <div style="font-size: 13px; color: #64748b; line-height: 1.6;">Layers breathe, gradient shimmers, particles orbit continuously. Data fetches.</div>
+      <div style="margin-top: 12px; font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #475569;">Duration: 2–15s · Energy: Medium</div>
+    </div>
+    <div style="background: #0c1322; border: 1px solid #1e293b; border-radius: 16px; padding: 28px;">
+      <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #f472b6; letter-spacing: 2px; margin-bottom: 8px;">TIER 3 — SPLASH</div>
+      <div style="font-family: 'Outfit', sans-serif; font-size: 18px; font-weight: 600; color: #e2e8f0; margin-bottom: 8px;">The Big Bang</div>
+      <div style="font-size: 13px; color: #64748b; line-height: 1.6;">Dots fling in → orbit → decelerate. Logo assembles. Pulse rings. Wordmark punches in. First visit / install.</div>
+      <div style="margin-top: 12px; font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #475569;">Duration: ~3.8s · Energy: 🔥</div>
+    </div>
+  </div>
+</div>
+
+</div>
+</body>
+</html>

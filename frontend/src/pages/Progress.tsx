@@ -11,6 +11,7 @@ import {
   Bar,
 } from 'recharts'
 import AppHeader from '../components/AppHeader'
+import PageLoader from '../components/PageLoader'
 import { useExercises, useActiveMesocycle, useWorkoutHistory, useExerciseProgress } from '../api/hooks'
 
 export default function Progress() {
@@ -27,7 +28,7 @@ export default function Progress() {
   const { data: progressData = [] } = useExerciseProgress(selectedExercise)
 
   if (exercisesLoading) {
-    return <div className="text-slate-400 text-center py-8">Loading...</div>
+    return <PageLoader />
   }
 
   // Calculate mesocycle stats

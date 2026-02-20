@@ -1,5 +1,6 @@
 import { useParams } from 'react-router-dom'
 import AppHeader from '../components/AppHeader'
+import PageLoader from '../components/PageLoader'
 import { useWorkoutDetail } from '../api/hooks'
 import MuscleGroupBadge from '../components/MuscleGroupBadge'
 import RirBadge from '../components/RirBadge'
@@ -92,7 +93,7 @@ export default function WorkoutDetail() {
   const { data: workout, isLoading } = useWorkoutDetail(mesocycleId!, weekIndex, sessionIndex)
 
   if (isLoading) {
-    return <div className="text-slate-400 text-center py-8">Loading...</div>
+    return <PageLoader />
   }
 
   if (!workout) {

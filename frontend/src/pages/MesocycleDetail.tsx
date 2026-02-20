@@ -1,6 +1,7 @@
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useToast } from '../components/Toast'
 import AppHeader from '../components/AppHeader'
+import PageLoader from '../components/PageLoader'
 import MesoGrid from '../components/MesoGrid'
 import ProgressBar from '../components/ProgressBar'
 import { useMesocycle, useWorkoutHistory, useUpdateMesocycle, useDeleteMesocycle } from '../api/hooks'
@@ -181,7 +182,7 @@ export default function MesocycleDetail() {
   }
 
   if (isLoading) {
-    return <div className="text-slate-400 text-center py-8">Loading...</div>
+    return <PageLoader />
   }
 
   if (!mesocycle) {

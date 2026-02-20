@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useToast } from '../components/Toast'
 import { ChevronUpIcon, ChevronDownIcon, PencilIcon, TrashIcon } from '../components/Icons'
 import AppHeader from '../components/AppHeader'
+import PageLoader from '../components/PageLoader'
 import {
   useSplit,
   useUpdateSplit,
@@ -83,7 +84,7 @@ export default function SplitDetail() {
   }
 
   if (isLoading) {
-    return <div className="text-slate-400 text-center py-8">Loading...</div>
+    return <PageLoader />
   }
 
   if (!split) {

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useToast } from '../components/Toast'
 import { ChevronRightIcon } from '../components/Icons'
 import AppHeader from '../components/AppHeader'
+import PageLoader from '../components/PageLoader'
 import { useSplits, useCreateSplit, useSplit, useExercises } from '../api/hooks'
 import { getMuscleColor } from '../lib/muscleColors'
 import type { SplitListItem } from '../types'
@@ -35,7 +36,7 @@ export default function Splits() {
       )}
 
       {isLoading ? (
-        <div className="text-slate-400 text-center py-8">Loading...</div>
+        <PageLoader />
       ) : splits.length === 0 ? (
         <div className="text-slate-400 text-center py-8">
           No splits yet. Create your first workout split!

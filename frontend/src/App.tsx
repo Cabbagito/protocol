@@ -2,6 +2,8 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import { useState, useEffect, lazy, Suspense, Component, type ReactNode } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import Layout from './components/Layout'
+import PageLoader from './components/PageLoader'
+import SplashScreen from './components/SplashScreen'
 import { getToken } from './lib/auth'
 
 // Wrap React.lazy to auto-reload on chunk load errors (stale deploys)
@@ -71,9 +73,6 @@ const queryClient = new QueryClient({
   },
 })
 
-function PageLoader() {
-  return <div className="text-slate-400 text-center py-8 animate-pulse">Loading...</div>
-}
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const token = getToken()
@@ -91,14 +90,11 @@ export default function App() {
   }, [])
 
   if (isAuthenticated === null) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-pulse text-slate-400">Loading...</div>
-      </div>
-    )
+    return <PageLoader className="min-h-screen" />
   }
 
   return (
+    <SplashScreen>
     <QueryClientProvider client={queryClient}>
       <ChunkErrorBoundary>
       <Suspense fallback={<PageLoader />}>
@@ -132,5 +128,6 @@ export default function App() {
       </Suspense>
       </ChunkErrorBoundary>
     </QueryClientProvider>
+    </SplashScreen>
   )
 }

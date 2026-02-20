@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useToast } from '../components/Toast'
 import { ChevronRightIcon } from '../components/Icons'
 import AppHeader from '../components/AppHeader'
+import PageLoader from '../components/PageLoader'
 import MesoGrid from '../components/MesoGrid'
 import { useMesocycles, useCreateMesocycle, useSplits, useActiveMesocycle } from '../api/hooks'
 import type { MesocycleListItem, Mesocycle } from '../types'
@@ -39,7 +40,7 @@ export default function Mesocycles() {
       )}
 
       {isLoading ? (
-        <div className="text-slate-400 text-center py-8">Loading...</div>
+        <PageLoader />
       ) : mesocycles.length === 0 ? (
         <div className="text-slate-400 text-center py-8">
           No mesocycles yet. Create your first training block!

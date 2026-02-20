@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
-import { ProtocolLogo, ChevronDownIcon } from './Icons'
+import { ChevronDownIcon } from './Icons'
+import ProtocolMark from './ProtocolMark'
 import ProgressBar from './ProgressBar'
 
 interface AppHeaderProps {
@@ -45,7 +46,7 @@ export default function AppHeader({
           className="flex-shrink-0"
           onClick={(e) => e.stopPropagation()}
         >
-          <ProtocolLogo className="w-9 h-9" />
+          <ProtocolMark mode="idle" className="w-9 h-9" />
         </Link>
 
         <div className="flex-1 min-w-0">

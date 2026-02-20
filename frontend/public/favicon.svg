@@ -1,4 +1,17 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <rect width="100" height="100" rx="20" fill="#0f172a"/>
-  <text x="50" y="68" font-family="system-ui, sans-serif" font-size="50" font-weight="bold" fill="#0ea5e9" text-anchor="middle">P</text>
+  <defs>
+    <linearGradient id="fg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0ea5e9"/>
+      <stop offset="100%" stop-color="#8b5cf6"/>
+    </linearGradient>
+    <radialGradient id="fv" cx="42%" cy="38%" r="62%">
+      <stop offset="0%" stop-color="#0f172a" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#000" stop-opacity="0.4"/>
+    </radialGradient>
+  </defs>
+  <rect width="100" height="100" rx="22" fill="#0f172a"/>
+  <rect width="100" height="100" rx="22" fill="url(#fv)"/>
+  <path d="M36 80 L36 24 L58 24 C69 24 76 31 76 40 C76 49 69 56 58 56 L48 56 L48 80 Z M48 34 L56 34 C62 34 64 37 64 40 C64 43 62 46 56 46 L48 46 Z" fill="url(#fg)" opacity="0.15"/>
+  <path d="M33 78 L33 22 L55 22 C66 22 73 29 73 38 C73 47 66 54 55 54 L45 54 L45 78 Z M45 32 L53 32 C59 32 61 35 61 38 C61 41 59 44 53 44 L45 44 Z" fill="url(#fg)" opacity="0.4"/>
+  <path d="M30 76 L30 20 L52 20 C63 20 70 27 70 36 C70 45 63 52 52 52 L42 52 L42 76 Z M42 30 L50 30 C56 30 58 33 58 36 C58 39 56 42 50 42 L42 42 Z" fill="url(#fg)"/>
 </svg>

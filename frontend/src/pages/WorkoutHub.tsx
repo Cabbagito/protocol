@@ -1,12 +1,13 @@
 import { Link, Navigate } from 'react-router-dom'
 import { useActiveMesocycle } from '../api/hooks'
 import AppHeader from '../components/AppHeader'
+import PageLoader from '../components/PageLoader'
 
 export default function WorkoutHub() {
   const { data: mesocycle, isLoading } = useActiveMesocycle()
 
   if (isLoading) {
-    return <div className="text-slate-500 text-center py-8">Loading...</div>
+    return <PageLoader />
   }
 
   if (mesocycle) {

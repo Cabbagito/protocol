@@ -5,6 +5,7 @@ import { useExercises, useCreateExercise } from '../api/hooks'
 import { getMuscleColor } from '../lib/muscleColors'
 import { ChevronRightIcon } from '../components/Icons'
 import AppHeader from '../components/AppHeader'
+import PageLoader from '../components/PageLoader'
 import ExerciseSparkline from '../components/ExerciseSparkline'
 import type { Exercise, EquipmentType } from '../types'
 
@@ -126,7 +127,7 @@ export default function Exercises() {
 
       {/* Exercise list */}
       {isLoading ? (
-        <div className="text-slate-400 text-center py-8">Loading...</div>
+        <PageLoader />
       ) : filteredExercises.length === 0 ? (
         <div className="text-slate-400 text-center py-8">
           {hasActiveFilters ? 'No exercises match your filters.' : 'No exercises yet. Add your first one!'}
