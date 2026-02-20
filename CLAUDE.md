@@ -4,7 +4,7 @@ This file provides guidance to Claude Code when working with this repository.
 
 ## Project Overview
 
-Protocol is a multi-user personal fitness PWA combining gym tracking, nutrition logging, and glucose management. Monorepo with a React frontend and FastAPI backend, deployed as a single Docker container on Railway with PostgreSQL.
+Protocol is a multi-user personal fitness PWA combining gym tracking, nutrition logging, and glucose management. Monorepo with a React frontend and FastAPI backend, deployed via Docker Compose on a VPS with Caddy (reverse proxy + auto-SSL) and PostgreSQL.
 
 ## Development Commands
 
@@ -35,19 +35,19 @@ bun run lint
 
 ## Architecture
 
-**Single container deployment:** FastAPI serves both `/api/*` routes and React static files in production. In development, Vite proxies `/api` requests to the backend container.
+**Split container deployment:** In production, three containers — Caddy serves the React frontend and reverse-proxies `/api/*` to the backend; FastAPI is a pure API server (no static file serving); PostgreSQL for data. In development, Vite proxies `/api` requests to the backend container.
 
 **Auth:** Multi-user password-based JWT with bcrypt hashing. Each user has a unique password. `APP_PASSWORD` env var bootstraps the admin user on first run. JWT `sub` contains the user UUID, tokens valid 1 year. `get_current_user` dependency returns a `User` object. Login iterates all users checking bcrypt hashes.
 
-**Database:** PostgreSQL with async SQLAlchemy and Alembic migrations. Migrations run automatically on startup (`alembic upgrade head`). In development, PostgreSQL runs in Docker; in production, Railway-hosted PostgreSQL.
+**Database:** PostgreSQL with async SQLAlchemy and Alembic migrations. Migrations run automatically on startup (`alembic upgrade head`). In development, PostgreSQL runs in Docker; in production, VPS-hosted PostgreSQL via Docker Compose.
 
 ## Infrastructure
 
-**Local dev (docker compose):** Three containers — PostgreSQL on :5432, FastAPI on :8000, Vite on :5173. Frontend proxies `/api` to `http://backend:8000`.
+**Local dev (`docker-compose.yml`):** Three containers — PostgreSQL on :5432, FastAPI on :8000, Vite on :5173. Frontend proxies `/api` to `http://backend:8000`. Hot reload via volume mounts.
 
-**Production (Railway):** Single Docker container. Multi-stage build: bun builds frontend, uv installs backend deps, python:alpine runs everything. FastAPI serves React static files from `/frontend/dist` and API from `/api`. Listens on port 8000 (Railway's `PORT` env var).
+**Production (`docker-compose.prod.yml`):** Three containers — PostgreSQL, FastAPI (no exposed ports), Caddy on :80/:443. Caddy serves the baked-in React frontend, reverse-proxies `/api/*` to backend, and auto-provisions SSL via Let's Encrypt. `backend/Dockerfile` builds the API image; `Dockerfile.caddy` builds frontend + Caddy image. All secrets via `.env` file (see `.env.prod.example`).
 
-**Database:** PostgreSQL, accessed only through FastAPI backend. In dev, runs as a Docker container. In production, Railway-hosted PostgreSQL.
+**Database:** PostgreSQL, accessed only through FastAPI backend. Runs as a Docker container in both dev and production.
 
 ## Key Patterns
 
@@ -115,7 +115,7 @@ Key derived fields (computed from structure, not stored): `total_weeks`, `curren
 
 **Backend:** `DATABASE_URL`, `APP_PASSWORD` (bootstrap admin password), `ADMIN_NAME` (admin user display name, default "Admin"), `SECRET_KEY`, `CORS_ORIGINS`, `ANTHROPIC_API_KEY` (future)
 
-**Railway production:** Same as above, plus `PORT=8000` (set by Railway). `DATABASE_URL` points to Railway PostgreSQL.
+**Production (`.env` file):** `DOMAIN` (Caddy auto-SSL), `DB_PASSWORD`, `APP_PASSWORD`, `SECRET_KEY`, `ADMIN_NAME`. See `.env.prod.example`.
 
 **Docker compose dev:** Hardcoded dev values — `APP_PASSWORD=devpassword`, `ADMIN_NAME=Admin`, local PostgreSQL.
 
@@ -131,7 +131,7 @@ Key derived fields (computed from structure, not stored): `total_weeks`, `curren
 
 **Do NOT include** the `Co-Authored-By` footer in commit messages.
 
-**Workflow:** Work on feature/fix branches, merge to `main`. Railway auto-deploys from `main`.
+**Workflow:** Work on feature/fix branches, merge to `main`.
 
 ## Documentation
 
