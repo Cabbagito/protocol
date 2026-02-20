@@ -1,8 +1,11 @@
 """Import RP Strength training data into Protocol.
 
 Usage:
-    uv run python -m scripts.import_rp --data-file docs/rp_training_data.json --user-name "Admin"
-    uv run python -m scripts.import_rp --data-file docs/rp_training_data.json --user-name "Admin" --dry-run
+    uv run python -m scripts.import_rp --data-file rp_training_data.json --user-name "Admin"
+    uv run python -m scripts.import_rp --data-file rp_training_data.json --user-name "Admin" --dry-run
+
+Docker:
+    docker compose exec backend uv run python -m scripts.import_rp --data-file /app/rp_training_data.json --user-name "Admin"
 """
 
 import argparse
