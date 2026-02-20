@@ -12,13 +12,13 @@ Built mobile-first with a dark navy UI, animated transitions, and offline-ready 
 ```
  ┌─────────────────────────────────────────────────────────┐
  │                                                         │
- │      ◇  Exercises   ◇  Splits   ◇  Mesocycles          │
- │      ◇  Workouts    ◇  Progress Charts                 │
- │      ◇  Rest Timer  ◇  Auto-Progression                │
+ │      ◇  Exercises   ◇  Splits   ◇  Mesocycles           │
+ │      ◇  Workouts    ◇  Progress Charts                  │
+ │      ◇  Rest Timer  ◇  Auto-Progression                 │
  │                                                         │
  │      Phase 1: Gym MVP ························ Done ✓   │
- │      Phase 2: Diet Tracking ··················· Soon     │
- │      Phase 3: Glucose Management ·············· Soon     │
+ │      Phase 2: Diet Tracking ··················· Soon    │
+ │      Phase 3: Glucose Management ·············· Soon    │
  │                                                         │
  └─────────────────────────────────────────────────────────┘
 ```
@@ -84,10 +84,10 @@ bun run lint           # ESLint
 
 ```
                     ┌──────────────────────────────────────┐
-                    │            Docker Compose             │
-                    │                                       │
+                    │            Docker Compose            │
+                    │                                      │
   :5173 (dev)       │  ┌───────────┐    ┌───────────────┐  │
-  :443  (prod)  ────┼──│   Caddy   │───▸│    FastAPI     │  │
+  :443  (prod)  ────┼──│   Caddy   │───▸│    FastAPI    │  │
                     │  │  (proxy)  │    │   (backend)   │  │
                     │  └───────────┘    └──────┬────────┘  │
                     │                          │           │
