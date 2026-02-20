@@ -28,6 +28,10 @@ COPY --from=backend-builder /app/.venv /app/.venv
 # Copy backend code
 COPY backend/app ./app
 
+# Copy Alembic config and migrations
+COPY backend/alembic.ini ./alembic.ini
+COPY backend/migrations ./migrations
+
 # Copy built frontend
 COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
 

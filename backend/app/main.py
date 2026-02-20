@@ -1,3 +1,4 @@
+import asyncio
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -5,38 +6,32 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-from sqlalchemy import text
 
 from app.core.config import settings
 from app.core.database import async_session, engine
-from app.core.seed import reset_and_reseed, seed_default_splits, seed_exercises
+from app.core.migrations import check_needs_stamp, run_stamp, run_upgrade
+from app.core.seed import seed_default_splits, seed_exercises
 from app.models import base  # noqa: F401 - Import to register models
 from app.routers import auth, exercises, health, mesocycles, splits, workouts
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: create tables if they don't exist
-    async with engine.begin() as conn:
-        if settings.dev_reset_db:
-            # Use CASCADE to handle removed tables (e.g. workout_logs) that
-            # still have FK references in the DB but are no longer in models.
-            await conn.execute(text("DROP SCHEMA public CASCADE"))
-            await conn.execute(text("CREATE SCHEMA public"))
-        await conn.run_sync(base.Base.metadata.create_all)
+    # Run Alembic migrations (sync — needs its own event loop in a thread)
+    if await check_needs_stamp():
+        await asyncio.to_thread(run_stamp)
+    else:
+        await asyncio.to_thread(run_upgrade)
 
     # Seed exercises and default splits
     async with async_session() as session:
-        if settings.dev_reset_db:
-            await reset_and_reseed(session)
-        else:
-            count = await seed_exercises(session)
-            if count > 0:
-                print(f"Seeded/updated {count} exercises")
+        count = await seed_exercises(session)
+        if count > 0:
+            print(f"Seeded/updated {count} exercises")
 
-            added = await seed_default_splits(session)
-            if added > 0:
-                print(f"Seeded {added} default split(s)")
+        added = await seed_default_splits(session)
+        if added > 0:
+            print(f"Seeded {added} default split(s)")
 
     yield
     # Shutdown: dispose engine
