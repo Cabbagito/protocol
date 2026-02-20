@@ -91,6 +91,7 @@ export default function Workout() {
     setSets([])
     setSkippedExercises(new Set())
     setExerciseNotes({})
+    setHeaderExpanded(false)
     prevCompletedRef.current = 0
     prevSkippedRef.current = ''
     animPhaseRef.current.clear()
