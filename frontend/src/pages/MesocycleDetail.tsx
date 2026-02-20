@@ -343,7 +343,7 @@ export default function MesocycleDetail() {
             </span>
             <div
               className="-mx-4 px-4 mt-2 pb-2 flex gap-2.5 overflow-x-auto"
-              style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}
+              style={{ scrollbarWidth: 'none', overscrollBehaviorX: 'contain' }}
             >
               <style>{`.prog-scroll::-webkit-scrollbar { display: none; }`}</style>
               {progression.map((ex) => {
