@@ -21,15 +21,8 @@ class Settings(BaseSettings):
     # CORS
     cors_origins: list[str] = ["http://localhost:5173", "http://localhost:8000"]
 
-    # Dev mode
-    dev_reset_db: bool = False
-
     # Claude API
     anthropic_api_key: str = ""
-
-    # Supabase Storage
-    supabase_url: str = ""
-    supabase_key: str = ""
 
     class Config:
         env_file = ".env"

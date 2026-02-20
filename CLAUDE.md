@@ -4,7 +4,7 @@ This file provides guidance to Claude Code when working with this repository.
 
 ## Project Overview
 
-Protocol is a single-user personal fitness PWA combining gym tracking, nutrition logging, and glucose management. Monorepo with a React frontend and FastAPI backend, deployed as a single Docker container on Railway with a Supabase PostgreSQL database.
+Protocol is a single-user personal fitness PWA combining gym tracking, nutrition logging, and glucose management. Monorepo with a React frontend and FastAPI backend, deployed as a single Docker container on Railway with PostgreSQL.
 
 ## Development Commands
 
@@ -20,6 +20,12 @@ uv run pytest path/to/test.py -k "test_name"  # Single test
 uv run ruff check .                # Lint
 uv run ruff format .               # Format
 
+# Alembic migrations (from /backend)
+uv run alembic revision --autogenerate -m "description"  # Generate migration
+uv run alembic upgrade head        # Apply migrations
+uv run alembic current             # Show current revision
+uv run alembic history             # Show migration history
+
 # Frontend only (from /frontend)
 bun install
 bun run dev
@@ -33,7 +39,7 @@ bun run lint
 
 **Auth:** Simple password-based JWT (single user). Password from `APP_PASSWORD` env var, tokens valid 1 year.
 
-**Database:** Supabase-hosted PostgreSQL with async SQLAlchemy. Tables auto-create on startup via `Base.metadata.create_all`. Connection uses SSL with pgbouncer compatibility (`statement_cache_size=0`).
+**Database:** PostgreSQL with async SQLAlchemy and Alembic migrations. Migrations run automatically on startup (`alembic upgrade head`). In development, PostgreSQL runs in Docker; in production, Railway-hosted PostgreSQL.
 
 ## Infrastructure
 
@@ -41,7 +47,7 @@ bun run lint
 
 **Production (Railway):** Single Docker container. Multi-stage build: bun builds frontend, uv installs backend deps, python:alpine runs everything. FastAPI serves React static files from `/frontend/dist` and API from `/api`. Listens on port 8000 (Railway's `PORT` env var).
 
-**Database (Supabase):** Project `wjrugbqldyedubliygew` in eu-central-1. DB accessed only through FastAPI backend (not PostgREST). RLS is disabled since all access goes through the backend's JWT auth.
+**Database:** PostgreSQL, accessed only through FastAPI backend. In dev, runs as a Docker container. In production, Railway-hosted PostgreSQL.
 
 ## Key Patterns
 
@@ -90,7 +96,7 @@ Key derived fields (computed from structure, not stored): `total_weeks`, `curren
 - `GET /detail/{meso_id}/{week}/{session}` — view logged session
 - `GET /progress/{exercise_id}` — weight progression across all mesos
 
-**DB reset:** Set `DEV_RESET_DB=true` to drop all tables and reseed on startup. Used for development; production uses incremental seeding.
+**DB reset:** For a full reset in dev, use `docker compose down -v && docker compose up` to drop volumes and re-run migrations from scratch.
 
 **Frontend pages:**
 - Dashboard, Exercises, Splits, SplitDetail, Mesocycles, MesocycleDetail
@@ -102,9 +108,9 @@ Key derived fields (computed from structure, not stored): `total_weeks`, `curren
 
 ## Environment Variables
 
-**Backend:** `DATABASE_URL`, `APP_PASSWORD`, `SECRET_KEY`, `CORS_ORIGINS`, `DEV_RESET_DB` (drops all tables and reseeds on startup), `ANTHROPIC_API_KEY` (future)
+**Backend:** `DATABASE_URL`, `APP_PASSWORD`, `SECRET_KEY`, `CORS_ORIGINS`, `ANTHROPIC_API_KEY` (future)
 
-**Railway production:** Same as above, plus `PORT=8000` (set by Railway). `DATABASE_URL` points to Supabase pooled connection string.
+**Railway production:** Same as above, plus `PORT=8000` (set by Railway). `DATABASE_URL` points to Railway PostgreSQL.
 
 **Docker compose dev:** Hardcoded dev values — `APP_PASSWORD=devpassword`, local PostgreSQL.
 

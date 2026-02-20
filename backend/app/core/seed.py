@@ -1,7 +1,7 @@
 import logging
 from datetime import date, timedelta
 
-from sqlalchemy import delete, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -542,23 +542,3 @@ async def seed_demo_mesocycle(session: AsyncSession) -> None:
     session.add(meso)
     await session.commit()
     logger.info("Seeded demo mesocycle '%s' with weeks 1-2 + partial week 3 logged", meso.name)
-
-
-async def reset_and_reseed(session: AsyncSession) -> None:
-    """Wipe all data and re-seed from scratch (dev mode only)."""
-    logger.warning("DEV_RESET_DB is enabled — wiping and re-seeding all data")
-
-    # Delete in FK-safe order
-    await session.execute(delete(Mesocycle))
-    await session.execute(delete(SessionExercise))
-    await session.execute(delete(Session))
-    await session.execute(delete(Split))
-    await session.execute(delete(Exercise))
-    await session.commit()
-
-    # Re-seed
-    await seed_exercises(session)
-    await seed_default_splits(session)
-    await seed_demo_mesocycle(session)
-
-    logger.info("Dev reset complete: exercises, splits, and demo mesocycle seeded")

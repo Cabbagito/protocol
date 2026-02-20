@@ -1,3 +1,5 @@
+> **Note:** This PRD was written before development started and is outdated in many details (e.g., Supabase references, data model specifics). See `CLAUDE.md` for the current architecture and data model. Keeping this file for historical context.
+
 # Protocol — PRD
 
 **Version:** 0.1  
