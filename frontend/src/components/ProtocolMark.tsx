@@ -9,8 +9,8 @@ export default function ProtocolMark({ mode = 'idle', className }: ProtocolMarkP
       <svg className={className} viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <linearGradient id="load-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" className="l-shim-s" />
-            <stop offset="100%" className="l-shim-e" />
+            <stop offset="0%" className="l-shim-s" stopColor="#0ea5e9" />
+            <stop offset="100%" className="l-shim-e" stopColor="#8b5cf6" />
           </linearGradient>
         </defs>
         {/* Orbit track */}
@@ -36,8 +36,8 @@ export default function ProtocolMark({ mode = 'idle', className }: ProtocolMarkP
     <svg className={className} viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
       <defs>
         <linearGradient id="idle-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" className="cascade-fs" />
-          <stop offset="100%" className="cascade-fe" />
+          <stop offset="0%" className="cascade-fs" stopColor="#0ea5e9" />
+          <stop offset="100%" className="cascade-fe" stopColor="#8b5cf6" />
         </linearGradient>
         <radialGradient id="idle-vig" cx="42%" cy="38%" r="62%">
           <stop offset="0%" stopColor="#0f172a" stopOpacity="0" />

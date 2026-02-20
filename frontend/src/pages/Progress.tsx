@@ -28,7 +28,7 @@ export default function Progress() {
   const { data: progressData = [] } = useExerciseProgress(selectedExercise)
 
   if (exercisesLoading) {
-    return <PageLoader />
+    return <PageLoader className="min-h-[60vh]" />
   }
 
   // Calculate mesocycle stats

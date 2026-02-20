@@ -84,7 +84,7 @@ export default function SplitDetail() {
   }
 
   if (isLoading) {
-    return <PageLoader />
+    return <PageLoader className="min-h-[60vh]" />
   }
 
   if (!split) {

@@ -24,7 +24,7 @@ export default function Dashboard() {
   const { data: mesocycle, isLoading: mesoLoading } = useActiveMesocycle()
 
   if (mesoLoading) {
-    return <PageLoader />
+    return <PageLoader className="min-h-[60vh]" />
   }
 
   const formattedDate = new Date().toLocaleDateString('en-US', {

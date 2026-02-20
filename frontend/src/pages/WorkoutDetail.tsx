@@ -93,7 +93,7 @@ export default function WorkoutDetail() {
   const { data: workout, isLoading } = useWorkoutDetail(mesocycleId!, weekIndex, sessionIndex)
 
   if (isLoading) {
-    return <PageLoader />
+    return <PageLoader className="min-h-[60vh]" />
   }
 
   if (!workout) {

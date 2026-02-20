@@ -7,7 +7,7 @@ export default function WorkoutHub() {
   const { data: mesocycle, isLoading } = useActiveMesocycle()
 
   if (isLoading) {
-    return <PageLoader />
+    return <PageLoader className="min-h-[60vh]" />
   }
 
   if (mesocycle) {
