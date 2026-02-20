@@ -245,6 +245,7 @@ function MesocycleForm({ onSave, onCancel }: MesocycleFormProps) {
         <label className="text-sm text-slate-400">Total Weeks</label>
         <input
           type="number"
+          inputMode="numeric"
           min="1"
           max="12"
           value={totalWeeks}

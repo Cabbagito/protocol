@@ -395,6 +395,7 @@ function SessionForm({ splitId, session, onSave, onCancel }: SessionFormProps) {
                       <label className="text-xs text-slate-500">Sets</label>
                       <input
                         type="number"
+                        inputMode="numeric"
                         min="1"
                         value={ex.sets}
                         onChange={(e) => handleExerciseChange(index, 'sets', parseInt(e.target.value) || 1)}

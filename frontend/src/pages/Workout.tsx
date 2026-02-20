@@ -1044,6 +1044,7 @@ const SetRow = memo(function SetRow({ set, exercise, allSets, onUpdate, onComple
       <div className="flex-1 relative">
         <input
           type="number"
+          inputMode="decimal"
           step="0.5"
           value={isMatchLocked ? (resolvedWeight ?? set.weight ?? '') : (set.weight || '')}
           onChange={(e) => onUpdate(exercise.exercise_id, set.set_num, 'weight', parseFloat(e.target.value) || 0)}
@@ -1075,6 +1076,7 @@ const SetRow = memo(function SetRow({ set, exercise, allSets, onUpdate, onComple
       <div className="flex-1 relative">
         <input
           type="number"
+          inputMode="numeric"
           value={isMatchLocked
             ? (set.completed ? (set.reps ?? '') : (mmRefLogged ? resolvedTargetReps : ''))
             : (set.completed ? (set.reps ?? '') : (set.reps || ''))
