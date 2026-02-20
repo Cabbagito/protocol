@@ -1,13 +1,14 @@
 import logging
 from datetime import date, timedelta
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models.exercise import Exercise
 from app.models.mesocycle import Mesocycle
 from app.models.split import Session, SessionExercise, Split
+from app.models.user import User
 
 logger = logging.getLogger(__name__)
 
@@ -542,3 +543,53 @@ async def seed_demo_mesocycle(session: AsyncSession) -> None:
     session.add(meso)
     await session.commit()
     logger.info("Seeded demo mesocycle '%s' with weeks 1-2 + partial week 3 logged", meso.name)
+
+
+async def ensure_admin_user(session: AsyncSession) -> None:
+    """Bootstrap the admin user on first run.
+
+    If no users exist and APP_PASSWORD is set, creates an admin user and
+    assigns any orphan non-seed data to them. Seed data (seed_key IS NOT NULL)
+    keeps user_id = NULL so it remains shared.
+    """
+    from app.core.config import settings
+    from app.core.security import hash_password
+
+    result = await session.execute(select(User).limit(1))
+    if result.scalar_one_or_none() is not None:
+        return  # Users already exist
+
+    if not settings.app_password:
+        return
+
+    admin = User(
+        name=settings.admin_name,
+        password_hash=hash_password(settings.app_password),
+        is_admin=True,
+    )
+    session.add(admin)
+    await session.flush()
+
+    # Assign orphan non-seed exercises to admin
+    await session.execute(
+        update(Exercise)
+        .where(Exercise.seed_key.is_(None), Exercise.user_id.is_(None))
+        .values(user_id=admin.id)
+    )
+
+    # Assign orphan non-seed splits to admin
+    await session.execute(
+        update(Split)
+        .where(Split.seed_key.is_(None), Split.user_id.is_(None))
+        .values(user_id=admin.id)
+    )
+
+    # Assign all orphan mesocycles to admin (mesocycles don't have seed_key)
+    await session.execute(
+        update(Mesocycle)
+        .where(Mesocycle.user_id.is_(None))
+        .values(user_id=admin.id)
+    )
+
+    await session.commit()
+    logger.info("Created admin user '%s' and assigned orphan data", admin.name)

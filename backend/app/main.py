@@ -10,7 +10,7 @@ from fastapi.staticfiles import StaticFiles
 from app.core.config import settings
 from app.core.database import async_session, engine
 from app.core.migrations import check_needs_stamp, run_stamp, run_upgrade
-from app.core.seed import seed_default_splits, seed_exercises
+from app.core.seed import ensure_admin_user, seed_default_splits, seed_exercises
 from app.models import base  # noqa: F401 - Import to register models
 from app.routers import auth, exercises, health, mesocycles, splits, workouts
 
@@ -32,6 +32,8 @@ async def lifespan(app: FastAPI):
         added = await seed_default_splits(session)
         if added > 0:
             print(f"Seeded {added} default split(s)")
+
+        await ensure_admin_user(session)
 
     yield
     # Shutdown: dispose engine

@@ -1,10 +1,16 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../api/client'
-import { setToken } from '../lib/auth'
+import { setToken, setUserInfo } from '../lib/auth'
 
 interface LoginProps {
   onLogin: () => void
+}
+
+interface LoginResponse {
+  access_token: string
+  user_name: string
+  is_admin: boolean
 }
 
 export default function Login({ onLogin }: LoginProps) {
@@ -19,8 +25,9 @@ export default function Login({ onLogin }: LoginProps) {
     setLoading(true)
 
     try {
-      const response = await api.post<{ access_token: string }>('/auth/login', { password })
+      const response = await api.post<LoginResponse>('/auth/login', { password })
       setToken(response.access_token)
+      setUserInfo({ name: response.user_name, is_admin: response.is_admin })
       onLogin()
       navigate('/', { replace: true })
     } catch {

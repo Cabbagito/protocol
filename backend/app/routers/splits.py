@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -8,6 +8,7 @@ from app.core.database import get_db
 from app.core.security import get_current_user
 from app.models.exercise import Exercise
 from app.models.split import Session, SessionExercise, Split
+from app.models.user import User
 
 router = APIRouter()
 
@@ -91,11 +92,12 @@ class SessionReorder(BaseModel):
 @router.get("", response_model=list[SplitListItem])
 async def list_splits(
     db: AsyncSession = Depends(get_db),
-    _: str = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     result = await db.execute(
         select(Split.id, Split.name, func.count(Session.id).label("session_count"))
         .outerjoin(Session)
+        .where(or_(Split.user_id == current_user.id, Split.user_id.is_(None)))
         .group_by(Split.id)
         .order_by(Split.name)
     )
@@ -107,9 +109,9 @@ async def list_splits(
 async def create_split(
     split: SplitCreate,
     db: AsyncSession = Depends(get_db),
-    _: str = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
-    db_split = Split(name=split.name)
+    db_split = Split(name=split.name, user_id=current_user.id)
     db.add(db_split)
     await db.commit()
     await db.refresh(db_split)
@@ -120,7 +122,7 @@ async def create_split(
 async def get_split(
     split_id: str,
     db: AsyncSession = Depends(get_db),
-    _: str = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     result = await db.execute(
         select(Split)
@@ -129,7 +131,10 @@ async def get_split(
             .selectinload(Session.exercises)
             .selectinload(SessionExercise.exercise)
         )
-        .where(Split.id == split_id)
+        .where(
+            Split.id == split_id,
+            or_(Split.user_id == current_user.id, Split.user_id.is_(None)),
+        )
     )
     split = result.scalar_one_or_none()
     if not split:
@@ -143,7 +148,7 @@ async def update_split(
     split_id: str,
     split_update: SplitUpdate,
     db: AsyncSession = Depends(get_db),
-    _: str = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     result = await db.execute(
         select(Split)
@@ -152,7 +157,7 @@ async def update_split(
             .selectinload(Session.exercises)
             .selectinload(SessionExercise.exercise)
         )
-        .where(Split.id == split_id)
+        .where(Split.id == split_id, Split.user_id == current_user.id)
     )
     split = result.scalar_one_or_none()
     if not split:
@@ -168,9 +173,11 @@ async def update_split(
 async def delete_split(
     split_id: str,
     db: AsyncSession = Depends(get_db),
-    _: str = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
-    result = await db.execute(select(Split).where(Split.id == split_id))
+    result = await db.execute(
+        select(Split).where(Split.id == split_id, Split.user_id == current_user.id)
+    )
     split = result.scalar_one_or_none()
     if not split:
         raise HTTPException(status_code=404, detail="Split not found")
@@ -191,9 +198,11 @@ async def add_session(
     split_id: str,
     session: SessionCreate,
     db: AsyncSession = Depends(get_db),
-    _: str = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
-    result = await db.execute(select(Split).where(Split.id == split_id))
+    result = await db.execute(
+        select(Split).where(Split.id == split_id, Split.user_id == current_user.id)
+    )
     split = result.scalar_one_or_none()
     if not split:
         raise HTTPException(status_code=404, detail="Split not found")
@@ -213,10 +222,15 @@ async def add_session(
     db.add(db_session)
     await db.flush()
 
-    # Batch-validate all exercise IDs in one query
+    # Batch-validate all exercise IDs (scoped to visible exercises)
     if session.exercises:
         exercise_ids = [ex.exercise_id for ex in session.exercises]
-        result = await db.execute(select(Exercise.id).where(Exercise.id.in_(exercise_ids)))
+        result = await db.execute(
+            select(Exercise.id).where(
+                Exercise.id.in_(exercise_ids),
+                or_(Exercise.user_id == current_user.id, Exercise.user_id.is_(None)),
+            )
+        )
         found_ids = set(row[0] for row in result.all())
         missing = set(exercise_ids) - found_ids
         if missing:
@@ -252,8 +266,15 @@ async def update_session(
     session_id: str,
     session_update: SessionUpdate,
     db: AsyncSession = Depends(get_db),
-    _: str = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
+    # Verify parent split belongs to current user
+    result = await db.execute(
+        select(Split).where(Split.id == split_id, Split.user_id == current_user.id)
+    )
+    if not result.scalar_one_or_none():
+        raise HTTPException(status_code=404, detail="Split not found")
+
     result = await db.execute(
         select(Session)
         .options(selectinload(Session.exercises))
@@ -270,10 +291,15 @@ async def update_session(
     for ex in session.exercises:
         await db.delete(ex)
 
-    # Batch-validate all exercise IDs in one query
+    # Batch-validate all exercise IDs (scoped to visible exercises)
     if session_update.exercises:
         exercise_ids = [ex.exercise_id for ex in session_update.exercises]
-        result = await db.execute(select(Exercise.id).where(Exercise.id.in_(exercise_ids)))
+        result = await db.execute(
+            select(Exercise.id).where(
+                Exercise.id.in_(exercise_ids),
+                or_(Exercise.user_id == current_user.id, Exercise.user_id.is_(None)),
+            )
+        )
         found_ids = set(row[0] for row in result.all())
         missing = set(exercise_ids) - found_ids
         if missing:
@@ -308,8 +334,15 @@ async def delete_session(
     split_id: str,
     session_id: str,
     db: AsyncSession = Depends(get_db),
-    _: str = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
+    # Verify parent split belongs to current user
+    result = await db.execute(
+        select(Split).where(Split.id == split_id, Split.user_id == current_user.id)
+    )
+    if not result.scalar_one_or_none():
+        raise HTTPException(status_code=404, detail="Split not found")
+
     result = await db.execute(
         select(Session).where(Session.id == session_id, Session.split_id == split_id)
     )
@@ -326,11 +359,13 @@ async def reorder_sessions(
     split_id: str,
     reorder: SessionReorder,
     db: AsyncSession = Depends(get_db),
-    _: str = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
-    result = await db.execute(select(Split).where(Split.id == split_id))
-    split = result.scalar_one_or_none()
-    if not split:
+    # Verify parent split belongs to current user
+    result = await db.execute(
+        select(Split).where(Split.id == split_id, Split.user_id == current_user.id)
+    )
+    if not result.scalar_one_or_none():
         raise HTTPException(status_code=404, detail="Split not found")
 
     # Fetch all sessions for this split in one query, then validate and reorder

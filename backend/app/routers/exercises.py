@@ -1,11 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.security import get_current_user
 from app.models.exercise import Exercise
+from app.models.user import User
 
 router = APIRouter()
 
@@ -29,9 +30,13 @@ class ExerciseResponse(BaseModel):
 @router.get("", response_model=list[ExerciseResponse])
 async def list_exercises(
     db: AsyncSession = Depends(get_db),
-    _: str = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
-    result = await db.execute(select(Exercise).order_by(Exercise.name))
+    result = await db.execute(
+        select(Exercise)
+        .where(or_(Exercise.user_id == current_user.id, Exercise.user_id.is_(None)))
+        .order_by(Exercise.name)
+    )
     exercises = result.scalars().all()
     return exercises
 
@@ -40,12 +45,13 @@ async def list_exercises(
 async def create_exercise(
     exercise: ExerciseCreate,
     db: AsyncSession = Depends(get_db),
-    _: str = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     db_exercise = Exercise(
         name=exercise.name,
         muscle_group=exercise.muscle_group,
         equipment_type=exercise.equipment_type,
+        user_id=current_user.id,
     )
     db.add(db_exercise)
     await db.commit()
@@ -57,9 +63,14 @@ async def create_exercise(
 async def get_exercise(
     exercise_id: str,
     db: AsyncSession = Depends(get_db),
-    _: str = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
-    result = await db.execute(select(Exercise).where(Exercise.id == exercise_id))
+    result = await db.execute(
+        select(Exercise).where(
+            Exercise.id == exercise_id,
+            or_(Exercise.user_id == current_user.id, Exercise.user_id.is_(None)),
+        )
+    )
     exercise = result.scalar_one_or_none()
     if not exercise:
         raise HTTPException(status_code=404, detail="Exercise not found")
@@ -71,9 +82,11 @@ async def update_exercise(
     exercise_id: str,
     exercise_update: ExerciseCreate,
     db: AsyncSession = Depends(get_db),
-    _: str = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
-    result = await db.execute(select(Exercise).where(Exercise.id == exercise_id))
+    result = await db.execute(
+        select(Exercise).where(Exercise.id == exercise_id, Exercise.user_id == current_user.id)
+    )
     exercise = result.scalar_one_or_none()
     if not exercise:
         raise HTTPException(status_code=404, detail="Exercise not found")
@@ -91,9 +104,11 @@ async def update_exercise(
 async def delete_exercise(
     exercise_id: str,
     db: AsyncSession = Depends(get_db),
-    _: str = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
-    result = await db.execute(select(Exercise).where(Exercise.id == exercise_id))
+    result = await db.execute(
+        select(Exercise).where(Exercise.id == exercise_id, Exercise.user_id == current_user.id)
+    )
     exercise = result.scalar_one_or_none()
     if not exercise:
         raise HTTPException(status_code=404, detail="Exercise not found")

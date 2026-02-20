@@ -2,15 +2,15 @@ from datetime import date as date_type
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from app.core.database import get_db
 from app.core.security import get_current_user
 from app.core.seed import compute_progression, get_current_position
 from app.models.exercise import Exercise
 from app.models.mesocycle import Mesocycle
+from app.models.user import User
 
 router = APIRouter()
 
@@ -72,10 +72,14 @@ class ProgressEntry(BaseModel):
 async def get_workout_template(
     mesocycle_id: str,
     db: AsyncSession = Depends(get_db),
-    _: str = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Get the current workout template from the mesocycle structure."""
-    result = await db.execute(select(Mesocycle).where(Mesocycle.id == mesocycle_id))
+    result = await db.execute(
+        select(Mesocycle).where(
+            Mesocycle.id == mesocycle_id, Mesocycle.user_id == current_user.id
+        )
+    )
     mesocycle = result.scalar_one_or_none()
     if not mesocycle:
         raise HTTPException(status_code=404, detail="Mesocycle not found")
@@ -106,10 +110,14 @@ async def get_specific_template(
     week_index: int,
     session_index: int,
     db: AsyncSession = Depends(get_db),
-    _: str = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Get a specific workout template by week and session index."""
-    result = await db.execute(select(Mesocycle).where(Mesocycle.id == mesocycle_id))
+    result = await db.execute(
+        select(Mesocycle).where(
+            Mesocycle.id == mesocycle_id, Mesocycle.user_id == current_user.id
+        )
+    )
     mesocycle = result.scalar_one_or_none()
     if not mesocycle:
         raise HTTPException(status_code=404, detail="Mesocycle not found")
@@ -143,11 +151,13 @@ async def get_specific_template(
 async def log_sets(
     data: LogSetsRequest,
     db: AsyncSession = Depends(get_db),
-    _: str = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Log sets into the mesocycle structure."""
     result = await db.execute(
-        select(Mesocycle).where(Mesocycle.id == data.mesocycle_id).with_for_update()
+        select(Mesocycle)
+        .where(Mesocycle.id == data.mesocycle_id, Mesocycle.user_id == current_user.id)
+        .with_for_update()
     )
     mesocycle = result.scalar_one_or_none()
     if not mesocycle:
@@ -216,11 +226,13 @@ async def log_sets(
 async def get_exercise_progress(
     exercise_id: str,
     db: AsyncSession = Depends(get_db),
-    _: str = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Get weight progression for an exercise by scanning all mesocycle structures."""
     result = await db.execute(
-        select(Mesocycle).order_by(Mesocycle.started_at.asc())
+        select(Mesocycle)
+        .where(Mesocycle.user_id == current_user.id)
+        .order_by(Mesocycle.started_at.asc())
     )
     mesocycles = result.scalars().all()
 
@@ -237,7 +249,10 @@ async def get_exercise_progress(
                     max_weight = max(s.get("weight", 0) or 0 for s in logged_sets)
                     total_reps = sum(s.get("reps", 0) or 0 for s in logged_sets)
                     total_sets = len(logged_sets)
-                    volume = sum((s.get("weight", 0) or 0) * (s.get("reps", 0) or 0) for s in logged_sets)
+                    volume = sum(
+                        (s.get("weight", 0) or 0) * (s.get("reps", 0) or 0)
+                        for s in logged_sets
+                    )
                     progress.append({
                         "date": session.get("date") or meso.started_at.isoformat(),
                         "week_number": week["week_number"],
@@ -260,11 +275,13 @@ class ExerciseNoteRequest(BaseModel):
 async def update_exercise_note(
     data: ExerciseNoteRequest,
     db: AsyncSession = Depends(get_db),
-    _: str = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Update or remove a meso-wide exercise note."""
     result = await db.execute(
-        select(Mesocycle).where(Mesocycle.id == data.mesocycle_id).with_for_update()
+        select(Mesocycle)
+        .where(Mesocycle.id == data.mesocycle_id, Mesocycle.user_id == current_user.id)
+        .with_for_update()
     )
     mesocycle = result.scalar_one_or_none()
     if not mesocycle:
@@ -300,18 +317,25 @@ class ReplaceExerciseRequest(BaseModel):
 async def replace_exercise(
     data: ReplaceExerciseRequest,
     db: AsyncSession = Depends(get_db),
-    _: str = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Replace an exercise in the mesocycle structure."""
     result = await db.execute(
-        select(Mesocycle).where(Mesocycle.id == data.mesocycle_id).with_for_update()
+        select(Mesocycle)
+        .where(Mesocycle.id == data.mesocycle_id, Mesocycle.user_id == current_user.id)
+        .with_for_update()
     )
     mesocycle = result.scalar_one_or_none()
     if not mesocycle:
         raise HTTPException(status_code=404, detail="Mesocycle not found")
 
-    # Look up new exercise
-    ex_result = await db.execute(select(Exercise).where(Exercise.id == data.new_exercise_id))
+    # Look up new exercise (scoped to visible exercises)
+    ex_result = await db.execute(
+        select(Exercise).where(
+            Exercise.id == data.new_exercise_id,
+            or_(Exercise.user_id == current_user.id, Exercise.user_id.is_(None)),
+        )
+    )
     new_exercise = ex_result.scalar_one_or_none()
     if not new_exercise:
         raise HTTPException(status_code=404, detail="New exercise not found")
@@ -380,10 +404,14 @@ async def replace_exercise(
 async def get_workout_history(
     mesocycle_id: str,
     db: AsyncSession = Depends(get_db),
-    _: str = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Get list of completed workouts from the mesocycle structure."""
-    result = await db.execute(select(Mesocycle).where(Mesocycle.id == mesocycle_id))
+    result = await db.execute(
+        select(Mesocycle).where(
+            Mesocycle.id == mesocycle_id, Mesocycle.user_id == current_user.id
+        )
+    )
     mesocycle = result.scalar_one_or_none()
     if not mesocycle:
         raise HTTPException(status_code=404, detail="Mesocycle not found")
@@ -422,10 +450,14 @@ async def get_workout_detail(
     week_index: int,
     session_index: int,
     db: AsyncSession = Depends(get_db),
-    _: str = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Get detailed workout data for a specific session in the structure."""
-    result = await db.execute(select(Mesocycle).where(Mesocycle.id == mesocycle_id))
+    result = await db.execute(
+        select(Mesocycle).where(
+            Mesocycle.id == mesocycle_id, Mesocycle.user_id == current_user.id
+        )
+    )
     mesocycle = result.scalar_one_or_none()
     if not mesocycle:
         raise HTTPException(status_code=404, detail="Mesocycle not found")

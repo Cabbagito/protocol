@@ -1,29 +1,42 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
+from passlib.context import CryptContext
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
+from app.core.database import get_db
 
 ALGORITHM = "HS256"
 
 security = HTTPBearer()
 
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-def create_access_token() -> str:
-    expire = datetime.now(timezone.utc) + timedelta(days=settings.access_token_expire_days)
-    to_encode = {"exp": expire, "sub": "user"}
+
+def hash_password(password: str) -> str:
+    return pwd_context.hash(password)
+
+
+def verify_password(plain: str, hashed: str) -> bool:
+    return pwd_context.verify(plain, hashed)
+
+
+def create_access_token(user_id: str) -> str:
+    expire = datetime.now(UTC) + timedelta(days=settings.access_token_expire_days)
+    to_encode = {"exp": expire, "sub": user_id}
     return jwt.encode(to_encode, settings.secret_key, algorithm=ALGORITHM)
-
-
-def verify_password(password: str) -> bool:
-    return password == settings.app_password
 
 
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
-) -> str:
+    db: AsyncSession = Depends(get_db),
+):
+    from app.models.user import User
+
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Invalid authentication credentials",
@@ -34,9 +47,15 @@ async def get_current_user(
         payload = jwt.decode(
             credentials.credentials, settings.secret_key, algorithms=[ALGORITHM]
         )
-        sub: str | None = payload.get("sub")
-        if sub is None:
+        user_id: str | None = payload.get("sub")
+        if user_id is None:
             raise credentials_exception
-        return sub
     except JWTError:
         raise credentials_exception
+
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+    if user is None:
+        raise credentials_exception
+
+    return user

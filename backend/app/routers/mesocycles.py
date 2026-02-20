@@ -1,9 +1,8 @@
 from datetime import date as date_type
-from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
-from sqlalchemy import select, update
+from sqlalchemy import or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -13,6 +12,7 @@ from app.core.seed import build_mesocycle_structure, get_current_position
 from app.models.exercise import Exercise
 from app.models.mesocycle import Mesocycle
 from app.models.split import Session, SessionExercise, Split
+from app.models.user import User
 
 router = APIRouter()
 
@@ -24,7 +24,7 @@ class MesocycleCreate(BaseModel):
     split_id: str
     name: str = Field(min_length=1, max_length=100)
     total_weeks: int = Field(default=4, ge=1, le=12)
-    started_at: Optional[date_type] = None
+    started_at: date_type | None = None
 
 
 class MesocycleUpdate(BaseModel):
@@ -73,9 +73,13 @@ class MesocycleResponse(BaseModel):
 async def list_mesocycles(
     active_only: bool = False,
     db: AsyncSession = Depends(get_db),
-    _: str = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
-    query = select(Mesocycle).options(selectinload(Mesocycle.split))
+    query = (
+        select(Mesocycle)
+        .options(selectinload(Mesocycle.split))
+        .where(Mesocycle.user_id == current_user.id)
+    )
     if active_only:
         query = query.where(Mesocycle.is_active.is_(True))
     query = query.order_by(Mesocycle.is_active.desc(), Mesocycle.started_at.desc())
@@ -90,9 +94,9 @@ async def list_mesocycles(
 async def create_mesocycle(
     data: MesocycleCreate,
     db: AsyncSession = Depends(get_db),
-    _: str = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
-    # Verify split exists and load sessions with exercises
+    # Verify split exists and is visible to user, load sessions with exercises
     result = await db.execute(
         select(Split)
         .options(
@@ -100,14 +104,21 @@ async def create_mesocycle(
             .selectinload(Session.exercises)
             .selectinload(SessionExercise.exercise)
         )
-        .where(Split.id == data.split_id)
+        .where(
+            Split.id == data.split_id,
+            or_(Split.user_id == current_user.id, Split.user_id.is_(None)),
+        )
     )
     split = result.scalar_one_or_none()
     if not split:
         raise HTTPException(status_code=404, detail="Split not found")
 
-    # Bulk-deactivate any currently active mesocycles
-    await db.execute(update(Mesocycle).where(Mesocycle.is_active.is_(True)).values(is_active=False))
+    # Bulk-deactivate only this user's active mesocycles
+    await db.execute(
+        update(Mesocycle)
+        .where(Mesocycle.is_active.is_(True), Mesocycle.user_id == current_user.id)
+        .values(is_active=False)
+    )
 
     # Build exercise lookup by id
     exercise_ids = [se.exercise_id for s in split.sessions for se in s.exercises]
@@ -122,6 +133,7 @@ async def create_mesocycle(
 
     mesocycle = Mesocycle(
         split_id=data.split_id,
+        user_id=current_user.id,
         name=data.name,
         started_at=data.started_at or date_type.today(),
         is_active=True,
@@ -134,15 +146,15 @@ async def create_mesocycle(
     return _mesocycle_to_response(mesocycle, split.name)
 
 
-@router.get("/active", response_model=Optional[MesocycleResponse])
+@router.get("/active", response_model=MesocycleResponse | None)
 async def get_active_mesocycle(
     db: AsyncSession = Depends(get_db),
-    _: str = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     result = await db.execute(
         select(Mesocycle)
         .options(selectinload(Mesocycle.split))
-        .where(Mesocycle.is_active.is_(True))
+        .where(Mesocycle.is_active.is_(True), Mesocycle.user_id == current_user.id)
     )
     mesocycle = result.scalar_one_or_none()
 
@@ -156,12 +168,12 @@ async def get_active_mesocycle(
 async def get_mesocycle(
     mesocycle_id: str,
     db: AsyncSession = Depends(get_db),
-    _: str = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     result = await db.execute(
         select(Mesocycle)
         .options(selectinload(Mesocycle.split))
-        .where(Mesocycle.id == mesocycle_id)
+        .where(Mesocycle.id == mesocycle_id, Mesocycle.user_id == current_user.id)
     )
     mesocycle = result.scalar_one_or_none()
 
@@ -176,12 +188,12 @@ async def update_mesocycle(
     mesocycle_id: str,
     data: MesocycleUpdate,
     db: AsyncSession = Depends(get_db),
-    _: str = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     result = await db.execute(
         select(Mesocycle)
         .options(selectinload(Mesocycle.split))
-        .where(Mesocycle.id == mesocycle_id)
+        .where(Mesocycle.id == mesocycle_id, Mesocycle.user_id == current_user.id)
     )
     mesocycle = result.scalar_one_or_none()
 
@@ -195,7 +207,11 @@ async def update_mesocycle(
         if data.is_active:
             await db.execute(
                 update(Mesocycle)
-                .where(Mesocycle.is_active.is_(True), Mesocycle.id != mesocycle_id)
+                .where(
+                    Mesocycle.is_active.is_(True),
+                    Mesocycle.id != mesocycle_id,
+                    Mesocycle.user_id == current_user.id,
+                )
                 .values(is_active=False)
             )
         mesocycle.is_active = data.is_active
@@ -210,9 +226,11 @@ async def update_mesocycle(
 async def delete_mesocycle(
     mesocycle_id: str,
     db: AsyncSession = Depends(get_db),
-    _: str = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
-    result = await db.execute(select(Mesocycle).where(Mesocycle.id == mesocycle_id))
+    result = await db.execute(
+        select(Mesocycle).where(Mesocycle.id == mesocycle_id, Mesocycle.user_id == current_user.id)
+    )
     mesocycle = result.scalar_one_or_none()
 
     if not mesocycle:

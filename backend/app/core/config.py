@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     app_password: str = "changeme"
     secret_key: str = "change-this-secret-key-in-production"
     access_token_expire_days: int = 365
+    admin_name: str = "Admin"
 
     # CORS
     cors_origins: list[str] = ["http://localhost:5173", "http://localhost:8000"]

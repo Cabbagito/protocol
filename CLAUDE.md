@@ -4,7 +4,7 @@ This file provides guidance to Claude Code when working with this repository.
 
 ## Project Overview
 
-Protocol is a single-user personal fitness PWA combining gym tracking, nutrition logging, and glucose management. Monorepo with a React frontend and FastAPI backend, deployed as a single Docker container on Railway with PostgreSQL.
+Protocol is a multi-user personal fitness PWA combining gym tracking, nutrition logging, and glucose management. Monorepo with a React frontend and FastAPI backend, deployed as a single Docker container on Railway with PostgreSQL.
 
 ## Development Commands
 
@@ -37,7 +37,7 @@ bun run lint
 
 **Single container deployment:** FastAPI serves both `/api/*` routes and React static files in production. In development, Vite proxies `/api` requests to the backend container.
 
-**Auth:** Simple password-based JWT (single user). Password from `APP_PASSWORD` env var, tokens valid 1 year.
+**Auth:** Multi-user password-based JWT with bcrypt hashing. Each user has a unique password. `APP_PASSWORD` env var bootstraps the admin user on first run. JWT `sub` contains the user UUID, tokens valid 1 year. `get_current_user` dependency returns a `User` object. Login iterates all users checking bcrypt hashes.
 
 **Database:** PostgreSQL with async SQLAlchemy and Alembic migrations. Migrations run automatically on startup (`alembic upgrade head`). In development, PostgreSQL runs in Docker; in production, Railway-hosted PostgreSQL.
 
@@ -52,14 +52,14 @@ bun run lint
 ## Key Patterns
 
 **Backend structure:**
-- `app/core/` - Config (pydantic-settings), database session, JWT security
-- `app/models/` - SQLAlchemy models (inherit from `Base`, `TimestampMixin`)
-- `app/routers/` - FastAPI routers, each protected with `Depends(get_current_user)`
+- `app/core/` - Config (pydantic-settings), database session, JWT security (bcrypt + passlib)
+- `app/models/` - SQLAlchemy models (inherit from `Base`, `TimestampMixin`); `User` model for auth
+- `app/routers/` - FastAPI routers, each protected with `Depends(get_current_user)` which returns a `User`
 - Pydantic schemas defined inline in routers
 
 **Frontend structure:**
 - `src/api/client.ts` - Fetch wrapper with auto-auth headers and 401 redirect
-- `src/lib/auth.ts` - Token storage (localStorage)
+- `src/lib/auth.ts` - Token + UserInfo storage (localStorage)
 - `src/components/Icons.tsx` - Shared SVG icon components (all icons live here)
 - `src/components/Toast.tsx` - Error toast notification system
 - `src/pages/` - Route pages (lazy-loaded via React.lazy)
@@ -76,11 +76,15 @@ Three domains planned:
 
 **Currently implemented (Phase 1 - Gym MVP):**
 
-**Exercise** (`/api/exercises`): Pre-seeded ~50 exercises. Each has a single `muscle_group` string (one of: back, biceps, front delt, rear delt, side delt, chest, triceps, quads, hamstrings, glutes, calves, abs, traps, forearms) and `equipment_type` (barbell, dumbbell, machine, cable, bodyweight).
+**User** (`users` table): Multi-user auth. Fields: `id` (UUID), `name`, `password_hash` (bcrypt), `is_admin`. Admin user is bootstrapped from `APP_PASSWORD` on first run via `ensure_admin_user()`.
 
-**Split** (`/api/splits`): Training template with ordered sessions. Each session has exercises with `sets` count (no rep ranges — rep targets are set per-set in the mesocycle structure).
+**Data ownership:** Exercise, Split, and Mesocycle have a nullable `user_id` FK. `NULL` = system/seed data (visible to all users). `<uuid>` = user-created (visible only to owner). Queries use `WHERE user_id = current_user.id OR user_id IS NULL` for reads, `WHERE user_id = current_user.id` for writes.
 
-**Mesocycle** (`/api/mesocycles`): Core training block. Stores a `structure` JSONB column containing the entire nested document: `weeks[] → sessions[] → exercises[] → sets[]`. Each set has `weight`, `reps`, `target_reps`, `suggested_weight`, `rir`, and `logged` flag. No separate WorkoutLog table — all workout data lives in the structure.
+**Exercise** (`/api/exercises`): Pre-seeded ~50 exercises (`user_id=NULL`, shared). User-created exercises have `user_id` set. Each has a single `muscle_group` string (one of: back, biceps, front delt, rear delt, side delt, chest, triceps, quads, hamstrings, glutes, calves, abs, traps, forearms) and `equipment_type` (barbell, dumbbell, machine, cable, bodyweight).
+
+**Split** (`/api/splits`): Training template with ordered sessions. Each session has exercises with `sets` count (no rep ranges — rep targets are set per-set in the mesocycle structure). Seed splits (`user_id=NULL`) are shared; user-created splits have `user_id` set.
+
+**Mesocycle** (`/api/mesocycles`): Core training block. Always owned by a user (`user_id` set on creation). Stores a `structure` JSONB column containing the entire nested document: `weeks[] → sessions[] → exercises[] → sets[]`. Each set has `weight`, `reps`, `target_reps`, `suggested_weight`, `rir`, and `logged` flag. No separate WorkoutLog table — all workout data lives in the structure. `is_active` bulk updates are scoped to current user.
 
 Key derived fields (computed from structure, not stored): `total_weeks`, `current_week`, `rir_scheme`, `current_rir`, `workouts_completed`.
 
@@ -101,6 +105,7 @@ Key derived fields (computed from structure, not stored): `total_weeks`, `curren
 **Frontend pages:**
 - Dashboard, Exercises, Splits, SplitDetail, Mesocycles, MesocycleDetail
 - Workout (log with rest timer), WorkoutDetail, Progress (charts)
+- Settings (current user name, logout button)
 
 **Frontend routes:**
 - `/workout/:mesocycleId` — log workout (auto-detects next session, supports `?week=N&session=N` query params for specific session)
@@ -108,11 +113,11 @@ Key derived fields (computed from structure, not stored): `total_weeks`, `curren
 
 ## Environment Variables
 
-**Backend:** `DATABASE_URL`, `APP_PASSWORD`, `SECRET_KEY`, `CORS_ORIGINS`, `ANTHROPIC_API_KEY` (future)
+**Backend:** `DATABASE_URL`, `APP_PASSWORD` (bootstrap admin password), `ADMIN_NAME` (admin user display name, default "Admin"), `SECRET_KEY`, `CORS_ORIGINS`, `ANTHROPIC_API_KEY` (future)
 
 **Railway production:** Same as above, plus `PORT=8000` (set by Railway). `DATABASE_URL` points to Railway PostgreSQL.
 
-**Docker compose dev:** Hardcoded dev values — `APP_PASSWORD=devpassword`, local PostgreSQL.
+**Docker compose dev:** Hardcoded dev values — `APP_PASSWORD=devpassword`, `ADMIN_NAME=Admin`, local PostgreSQL.
 
 ## Git Conventions
 
