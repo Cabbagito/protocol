@@ -10,10 +10,10 @@
 Phase 1 (Gym MVP) is feature-complete and functional. Exercises, splits, mesocycles, workout logging with progression, history, progress charts, PWA install — all working. The frontend is polished with animations, rest timers, set types (straight/myorep/myorep match), exercise replacement, per-exercise notes, and a responsive mobile-first UI.
 
 **What's not ready:**
-- Database wipes on every restart (`DEV_RESET_DB=true` hardcoded)
-- No migration system (schema changes = data loss)
+- ~~Database wipes on every restart (`DEV_RESET_DB=true` hardcoded)~~ — removed entirely
+- ~~No migration system (schema changes = data loss)~~ — Alembic with auto-upgrade on startup
+- ~~Supabase references still in code (no longer used)~~ — cleaned up
 - Single shared password, no user separation
-- Supabase references still in code (no longer used)
 - No backups
 - No tests
 - Settings page is a stub
@@ -123,31 +123,15 @@ Optional: sync `/backups` to an S3 bucket or another location for offsite redund
 
 ## Task Breakdown
 
-### T1: Set Up Alembic Migrations
+### ~~T1: Set Up Alembic Migrations~~ DONE
 
-**Why:** Without this, any model change in production means manual SQL or data loss. Must be done before any real data exists.
-
-**What:**
-- Run `alembic init` in `/backend`
-- Configure `alembic/env.py` to use our async SQLAlchemy engine and import all models
-- Generate initial migration from current schema (`alembic revision --autogenerate`)
-- Replace `Base.metadata.create_all` in the startup lifespan with `alembic upgrade head`
-- Test: migration runs cleanly on a fresh DB and on an existing DB with data
-
-**Consideration:** The dev docker-compose currently wipes the DB. After Alembic, `DEV_RESET_DB=true` should run `alembic downgrade base` + `alembic upgrade head` + seed, rather than raw `DROP SCHEMA`.
+Alembic configured with `migrations/` directory (renamed from `alembic/` to avoid Python import conflict). Auto-upgrade on startup via `asyncio.to_thread(run_upgrade)`. Pre-Alembic database detection stamps head instead of re-creating. Initial migration `0001_initial_schema` covers all gym MVP tables. `DEV_RESET_DB` removed entirely — use `docker compose down -v` for a full reset.
 
 ---
 
-### T2: Clean Up Supabase References
+### ~~T2: Clean Up Supabase References~~ DONE
 
-**Why:** Supabase is no longer used. Dead code and config creates confusion.
-
-**What:**
-- Remove SSL/pgbouncer connection logic from `app/core/database.py` (the `is_remote` path with `statement_cache_size=0`, `NullPool`, SSL cert stuff)
-- Remove `SUPABASE_KEY` and `SUPABASE_URL` from `app/core/config.py`
-- Update CLAUDE.md: remove all Supabase mentions, update architecture section
-- Update PRD.md: mark Supabase sections as outdated or update them (tech stack table, architecture diagram, cost estimates, setup instructions)
-- Simplify database.py to just use the standard async connection pool
+Removed SSL/pgbouncer/NullPool from `database.py`, dropped `supabase_url`/`supabase_key` from config, cleaned `.env.example`, updated CLAUDE.md and added outdated notice to PRD.md.
 
 ---
 
@@ -227,16 +211,9 @@ Optional: sync `/backups` to an S3 bucket or another location for offsite redund
 
 ---
 
-### T6: Disable `DEV_RESET_DB` Default
+### ~~T6: Disable `DEV_RESET_DB` Default~~ DONE
 
-**Why:** Once you have real data (even locally), you don't want accidental wipes.
-
-**What:**
-- Change `DEV_RESET_DB` default to `false` in `docker-compose.yml`
-- Keep the functionality available (set to `true` explicitly when you want a fresh start)
-- Document how to do a full reset when needed: `DEV_RESET_DB=true docker compose up`
-
-**Tiny change but important to do before importing real data.**
+Went further than planned: removed `DEV_RESET_DB` entirely (config field, env var, `reset_and_reseed` function, all code paths). Full reset is now `docker compose down -v && docker compose up`.
 
 ---
 
@@ -280,12 +257,12 @@ Optional: sync `/backups` to an S3 bucket or another location for offsite redund
 
 ```
 T1: Alembic ──────┐
-                   ├──→ T3: Multi-User Auth ──→ T4: Data Import
-T2: Supabase ─────┘          │
-  Cleanup                    │
-                             ├──→ T5: VPS Setup
-T6: Disable                  │
-  DEV_RESET_DB ──────────────┘
+  ✅ DONE          ├──→ T3: Multi-User Auth ──→ T4: Data Import
+T2: Supabase ─────┘     ⬅ YOU ARE HERE  │
+  ✅ DONE                               │
+                                        ├──→ T5: VPS Setup
+T6: DEV_RESET_DB                        │
+  ✅ DONE ──────────────────────────────┘
                                   T7: Tests (anytime, in parallel)
                                   T8: Settings & Polish (ongoing)
 ```
