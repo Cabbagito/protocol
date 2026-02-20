@@ -6,6 +6,8 @@
   html {
     background: #070d15;
     -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    overscroll-behavior-y: contain;
   }
 
   body {
@@ -251,8 +253,8 @@
 
   .schedule-strip {
     overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
+    overscroll-behavior-x: contain;
   }
   .schedule-strip::-webkit-scrollbar { display: none; }
 
