@@ -26,6 +26,7 @@ from app.models.user import User
 # Exercise mapping: RP exercise name -> Protocol seed_key
 # ---------------------------------------------------------------------------
 RP_TO_SEED_KEY: dict[str, str] = {
+    # Direct name matches to existing seed exercises
     "Barbell Bent Over Row": "barbell_row",
     "Barbell Curl (Normal Grip)": "barbell_curl",
     "Cable Overhead Triceps Extension": "overhead_tricep_extension",
@@ -52,28 +53,25 @@ RP_TO_SEED_KEY: dict[str, str] = {
     "Reverse Curl": "reverse_curl",
     "Seated Cable Row": "seated_cable_row",
     "Standing Calf Raise": "calf_raise",
-}
-
-# New exercises to create (not in seed data)
-NEW_EXERCISES: dict[str, dict] = {
-    "Bayesian Curl": {"name": "Bayesian Curl", "muscle_group": "biceps", "equipment_type": "cable"},
-    "Bulgarian Split Squat (Glute-Focused)": {"name": "Bulgarian Split Squat (Glutes)", "muscle_group": "glutes", "equipment_type": "dumbbell"},
-    "Cable Cross Body Lateral Raise": {"name": "Cable Cross Body Lateral Raise", "muscle_group": "side delt", "equipment_type": "cable"},
-    "Cable Leaning Lateral Raise": {"name": "Cable Leaning Lateral Raise", "muscle_group": "side delt", "equipment_type": "cable"},
-    "Cable Triceps Pushdown (Single-Arm)": {"name": "Single-Arm Cable Pushdown", "muscle_group": "triceps", "equipment_type": "cable"},
-    "Deadlift (Deficit)": {"name": "Deficit Deadlift", "muscle_group": "back", "equipment_type": "barbell"},
-    "Dumbbell Flye (Incline)": {"name": "Incline Dumbbell Flye", "muscle_group": "chest", "equipment_type": "dumbbell"},
-    "Dumbbell Press Flye (Flat)": {"name": "Dumbbell Press Flye", "muscle_group": "chest", "equipment_type": "dumbbell"},
-    "Dumbbell Stiff Legged Deadlift": {"name": "Dumbbell Stiff Legged Deadlift", "muscle_group": "hamstrings", "equipment_type": "dumbbell"},
-    "EZ Bar Preacher Curl": {"name": "EZ Bar Preacher Curl", "muscle_group": "biceps", "equipment_type": "barbell"},
-    "Barbell Standing Wrist Curl": {"name": "Barbell Wrist Curl", "muscle_group": "forearms", "equipment_type": "barbell"},
-    "Lat Prayer": {"name": "Lat Prayer", "muscle_group": "back", "equipment_type": "cable"},
-    "Machine Chest Supported Row": {"name": "Machine Chest Supported Row", "muscle_group": "back", "equipment_type": "machine"},
-    "Machine Preacher Forearm Curl": {"name": "Machine Forearm Curl", "muscle_group": "forearms", "equipment_type": "machine"},
-    "Pulldown (Parallel Grip)": {"name": "Parallel Grip Lat Pulldown", "muscle_group": "back", "equipment_type": "cable"},
-    "Pulldown (Wide Grip)": {"name": "Wide Grip Lat Pulldown", "muscle_group": "back", "equipment_type": "cable"},
-    "Slant Board Sit-Up (Weighted)": {"name": "Slant Board Sit-Up", "muscle_group": "abs", "equipment_type": "bodyweight"},
-    "Walking Lunges (Glute-Focused, Barbell)": {"name": "Walking Lunges", "muscle_group": "glutes", "equipment_type": "barbell"},
+    # Exercises added to seed data for RP import
+    "Bayesian Curl": "bayesian_curl",
+    "Bulgarian Split Squat (Glute-Focused)": "bulgarian_split_squat_glutes",
+    "Cable Cross Body Lateral Raise": "cable_cross_body_lateral_raise",
+    "Cable Leaning Lateral Raise": "cable_leaning_lateral_raise",
+    "Cable Triceps Pushdown (Single-Arm)": "single_arm_cable_pushdown",
+    "Deadlift (Deficit)": "deficit_deadlift",
+    "Dumbbell Flye (Incline)": "incline_dumbbell_flye",
+    "Dumbbell Press Flye (Flat)": "dumbbell_press_flye",
+    "Dumbbell Stiff Legged Deadlift": "dumbbell_stiff_leg_deadlift",
+    "EZ Bar Preacher Curl": "ez_bar_preacher_curl",
+    "Barbell Standing Wrist Curl": "barbell_wrist_curl",
+    "Lat Prayer": "lat_prayer",
+    "Machine Chest Supported Row": "machine_chest_supported_row",
+    "Machine Preacher Forearm Curl": "machine_forearm_curl",
+    "Pulldown (Parallel Grip)": "parallel_grip_lat_pulldown",
+    "Pulldown (Wide Grip)": "wide_grip_lat_pulldown",
+    "Slant Board Sit-Up (Weighted)": "slant_board_sit_up",
+    "Walking Lunges (Glute-Focused, Barbell)": "walking_lunges",
 }
 
 
@@ -157,64 +155,29 @@ def determine_exercise_order(
 
 
 async def resolve_exercises(
-    db: AsyncSession, user_id: str, rp_data: dict, *, dry_run: bool
+    db: AsyncSession, rp_data: dict
 ) -> dict[str, str]:
-    """Resolve all RP exercise names to Protocol exercise IDs.
+    """Resolve all RP exercise names to Protocol seed exercise IDs.
 
     Returns: {rp_exercise_name: protocol_exercise_id}
     """
-    # Load all existing exercises
-    result = await db.execute(select(Exercise))
-    all_exercises = result.scalars().all()
-    by_seed_key = {e.seed_key: e for e in all_exercises if e.seed_key}
-    by_name = {e.name: e for e in all_exercises}
+    result = await db.execute(select(Exercise).where(Exercise.seed_key.isnot(None)))
+    by_seed_key = {e.seed_key: e for e in result.scalars().all()}
 
     mapping: dict[str, str] = {}
-    created_count = 0
-
     rp_exercise_names = {ex["name"] for ex in rp_data["exercises"]}
 
     for rp_name in sorted(rp_exercise_names):
-        # Try direct seed_key mapping
         seed_key = RP_TO_SEED_KEY.get(rp_name)
         if seed_key and seed_key in by_seed_key:
             mapping[rp_name] = by_seed_key[seed_key].id
-            continue
-
-        # Try new exercise creation
-        new_ex_def = NEW_EXERCISES.get(rp_name)
-        if new_ex_def:
-            # Check if already created (from a previous run)
-            existing = by_name.get(new_ex_def["name"])
-            if existing:
-                mapping[rp_name] = existing.id
-                continue
-
-            if dry_run:
-                mapping[rp_name] = f"NEW:{new_ex_def['name']}"
-                created_count += 1
-                continue
-
-            exercise = Exercise(
-                name=new_ex_def["name"],
-                muscle_group=new_ex_def["muscle_group"],
-                equipment_type=new_ex_def["equipment_type"],
-                user_id=user_id,
-            )
-            db.add(exercise)
-            await db.flush()
-            mapping[rp_name] = exercise.id
-            by_name[exercise.name] = exercise
-            created_count += 1
-            continue
-
-        print(f"  WARNING: No mapping for RP exercise '{rp_name}'")
+        else:
+            print(f"  WARNING: No seed exercise for '{rp_name}' (seed_key={seed_key})")
 
     print(f"\nExercise resolution:")
-    print(f"  Mapped to seed exercises: {sum(1 for v in mapping.values() if not v.startswith('NEW:'))}")
-    print(f"  New exercises created: {created_count}")
-    if any(rp_name not in mapping for rp_name in rp_exercise_names):
-        unmapped = [n for n in rp_exercise_names if n not in mapping]
+    print(f"  Mapped: {len(mapping)} / {len(rp_exercise_names)}")
+    if len(mapping) < len(rp_exercise_names):
+        unmapped = sorted(rp_exercise_names - mapping.keys())
         print(f"  UNMAPPED: {unmapped}")
 
     return mapping
@@ -325,7 +288,7 @@ async def build_and_import_mesocycles(
             exercises_for_day = day_exercise_orders[day]
             for order, ex_name in enumerate(exercises_for_day):
                 ex_id = exercise_map.get(ex_name)
-                if not ex_id or ex_id.startswith("NEW:"):
+                if not ex_id:
                     continue
 
                 # Determine max set count for this exercise across all weeks
@@ -362,7 +325,7 @@ async def build_and_import_mesocycles(
                 exercise_entries = []
                 for ex_name in day_exercise_orders[day]:
                     ex_id = exercise_map.get(ex_name)
-                    if not ex_id or ex_id.startswith("NEW:"):
+                    if not ex_id:
                         continue
 
                     ex_obj = exercises_by_id.get(ex_id)
@@ -453,7 +416,7 @@ async def build_and_import_mesocycles(
             user_id=user_id,
             name=meso_name,
             started_at=started_at,
-            is_active=False,
+            is_active=meso_info["status"] == "active",
             structure=structure,
         )
         db.add(mesocycle)
@@ -491,7 +454,7 @@ async def main(data_file: str, user_name: str, *, dry_run: bool) -> None:
         print(f"Found user: {user.name} (id={user.id})")
 
         # Resolve exercises
-        exercise_map = await resolve_exercises(db, user.id, rp_data, dry_run=dry_run)
+        exercise_map = await resolve_exercises(db, rp_data)
 
         # Build and import mesocycles
         print(f"\n{'=' * 50}")
