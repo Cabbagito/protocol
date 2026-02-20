@@ -358,29 +358,19 @@ async def build_and_import_mesocycles(
                             })
                         total_sets += len(sets_list)
                     else:
-                        # No data for this week/day/exercise - create empty sets
-                        # Use the max set count from other weeks
-                        max_sets = 0
-                        for w in all_weeks:
-                            if (w, day) in meso_sessions:
-                                max_sets = max(
-                                    max_sets,
-                                    len(meso_sessions[(w, day)].get(ex_name, [])),
-                                )
-                        if max_sets == 0:
-                            max_sets = 2
-                        sets_list = [
-                            {
-                                "set_num": i + 1,
-                                "weight": None,
-                                "reps": None,
-                                "target_reps": 10,
-                                "suggested_weight": None,
-                                "rir": None,
-                                "logged": False,
-                            }
-                            for i in range(max_sets)
-                        ]
+                        # No data for this week/day/exercise — mark as skipped
+                        sets_list = [{"set_num": 1, "weight": None, "reps": None,
+                                      "target_reps": 10, "suggested_weight": None,
+                                      "rir": None, "logged": False}]
+                        exercise_entries.append({
+                            "exercise_id": ex_id,
+                            "exercise_name": ex_obj.name,
+                            "muscle_group": ex_obj.muscle_group,
+                            "equipment_type": ex_obj.equipment_type,
+                            "sets": sets_list,
+                            "skipped": True,
+                        })
+                        continue
 
                     exercise_entries.append({
                         "exercise_id": ex_id,

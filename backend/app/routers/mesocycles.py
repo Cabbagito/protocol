@@ -257,20 +257,22 @@ def _derive_fields(structure: dict) -> dict:
 
     current_rir = rir_scheme[current_week - 1] if rir_scheme else 0
 
-    # Count fully-logged sessions
+    # Count fully-logged sessions (respecting skipped exercises)
     workouts_completed = 0
     for week in weeks:
         for session in week.get("sessions", []):
+            non_skipped = [
+                ex for ex in session.get("exercises", [])
+                if not ex.get("skipped", False)
+            ]
+            if not non_skipped:
+                continue
             all_logged = all(
                 s["logged"]
-                for ex in session.get("exercises", [])
+                for ex in non_skipped
                 for s in ex.get("sets", [])
             )
-            if all_logged and any(
-                s["logged"]
-                for ex in session.get("exercises", [])
-                for s in ex.get("sets", [])
-            ):
+            if all_logged:
                 workouts_completed += 1
 
     return {
@@ -304,8 +306,13 @@ def _mesocycle_to_list_item(mesocycle: Mesocycle) -> dict:
     derived = _derive_fields(mesocycle.structure)
     weeks = mesocycle.structure.get("weeks", [])
     total_workouts = sum(
-        len(week.get("sessions", []))
+        1
         for week in weeks
+        for session in week.get("sessions", [])
+        if any(
+            not ex.get("skipped", False)
+            for ex in session.get("exercises", [])
+        )
     )
     return {
         "id": mesocycle.id,
