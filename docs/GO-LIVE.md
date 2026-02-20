@@ -13,10 +13,10 @@ Phase 1 (Gym MVP) is feature-complete and functional. Exercises, splits, mesocyc
 - ~~Database wipes on every restart (`DEV_RESET_DB=true` hardcoded)~~ — removed entirely
 - ~~No migration system (schema changes = data loss)~~ — Alembic with auto-upgrade on startup
 - ~~Supabase references still in code (no longer used)~~ — cleaned up
-- Single shared password, no user separation
+- ~~Single shared password, no user separation~~ — multi-user auth with bcrypt + user-scoped data
 - No backups
 - No tests
-- Settings page is a stub
+- Settings page is minimal (shows user name + logout, no user management yet)
 - Diet and Glucose domains: 0% implemented (not blocking go-live)
 
 ---
@@ -135,35 +135,15 @@ Removed SSL/pgbouncer/NullPool from `database.py`, dropped `supabase_url`/`supab
 
 ---
 
-### T3: Multi-User Auth (Friends & Family)
+### ~~T3: Multi-User Auth (Minimal)~~ DONE
 
-**Why:** Currently one shared password with no user separation. Need to give friends their own "account" (password) with isolated data.
+`User` model with `id` (UUID), `name`, `password_hash` (bcrypt), `is_admin`. Passwords hashed with `bcrypt` directly (replaced `passlib` — incompatible with bcrypt 5.x). Login iterates all users checking bcrypt hashes, JWT `sub` = user UUID, `get_current_user` returns `User` object.
 
-**What:**
+Nullable `user_id` FK added to `Exercise`, `Split`, `Mesocycle` (migration `0002`). `NULL` = seed/system data (visible to all), `<uuid>` = user-owned. All router queries scoped: reads use `user_id = me OR NULL`, writes use `user_id = me`. Critical fix: `is_active` bulk deactivation on mesocycle create/update now scoped to current user.
 
-**Backend:**
-- Create `User` model: `id` (UUID), `name`, `password_hash`, `is_admin`, `created_at`
-- Hash passwords with `passlib` (already in dependencies, currently unused)
-- Login: hash the submitted password and match against all users' `password_hash` values. The password is the sole identifier — no username field
-- JWT subject becomes user ID instead of the string `"user"`
-- `get_current_user` dependency returns a `User` object
-- Add nullable `user_id` FK to: `Exercise`, `Split`, `Mesocycle`
-  - `user_id = NULL` → system/seed data (visible to all)
-  - `user_id = <uuid>` → user-created (visible only to that user)
-- All queries: `WHERE user_id = :current_user OR user_id IS NULL` for reads, `WHERE user_id = :current_user` for writes
-- Admin endpoints (protected by `is_admin` flag):
-  - `POST /api/users` — create user, generate password, return it once
-  - `GET /api/users` — list users
-  - `DELETE /api/users/{id}` — remove user and their data
-- Remove `APP_PASSWORD` env var (passwords now live in the DB)
-- First-run setup: if no users exist, create admin user from env vars (`ADMIN_NAME`, `ADMIN_PASSWORD`) or prompt on first request
+Admin bootstrap: `ensure_admin_user()` runs on startup — if no users exist, creates admin from `APP_PASSWORD` + `ADMIN_NAME` env vars and assigns orphan data. Settings page shows current user name + logout button. Frontend stores `UserInfo` (name, is_admin) in localStorage.
 
-**Frontend:**
-- Login form: single password field (no username)
-- No registration page — admin creates users via settings page or API
-- Settings page: admin section to manage users (create, view, delete)
-
-**Migration:** Alembic migration adds `users` table, adds nullable `user_id` columns to existing tables, creates the admin user, assigns all existing data to that admin user.
+**Deferred to T8:** Admin user management UI/endpoints, password change, adding friends (will need a CLI script or simple endpoint).
 
 ---
 
@@ -258,13 +238,14 @@ Went further than planned: removed `DEV_RESET_DB` entirely (config field, env va
 ```
 T1: Alembic ──────┐
   ✅ DONE          ├──→ T3: Multi-User Auth ──→ T4: Data Import
-T2: Supabase ─────┘     ⬅ YOU ARE HERE  │
-  ✅ DONE                               │
-                                        ├──→ T5: VPS Setup
-T6: DEV_RESET_DB                        │
-  ✅ DONE ──────────────────────────────┘
+T2: Supabase ─────┘     ✅ DONE            │
+  ✅ DONE                                   │
+                                            ├──→ T5: VPS Setup
+T6: DEV_RESET_DB                            │
+  ✅ DONE ─────────────────────────────────┘
                                   T7: Tests (anytime, in parallel)
                                   T8: Settings & Polish (ongoing)
+                                  ⬅ YOU ARE HERE
 ```
 
 **Reasoning:**
@@ -301,7 +282,7 @@ These updates are not blocking but should happen alongside the work to keep docs
 
 ## Decisions (Resolved)
 
-1. **Login UX:** Password-only. Each user gets a unique generated password (e.g. `a&^*hgsdh_felix_kjshf*(YFD`). The password itself identifies the user — no username field. On login, the backend hashes the input and matches against all user records. Admin creates users and hands them their password.
+1. **Login UX:** Password-only. Each user gets a unique password. The password itself identifies the user — no username field. On login, the backend checks the input against all user records via bcrypt. Admin creates users and hands them their password. (Admin management UI deferred — currently add users via CLI/script.)
 
 2. **Shared vs per-user data:**
    - **Seed exercises** (the ~57 pre-seeded ones): shared/system-level, visible to all users, no `user_id`
