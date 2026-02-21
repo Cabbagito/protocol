@@ -137,6 +137,25 @@ Key derived fields (computed from structure, not stored): `total_weeks`, `curren
 
 **Workflow:** Work on feature/fix branches, merge to `main`.
 
+## Production Debugging (public)
+
+**Deployment status** — check via GitHub Actions:
+```bash
+gh run list --limit 5                  # Recent deploys
+gh run view <run-id>                   # Job summary
+gh run view <run-id> --log             # Full build logs
+gh run view <run-id> --log-failed      # Only failed step logs
+gh workflow run deploy.yml             # Manual deploy trigger
+```
+
+**Live site health** — no auth needed:
+```bash
+curl -s https://protocol-42.com/api/health     # API health check
+curl -s -o /dev/null -w "%{http_code}" https://protocol-42.com/  # HTTP status
+```
+
+Server access (SSH, hcloud, DB queries, authenticated API calls) requires operator keys — see `CLAUDE.local.md`.
+
 ## Documentation
 
 **Keep CLAUDE.md updated** when making changes that affect:
