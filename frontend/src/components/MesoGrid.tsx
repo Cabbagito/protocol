@@ -11,15 +11,15 @@ const cellStyles: Record<CellState, React.CSSProperties> = {
     border: '1.5px solid rgba(34,197,94,0.25)',
   },
   current: {
-    background: 'rgba(2,132,199,0.15)',
-    border: '2px solid #0284c7',
-    boxShadow: '0 0 0 3px rgba(56,189,248,0.35)',
+    background: 'rgba(var(--accent-rgb),0.15)',
+    border: '2px solid var(--accent-d)',
+    boxShadow: '0 0 0 3px rgba(var(--accent-rgb),0.35)',
     animation: 'pulse-current 2s ease-in-out infinite',
     willChange: 'opacity',
   },
   pending: {
-    background: '#162a3e',
-    border: '1.5px solid #244868',
+    background: 'var(--input)',
+    border: '1.5px solid var(--border)',
   },
   'deload-done': {
     background: 'rgba(234,179,8,0.12)',
@@ -38,14 +38,14 @@ const cellStyles: Record<CellState, React.CSSProperties> = {
   },
   viewing: {
     background: 'rgba(148,163,184,0.08)',
-    border: '2px solid #64748b',
+    border: '2px solid var(--text-m)',
     boxShadow: '0 0 0 3px rgba(148,163,184,0.35)',
     animation: 'pulse-viewing 2s ease-in-out infinite',
     willChange: 'opacity',
   },
   'deload-viewing': {
     background: 'rgba(148,163,184,0.08)',
-    border: '2px solid #64748b',
+    border: '2px solid var(--text-m)',
     boxShadow: '0 0 0 3px rgba(148,163,184,0.35)',
     animation: 'pulse-viewing 2s ease-in-out infinite',
     willChange: 'opacity',
@@ -145,12 +145,12 @@ export default function MesoGrid({ mesocycle, compact = false, viewingWeek, view
               className="text-center"
               style={{ lineHeight: 1.2 }}
             >
-              <div className="text-[10px] font-medium text-slate-400">
+              <div className="text-[10px] font-medium text-[var(--text-2)]">
                 W{wi + 1}
               </div>
               <div
                 className="text-[10px]"
-                style={{ color: isDeload ? '#eab308' : '#64748b' }}
+                style={{ color: isDeload ? '#eab308' : 'var(--text-m)' }}
               >
                 {isDeload ? 'DL' : `R${week.rir}`}
               </div>
@@ -163,7 +163,7 @@ export default function MesoGrid({ mesocycle, compact = false, viewingWeek, view
           <>
             <div
               key={`label-${si}`}
-              className="text-[10px] font-medium text-slate-500 truncate pr-1"
+              className="text-[10px] font-medium text-[var(--text-m)] truncate pr-1"
               title={name}
             >
               {name}
@@ -202,7 +202,7 @@ export default function MesoGrid({ mesocycle, compact = false, viewingWeek, view
                         width: 8,
                         height: 8,
                         borderRadius: '50%',
-                        background: state === 'deload-current' ? '#eab308' : '#0284c7',
+                        background: state === 'deload-current' ? '#eab308' : 'var(--accent-d)',
                       }}
                     />
                   )}
@@ -212,7 +212,7 @@ export default function MesoGrid({ mesocycle, compact = false, viewingWeek, view
                         width: 8,
                         height: 8,
                         borderRadius: '50%',
-                        background: '#64748b',
+                        background: 'var(--text-m)',
                       }}
                     />
                   )}
@@ -230,7 +230,7 @@ export default function MesoGrid({ mesocycle, compact = false, viewingWeek, view
   return (
     <div className="card">
       <div className="flex items-start justify-between mb-3">
-        <h2 className="font-semibold text-slate-200">{mesocycle.name}</h2>
+        <h2 className="font-semibold text-[var(--text-1)]">{mesocycle.name}</h2>
         <Link to={`/mesocycles/${mesocycle.id}`} className="text-protocol-400 text-sm">
           View
         </Link>

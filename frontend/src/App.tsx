@@ -47,7 +47,7 @@ class ChunkErrorBoundary extends Component<{ children: ReactNode }, { hasError: 
       return (
         <div className="min-h-screen flex items-center justify-center p-6">
           <div className="text-center">
-            <p className="text-slate-300 mb-4">A new version is available.</p>
+            <p className="text-[var(--text-2)] mb-4">A new version is available.</p>
             <button
               onClick={() => window.location.reload()}
               className="btn btn-primary"

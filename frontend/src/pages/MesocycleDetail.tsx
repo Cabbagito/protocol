@@ -214,7 +214,7 @@ export default function MesocycleDetail() {
   }
 
   if (!mesocycle) {
-    return <div className="text-slate-400 text-center py-8">Mesocycle not found</div>
+    return <div className="text-[var(--text-2)] text-center py-8">Mesocycle not found</div>
   }
 
   const totalWorkouts = mesocycle.structure.weeks.reduce((count, week) =>
@@ -272,7 +272,7 @@ export default function MesocycleDetail() {
 
       <div className="px-4 pb-6">
         {/* Split name subtitle */}
-        <div className="text-[11px] mb-4" style={{ color: '#475569' }}>
+        <div className="text-[11px] mb-4" style={{ color: 'var(--text-m)' }}>
           {mesocycle.split_name} &middot; {mesocycle.total_weeks} weeks
         </div>
 
@@ -284,19 +284,19 @@ export default function MesocycleDetail() {
                 <span className="font-mono text-[20px] font-bold" style={{ color: '#4ade80' }}>
                   {progressPercent}%
                 </span>
-                <span className="text-[10px]" style={{ color: '#475569' }}>complete</span>
+                <span className="text-[10px]" style={{ color: 'var(--text-m)' }}>complete</span>
               </div>
               <ProgressBar percent={progressPercent} />
             </div>
             <div className="text-right">
-              <div className="font-mono text-[12px] font-semibold" style={{ color: '#94a3b8' }}>
+              <div className="font-mono text-[12px] font-semibold" style={{ color: 'var(--text-m)' }}>
                 {mesocycle.workouts_completed} / {totalWorkouts}
               </div>
-              <div className="text-[9px]" style={{ color: '#475569' }}>workouts</div>
+              <div className="text-[9px]" style={{ color: 'var(--text-m)' }}>workouts</div>
             </div>
           </div>
 
-          <div className="text-[10px] mb-3" style={{ color: '#475569' }}>
+          <div className="text-[10px] mb-3" style={{ color: 'var(--text-m)' }}>
             Week {mesocycle.current_week}
             {' '}&middot;{' '}
             {mesocycle.current_rir === -1 ? 'Deload' : `RiR ${mesocycle.current_rir}`}
@@ -310,7 +310,7 @@ export default function MesocycleDetail() {
 
           <div
             className="px-3 py-3 rounded-lg"
-            style={{ background: '#132438', border: '1px solid rgba(255,255,255,0.04)' }}
+            style={{ background: 'var(--panel)', border: '1px solid rgba(255,255,255,0.04)' }}
           >
             <MesoGrid mesocycle={mesocycle} compact />
           </div>
@@ -324,22 +324,22 @@ export default function MesocycleDetail() {
           >
             <div
               className="card active:scale-[0.98] transition-transform"
-              style={{ borderColor: 'rgba(14,165,233,0.25)', padding: 16 }}
+              style={{ borderColor: 'rgba(var(--accent-rgb),0.25)', padding: 16 }}
             >
               <div className="flex items-center gap-3 mb-3">
                 <div
                   className="w-9 h-9 rounded-xl flex items-center justify-center"
-                  style={{ background: 'rgba(14,165,233,0.1)', border: '1.5px solid rgba(14,165,233,0.25)' }}
+                  style={{ background: 'rgba(var(--accent-rgb),0.1)', border: '1.5px solid rgba(var(--accent-rgb),0.25)' }}
                 >
-                  <svg className="w-4 h-4" style={{ color: '#38bdf8' }} fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                  <svg className="w-4 h-4" style={{ color: 'var(--accent-l)' }} fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
                   </svg>
                 </div>
                 <div className="flex-1">
-                  <div className="text-[15px] font-semibold" style={{ color: '#e2e8f0' }}>
+                  <div className="text-[15px] font-semibold" style={{ color: 'var(--text-1)' }}>
                     {nextSession.session.session_name} — Week {mesocycle.structure.weeks[nextSession.weekIndex]!.week_number}
                   </div>
-                  <div className="text-[11px]" style={{ color: '#475569' }}>
+                  <div className="text-[11px]" style={{ color: 'var(--text-m)' }}>
                     {nextSession.session.exercises.length} exercises
                     {' '}&middot;{' '}
                     {mesocycle.rir_scheme[nextSession.weekIndex] === -1
@@ -348,13 +348,13 @@ export default function MesocycleDetail() {
                   </div>
                 </div>
               </div>
-              <div className="text-[10px] mb-3 pl-12" style={{ color: '#334155' }}>
+              <div className="text-[10px] mb-3 pl-12" style={{ color: 'var(--text-m)' }}>
                 {nextSession.session.exercises.slice(0, 5).map((e) => e.exercise_name).join(' \u00B7 ')}
               </div>
               <button
                 className="w-full py-2.5 text-[14px] font-semibold rounded-[10px] text-white text-center"
                 style={{
-                  background: 'linear-gradient(110deg, #0ea5e9 30%, #38bdf8 50%, #0ea5e9 70%)',
+                  background: 'linear-gradient(110deg, var(--accent) 30%, var(--accent-l) 50%, var(--accent) 70%)',
                   backgroundSize: '200% 100%',
                   animation: 'shimmer-cta 3s ease-in-out infinite',
                 }}
@@ -371,11 +371,11 @@ export default function MesocycleDetail() {
             <div className="flex items-center justify-between mb-2">
               <span
                 className="text-[10px] font-semibold uppercase tracking-wider"
-                style={{ color: '#475569', letterSpacing: '0.08em' }}
+                style={{ color: 'var(--text-m)', letterSpacing: '0.08em' }}
               >
                 Progression
               </span>
-              <div className="flex rounded-md overflow-hidden" style={{ border: '1px solid #1e3a52' }}>
+              <div className="flex rounded-md overflow-hidden" style={{ border: '1px solid var(--border)' }}>
                 {(['strength', 'stimulus'] as const).map((m) => (
                   <button
                     key={m}
@@ -383,7 +383,7 @@ export default function MesocycleDetail() {
                     className="px-2.5 py-0.5 text-[9px] font-medium transition-colors"
                     style={{
                       background: progressionMetric === m ? 'rgba(139,92,246,0.15)' : 'transparent',
-                      color: progressionMetric === m ? '#a78bfa' : '#475569',
+                      color: progressionMetric === m ? '#a78bfa' : 'var(--text-m)',
                     }}
                   >
                     {m === 'strength' ? 'Strength' : 'Stimulus'}
@@ -413,7 +413,7 @@ export default function MesocycleDetail() {
                         {ex.muscleGroup}
                       </span>
                     </div>
-                    <div className="text-[12px] font-medium mb-2 truncate" style={{ color: '#e2e8f0' }}>
+                    <div className="text-[12px] font-medium mb-2 truncate" style={{ color: 'var(--text-1)' }}>
                       {ex.exerciseName}
                     </div>
                     <MesoSparkline weights={data.map((d) => d.value)} color={color.primary} />
@@ -421,7 +421,7 @@ export default function MesocycleDetail() {
                       <span className="font-mono text-[16px] font-bold" style={{ color: color.light }}>
                         {isStrength ? current.toFixed(1) : formatVolume(current)}
                       </span>
-                      <span className="text-[9px]" style={{ color: '#475569' }}>
+                      <span className="text-[9px]" style={{ color: 'var(--text-m)' }}>
                         {isStrength ? 'kg' : 'kg'}
                       </span>
                       <span
@@ -444,7 +444,7 @@ export default function MesocycleDetail() {
           <div className="card flex-1" style={{ padding: '10px 12px' }}>
             <span
               className="text-[10px] font-semibold uppercase tracking-wider"
-              style={{ color: '#475569', letterSpacing: '0.08em' }}
+              style={{ color: 'var(--text-m)', letterSpacing: '0.08em' }}
             >
               Volume
             </span>
@@ -454,16 +454,16 @@ export default function MesocycleDetail() {
                 const pct = Math.round((v.sets / maxVolume) * 100)
                 return (
                   <div key={v.muscleGroup} className="flex items-center gap-1.5">
-                    <span className="text-[9px] w-9 text-right truncate" style={{ color: '#475569' }}>
+                    <span className="text-[9px] w-9 text-right truncate" style={{ color: 'var(--text-m)' }}>
                       {v.muscleGroup.charAt(0).toUpperCase() + v.muscleGroup.slice(1)}
                     </span>
-                    <div className="flex-1 h-[4px] rounded-full" style={{ background: '#162a3e' }}>
+                    <div className="flex-1 h-[4px] rounded-full" style={{ background: 'var(--input)' }}>
                       <div
                         className="h-full rounded-full transition-all duration-500"
                         style={{ width: `${pct}%`, background: color.primary, opacity: 0.7 }}
                       />
                     </div>
-                    <span className="font-mono text-[9px]" style={{ color: '#64748b' }}>{v.sets}</span>
+                    <span className="font-mono text-[9px]" style={{ color: 'var(--text-m)' }}>{v.sets}</span>
                   </div>
                 )
               })}
@@ -474,7 +474,7 @@ export default function MesocycleDetail() {
           <div className="card flex-1" style={{ padding: '10px 12px' }}>
             <span
               className="text-[10px] font-semibold uppercase tracking-wider"
-              style={{ color: '#475569', letterSpacing: '0.08em' }}
+              style={{ color: 'var(--text-m)', letterSpacing: '0.08em' }}
             >
               Week {mesocycle.current_week}
             </span>
@@ -501,19 +501,19 @@ export default function MesocycleDetail() {
                     ) : isCurrent ? (
                       <div
                         className="w-4 h-4 rounded flex items-center justify-center"
-                        style={{ background: 'rgba(14,165,233,0.1)', border: '1px solid rgba(14,165,233,0.2)' }}
+                        style={{ background: 'rgba(var(--accent-rgb),0.1)', border: '1px solid rgba(var(--accent-rgb),0.2)' }}
                       >
-                        <div className="w-1.5 h-1.5 rounded-full" style={{ background: '#38bdf8' }} />
+                        <div className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--accent-l)' }} />
                       </div>
                     ) : (
                       <div
                         className="w-4 h-4 rounded"
-                        style={{ background: '#162a3e', border: '1px solid #1e3a52' }}
+                        style={{ background: 'var(--input)', border: '1px solid var(--border)' }}
                       />
                     )}
                     <span
                       className={`text-[11px] ${isCurrent ? 'font-medium' : ''}`}
-                      style={{ color: allLogged ? '#94a3b8' : isCurrent ? '#e2e8f0' : '#475569' }}
+                      style={{ color: allLogged ? 'var(--text-m)' : isCurrent ? 'var(--text-1)' : 'var(--text-m)' }}
                     >
                       {session.session_name}
                     </span>
@@ -528,12 +528,12 @@ export default function MesocycleDetail() {
         <div className="mt-3">
           <span
             className="text-[10px] font-semibold uppercase tracking-wider"
-            style={{ color: '#475569', letterSpacing: '0.08em' }}
+            style={{ color: 'var(--text-m)', letterSpacing: '0.08em' }}
           >
             Recent
           </span>
           {recentWorkouts.length === 0 ? (
-            <div className="text-slate-500 text-sm mt-2">No workouts logged yet.</div>
+            <div className="text-[var(--text-m)] text-sm mt-2">No workouts logged yet.</div>
           ) : (
             <div className="mt-2 space-y-1">
               {recentWorkouts.map((workout, idx) => (
@@ -541,21 +541,21 @@ export default function MesocycleDetail() {
                   key={idx}
                   to={`/workouts/${mesocycle.id}/${workout.week_index}/${workout.session_index}`}
                   className="flex items-center justify-between py-2.5 px-3 rounded-lg active:bg-sky-500/5 transition-colors"
-                  style={{ background: 'rgba(15,29,46,0.5)' }}
+                  style={{ background: 'var(--card)' }}
                 >
                   <div className="flex items-center gap-2">
                     <div className="w-1 h-6 rounded-full" style={{ background: '#4ade80' }} />
                     <div>
-                      <span className="text-[12px] font-medium" style={{ color: '#cbd5e1' }}>
+                      <span className="text-[12px] font-medium" style={{ color: 'var(--text-2)' }}>
                         {workout.session_name}
                       </span>
-                      <span className="text-[10px] ml-1.5" style={{ color: '#334155' }}>
+                      <span className="text-[10px] ml-1.5" style={{ color: 'var(--text-m)' }}>
                         W{workout.week_number} &middot; {workout.total_sets} sets
                       </span>
                     </div>
                   </div>
                   {workout.date && (
-                    <span className="font-mono text-[10px]" style={{ color: '#475569' }}>
+                    <span className="font-mono text-[10px]" style={{ color: 'var(--text-m)' }}>
                       {new Date(workout.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                     </span>
                   )}
@@ -570,7 +570,7 @@ export default function MesocycleDetail() {
           <button
             onClick={handleToggleActive}
             className="flex-1 py-2.5 text-[12px] font-medium rounded-lg text-center transition-all active:scale-[0.97]"
-            style={{ color: '#94a3b8', border: '1px solid #1e3a52', background: 'transparent' }}
+            style={{ color: 'var(--text-m)', border: '1px solid var(--border)', background: 'transparent' }}
           >
             {mesocycle.is_active ? 'Archive' : 'Reactivate'}
           </button>

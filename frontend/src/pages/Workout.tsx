@@ -360,7 +360,7 @@ export default function Workout() {
   }
 
   if (!template) {
-    return <div className="text-slate-500 text-center py-8">Workout template not found</div>
+    return <div className="text-[var(--text-m)] text-center py-8">Workout template not found</div>
   }
 
   // Compute completion excluding skipped exercises
@@ -387,11 +387,11 @@ export default function Workout() {
               className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg"
               style={{ background: 'rgba(148,163,184,0.1)', border: '1px solid rgba(148,163,184,0.15)' }}
             >
-              <svg className="w-3.5 h-3.5" style={{ color: '#94a3b8' }} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+              <svg className="w-3.5 h-3.5" style={{ color: 'var(--text-2)' }} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
               </svg>
-              <span className="text-xs font-medium" style={{ color: '#94a3b8' }}>Preview</span>
+              <span className="text-xs font-medium" style={{ color: 'var(--text-2)' }}>Preview</span>
             </div>
           ) : (
             <RirBadge rir={template.target_rir} />
@@ -476,14 +476,14 @@ export default function Workout() {
               onClick={() => navigate(`/workout/${mesocycleId}`)}
               className="btn w-full font-medium"
               style={{
-                background: 'rgba(2,132,199,0.15)',
-                border: '1.5px solid rgba(2,132,199,0.3)',
-                color: '#38bdf8',
+                background: 'rgba(var(--accent-rgb),0.15)',
+                border: '1.5px solid rgba(var(--accent-rgb),0.3)',
+                color: 'var(--accent-l)',
               }}
             >
               Go to Current Workout
             </button>
-            <span className="text-[11px] text-center" style={{ color: '#64748b' }}>
+            <span className="text-[11px] text-center" style={{ color: 'var(--text-m)' }}>
               {currentWorkoutInfo.name} · Week {currentWorkoutInfo.week} · {currentWorkoutInfo.rir}
             </span>
           </div>
@@ -536,14 +536,14 @@ function NoteModal({ exerciseName, initialNote, onSave, onClose }: {
       <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(2px)' }} />
       <div
         className="relative w-full rounded-t-2xl pb-safe slide-up"
-        style={{ background: '#0c1929', border: '1px solid rgba(255,255,255,0.06)', borderBottom: 'none' }}
+        style={{ background: 'var(--card)', border: '1px solid rgba(255,255,255,0.06)', borderBottom: 'none' }}
         onClick={e => e.stopPropagation()}
       >
         <div className="flex justify-center pt-3 pb-2">
           <div className="w-9 h-1 rounded-full" style={{ background: 'rgba(255,255,255,0.15)' }} />
         </div>
         <div className="px-5 pb-1">
-          <span className="text-xs font-medium uppercase tracking-wider text-slate-600">Note for {exerciseName}</span>
+          <span className="text-xs font-medium uppercase tracking-wider text-[var(--text-m)]">Note for {exerciseName}</span>
         </div>
         <div className="px-4 pb-3">
           <textarea
@@ -596,15 +596,15 @@ function ExercisePicker({ muscleGroup, currentExerciseId, onSelect, onClose }: {
   }, [exercises, muscleGroup, currentExerciseId, search])
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col" style={{ background: '#0d1b2a' }}>
+    <div className="fixed inset-0 z-50 flex flex-col" style={{ background: 'var(--base)' }}>
       {/* Header */}
       <div className="flex items-center gap-3 px-4 pt-4 pb-3">
-        <button onClick={onClose} className="text-slate-400 p-1">
+        <button onClick={onClose} className="text-[var(--text-2)] p-1">
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
           </svg>
         </button>
-        <h2 className="text-lg font-semibold text-slate-200 flex-1">Replace Exercise</h2>
+        <h2 className="text-lg font-semibold text-[var(--text-1)] flex-1">Replace Exercise</h2>
       </div>
 
       {/* Search */}
@@ -628,14 +628,14 @@ function ExercisePicker({ muscleGroup, currentExerciseId, onSelect, onClose }: {
             className="w-full flex items-center gap-3 py-3 border-b"
             style={{
               borderColor: 'rgba(255,255,255,0.04)',
-              background: ex.id === selectedId ? 'rgba(2,132,199,0.08)' : undefined,
+              background: ex.id === selectedId ? 'rgba(var(--accent-rgb),0.08)' : undefined,
             }}
           >
             <div
               className="w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0"
               style={{
-                borderColor: ex.id === selectedId ? '#0ea5e9' : '#244868',
-                background: ex.id === selectedId ? '#0ea5e9' : undefined,
+                borderColor: ex.id === selectedId ? 'var(--accent)' : 'var(--border)',
+                background: ex.id === selectedId ? 'var(--accent)' : undefined,
               }}
             >
               {ex.id === selectedId && (
@@ -645,13 +645,13 @@ function ExercisePicker({ muscleGroup, currentExerciseId, onSelect, onClose }: {
               )}
             </div>
             <div className="text-left">
-              <div className="text-sm font-medium text-slate-200">{ex.name}</div>
-              <div className="text-[11px] text-slate-600 capitalize">{ex.equipment_type}</div>
+              <div className="text-sm font-medium text-[var(--text-1)]">{ex.name}</div>
+              <div className="text-[11px] text-[var(--text-m)] capitalize">{ex.equipment_type}</div>
             </div>
           </button>
         ))}
         {filtered.length === 0 && (
-          <div className="text-center text-slate-600 py-8 text-sm">No exercises found</div>
+          <div className="text-center text-[var(--text-m)] py-8 text-sm">No exercises found</div>
         )}
       </div>
 
@@ -662,8 +662,8 @@ function ExercisePicker({ muscleGroup, currentExerciseId, onSelect, onClose }: {
             onClick={() => setApplyToFuture(!applyToFuture)}
             className="w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0"
             style={{
-              borderColor: applyToFuture ? '#0ea5e9' : '#244868',
-              background: applyToFuture ? '#0ea5e9' : undefined,
+              borderColor: applyToFuture ? 'var(--accent)' : 'var(--border)',
+              background: applyToFuture ? 'var(--accent)' : undefined,
             }}
           >
             {applyToFuture && (
@@ -672,7 +672,7 @@ function ExercisePicker({ muscleGroup, currentExerciseId, onSelect, onClose }: {
               </svg>
             )}
           </button>
-          <span className="text-sm text-slate-300">Apply to rest of mesocycle</span>
+          <span className="text-sm text-[var(--text-2)]">Apply to rest of mesocycle</span>
         </label>
         <button
           onClick={() => selectedId && onSelect(selectedId, applyToFuture)}
@@ -719,12 +719,12 @@ function ExerciseCard({ exercise, sets, allSets, targetRir, onUpdateSet, onCompl
       >
         <div className="flex items-center gap-2.5 min-w-0">
           <MuscleGroupBadge muscleGroup={exercise.muscle_group} />
-          <span className="text-sm font-medium text-slate-400 truncate">{exercise.exercise_name}</span>
+          <span className="text-sm font-medium text-[var(--text-2)] truncate">{exercise.exercise_name}</span>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           <span
             className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded"
-            style={{ background: 'rgba(148,163,184,0.1)', color: '#94a3b8' }}
+            style={{ background: 'rgba(148,163,184,0.1)', color: 'var(--text-2)' }}
           >
             Skipped
           </span>
@@ -771,9 +771,9 @@ function ExerciseCard({ exercise, sets, allSets, targetRir, onUpdateSet, onCompl
 
       {/* Exercise name + equipment */}
       <div className="mb-1">
-        <h2 className="text-base font-semibold text-slate-200">{exercise.exercise_name}</h2>
+        <h2 className="text-base font-semibold text-[var(--text-1)]">{exercise.exercise_name}</h2>
         {exercise.equipment_type && (
-          <span className="text-xs text-slate-600 capitalize">{exercise.equipment_type}</span>
+          <span className="text-xs text-[var(--text-m)] capitalize">{exercise.equipment_type}</span>
         )}
       </div>
 
@@ -788,16 +788,16 @@ function ExerciseCard({ exercise, sets, allSets, targetRir, onUpdateSet, onCompl
       <div className="panel-frosted">
         {/* Column headers */}
         <div className="flex items-center mb-2 px-2 pt-1">
-          <div className="w-8 text-center text-[11px] font-medium uppercase tracking-wider text-slate-600">
+          <div className="w-8 text-center text-[11px] font-medium uppercase tracking-wider text-[var(--text-m)]">
             #
           </div>
-          <div className="flex-1 text-center text-[11px] font-medium uppercase tracking-wider text-slate-600">
+          <div className="flex-1 text-center text-[11px] font-medium uppercase tracking-wider text-[var(--text-m)]">
             Weight
           </div>
-          <div className="flex-1 text-center text-[11px] font-medium uppercase tracking-wider text-slate-600">
+          <div className="flex-1 text-center text-[11px] font-medium uppercase tracking-wider text-[var(--text-m)]">
             Reps
           </div>
-          <div className="w-12 text-center text-[11px] font-medium uppercase tracking-wider text-slate-600">
+          <div className="w-12 text-center text-[11px] font-medium uppercase tracking-wider text-[var(--text-m)]">
             Log
           </div>
         </div>
@@ -873,14 +873,14 @@ function getSetState(set: WorkingSet): SetState {
 
 const SET_STYLES: Record<SetState, { inputBg: string; inputBorder: string; textColor: string }> = {
   pending: {
-    inputBg: '#162a3e',
-    inputBorder: '#244868',
-    textColor: '#cbd5e1',
+    inputBg: 'var(--input)',
+    inputBorder: 'var(--border)',
+    textColor: 'var(--text-2)',
   },
   logged: {
-    inputBg: '#0c2d4e',
-    inputBorder: '#164e7a',
-    textColor: '#38bdf8',
+    inputBg: 'rgba(var(--accent-rgb),0.08)',
+    inputBorder: 'rgba(var(--accent-rgb),0.2)',
+    textColor: 'var(--accent-l)',
   },
   exceeded: {
     inputBg: 'rgba(168,85,247,0.08)',
@@ -899,7 +899,7 @@ const SET_TYPE_LABELS: Record<string, { label: string; color: string; bg: string
   myorep_match: { label: 'MM', color: '#fbbf24', bg: 'rgba(251,191,36,0.12)', border: 'rgba(251,191,36,0.3)', rowBg: 'rgba(251,191,36,0.05)' },
 }
 
-const STRAIGHT_PILL = { color: '#cbd5e1', bg: 'rgba(255,255,255,0.04)', border: 'rgba(255,255,255,0.12)' }
+const STRAIGHT_PILL = { color: 'var(--text-2)', bg: 'rgba(255,255,255,0.04)', border: 'rgba(255,255,255,0.12)' }
 
 const SetRow = memo(function SetRow({ set, exercise, allSets, onUpdate, onComplete, onUncomplete, locked, animPhase, onClearAnim }: SetRowProps) {
   const [typePopoverOpen, setTypePopoverOpen] = useState(false)
@@ -1005,7 +1005,7 @@ const SetRow = memo(function SetRow({ set, exercise, allSets, onUpdate, onComple
             <div
               className="absolute left-0 top-8 z-50 rounded-lg py-1 min-w-[140px]"
               style={{
-                background: '#132438',
+                background: 'var(--panel)',
                 border: '1px solid rgba(255,255,255,0.08)',
                 boxShadow: '0 8px 24px rgba(0,0,0,0.6)',
               }}
@@ -1013,7 +1013,7 @@ const SetRow = memo(function SetRow({ set, exercise, allSets, onUpdate, onComple
               <button
                 onClick={() => handleSetTypeChange('straight')}
                 className="w-full px-3 py-2 text-left text-[13px] flex items-center gap-2"
-                style={{ color: setType === 'straight' ? '#38bdf8' : '#94a3b8' }}
+                style={{ color: setType === 'straight' ? 'var(--accent-l)' : 'var(--text-m)' }}
               >
                 <span className="w-4 text-center font-semibold text-[11px]">#</span>
                 Straight
@@ -1021,7 +1021,7 @@ const SetRow = memo(function SetRow({ set, exercise, allSets, onUpdate, onComple
               <button
                 onClick={() => handleSetTypeChange('myorep')}
                 className="w-full px-3 py-2 text-left text-[13px] flex items-center gap-2"
-                style={{ color: setType === 'myorep' ? '#2dd4bf' : '#94a3b8' }}
+                style={{ color: setType === 'myorep' ? '#2dd4bf' : 'var(--text-m)' }}
               >
                 <span className="w-4 text-center font-semibold text-[11px]" style={{ color: '#2dd4bf' }}>MR</span>
                 Myorep
@@ -1030,7 +1030,7 @@ const SetRow = memo(function SetRow({ set, exercise, allSets, onUpdate, onComple
                 onClick={() => !isFirstSet && handleSetTypeChange('myorep_match')}
                 disabled={isFirstSet}
                 className="w-full px-3 py-2 text-left text-[13px] flex items-center gap-2 disabled:opacity-30"
-                style={{ color: setType === 'myorep_match' ? '#fbbf24' : '#94a3b8' }}
+                style={{ color: setType === 'myorep_match' ? '#fbbf24' : 'var(--text-m)' }}
               >
                 <span className="w-4 text-center font-semibold text-[11px]" style={{ color: '#fbbf24' }}>MM</span>
                 Myorep Match
@@ -1108,7 +1108,7 @@ const SetRow = memo(function SetRow({ set, exercise, allSets, onUpdate, onComple
             return (
               <div
                 className="w-9 h-9 rounded-lg border-2 flex items-center justify-center opacity-30"
-                style={{ borderColor: '#244868' }}
+                style={{ borderColor: 'var(--border)' }}
               />
             )
           }
@@ -1144,7 +1144,7 @@ const SetRow = memo(function SetRow({ set, exercise, allSets, onUpdate, onComple
               }}
               disabled={isMatchLocked ? !mmRefLogged : !(set.weight ?? 0)}
               className="w-9 h-9 rounded-lg border-2 flex items-center justify-center check-pop disabled:opacity-30 disabled:cursor-not-allowed"
-              style={{ borderColor: isMatchLocked ? 'rgba(251,191,36,0.3)' : '#244868' }}
+              style={{ borderColor: isMatchLocked ? 'rgba(251,191,36,0.3)' : 'var(--border)' }}
             />
           )
         })()}
@@ -1154,7 +1154,7 @@ const SetRow = memo(function SetRow({ set, exercise, allSets, onUpdate, onComple
 })
 
 const SET_ANIM_CONFIG: Record<Exclude<SetState, 'pending'>, { bg: string; spinner: string; ripple: string; iconPath: string; strokeWidth: number }> = {
-  logged:   { bg: '#0284c7', spinner: '#0ea5e9', ripple: '#0ea5e9', iconPath: 'M5 13l4 4L19 7',   strokeWidth: 3 },
+  logged:   { bg: 'var(--accent-d)', spinner: 'var(--accent)', ripple: 'var(--accent)', iconPath: 'M5 13l4 4L19 7',   strokeWidth: 3 },
   exceeded: { bg: '#7c3aed', spinner: '#a855f7', ripple: '#a855f7', iconPath: 'M5 15l7-7 7 7',    strokeWidth: 2.5 },
   under:    { bg: '#dc2626', spinner: '#ef4444', ripple: '#ef4444', iconPath: 'M19 9l-7 7-7-7',   strokeWidth: 2.5 },
 }
@@ -1230,7 +1230,7 @@ function CompletedButton({ state, onClick, animated, onAnimEnd }: {
 
 function EllipsisIcon() {
   return (
-    <svg className="w-5 h-5 text-slate-500" fill="currentColor" viewBox="0 0 24 24">
+    <svg className="w-5 h-5 text-[var(--text-m)]" fill="currentColor" viewBox="0 0 24 24">
       <circle cx="12" cy="5" r="1.5" />
       <circle cx="12" cy="12" r="1.5" />
       <circle cx="12" cy="19" r="1.5" />

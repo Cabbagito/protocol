@@ -12,8 +12,23 @@
     <meta name="apple-mobile-web-app-title" content="Protocol" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@700&display=swap" rel="stylesheet">
     <title>Protocol</title>
+    <!-- Blocking theme script — applies CSS vars before first paint (no flash).
+         Keep theme values in sync with src/lib/themes.ts -->
+    <script>
+      ;(function(){
+        var T={dark:{'--deep':'#070d15','--base':'#0d1b2a','--card':'#0f1d2e','--panel':'#132438','--input':'#162a3e','--border':'#1e3a52','--text-1':'#e2e8f0','--text-2':'#cbd5e1','--text-m':'#475569','--accent-l':'#38bdf8','--accent':'#0ea5e9','--accent-d':'#0284c7','--accent-rgb':'14,165,233','--nav-bg':'rgba(13,27,42,0.95)','--shadow':'rgba(0,0,0,0.3)','--vignette':'#070d15','--check-color':'white','--btn-text':'white','--logo-bg':'#0f172a'},black:{'--deep':'#000000','--base':'#050505','--card':'#0c0c0c','--panel':'#111111','--input':'#1a1a1a','--border':'#252525','--text-1':'#e4e4e7','--text-2':'#a1a1aa','--text-m':'#52525b','--accent-l':'#38bdf8','--accent':'#0ea5e9','--accent-d':'#0284c7','--accent-rgb':'14,165,233','--nav-bg':'rgba(8,8,8,0.95)','--shadow':'rgba(0,0,0,0.5)','--vignette':'#000000','--check-color':'white','--btn-text':'white','--logo-bg':'#050505'},white:{'--deep':'#d4d8e0','--base':'#f1f5f9','--card':'#ffffff','--panel':'#e8ecf2','--input':'#e2e7ed','--border':'#c8ced8','--text-1':'#0f172a','--text-2':'#334155','--text-m':'#94a3b8','--accent-l':'#0284c7','--accent':'#0ea5e9','--accent-d':'#38bdf8','--accent-rgb':'14,165,233','--nav-bg':'rgba(241,245,249,0.95)','--shadow':'rgba(0,0,0,0.06)','--vignette':'#c4c8d0','--check-color':'white','--btn-text':'white','--logo-bg':'#f1f5f9'},cyan:{'--deep':'#054560','--base':'#0ea5e9','--card':'#0a2a42','--panel':'#0c3350','--input':'#0a2538','--border':'#186888','--text-1':'#f0faff','--text-2':'#bae6fd','--text-m':'#78c8e8','--accent-l':'#e0f6ff','--accent':'#7dd3fc','--accent-d':'#38bdf8','--accent-rgb':'125,211,252','--nav-bg':'rgba(10,34,55,0.92)','--shadow':'rgba(0,0,0,0.35)','--vignette':'#054560','--check-color':'white','--btn-text':'#0a2a42','--logo-bg':'#0ea5e9'},violet:{'--deep':'#1a0840','--base':'#8b5cf6','--card':'#1a1038','--panel':'#221448','--input':'#180d30','--border':'#402878','--text-1':'#f5f0ff','--text-2':'#ddd0fa','--text-m':'#b8a0e8','--accent-l':'#f0e8ff','--accent':'#c4b5fd','--accent-d':'#a78bfa','--accent-rgb':'196,181,253','--nav-bg':'rgba(22,12,48,0.92)','--shadow':'rgba(0,0,0,0.35)','--vignette':'#1a0840','--check-color':'white','--btn-text':'#1a1038','--logo-bg':'#8b5cf6'},gradient:{'--deep':'#0848a0','--base':'#0ea5e9','--card':'#ffffff','--panel':'#f0ecf8','--input':'#e8e4f2','--border':'#ddd6ee','--text-1':'#1a1030','--text-2':'#40306a','--text-m':'#8880a8','--accent-l':'#6d45d6','--accent':'#7c3aed','--accent-d':'#8b5cf6','--accent-rgb':'124,58,237','--nav-bg':'rgba(255,255,255,0.95)','--shadow':'rgba(0,0,0,0.1)','--vignette':'#3a20a0','--check-color':'white','--btn-text':'white','--logo-bg':'#0f172a'}};
+        var ids=['dark','black','white','cyan','violet','gradient'];
+        var id;try{id=localStorage.getItem('protocol_theme')}catch(e){}
+        if(!id||ids.indexOf(id)===-1)id='dark';
+        var t=T[id],r=document.documentElement,k;
+        r.setAttribute('data-theme',id);
+        for(k in t)r.style.setProperty(k,t[k]);
+        var m=document.querySelector('meta[name="theme-color"]');
+        if(m)m.setAttribute('content',t['--base']);
+      })();
+    </script>
   </head>
-  <body class="bg-navy-base text-slate-200">
+  <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

@@ -18,7 +18,7 @@ function getSetState(set: MesoSet): SetState {
 }
 
 const SET_COLORS: Record<SetState, { text: string; icon: string; bg: string }> = {
-  met: { text: '#38bdf8', icon: '#0ea5e9', bg: 'rgba(12,45,78,0.4)' },
+  met: { text: 'var(--accent-l)', icon: 'var(--accent)', bg: 'rgba(var(--accent-rgb),0.06)' },
   exceeded: { text: '#c084fc', icon: '#a855f7', bg: 'rgba(168,85,247,0.06)' },
   under: { text: '#f87171', icon: '#ef4444', bg: 'rgba(239,68,68,0.04)' },
 }
@@ -28,7 +28,7 @@ const SET_TYPE_LABELS: Record<string, { label: string; color: string; bg: string
   myorep_match: { label: 'MM', color: '#fbbf24', bg: 'rgba(251,191,36,0.12)', border: 'rgba(251,191,36,0.3)', rowBg: 'rgba(251,191,36,0.05)' },
 }
 
-const STRAIGHT_PILL = { color: '#cbd5e1', bg: 'rgba(255,255,255,0.04)', border: 'rgba(255,255,255,0.12)' }
+const STRAIGHT_PILL = { color: 'var(--text-2)', bg: 'rgba(255,255,255,0.04)', border: 'rgba(255,255,255,0.12)' }
 
 function SetStatusIcon({ state }: { state: SetState }) {
   if (state === 'met') {
@@ -97,7 +97,7 @@ export default function WorkoutDetail() {
   }
 
   if (!workout) {
-    return <div className="text-slate-400 text-center py-8">Workout not found</div>
+    return <div className="text-[var(--text-2)] text-center py-8">Workout not found</div>
   }
 
   const exerciseNotes = workout.exercise_notes ?? {}
@@ -161,28 +161,28 @@ export default function WorkoutDetail() {
         <div className="card stagger">
           <div className="grid grid-cols-4 gap-2 text-center">
             <div>
-              <div className="mono text-[22px] font-bold" style={{ color: '#38bdf8' }}>
+              <div className="mono text-[22px] font-bold" style={{ color: 'var(--accent-l)' }}>
                 {totalSets}
               </div>
-              <div className="text-[9px] font-medium uppercase tracking-wider text-slate-600">Sets</div>
+              <div className="text-[9px] font-medium uppercase tracking-wider text-[var(--text-m)]">Sets</div>
             </div>
             <div>
-              <div className="mono text-[22px] font-bold text-slate-200">
+              <div className="mono text-[22px] font-bold text-[var(--text-1)]">
                 {formatVolume(Math.round(totalVolume))}
               </div>
-              <div className="text-[9px] font-medium uppercase tracking-wider text-slate-600">Volume</div>
+              <div className="text-[9px] font-medium uppercase tracking-wider text-[var(--text-m)]">Volume</div>
             </div>
             <div>
-              <div className="mono text-[22px] font-bold text-slate-300">
+              <div className="mono text-[22px] font-bold text-[var(--text-2)]">
                 {exerciseCount}
               </div>
-              <div className="text-[9px] font-medium uppercase tracking-wider text-slate-600">Exercises</div>
+              <div className="text-[9px] font-medium uppercase tracking-wider text-[var(--text-m)]">Exercises</div>
             </div>
             <div>
               <div className="mono text-[22px] font-bold" style={{ color: '#4ade80' }}>
                 {onTargetPct}<span className="text-[14px]">%</span>
               </div>
-              <div className="text-[9px] font-medium uppercase tracking-wider text-slate-600">On Target</div>
+              <div className="text-[9px] font-medium uppercase tracking-wider text-[var(--text-m)]">On Target</div>
             </div>
           </div>
         </div>
@@ -193,13 +193,13 @@ export default function WorkoutDetail() {
             {/* Proportional bar */}
             <div
               className="flex mb-3 overflow-hidden"
-              style={{ height: 6, borderRadius: 3, background: '#162a3e' }}
+              style={{ height: 6, borderRadius: 3, background: 'var(--input)' }}
             >
               {metPct > 0 && (
                 <div
                   style={{
                     width: `${metPct}%`,
-                    background: '#0ea5e9',
+                    background: 'var(--accent)',
                     borderRadius: exceededPct === 0 && underPct === 0 ? 3 : undefined,
                     borderTopLeftRadius: 3,
                     borderBottomLeftRadius: 3,
@@ -222,18 +222,18 @@ export default function WorkoutDetail() {
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5">
-                <div className="w-2 h-2 rounded-full" style={{ background: '#0ea5e9' }} />
-                <span className="text-[10px] text-slate-400">Hit target</span>
-                <span className="mono text-[11px] font-semibold" style={{ color: '#38bdf8' }}>{metCount}</span>
+                <div className="w-2 h-2 rounded-full" style={{ background: 'var(--accent)' }} />
+                <span className="text-[10px] text-[var(--text-2)]">Hit target</span>
+                <span className="mono text-[11px] font-semibold" style={{ color: 'var(--accent-l)' }}>{metCount}</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <div className="w-2 h-2 rounded-full" style={{ background: '#a855f7' }} />
-                <span className="text-[10px] text-slate-400">Exceeded</span>
+                <span className="text-[10px] text-[var(--text-2)]">Exceeded</span>
                 <span className="mono text-[11px] font-semibold" style={{ color: '#c084fc' }}>{exceededCount}</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <div className="w-2 h-2 rounded-full" style={{ background: '#ef4444' }} />
-                <span className="text-[10px] text-slate-400">Under</span>
+                <span className="text-[10px] text-[var(--text-2)]">Under</span>
                 <span className="mono text-[11px] font-semibold" style={{ color: '#f87171' }}>{underCount}</span>
               </div>
             </div>
@@ -242,7 +242,7 @@ export default function WorkoutDetail() {
 
         {/* Section label */}
         <div className="stagger pt-1">
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-600">Exercises</span>
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--text-m)]">Exercises</span>
         </div>
 
         {/* Exercise Cards */}
@@ -257,11 +257,11 @@ export default function WorkoutDetail() {
               >
                 <div className="flex items-center gap-2.5 min-w-0">
                   <MuscleGroupBadge muscleGroup={exercise.muscle_group} />
-                  <span className="text-sm font-medium text-slate-400 truncate">{exercise.exercise_name}</span>
+                  <span className="text-sm font-medium text-[var(--text-2)] truncate">{exercise.exercise_name}</span>
                 </div>
                 <span
                   className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded flex-shrink-0"
-                  style={{ background: 'rgba(148,163,184,0.1)', color: '#94a3b8' }}
+                  style={{ background: 'rgba(148,163,184,0.1)', color: 'var(--text-2)' }}
                 >
                   Skipped
                 </span>
@@ -285,9 +285,9 @@ export default function WorkoutDetail() {
               {/* Exercise header */}
               <div className="flex items-center gap-2 mb-1">
                 <MuscleGroupBadge muscleGroup={exercise.muscle_group} />
-                <span className="text-[10px] text-slate-600 capitalize">{exercise.equipment_type}</span>
+                <span className="text-[10px] text-[var(--text-m)] capitalize">{exercise.equipment_type}</span>
               </div>
-              <h2 className="text-base font-semibold text-slate-200 mb-1">{exercise.exercise_name}</h2>
+              <h2 className="text-base font-semibold text-[var(--text-1)] mb-1">{exercise.exercise_name}</h2>
 
               {/* Exercise note */}
               {exerciseNote && (
@@ -303,10 +303,10 @@ export default function WorkoutDetail() {
                   className="grid items-center gap-1"
                   style={{ gridTemplateColumns: '36px 1fr 1fr 1fr 28px', padding: '4px 8px 2px' }}
                 >
-                  <div className="text-[9px] font-medium uppercase tracking-wider text-center text-slate-700">#</div>
-                  <div className="text-[9px] font-medium uppercase tracking-wider text-center text-slate-700">Weight</div>
-                  <div className="text-[9px] font-medium uppercase tracking-wider text-center text-slate-700">Reps</div>
-                  <div className="text-[9px] font-medium uppercase tracking-wider text-center text-slate-700">Target</div>
+                  <div className="text-[9px] font-medium uppercase tracking-wider text-center text-[var(--text-m)]">#</div>
+                  <div className="text-[9px] font-medium uppercase tracking-wider text-center text-[var(--text-m)]">Weight</div>
+                  <div className="text-[9px] font-medium uppercase tracking-wider text-center text-[var(--text-m)]">Reps</div>
+                  <div className="text-[9px] font-medium uppercase tracking-wider text-center text-[var(--text-m)]">Target</div>
                   <div />
                 </div>
 
@@ -350,7 +350,7 @@ export default function WorkoutDetail() {
                       <div className="mono text-[13px] font-medium text-center" style={{ color: colors.text }}>
                         {set.reps ?? 0}
                       </div>
-                      <div className="mono text-[11px] text-center text-slate-600">{set.target_reps}</div>
+                      <div className="mono text-[11px] text-center text-[var(--text-m)]">{set.target_reps}</div>
                       <div className="flex justify-center">
                         <SetStatusIcon state={state} />
                       </div>
@@ -363,19 +363,19 @@ export default function WorkoutDetail() {
               {summary && (
                 <div
                   className="mt-2 px-3 py-2 flex items-center justify-between rounded-md"
-                  style={{ background: 'rgba(22,42,62,0.5)', border: '1px solid rgba(255,255,255,0.03)' }}
+                  style={{ background: 'var(--panel)', border: '1px solid rgba(255,255,255,0.03)' }}
                 >
                   <div className="flex items-center gap-3">
                     <div>
-                      <div className="text-[9px] uppercase tracking-wider text-slate-700">Best Set</div>
-                      <div className="mono text-[12px] font-semibold text-slate-300">
+                      <div className="text-[9px] uppercase tracking-wider text-[var(--text-m)]">Best Set</div>
+                      <div className="mono text-[12px] font-semibold text-[var(--text-2)]">
                         {summary.bestWeight} &times; {summary.bestReps}
                       </div>
                     </div>
-                    <div style={{ width: 1, height: 20, background: '#1e3a52' }} />
+                    <div style={{ width: 1, height: 20, background: 'var(--border)' }} />
                     <div>
-                      <div className="text-[9px] uppercase tracking-wider text-slate-700">Volume</div>
-                      <div className="mono text-[12px] font-semibold text-slate-300">
+                      <div className="text-[9px] uppercase tracking-wider text-[var(--text-m)]">Volume</div>
+                      <div className="mono text-[12px] font-semibold text-[var(--text-2)]">
                         {summary.totalVolume.toLocaleString()}
                       </div>
                     </div>
@@ -400,7 +400,7 @@ export default function WorkoutDetail() {
         {muscleEntries.length > 0 && (
           <>
             <div className="stagger pt-1">
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-600">
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--text-m)]">
                 Volume by Muscle
               </span>
             </div>
@@ -415,14 +415,14 @@ export default function WorkoutDetail() {
                         className="w-1.5 h-1.5 rounded-full flex-shrink-0"
                         style={{ background: color.primary }}
                       />
-                      <span className="text-[10px] w-16 text-slate-400 capitalize">{group}</span>
-                      <div className="flex-1 h-[4px] rounded-full" style={{ background: '#162a3e' }}>
+                      <span className="text-[10px] w-16 text-[var(--text-2)] capitalize">{group}</span>
+                      <div className="flex-1 h-[4px] rounded-full" style={{ background: 'var(--input)' }}>
                         <div
                           className="h-full rounded-full vol-bar"
                           style={{ width: `${widthPct}%`, background: color.primary, opacity: 0.7 }}
                         />
                       </div>
-                      <span className="mono text-[10px] w-8 text-right text-slate-500">{count}</span>
+                      <span className="mono text-[10px] w-8 text-right text-[var(--text-m)]">{count}</span>
                     </div>
                   )
                 })}
@@ -435,7 +435,7 @@ export default function WorkoutDetail() {
         {skippedExercises.length > 0 && (
           <>
             <div className="stagger pt-1">
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-600">
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--text-m)]">
                 Skipped ({skippedExercises.length})
               </span>
             </div>
@@ -446,7 +446,7 @@ export default function WorkoutDetail() {
         {workout.notes && (
           <div className="card stagger">
             <h3 className="font-medium mb-2">Notes</h3>
-            <p className="text-slate-400 text-sm whitespace-pre-wrap">{workout.notes}</p>
+            <p className="text-[var(--text-2)] text-sm whitespace-pre-wrap">{workout.notes}</p>
           </div>
         )}
       </div>

@@ -24,7 +24,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <nav
         className="fixed bottom-0 left-0 right-0 pb-[env(safe-area-inset-bottom)]"
         style={{
-          background: 'rgba(13,27,42,0.95)',
+          background: 'var(--nav-bg)',
           backdropFilter: 'blur(12px)',
           WebkitBackdropFilter: 'blur(12px)',
           borderTop: '1px solid rgba(255,255,255,0.06)',
@@ -42,7 +42,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 to={item.path}
                 className={clsx(
                   'flex flex-col items-center justify-center w-16 h-full transition-colors',
-                  isActive ? 'text-protocol-400' : 'text-slate-600 hover:text-slate-400'
+                  isActive ? 'text-protocol-400' : 'text-[var(--text-m)] hover:text-[var(--text-2)]'
                 )}
               >
                 <item.icon className="w-5 h-5 md:w-6 md:h-6" />

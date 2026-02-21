@@ -41,7 +41,7 @@ export default function BottomSheet({ open, onClose, title, actions }: BottomShe
         ref={sheetRef}
         className="absolute bottom-0 left-0 right-0 rounded-t-2xl pb-safe slide-up"
         style={{
-          background: '#0c1929',
+          background: 'var(--card)',
           border: '1px solid rgba(255,255,255,0.06)',
           borderBottom: 'none',
         }}
@@ -57,7 +57,7 @@ export default function BottomSheet({ open, onClose, title, actions }: BottomShe
 
         {title && (
           <div className="px-5 pb-2">
-            <span className="text-xs font-medium uppercase tracking-wider text-slate-600">
+            <span className="text-xs font-medium uppercase tracking-wider text-[var(--text-m)]">
               {title}
             </span>
           </div>
@@ -74,7 +74,7 @@ export default function BottomSheet({ open, onClose, title, actions }: BottomShe
               }}
               className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-left active:scale-[0.98] transition-transform"
               style={{
-                color: action.variant === 'danger' ? '#f87171' : '#e2e8f0',
+                color: action.variant === 'danger' ? '#f87171' : 'var(--text-1)',
               }}
             >
               {action.icon && (

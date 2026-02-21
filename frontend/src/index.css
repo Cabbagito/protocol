@@ -4,7 +4,7 @@
 
 @layer base {
   html {
-    background: #070d15;
+    background: var(--deep);
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
     overscroll-behavior-y: contain;
@@ -12,7 +12,8 @@
 
   body {
     @apply antialiased;
-    background: #0d1b2a;
+    background: var(--base);
+    color: var(--text-1);
     overscroll-behavior: none;
     padding-top: env(safe-area-inset-top);
     padding-bottom: env(safe-area-inset-bottom);
@@ -27,11 +28,13 @@
     inset: 0;
     pointer-events: none;
     z-index: 100;
-    background: radial-gradient(ellipse at center, transparent 80%, rgba(7,13,21,0.55) 100%);
+    background: radial-gradient(ellipse at center, transparent 80%, var(--vignette) 100%);
+    opacity: 0.55;
   }
   @media (min-width: 768px) {
     body::before {
-      background: radial-gradient(ellipse at center, transparent 60%, #070d15 100%);
+      background: radial-gradient(ellipse at center, transparent 60%, var(--vignette) 100%);
+      opacity: 1;
     }
   }
 
@@ -57,35 +60,36 @@
   }
 
   .btn-secondary {
-    background: #132438;
+    background: var(--panel);
     border: 1px solid rgba(255, 255, 255, 0.06);
     @apply text-slate-100 hover:bg-navy-input focus:ring-slate-500 rounded-lg;
   }
 
   .input {
-    @apply w-full px-3 py-2 rounded-lg text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-protocol-500 focus:border-transparent;
-    background: #162a3e;
-    border: 1px solid #244868;
+    @apply w-full px-3 py-2 rounded-lg placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-protocol-500 focus:border-transparent;
+    color: var(--text-1);
+    background: var(--input);
+    border: 1px solid var(--border);
   }
 
   .card {
-    background: #0f1d2e;
+    background: var(--card);
     border-radius: 10px;
-    border: 1.5px solid #244868;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    border: 1.5px solid var(--border);
+    box-shadow: 0 4px 12px var(--shadow);
     @apply p-4;
   }
 
   .exercise-card {
-    background: #0f1d2e;
+    background: var(--card);
     border-radius: 10px;
     border: 1.5px solid;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 4px 12px var(--shadow);
     @apply px-3 pt-3 pb-2.5;
   }
 
   .panel-frosted {
-    background: #132438;
+    background: var(--panel);
     border: 1px solid rgba(255, 255, 255, 0.04);
     border-radius: 8px;
     padding: 4px;
@@ -118,7 +122,7 @@
   }
 
   .reps-ghost::placeholder {
-    color: #2a4a64;
+    color: var(--border);
   }
 
   @keyframes lock-jiggle {
@@ -173,7 +177,7 @@
     cursor: pointer;
   }
   .list-row:active {
-    background: rgba(56,189,248,0.04);
+    background: rgba(var(--accent-rgb),0.04);
   }
 
   .accent-strip {
@@ -192,30 +196,30 @@
     transition: all 0.15s ease;
     border-radius: 8px;
     padding: 6px 12px;
-    background: rgba(2,132,199,0.15);
-    border: 1px solid rgba(2,132,199,0.3);
+    background: rgba(var(--accent-rgb),0.15);
+    border: 1px solid rgba(var(--accent-rgb),0.3);
   }
   .plus-btn:active {
     transform: scale(0.95);
-    background: rgba(2,132,199,0.25);
+    background: rgba(var(--accent-rgb),0.25);
   }
 
   .add-row {
-    border: 1.5px dashed #244868;
+    border: 1.5px dashed var(--border);
     border-radius: 8px;
     transition: all 0.2s ease;
     cursor: pointer;
   }
   .add-row:hover, .add-row:active {
-    border-color: #38bdf8;
-    background: rgba(56,189,248,0.03);
+    border-color: var(--accent-l);
+    background: rgba(var(--accent-rgb),0.03);
   }
 
   .compact-card {
-    background: #0f1d2e;
+    background: var(--card);
     border-radius: 10px;
-    border: 1px solid #244868;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+    border: 1px solid var(--border);
+    box-shadow: 0 2px 8px var(--shadow);
   }
 
   .sparkline {
@@ -587,4 +591,17 @@
     50% { opacity: 0.55; }
   }
   .pulse-glow { animation: pulse-glow 4s ease-in-out infinite; }
+}
+
+/* ===== GRADIENT THEME OVERRIDES ===== */
+[data-theme="gradient"] body {
+  background: linear-gradient(135deg, #0ea5e9, #8b5cf6);
+  background-attachment: fixed;
+}
+[data-theme="gradient"] body::before {
+  background: radial-gradient(ellipse at center, transparent 60%, rgba(58,32,160,0.35) 100%);
+  opacity: 1;
+}
+[data-theme="gradient"] .btn-primary {
+  background: linear-gradient(135deg, #0ea5e9, #8b5cf6);
 }

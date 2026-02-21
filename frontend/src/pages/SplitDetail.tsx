@@ -88,7 +88,7 @@ export default function SplitDetail() {
   }
 
   if (!split) {
-    return <div className="text-slate-400 text-center py-8">Split not found</div>
+    return <div className="text-[var(--text-2)] text-center py-8">Split not found</div>
   }
 
   return (
@@ -128,7 +128,7 @@ export default function SplitDetail() {
 
       <div className="px-4 space-y-4">
       <div className="flex justify-between items-center">
-        <h2 className="text-lg font-medium text-slate-300">Sessions</h2>
+        <h2 className="text-lg font-medium text-[var(--text-2)]">Sessions</h2>
         <button
           onClick={() => {
             setEditingSession(null)
@@ -156,7 +156,7 @@ export default function SplitDetail() {
       )}
 
       {split.sessions.length === 0 ? (
-        <div className="text-slate-400 text-center py-8">
+        <div className="text-[var(--text-2)] text-center py-8">
           No sessions yet. Add your first workout session!
         </div>
       ) : (
@@ -166,10 +166,10 @@ export default function SplitDetail() {
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
-                    <span className="text-slate-500 text-sm">Day {index + 1}</span>
+                    <span className="text-[var(--text-m)] text-sm">Day {index + 1}</span>
                     <span className="font-medium">{session.name}</span>
                     {session.is_rest_day && (
-                      <span className="text-xs bg-slate-700 text-slate-300 px-2 py-0.5 rounded">
+                      <span className="text-xs bg-[var(--input)] text-[var(--text-2)] px-2 py-0.5 rounded">
                         Rest
                       </span>
                     )}
@@ -177,9 +177,9 @@ export default function SplitDetail() {
                   {!session.is_rest_day && session.exercises.length > 0 && (
                     <div className="mt-2 space-y-1">
                       {session.exercises.map((ex) => (
-                        <div key={ex.id} className="text-sm text-slate-400 flex items-center gap-2">
+                        <div key={ex.id} className="text-sm text-[var(--text-2)] flex items-center gap-2">
                           <span>{ex.exercise_name}</span>
-                          <span className="text-slate-500">
+                          <span className="text-[var(--text-m)]">
                             {ex.sets} sets
                           </span>
                         </div>
@@ -191,26 +191,26 @@ export default function SplitDetail() {
                   <button
                     onClick={() => handleMoveSession(session.id, 'up')}
                     disabled={index === 0}
-                    className="p-1 text-slate-400 hover:text-slate-200 disabled:opacity-30"
+                    className="p-1 text-[var(--text-2)] hover:text-[var(--text-1)] disabled:opacity-30"
                   >
                     <ChevronUpIcon className="w-5 h-5" />
                   </button>
                   <button
                     onClick={() => handleMoveSession(session.id, 'down')}
                     disabled={index === split.sessions.length - 1}
-                    className="p-1 text-slate-400 hover:text-slate-200 disabled:opacity-30"
+                    className="p-1 text-[var(--text-2)] hover:text-[var(--text-1)] disabled:opacity-30"
                   >
                     <ChevronDownIcon className="w-5 h-5" />
                   </button>
                   <button
                     onClick={() => setEditingSession(session)}
-                    className="p-1 text-slate-400 hover:text-slate-200"
+                    className="p-1 text-[var(--text-2)] hover:text-[var(--text-1)]"
                   >
                     <PencilIcon className="w-5 h-5" />
                   </button>
                   <button
                     onClick={() => handleDeleteSession(session.id)}
-                    className="p-1 text-slate-400 hover:text-red-400"
+                    className="p-1 text-[var(--text-2)] hover:text-red-400"
                   >
                     <TrashIcon className="w-5 h-5" />
                   </button>
@@ -325,7 +325,7 @@ function SessionForm({ splitId, session, onSave, onCancel }: SessionFormProps) {
           type="checkbox"
           checked={isRestDay}
           onChange={(e) => setIsRestDay(e.target.checked)}
-          className="rounded border-slate-600 bg-slate-700 text-protocol-500 focus:ring-protocol-500"
+          className="rounded border-[var(--border)] bg-[var(--input)] text-protocol-500 focus:ring-protocol-500"
         />
         <span>Rest day</span>
       </label>
@@ -333,7 +333,7 @@ function SessionForm({ splitId, session, onSave, onCancel }: SessionFormProps) {
       {!isRestDay && (
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-sm text-slate-400">Exercises</span>
+            <span className="text-sm text-[var(--text-2)]">Exercises</span>
             <button
               type="button"
               onClick={handleAddExercise}
@@ -345,15 +345,15 @@ function SessionForm({ splitId, session, onSave, onCancel }: SessionFormProps) {
           </div>
 
           {availableExercises.length === 0 ? (
-            <div className="text-slate-500 text-sm py-2">
+            <div className="text-[var(--text-m)] text-sm py-2">
               No exercises available. Create some exercises first.
             </div>
           ) : exercises.length === 0 ? (
-            <div className="text-slate-500 text-sm py-2">No exercises added yet.</div>
+            <div className="text-[var(--text-m)] text-sm py-2">No exercises added yet.</div>
           ) : (
             <div className="space-y-2">
               {exercises.map((ex, index) => (
-                <div key={index} className="bg-slate-800 rounded p-2 space-y-2">
+                <div key={index} className="bg-[var(--card)] rounded p-2 space-y-2">
                   <div className="flex items-center gap-2">
                     <select
                       value={ex.exercise_id}
@@ -370,7 +370,7 @@ function SessionForm({ splitId, session, onSave, onCancel }: SessionFormProps) {
                       type="button"
                       onClick={() => handleMoveExercise(index, 'up')}
                       disabled={index === 0}
-                      className="p-1 text-slate-400 hover:text-slate-200 disabled:opacity-30"
+                      className="p-1 text-[var(--text-2)] hover:text-[var(--text-1)] disabled:opacity-30"
                     >
                       <ChevronUpIcon className="w-4 h-4" />
                     </button>
@@ -378,21 +378,21 @@ function SessionForm({ splitId, session, onSave, onCancel }: SessionFormProps) {
                       type="button"
                       onClick={() => handleMoveExercise(index, 'down')}
                       disabled={index === exercises.length - 1}
-                      className="p-1 text-slate-400 hover:text-slate-200 disabled:opacity-30"
+                      className="p-1 text-[var(--text-2)] hover:text-[var(--text-1)] disabled:opacity-30"
                     >
                       <ChevronDownIcon className="w-4 h-4" />
                     </button>
                     <button
                       type="button"
                       onClick={() => handleRemoveExercise(index)}
-                      className="p-1 text-slate-400 hover:text-red-400"
+                      className="p-1 text-[var(--text-2)] hover:text-red-400"
                     >
                       <TrashIcon className="w-4 h-4" />
                     </button>
                   </div>
                   <div className="flex gap-2 text-sm">
                     <div className="flex-1">
-                      <label className="text-xs text-slate-500">Sets</label>
+                      <label className="text-xs text-[var(--text-m)]">Sets</label>
                       <input
                         type="number"
                         inputMode="numeric"

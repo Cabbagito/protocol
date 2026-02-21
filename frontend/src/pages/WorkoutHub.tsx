@@ -19,7 +19,7 @@ export default function WorkoutHub() {
       <AppHeader title="Workout" />
       <div className="px-4">
         <div className="card">
-          <p className="text-slate-500 text-sm mb-4">
+          <p className="text-[var(--text-m)] text-sm mb-4">
             No active mesocycle. Create one to start working out.
           </p>
           <Link to="/mesocycles" className="btn btn-primary inline-block">

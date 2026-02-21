@@ -33,7 +33,7 @@ export default function SplashScreen({ children }: SplashScreenProps) {
       {state !== 'done' && (
         <div
           className={`fixed inset-0 z-[9999] flex items-center justify-center ${state === 'fading' ? 'splash-fade-out' : ''}`}
-          style={{ background: '#050810' }}
+          style={{ background: 'var(--deep)' }}
         >
           <svg width="300" height="340" viewBox="0 0 300 340" xmlns="http://www.w3.org/2000/svg" style={{ overflow: 'hidden' }}>
             <defs>
@@ -51,7 +51,7 @@ export default function SplashScreen({ children }: SplashScreenProps) {
             <rect className="spl-flash" width="300" height="340" fill="url(#spl-flash-grad)" opacity="0" />
 
             {/* Orbit track */}
-            <circle className="spl-track" cx="150" cy="130" r="52" fill="none" stroke="#1e293b" strokeWidth="1" strokeDasharray="3 7" opacity="0" />
+            <circle className="spl-track" cx="150" cy="130" r="52" fill="none" stroke="var(--border)" strokeWidth="1" strokeDasharray="3 7" opacity="0" />
 
             {/* Pulse rings */}
             <circle className="spl-pulse-1" cx="150" cy="130" r="10" fill="none" stroke="url(#spl-grad)" strokeWidth="3" />

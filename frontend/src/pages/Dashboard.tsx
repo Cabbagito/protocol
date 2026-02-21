@@ -43,8 +43,8 @@ export default function Dashboard() {
         <MesoGrid mesocycle={mesocycle} />
       ) : (
         <div className="card">
-          <h2 className="font-semibold mb-2 text-slate-200">Get Started</h2>
-          <p className="text-slate-500 text-sm mb-4">
+          <h2 className="font-semibold mb-2 text-[var(--text-1)]">Get Started</h2>
+          <p className="text-[var(--text-m)] text-sm mb-4">
             Create a mesocycle to start tracking your workouts.
           </p>
           <Link to="/mesocycles" className="btn btn-primary inline-block">
@@ -62,10 +62,10 @@ export default function Dashboard() {
             className="card flex items-center justify-between py-3.5"
           >
             <div className="flex items-center gap-3">
-              <item.icon className="w-5 h-5 text-slate-400" />
-              <span className="text-sm font-medium text-slate-200">{item.label}</span>
+              <item.icon className="w-5 h-5 text-[var(--text-2)]" />
+              <span className="text-sm font-medium text-[var(--text-1)]">{item.label}</span>
             </div>
-            <ChevronRightIcon className="w-4 h-4 text-slate-600" />
+            <ChevronRightIcon className="w-4 h-4 text-[var(--text-m)]" />
           </Link>
         ))}
       </div>

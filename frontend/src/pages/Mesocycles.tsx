@@ -23,10 +23,10 @@ export default function Mesocycles() {
         subtitle={`${mesocycles.length} mesocycles`}
         rightContent={
           <button onClick={() => setShowForm(!showForm)} className="plus-btn">
-            <svg className="w-3.5 h-3.5" style={{ color: '#38bdf8' }} fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+            <svg className="w-3.5 h-3.5" style={{ color: 'var(--accent-l)' }} fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
             </svg>
-            <span className="text-xs font-medium" style={{ color: '#38bdf8' }}>New</span>
+            <span className="text-xs font-medium" style={{ color: 'var(--accent-l)' }}>New</span>
           </button>
         }
       />
@@ -42,7 +42,7 @@ export default function Mesocycles() {
       {isLoading ? (
         <PageLoader />
       ) : mesocycles.length === 0 ? (
-        <div className="text-slate-400 text-center py-8">
+        <div className="text-[var(--text-2)] text-center py-8">
           No mesocycles yet. Create your first training block!
         </div>
       ) : (
@@ -62,10 +62,10 @@ export default function Mesocycles() {
             onClick={() => setShowForm(true)}
             className="add-row flex items-center justify-center gap-2 py-3 w-full stagger"
           >
-            <svg className="w-4 h-4" style={{ color: '#38bdf8' }} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <svg className="w-4 h-4" style={{ color: 'var(--accent-l)' }} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
             </svg>
-            <span className="text-xs font-medium" style={{ color: '#38bdf8' }}>New Mesocycle</span>
+            <span className="text-xs font-medium" style={{ color: 'var(--accent-l)' }}>New Mesocycle</span>
           </button>
         </div>
       )}
@@ -90,7 +90,7 @@ function ActiveMesoCard({ meso, fullMeso }: { meso: MesocycleListItem; fullMeso:
       {/* Top row */}
       <div className="flex items-center justify-between mb-1">
         <div className="flex items-center gap-2">
-          <span className="text-[15px] font-semibold text-slate-200">{meso.name}</span>
+          <span className="text-[15px] font-semibold text-[var(--text-1)]">{meso.name}</span>
           <span
             className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded"
             style={{ color: '#4ade80', background: 'rgba(74,222,128,0.1)', border: '1px solid rgba(74,222,128,0.2)' }}
@@ -98,23 +98,23 @@ function ActiveMesoCard({ meso, fullMeso }: { meso: MesocycleListItem; fullMeso:
             Active
           </span>
         </div>
-        <ChevronRightIcon className="w-4 h-4 shrink-0 text-[#334155]" />
+        <ChevronRightIcon className="w-4 h-4 shrink-0 text-[var(--text-m)]" />
       </div>
 
       {/* Meta row */}
       <div className="flex items-center gap-1.5 mb-3">
-        <span className="text-[11px]" style={{ color: '#475569' }}>{meso.split_name}</span>
-        <span className="text-[11px]" style={{ color: '#334155' }}>&middot;</span>
-        <span className="mono text-[11px]" style={{ color: '#64748b' }}>Week {meso.current_week} / {meso.total_weeks}</span>
-        <span className="text-[11px]" style={{ color: '#334155' }}>&middot;</span>
-        <span className="mono text-[11px]" style={{ color: '#38bdf8' }}>
+        <span className="text-[11px]" style={{ color: 'var(--text-m)' }}>{meso.split_name}</span>
+        <span className="text-[11px]" style={{ color: 'var(--text-m)' }}>&middot;</span>
+        <span className="mono text-[11px]" style={{ color: 'var(--text-m)' }}>Week {meso.current_week} / {meso.total_weeks}</span>
+        <span className="text-[11px]" style={{ color: 'var(--text-m)' }}>&middot;</span>
+        <span className="mono text-[11px]" style={{ color: meso.current_rir === -1 ? '#eab308' : 'var(--accent-l)' }}>
           {meso.current_rir === -1 ? 'Deload' : `RiR ${meso.current_rir}`}
         </span>
       </div>
 
       {/* Progress bar */}
       <div className="flex items-center gap-2 mb-3">
-        <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: '#162a3e' }}>
+        <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--input)' }}>
           <div
             className="h-full rounded-full"
             style={{
@@ -146,22 +146,22 @@ function InactiveMesoCard({ meso }: { meso: MesocycleListItem }) {
     >
       <div className="flex items-center justify-between mb-1">
         <div className="flex items-center gap-2">
-          <span className="text-[15px] font-medium" style={{ color: '#94a3b8' }}>{meso.name}</span>
+          <span className="text-[15px] font-medium" style={{ color: 'var(--text-2)' }}>{meso.name}</span>
           <span
             className="text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded"
-            style={{ color: '#64748b', background: 'rgba(100,116,139,0.1)', border: '1px solid rgba(100,116,139,0.15)' }}
+            style={{ color: 'var(--text-m)', background: 'rgba(100,116,139,0.1)', border: '1px solid rgba(100,116,139,0.15)' }}
           >
             Done
           </span>
         </div>
-        <ChevronRightIcon className="w-4 h-4 shrink-0 text-[#334155]" />
+        <ChevronRightIcon className="w-4 h-4 shrink-0 text-[var(--text-m)]" />
       </div>
       <div className="flex items-center gap-1.5">
-        <span className="text-[11px]" style={{ color: '#475569' }}>{meso.split_name}</span>
-        <span className="text-[11px]" style={{ color: '#334155' }}>&middot;</span>
-        <span className="mono text-[11px]" style={{ color: '#475569' }}>{meso.total_weeks} weeks</span>
-        <span className="text-[11px]" style={{ color: '#334155' }}>&middot;</span>
-        <span className="mono text-[11px]" style={{ color: '#475569' }}>{meso.workouts_completed}/{meso.total_workouts}</span>
+        <span className="text-[11px]" style={{ color: 'var(--text-m)' }}>{meso.split_name}</span>
+        <span className="text-[11px]" style={{ color: 'var(--text-m)' }}>&middot;</span>
+        <span className="mono text-[11px]" style={{ color: 'var(--text-m)' }}>{meso.total_weeks} weeks</span>
+        <span className="text-[11px]" style={{ color: 'var(--text-m)' }}>&middot;</span>
+        <span className="mono text-[11px]" style={{ color: 'var(--text-m)' }}>{meso.workouts_completed}/{meso.total_workouts}</span>
       </div>
     </Link>
   )
@@ -224,7 +224,7 @@ function MesocycleForm({ onSave, onCancel }: MesocycleFormProps) {
       />
 
       {splits.length === 0 ? (
-        <div className="text-slate-500 text-sm py-2">
+        <div className="text-[var(--text-m)] text-sm py-2">
           No splits available. <Link to="/splits" className="text-protocol-400">Create one first.</Link>
         </div>
       ) : (
@@ -242,7 +242,7 @@ function MesocycleForm({ onSave, onCancel }: MesocycleFormProps) {
       )}
 
       <div>
-        <label className="text-sm text-slate-400">Total Weeks</label>
+        <label className="text-sm text-[var(--text-2)]">Total Weeks</label>
         <input
           type="number"
           inputMode="numeric"
@@ -252,7 +252,7 @@ function MesocycleForm({ onSave, onCancel }: MesocycleFormProps) {
           onChange={(e) => setTotalWeeks(parseInt(e.target.value) || 4)}
           className="input"
         />
-        <div className="text-xs text-slate-500 mt-1">
+        <div className="text-xs text-[var(--text-m)] mt-1">
           {getRirSchemePreview(totalWeeks)}
         </div>
       </div>

@@ -14,7 +14,7 @@ export default function ProtocolMark({ mode = 'idle', className }: ProtocolMarkP
           </linearGradient>
         </defs>
         {/* Orbit track */}
-        <circle cx="100" cy="100" r="58" fill="none" stroke="#1e293b" strokeWidth="1" strokeDasharray="4 8" opacity="0.4" />
+        <circle cx="100" cy="100" r="58" fill="none" stroke="var(--border)" strokeWidth="1" strokeDasharray="4 8" opacity="0.4" />
         {/* Orbiting dots */}
         <g style={{ transformOrigin: '100px 100px' }}>
           <circle className="orb-1" cx="100" cy="100" r="3.5" fill="#0ea5e9" opacity="0.9" />
@@ -44,7 +44,7 @@ export default function ProtocolMark({ mode = 'idle', className }: ProtocolMarkP
           <stop offset="100%" stopColor="#000" stopOpacity="0.4" />
         </radialGradient>
       </defs>
-      <rect width="100" height="100" rx="22" fill="#0f172a" />
+      <rect width="100" height="100" rx="22" fill="var(--logo-bg)" />
       <rect width="100" height="100" rx="22" fill="url(#idle-vig)" />
       <path className="cascade-back" d="M36 80 L36 24 L58 24 C69 24 76 31 76 40 C76 49 69 56 58 56 L48 56 L48 80 Z M48 34 L56 34 C62 34 64 37 64 40 C64 43 62 46 56 46 L48 46 Z" fill="#0ea5e9" opacity="0.15" />
       <path className="cascade-mid" d="M33 78 L33 22 L55 22 C66 22 73 29 73 38 C73 47 66 54 55 54 L45 54 L45 78 Z M45 32 L53 32 C59 32 61 35 61 38 C61 41 59 44 53 44 L45 44 Z" fill="#0ea5e9" opacity="0.4" />

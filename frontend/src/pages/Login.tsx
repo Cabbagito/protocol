@@ -56,7 +56,7 @@ export default function Login({ onLogin }: LoginProps) {
   return (
     <div
       className={`fixed inset-0 z-[9999] flex flex-col items-center justify-center ${fadingOut ? 'login-fade-out' : ''}`}
-      style={{ background: '#0d1b2a' }}
+      style={{ background: 'var(--base)' }}
     >
       {/* Ambient glow */}
       <div
@@ -68,7 +68,7 @@ export default function Login({ onLogin }: LoginProps) {
           width: 220,
           height: 220,
           transform: 'translate(-50%, -50%)',
-          background: 'radial-gradient(circle, rgba(14,165,233,0.06) 0%, transparent 70%)',
+          background: 'radial-gradient(circle, rgba(var(--accent-rgb),0.06) 0%, transparent 70%)',
           filter: 'blur(30px)',
           zIndex: 1,
         }}
@@ -93,7 +93,7 @@ export default function Login({ onLogin }: LoginProps) {
         <circle
           className="login-track-in"
           cx="110" cy="85" r="52"
-          fill="none" stroke="#1e3a52" strokeWidth="1"
+          fill="none" stroke="var(--border)" strokeWidth="1"
           strokeDasharray="3 7" opacity="0"
         />
 
@@ -163,11 +163,11 @@ export default function Login({ onLogin }: LoginProps) {
           placeholder="Password"
           style={{
             width: '100%',
-            background: '#162a3e',
-            border: '1.5px solid #1e3a52',
+            background: 'var(--input)',
+            border: '1.5px solid var(--border)',
             borderRadius: 12,
             padding: '14px 16px',
-            color: '#e2e8f0',
+            color: 'var(--text-1)',
             fontSize: 14,
             fontWeight: 500,
             outline: 'none',
@@ -177,11 +177,11 @@ export default function Login({ onLogin }: LoginProps) {
             transition: 'border-color 0.3s ease, box-shadow 0.3s ease',
           }}
           onFocus={(e) => {
-            e.currentTarget.style.borderColor = '#0ea5e9'
-            e.currentTarget.style.boxShadow = '0 0 0 3px rgba(14,165,233,0.1), 0 0 20px rgba(14,165,233,0.05)'
+            e.currentTarget.style.borderColor = 'var(--accent)'
+            e.currentTarget.style.boxShadow = '0 0 0 3px rgba(var(--accent-rgb),0.1), 0 0 20px rgba(var(--accent-rgb),0.05)'
           }}
           onBlur={(e) => {
-            e.currentTarget.style.borderColor = '#1e3a52'
+            e.currentTarget.style.borderColor = 'var(--border)'
             e.currentTarget.style.boxShadow = 'none'
           }}
         />
@@ -202,8 +202,8 @@ export default function Login({ onLogin }: LoginProps) {
             cursor: loading || !password ? 'default' : 'pointer',
             transition: 'all 0.2s ease',
             background: 'transparent',
-            color: '#0ea5e9',
-            border: '1.5px solid rgba(14,165,233,0.25)',
+            color: 'var(--accent)',
+            border: '1.5px solid rgba(var(--accent-rgb),0.25)',
             opacity: loading || !password ? 0.5 : 1,
           }}
         >
@@ -220,7 +220,7 @@ export default function Login({ onLogin }: LoginProps) {
           opacity: 0,
           fontFamily: "'JetBrains Mono', monospace",
           fontSize: 10,
-          color: '#334155',
+          color: 'var(--text-m)',
         }}
       >
         protocol-42.com

@@ -32,7 +32,7 @@ export default function AppHeader({
       style={{
         marginTop: 'calc(-1 * env(safe-area-inset-top, 0px))',
         paddingTop: 'env(safe-area-inset-top, 0px)',
-        background: '#0d1b2a',
+        background: 'var(--base)',
         borderBottom: hasProgressBar ? 'none' : '1px solid rgba(255,255,255,0.04)',
       }}
     >
@@ -50,19 +50,19 @@ export default function AppHeader({
         </Link>
 
         <div className="flex-1 min-w-0">
-          <h1 className="text-[15px] font-semibold truncate text-slate-200">
+          <h1 className="text-[15px] font-semibold truncate text-[var(--text-1)]">
             {title}
           </h1>
           {breadcrumb ? (
             <Link
               to={breadcrumb.to}
-              className="text-[11px] text-slate-600 hover:text-slate-400 transition-colors"
+              className="text-[11px] text-[var(--text-m)] hover:text-[var(--text-2)] transition-colors"
               onClick={(e) => e.stopPropagation()}
             >
               &#8249; {breadcrumb.label}
             </Link>
           ) : subtitle ? (
-            <p className="text-[11px] text-slate-600">{subtitle}</p>
+            <p className="text-[11px] text-[var(--text-m)]">{subtitle}</p>
           ) : null}
         </div>
 
@@ -78,7 +78,7 @@ export default function AppHeader({
         {/* Drawer expand indicator */}
         {drawerContent && (
           <ChevronDownIcon
-            className={`w-4 h-4 flex-shrink-0 text-slate-600 transition-transform duration-300 ${drawerExpanded ? 'rotate-180' : ''}`}
+            className={`w-4 h-4 flex-shrink-0 text-[var(--text-m)] transition-transform duration-300 ${drawerExpanded ? 'rotate-180' : ''}`}
           />
         )}
       </div>
@@ -101,10 +101,10 @@ export default function AppHeader({
             }}
           >
             <div className="pointer-events-auto" style={{
-              background: '#132438',
+              background: 'var(--panel)',
               borderRadius: 12,
               boxShadow: '0 16px 48px rgba(0,0,0,0.6)',
-              border: '1.5px solid #244868',
+              border: '1.5px solid var(--border)',
             }}>
               <div className="px-4 pt-4 pb-5">
                 {drawerContent}

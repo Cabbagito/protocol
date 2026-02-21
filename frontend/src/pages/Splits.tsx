@@ -20,10 +20,10 @@ export default function Splits() {
         subtitle={`${splits.length} splits`}
         rightContent={
           <button onClick={() => setShowForm(!showForm)} className="plus-btn">
-            <svg className="w-3.5 h-3.5" style={{ color: '#38bdf8' }} fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+            <svg className="w-3.5 h-3.5" style={{ color: 'var(--accent-l)' }} fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
             </svg>
-            <span className="text-xs font-medium" style={{ color: '#38bdf8' }}>New</span>
+            <span className="text-xs font-medium" style={{ color: 'var(--accent-l)' }}>New</span>
           </button>
         }
       />
@@ -39,7 +39,7 @@ export default function Splits() {
       {isLoading ? (
         <PageLoader />
       ) : splits.length === 0 ? (
-        <div className="text-slate-400 text-center py-8">
+        <div className="text-[var(--text-2)] text-center py-8">
           No splits yet. Create your first workout split!
         </div>
       ) : (
@@ -53,10 +53,10 @@ export default function Splits() {
             onClick={() => setShowForm(true)}
             className="add-row flex items-center justify-center gap-2 py-3 w-full stagger"
           >
-            <svg className="w-4 h-4" style={{ color: '#38bdf8' }} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <svg className="w-4 h-4" style={{ color: 'var(--accent-l)' }} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
             </svg>
-            <span className="text-xs font-medium" style={{ color: '#38bdf8' }}>New Split</span>
+            <span className="text-xs font-medium" style={{ color: 'var(--accent-l)' }}>New Split</span>
           </button>
         </div>
       )}
@@ -121,8 +121,8 @@ function SplitCard({ split }: { split: SplitListItem }) {
     <Link to={`/splits/${split.id}`} className="compact-card p-4 list-row block stagger">
       {/* Top row */}
       <div className="flex items-center justify-between mb-3">
-        <div className="text-[15px] font-semibold text-slate-200">{split.name}</div>
-        <ChevronRightIcon className="w-4 h-4 shrink-0 text-[#334155]" />
+        <div className="text-[15px] font-semibold text-[var(--text-1)]">{split.name}</div>
+        <ChevronRightIcon className="w-4 h-4 shrink-0 text-[var(--text-m)]" />
       </div>
 
       {isLoading ? (
@@ -141,13 +141,13 @@ function SplitCard({ split }: { split: SplitListItem }) {
                     className="day-num"
                     style={{
                       background: color ? `${color.bg}` : 'rgba(148,163,184,0.08)',
-                      color: color ? color.light : '#94a3b8',
+                      color: color ? color.light : 'var(--text-2)',
                       border: `1px solid ${color ? color.border : 'rgba(148,163,184,0.15)'}`,
                     }}
                   >
                     {idx + 1}
                   </div>
-                  <span className="day-name" style={{ color: '#64748b' }}>
+                  <span className="day-name" style={{ color: 'var(--text-m)' }}>
                     {session.name}
                   </span>
                 </div>
@@ -157,15 +157,15 @@ function SplitCard({ split }: { split: SplitListItem }) {
 
           {/* Volume bars */}
           {volumeData.length > 0 && (
-            <div className="space-y-1.5" style={{ padding: '8px 10px', background: '#0a1626', borderRadius: 8 }}>
+            <div className="space-y-1.5" style={{ padding: '8px 10px', background: 'var(--deep)', borderRadius: 8 }}>
               {volumeData.map(({ group, sets }) => {
                 const color = getMuscleColor(group)
                 return (
                   <div key={group} className="flex items-center gap-2">
-                    <span className="text-[9px] font-medium w-14 text-right capitalize" style={{ color: '#475569' }}>
+                    <span className="text-[9px] font-medium w-14 text-right capitalize" style={{ color: 'var(--text-m)' }}>
                       {group}
                     </span>
-                    <div className="flex-1 h-[5px] rounded-full" style={{ background: '#162a3e' }}>
+                    <div className="flex-1 h-[5px] rounded-full" style={{ background: 'var(--input)' }}>
                       <div
                         className="vol-bar rounded-full h-full"
                         style={{
@@ -175,7 +175,7 @@ function SplitCard({ split }: { split: SplitListItem }) {
                         }}
                       />
                     </div>
-                    <span className="mono text-[9px] w-5 text-right" style={{ color: '#475569' }}>
+                    <span className="mono text-[9px] w-5 text-right" style={{ color: 'var(--text-m)' }}>
                       {sets}
                     </span>
                   </div>

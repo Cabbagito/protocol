@@ -68,28 +68,28 @@ export default function Progress() {
           <div className="grid grid-cols-3 gap-4 text-center mb-4">
             <div>
               <div className="text-2xl font-bold text-protocol-400">{completionPercent}%</div>
-              <div className="text-xs text-slate-400">Complete</div>
+              <div className="text-xs text-[var(--text-2)]">Complete</div>
             </div>
             <div>
               <div className="text-2xl font-bold text-protocol-400">{totalSets}</div>
-              <div className="text-xs text-slate-400">Total Sets</div>
+              <div className="text-xs text-[var(--text-2)]">Total Sets</div>
             </div>
             <div>
               <div className="text-2xl font-bold text-protocol-400">
                 {Math.round(totalVolume / 1000)}k
               </div>
-              <div className="text-xs text-slate-400">Volume (kg)</div>
+              <div className="text-xs text-[var(--text-2)]">Volume (kg)</div>
             </div>
           </div>
 
           {/* Progress bar */}
-          <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
+          <div className="h-2 bg-[var(--input)] rounded-full overflow-hidden">
             <div
               className="h-full bg-protocol-500 transition-all"
               style={{ width: `${completionPercent}%` }}
             />
           </div>
-          <div className="text-xs text-slate-400 mt-1 text-center">
+          <div className="text-xs text-[var(--text-2)] mt-1 text-center">
             Week {mesocycle.current_week} of {mesocycle.total_weeks}
           </div>
         </div>
@@ -102,16 +102,16 @@ export default function Progress() {
           <div className="h-48">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={weeklyData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                <XAxis dataKey="week" stroke="#94a3b8" fontSize={12} />
-                <YAxis stroke="#94a3b8" fontSize={12} />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                <XAxis dataKey="week" stroke="var(--text-m)" fontSize={12} />
+                <YAxis stroke="var(--text-m)" fontSize={12} />
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: '#1e293b',
-                    border: '1px solid #334155',
+                    backgroundColor: 'var(--panel)',
+                    border: '1px solid var(--border)',
                     borderRadius: '8px',
                   }}
-                  labelStyle={{ color: '#f1f5f9' }}
+                  labelStyle={{ color: 'var(--text-1)' }}
                   formatter={(value: number) => [`${Math.round(value).toLocaleString()} kg`, 'Volume']}
                 />
                 <Bar dataKey="volume" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
@@ -137,7 +137,7 @@ export default function Progress() {
         </select>
 
         {/* Strength / Stimulus toggle */}
-        <div className="flex rounded-lg overflow-hidden mb-4" style={{ border: '1px solid #1e3a52' }}>
+        <div className="flex rounded-lg overflow-hidden mb-4" style={{ border: '1px solid var(--border)' }}>
           {(['strength', 'stimulus'] as const).map((m) => (
             <button
               key={m}
@@ -145,7 +145,7 @@ export default function Progress() {
               className="flex-1 py-1.5 text-[12px] font-medium transition-colors"
               style={{
                 background: metric === m ? 'rgba(139,92,246,0.15)' : 'transparent',
-                color: metric === m ? '#a78bfa' : '#64748b',
+                color: metric === m ? '#a78bfa' : 'var(--text-m)',
               }}
             >
               {m === 'strength' ? 'Strength' : 'Stimulus'}
@@ -154,7 +154,7 @@ export default function Progress() {
         </div>
 
         {progressData.length === 0 ? (
-          <div className="text-slate-500 text-sm text-center py-8">
+          <div className="text-[var(--text-m)] text-sm text-center py-8">
             No data yet for this exercise.
           </div>
         ) : (
@@ -163,10 +163,10 @@ export default function Progress() {
             <div className="h-48 mb-4">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={progressData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                   <XAxis
                     dataKey="date"
-                    stroke="#94a3b8"
+                    stroke="var(--text-m)"
                     fontSize={10}
                     tickFormatter={(value) => {
                       const d = new Date(value)
@@ -174,7 +174,7 @@ export default function Progress() {
                     }}
                   />
                   <YAxis
-                    stroke="#94a3b8"
+                    stroke="var(--text-m)"
                     fontSize={12}
                     domain={['auto', 'auto']}
                     tickFormatter={metric === 'stimulus' ? (v: number) => {
@@ -186,10 +186,10 @@ export default function Progress() {
                   <Tooltip
                     contentStyle={{
                       backgroundColor: '#1e293b',
-                      border: '1px solid #334155',
+                      border: '1px solid var(--border)',
                       borderRadius: '8px',
                     }}
-                    labelStyle={{ color: '#f1f5f9' }}
+                    labelStyle={{ color: 'var(--text-1)' }}
                     formatter={(value: number) => [
                       metric === 'strength' ? `${value} kg` : `${Math.round(value).toLocaleString()} kg`,
                       metric === 'strength' ? 'Est. 1RM' : 'Volume',
@@ -211,24 +211,24 @@ export default function Progress() {
             <div className="grid grid-cols-2 gap-4 text-center">
               {metric === 'strength' ? (
                 <>
-                  <div className="bg-slate-800 rounded p-3">
+                  <div className="bg-[var(--card)] rounded p-3">
                     <div className="text-xl font-bold text-protocol-400">
                       {Math.max(...progressData.map((d) => d.best_e1rm)).toFixed(1)}
                       <span className="text-sm ml-0.5">kg</span>
                     </div>
-                    <div className="text-xs text-slate-400">PR Est. 1RM</div>
+                    <div className="text-xs text-[var(--text-2)]">PR Est. 1RM</div>
                   </div>
-                  <div className="bg-slate-800 rounded p-3">
+                  <div className="bg-[var(--card)] rounded p-3">
                     <div className="text-xl font-bold text-protocol-400">
                       {Math.max(...progressData.map((d) => d.max_weight))}
                       <span className="text-sm ml-0.5">kg</span>
                     </div>
-                    <div className="text-xs text-slate-400">PR Weight</div>
+                    <div className="text-xs text-[var(--text-2)]">PR Weight</div>
                   </div>
                 </>
               ) : (
                 <>
-                  <div className="bg-slate-800 rounded p-3">
+                  <div className="bg-[var(--card)] rounded p-3">
                     <div className="text-xl font-bold text-protocol-400">
                       {(() => {
                         const peak = Math.max(...progressData.map((d) => d.volume))
@@ -237,9 +237,9 @@ export default function Progress() {
                         return peak.toFixed(0)
                       })()}
                     </div>
-                    <div className="text-xs text-slate-400">Peak Volume</div>
+                    <div className="text-xs text-[var(--text-2)]">Peak Volume</div>
                   </div>
-                  <div className="bg-slate-800 rounded p-3">
+                  <div className="bg-[var(--card)] rounded p-3">
                     <div className="text-xl font-bold text-protocol-400">
                       {(() => {
                         const avg = Math.round(progressData.reduce((sum, d) => sum + d.volume, 0) / progressData.length)
@@ -248,7 +248,7 @@ export default function Progress() {
                         return avg.toFixed(0)
                       })()}
                     </div>
-                    <div className="text-xs text-slate-400">Avg Volume</div>
+                    <div className="text-xs text-[var(--text-2)]">Avg Volume</div>
                   </div>
                 </>
               )}
