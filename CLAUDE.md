@@ -49,6 +49,10 @@ bun run lint
 
 **Database:** PostgreSQL, accessed only through FastAPI backend. Runs as a Docker container in both dev and production.
 
+**Hosting:** Live at `protocol-42.com`. VPS with Caddy auto-provisioning SSL via Let's Encrypt for the domain.
+
+**CI/CD (`.github/workflows/deploy.yml`):** GitHub Actions deploys on every push to `main` (also supports manual `workflow_dispatch`). Uses `appleboy/ssh-action` to SSH into the VPS, pulls latest code, rebuilds containers with `docker compose -f docker-compose.prod.yml up -d --build --remove-orphans`, and prunes dangling images. Required GitHub secrets: `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY`.
+
 ## Key Patterns
 
 **Backend structure:**
