@@ -77,9 +77,7 @@ async def get_workout_template(
 ):
     """Get the current workout template from the mesocycle structure."""
     result = await db.execute(
-        select(Mesocycle).where(
-            Mesocycle.id == mesocycle_id, Mesocycle.user_id == current_user.id
-        )
+        select(Mesocycle).where(Mesocycle.id == mesocycle_id, Mesocycle.user_id == current_user.id)
     )
     mesocycle = result.scalar_one_or_none()
     if not mesocycle:
@@ -115,9 +113,7 @@ async def get_specific_template(
 ):
     """Get a specific workout template by week and session index."""
     result = await db.execute(
-        select(Mesocycle).where(
-            Mesocycle.id == mesocycle_id, Mesocycle.user_id == current_user.id
-        )
+        select(Mesocycle).where(Mesocycle.id == mesocycle_id, Mesocycle.user_id == current_user.id)
     )
     mesocycle = result.scalar_one_or_none()
     if not mesocycle:
@@ -216,6 +212,7 @@ async def log_sets(
 
     # Mark structure as modified for SQLAlchemy to detect the change
     from sqlalchemy.orm.attributes import flag_modified
+
     flag_modified(mesocycle, "structure")
 
     await db.commit()
@@ -255,18 +252,19 @@ async def get_exercise_progress(
                     total_reps = sum(s.get("reps", 0) or 0 for s in logged_sets)
                     total_sets = len(logged_sets)
                     volume = sum(
-                        (s.get("weight", 0) or 0) * (s.get("reps", 0) or 0)
-                        for s in logged_sets
+                        (s.get("weight", 0) or 0) * (s.get("reps", 0) or 0) for s in logged_sets
                     )
-                    progress.append({
-                        "date": session.get("date") or meso.started_at.isoformat(),
-                        "week_number": week["week_number"],
-                        "max_weight": max_weight,
-                        "best_e1rm": round(best_e1rm, 1),
-                        "total_reps": total_reps,
-                        "total_sets": total_sets,
-                        "volume": volume,
-                    })
+                    progress.append(
+                        {
+                            "date": session.get("date") or meso.started_at.isoformat(),
+                            "week_number": week["week_number"],
+                            "max_weight": max_weight,
+                            "best_e1rm": round(best_e1rm, 1),
+                            "total_reps": total_reps,
+                            "total_sets": total_sets,
+                            "volume": volume,
+                        }
+                    )
 
     return progress
 
@@ -303,6 +301,7 @@ async def update_exercise_note(
         structure["exercise_notes"].pop(data.exercise_id, None)
 
     from sqlalchemy.orm.attributes import flag_modified
+
     flag_modified(mesocycle, "structure")
     await db.commit()
 
@@ -390,8 +389,10 @@ async def replace_exercise(
         for wi in range(data.week_index + 1, len(weeks)):
             future_week = weeks[wi]
             for future_session in future_week.get("sessions", []):
-                if (future_session["session_name"] == session_name
-                        and future_session["day_order"] == day_order):
+                if (
+                    future_session["session_name"] == session_name
+                    and future_session["day_order"] == day_order
+                ):
                     for fe in future_session.get("exercises", []):
                         if fe["exercise_id"] == data.old_exercise_id:
                             replace_in_exercise(fe)
@@ -400,6 +401,7 @@ async def replace_exercise(
     compute_progression(structure)
 
     from sqlalchemy.orm.attributes import flag_modified
+
     flag_modified(mesocycle, "structure")
     await db.commit()
 
@@ -414,9 +416,7 @@ async def get_workout_history(
 ):
     """Get list of completed workouts from the mesocycle structure."""
     result = await db.execute(
-        select(Mesocycle).where(
-            Mesocycle.id == mesocycle_id, Mesocycle.user_id == current_user.id
-        )
+        select(Mesocycle).where(Mesocycle.id == mesocycle_id, Mesocycle.user_id == current_user.id)
     )
     mesocycle = result.scalar_one_or_none()
     if not mesocycle:
@@ -434,18 +434,19 @@ async def get_workout_history(
             if not logged_sets:
                 continue
             total_volume = sum(
-                (s.get("weight", 0) or 0) * (s.get("reps", 0) or 0)
-                for s in logged_sets
+                (s.get("weight", 0) or 0) * (s.get("reps", 0) or 0) for s in logged_sets
             )
-            workouts.append({
-                "week_index": wi,
-                "session_index": si,
-                "session_name": session["session_name"],
-                "week_number": week["week_number"],
-                "date": session.get("date"),
-                "total_sets": len(logged_sets),
-                "total_volume": total_volume,
-            })
+            workouts.append(
+                {
+                    "week_index": wi,
+                    "session_index": si,
+                    "session_name": session["session_name"],
+                    "week_number": week["week_number"],
+                    "date": session.get("date"),
+                    "total_sets": len(logged_sets),
+                    "total_volume": total_volume,
+                }
+            )
 
     return workouts
 
@@ -460,9 +461,7 @@ async def get_workout_detail(
 ):
     """Get detailed workout data for a specific session in the structure."""
     result = await db.execute(
-        select(Mesocycle).where(
-            Mesocycle.id == mesocycle_id, Mesocycle.user_id == current_user.id
-        )
+        select(Mesocycle).where(Mesocycle.id == mesocycle_id, Mesocycle.user_id == current_user.id)
     )
     mesocycle = result.scalar_one_or_none()
     if not mesocycle:

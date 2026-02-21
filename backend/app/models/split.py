@@ -1,4 +1,3 @@
-
 from sqlalchemy import Boolean, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -26,7 +25,9 @@ class Session(Base, TimestampMixin):
     __tablename__ = "sessions"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
-    split_id: Mapped[str] = mapped_column(String(36), ForeignKey("splits.id", ondelete="CASCADE"), nullable=False)
+    split_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("splits.id", ondelete="CASCADE"), nullable=False
+    )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     day_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     is_rest_day: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
@@ -43,8 +44,12 @@ class SessionExercise(Base, TimestampMixin):
     __tablename__ = "session_exercises"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
-    session_id: Mapped[str] = mapped_column(String(36), ForeignKey("sessions.id", ondelete="CASCADE"), nullable=False)
-    exercise_id: Mapped[str] = mapped_column(String(36), ForeignKey("exercises.id", ondelete="CASCADE"), nullable=False)
+    session_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("sessions.id", ondelete="CASCADE"), nullable=False
+    )
+    exercise_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("exercises.id", ondelete="CASCADE"), nullable=False
+    )
     order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     sets: Mapped[int] = mapped_column(Integer, nullable=False, default=3)
 

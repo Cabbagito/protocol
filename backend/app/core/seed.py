@@ -17,95 +17,470 @@ logger = logging.getLogger(__name__)
 # --------------------------------------------------------------------------
 COMMON_EXERCISES = [
     # Chest
-    {"seed_key": "barbell_bench_press", "name": "Barbell Bench Press", "muscle_group": "chest", "equipment_type": "barbell"},
-    {"seed_key": "incline_barbell_press", "name": "Incline Barbell Press", "muscle_group": "chest", "equipment_type": "barbell"},
-    {"seed_key": "decline_barbell_bench_press", "name": "Decline Barbell Bench Press", "muscle_group": "chest", "equipment_type": "barbell"},
-    {"seed_key": "dumbbell_bench_press", "name": "Dumbbell Bench Press", "muscle_group": "chest", "equipment_type": "dumbbell"},
-    {"seed_key": "incline_dumbbell_press", "name": "Incline Dumbbell Press", "muscle_group": "chest", "equipment_type": "dumbbell"},
-    {"seed_key": "dumbbell_flye", "name": "Dumbbell Flye", "muscle_group": "chest", "equipment_type": "dumbbell"},
-    {"seed_key": "incline_dumbbell_flye", "name": "Incline Dumbbell Flye", "muscle_group": "chest", "equipment_type": "dumbbell"},
-    {"seed_key": "dumbbell_press_flye", "name": "Dumbbell Press Flye", "muscle_group": "chest", "equipment_type": "dumbbell"},
-    {"seed_key": "cable_fly", "name": "Cable Fly", "muscle_group": "chest", "equipment_type": "cable"},
-    {"seed_key": "pec_deck", "name": "Pec Deck", "muscle_group": "chest", "equipment_type": "machine"},
-    {"seed_key": "push_up", "name": "Push Up", "muscle_group": "chest", "equipment_type": "bodyweight"},
+    {
+        "seed_key": "barbell_bench_press",
+        "name": "Barbell Bench Press",
+        "muscle_group": "chest",
+        "equipment_type": "barbell",
+    },
+    {
+        "seed_key": "incline_barbell_press",
+        "name": "Incline Barbell Press",
+        "muscle_group": "chest",
+        "equipment_type": "barbell",
+    },
+    {
+        "seed_key": "decline_barbell_bench_press",
+        "name": "Decline Barbell Bench Press",
+        "muscle_group": "chest",
+        "equipment_type": "barbell",
+    },
+    {
+        "seed_key": "dumbbell_bench_press",
+        "name": "Dumbbell Bench Press",
+        "muscle_group": "chest",
+        "equipment_type": "dumbbell",
+    },
+    {
+        "seed_key": "incline_dumbbell_press",
+        "name": "Incline Dumbbell Press",
+        "muscle_group": "chest",
+        "equipment_type": "dumbbell",
+    },
+    {
+        "seed_key": "dumbbell_flye",
+        "name": "Dumbbell Flye",
+        "muscle_group": "chest",
+        "equipment_type": "dumbbell",
+    },
+    {
+        "seed_key": "incline_dumbbell_flye",
+        "name": "Incline Dumbbell Flye",
+        "muscle_group": "chest",
+        "equipment_type": "dumbbell",
+    },
+    {
+        "seed_key": "dumbbell_press_flye",
+        "name": "Dumbbell Press Flye",
+        "muscle_group": "chest",
+        "equipment_type": "dumbbell",
+    },
+    {
+        "seed_key": "cable_fly",
+        "name": "Cable Fly",
+        "muscle_group": "chest",
+        "equipment_type": "cable",
+    },
+    {
+        "seed_key": "pec_deck",
+        "name": "Pec Deck",
+        "muscle_group": "chest",
+        "equipment_type": "machine",
+    },
+    {
+        "seed_key": "push_up",
+        "name": "Push Up",
+        "muscle_group": "chest",
+        "equipment_type": "bodyweight",
+    },
     {"seed_key": "dips", "name": "Dips", "muscle_group": "chest", "equipment_type": "bodyweight"},
     # Back
-    {"seed_key": "barbell_row", "name": "Barbell Row", "muscle_group": "back", "equipment_type": "barbell"},
-    {"seed_key": "dumbbell_row", "name": "Dumbbell Row", "muscle_group": "back", "equipment_type": "dumbbell"},
-    {"seed_key": "pull_up", "name": "Pull Up", "muscle_group": "back", "equipment_type": "bodyweight"},
-    {"seed_key": "chin_up", "name": "Chin Up", "muscle_group": "back", "equipment_type": "bodyweight"},
-    {"seed_key": "lat_pulldown", "name": "Lat Pulldown", "muscle_group": "back", "equipment_type": "cable"},
-    {"seed_key": "seated_cable_row", "name": "Seated Cable Row", "muscle_group": "back", "equipment_type": "cable"},
-    {"seed_key": "t_bar_row", "name": "T-Bar Row", "muscle_group": "back", "equipment_type": "barbell"},
-    {"seed_key": "deadlift", "name": "Deadlift", "muscle_group": "back", "equipment_type": "barbell"},
-    {"seed_key": "deficit_deadlift", "name": "Deficit Deadlift", "muscle_group": "back", "equipment_type": "barbell"},
-    {"seed_key": "lat_prayer", "name": "Lat Prayer", "muscle_group": "back", "equipment_type": "cable"},
-    {"seed_key": "machine_chest_supported_row", "name": "Machine Chest Supported Row", "muscle_group": "back", "equipment_type": "machine"},
-    {"seed_key": "parallel_grip_lat_pulldown", "name": "Parallel Grip Lat Pulldown", "muscle_group": "back", "equipment_type": "cable"},
-    {"seed_key": "wide_grip_lat_pulldown", "name": "Wide Grip Lat Pulldown", "muscle_group": "back", "equipment_type": "cable"},
-    {"seed_key": "romanian_deadlift", "name": "Romanian Deadlift", "muscle_group": "hamstrings", "equipment_type": "barbell"},
+    {
+        "seed_key": "barbell_row",
+        "name": "Barbell Row",
+        "muscle_group": "back",
+        "equipment_type": "barbell",
+    },
+    {
+        "seed_key": "dumbbell_row",
+        "name": "Dumbbell Row",
+        "muscle_group": "back",
+        "equipment_type": "dumbbell",
+    },
+    {
+        "seed_key": "pull_up",
+        "name": "Pull Up",
+        "muscle_group": "back",
+        "equipment_type": "bodyweight",
+    },
+    {
+        "seed_key": "chin_up",
+        "name": "Chin Up",
+        "muscle_group": "back",
+        "equipment_type": "bodyweight",
+    },
+    {
+        "seed_key": "lat_pulldown",
+        "name": "Lat Pulldown",
+        "muscle_group": "back",
+        "equipment_type": "cable",
+    },
+    {
+        "seed_key": "seated_cable_row",
+        "name": "Seated Cable Row",
+        "muscle_group": "back",
+        "equipment_type": "cable",
+    },
+    {
+        "seed_key": "t_bar_row",
+        "name": "T-Bar Row",
+        "muscle_group": "back",
+        "equipment_type": "barbell",
+    },
+    {
+        "seed_key": "deadlift",
+        "name": "Deadlift",
+        "muscle_group": "back",
+        "equipment_type": "barbell",
+    },
+    {
+        "seed_key": "deficit_deadlift",
+        "name": "Deficit Deadlift",
+        "muscle_group": "back",
+        "equipment_type": "barbell",
+    },
+    {
+        "seed_key": "lat_prayer",
+        "name": "Lat Prayer",
+        "muscle_group": "back",
+        "equipment_type": "cable",
+    },
+    {
+        "seed_key": "machine_chest_supported_row",
+        "name": "Machine Chest Supported Row",
+        "muscle_group": "back",
+        "equipment_type": "machine",
+    },
+    {
+        "seed_key": "parallel_grip_lat_pulldown",
+        "name": "Parallel Grip Lat Pulldown",
+        "muscle_group": "back",
+        "equipment_type": "cable",
+    },
+    {
+        "seed_key": "wide_grip_lat_pulldown",
+        "name": "Wide Grip Lat Pulldown",
+        "muscle_group": "back",
+        "equipment_type": "cable",
+    },
+    {
+        "seed_key": "romanian_deadlift",
+        "name": "Romanian Deadlift",
+        "muscle_group": "hamstrings",
+        "equipment_type": "barbell",
+    },
     # Shoulders — split into front delt, side delt, rear delt
-    {"seed_key": "overhead_press", "name": "Overhead Press", "muscle_group": "front delt", "equipment_type": "barbell"},
-    {"seed_key": "dumbbell_shoulder_press", "name": "Dumbbell Shoulder Press", "muscle_group": "front delt", "equipment_type": "dumbbell"},
-    {"seed_key": "dumbbell_front_raise", "name": "Dumbbell Front Raise", "muscle_group": "front delt", "equipment_type": "dumbbell"},
-    {"seed_key": "lateral_raise", "name": "Dumbbell Lateral Raise", "muscle_group": "side delt", "equipment_type": "dumbbell"},
-    {"seed_key": "cable_lateral_raise", "name": "Cable Lateral Raise", "muscle_group": "side delt", "equipment_type": "cable"},
-    {"seed_key": "cable_cross_body_lateral_raise", "name": "Cable Cross Body Lateral Raise", "muscle_group": "side delt", "equipment_type": "cable"},
-    {"seed_key": "cable_leaning_lateral_raise", "name": "Cable Leaning Lateral Raise", "muscle_group": "side delt", "equipment_type": "cable"},
-    {"seed_key": "upright_row", "name": "Upright Row", "muscle_group": "side delt", "equipment_type": "barbell"},
-    {"seed_key": "rear_delt_fly", "name": "Rear Delt Fly", "muscle_group": "rear delt", "equipment_type": "dumbbell"},
-    {"seed_key": "freemotion_rear_delt_fly", "name": "Freemotion Rear Delt Fly", "muscle_group": "rear delt", "equipment_type": "machine"},
-    {"seed_key": "face_pull", "name": "Face Pull", "muscle_group": "rear delt", "equipment_type": "cable"},
+    {
+        "seed_key": "overhead_press",
+        "name": "Overhead Press",
+        "muscle_group": "front delt",
+        "equipment_type": "barbell",
+    },
+    {
+        "seed_key": "dumbbell_shoulder_press",
+        "name": "Dumbbell Shoulder Press",
+        "muscle_group": "front delt",
+        "equipment_type": "dumbbell",
+    },
+    {
+        "seed_key": "dumbbell_front_raise",
+        "name": "Dumbbell Front Raise",
+        "muscle_group": "front delt",
+        "equipment_type": "dumbbell",
+    },
+    {
+        "seed_key": "lateral_raise",
+        "name": "Dumbbell Lateral Raise",
+        "muscle_group": "side delt",
+        "equipment_type": "dumbbell",
+    },
+    {
+        "seed_key": "cable_lateral_raise",
+        "name": "Cable Lateral Raise",
+        "muscle_group": "side delt",
+        "equipment_type": "cable",
+    },
+    {
+        "seed_key": "cable_cross_body_lateral_raise",
+        "name": "Cable Cross Body Lateral Raise",
+        "muscle_group": "side delt",
+        "equipment_type": "cable",
+    },
+    {
+        "seed_key": "cable_leaning_lateral_raise",
+        "name": "Cable Leaning Lateral Raise",
+        "muscle_group": "side delt",
+        "equipment_type": "cable",
+    },
+    {
+        "seed_key": "upright_row",
+        "name": "Upright Row",
+        "muscle_group": "side delt",
+        "equipment_type": "barbell",
+    },
+    {
+        "seed_key": "rear_delt_fly",
+        "name": "Rear Delt Fly",
+        "muscle_group": "rear delt",
+        "equipment_type": "dumbbell",
+    },
+    {
+        "seed_key": "freemotion_rear_delt_fly",
+        "name": "Freemotion Rear Delt Fly",
+        "muscle_group": "rear delt",
+        "equipment_type": "machine",
+    },
+    {
+        "seed_key": "face_pull",
+        "name": "Face Pull",
+        "muscle_group": "rear delt",
+        "equipment_type": "cable",
+    },
     # Traps
-    {"seed_key": "dumbbell_shrug", "name": "Dumbbell Shrug", "muscle_group": "traps", "equipment_type": "dumbbell"},
-    {"seed_key": "barbell_shrug", "name": "Barbell Shrug", "muscle_group": "traps", "equipment_type": "barbell"},
+    {
+        "seed_key": "dumbbell_shrug",
+        "name": "Dumbbell Shrug",
+        "muscle_group": "traps",
+        "equipment_type": "dumbbell",
+    },
+    {
+        "seed_key": "barbell_shrug",
+        "name": "Barbell Shrug",
+        "muscle_group": "traps",
+        "equipment_type": "barbell",
+    },
     # Biceps
-    {"seed_key": "barbell_curl", "name": "Barbell Curl", "muscle_group": "biceps", "equipment_type": "barbell"},
-    {"seed_key": "dumbbell_curl", "name": "Dumbbell Curl", "muscle_group": "biceps", "equipment_type": "dumbbell"},
-    {"seed_key": "hammer_curl", "name": "Hammer Curl", "muscle_group": "biceps", "equipment_type": "dumbbell"},
-    {"seed_key": "preacher_curl", "name": "Machine Preacher Curl", "muscle_group": "biceps", "equipment_type": "machine"},
-    {"seed_key": "cable_curl", "name": "Cable Curl", "muscle_group": "biceps", "equipment_type": "cable"},
-    {"seed_key": "lying_dumbbell_curl", "name": "Lying Dumbbell Curl", "muscle_group": "biceps", "equipment_type": "dumbbell"},
-    {"seed_key": "incline_dumbbell_curl", "name": "Incline Dumbbell Curl", "muscle_group": "biceps", "equipment_type": "dumbbell"},
-    {"seed_key": "bayesian_curl", "name": "Bayesian Curl", "muscle_group": "biceps", "equipment_type": "cable"},
-    {"seed_key": "ez_bar_preacher_curl", "name": "EZ Bar Preacher Curl", "muscle_group": "biceps", "equipment_type": "barbell"},
-    {"seed_key": "reverse_curl", "name": "Reverse Curl", "muscle_group": "forearms", "equipment_type": "barbell"},
+    {
+        "seed_key": "barbell_curl",
+        "name": "Barbell Curl",
+        "muscle_group": "biceps",
+        "equipment_type": "barbell",
+    },
+    {
+        "seed_key": "dumbbell_curl",
+        "name": "Dumbbell Curl",
+        "muscle_group": "biceps",
+        "equipment_type": "dumbbell",
+    },
+    {
+        "seed_key": "hammer_curl",
+        "name": "Hammer Curl",
+        "muscle_group": "biceps",
+        "equipment_type": "dumbbell",
+    },
+    {
+        "seed_key": "preacher_curl",
+        "name": "Machine Preacher Curl",
+        "muscle_group": "biceps",
+        "equipment_type": "machine",
+    },
+    {
+        "seed_key": "cable_curl",
+        "name": "Cable Curl",
+        "muscle_group": "biceps",
+        "equipment_type": "cable",
+    },
+    {
+        "seed_key": "lying_dumbbell_curl",
+        "name": "Lying Dumbbell Curl",
+        "muscle_group": "biceps",
+        "equipment_type": "dumbbell",
+    },
+    {
+        "seed_key": "incline_dumbbell_curl",
+        "name": "Incline Dumbbell Curl",
+        "muscle_group": "biceps",
+        "equipment_type": "dumbbell",
+    },
+    {
+        "seed_key": "bayesian_curl",
+        "name": "Bayesian Curl",
+        "muscle_group": "biceps",
+        "equipment_type": "cable",
+    },
+    {
+        "seed_key": "ez_bar_preacher_curl",
+        "name": "EZ Bar Preacher Curl",
+        "muscle_group": "biceps",
+        "equipment_type": "barbell",
+    },
+    {
+        "seed_key": "reverse_curl",
+        "name": "Reverse Curl",
+        "muscle_group": "forearms",
+        "equipment_type": "barbell",
+    },
     # Triceps
-    {"seed_key": "tricep_pushdown", "name": "Cable Triceps Pushdown", "muscle_group": "triceps", "equipment_type": "cable"},
-    {"seed_key": "overhead_tricep_extension", "name": "Cable Overhead Triceps Extension", "muscle_group": "triceps", "equipment_type": "cable"},
-    {"seed_key": "single_arm_cable_pushdown", "name": "Single-Arm Cable Pushdown", "muscle_group": "triceps", "equipment_type": "cable"},
-    {"seed_key": "skull_crusher", "name": "Barbell Skull Crusher", "muscle_group": "triceps", "equipment_type": "barbell"},
-    {"seed_key": "dumbbell_skull_crusher", "name": "Dumbbell Skull Crusher", "muscle_group": "triceps", "equipment_type": "dumbbell"},
-    {"seed_key": "close_grip_bench_press", "name": "Close Grip Bench Press", "muscle_group": "triceps", "equipment_type": "barbell"},
+    {
+        "seed_key": "tricep_pushdown",
+        "name": "Cable Triceps Pushdown",
+        "muscle_group": "triceps",
+        "equipment_type": "cable",
+    },
+    {
+        "seed_key": "overhead_tricep_extension",
+        "name": "Cable Overhead Triceps Extension",
+        "muscle_group": "triceps",
+        "equipment_type": "cable",
+    },
+    {
+        "seed_key": "single_arm_cable_pushdown",
+        "name": "Single-Arm Cable Pushdown",
+        "muscle_group": "triceps",
+        "equipment_type": "cable",
+    },
+    {
+        "seed_key": "skull_crusher",
+        "name": "Barbell Skull Crusher",
+        "muscle_group": "triceps",
+        "equipment_type": "barbell",
+    },
+    {
+        "seed_key": "dumbbell_skull_crusher",
+        "name": "Dumbbell Skull Crusher",
+        "muscle_group": "triceps",
+        "equipment_type": "dumbbell",
+    },
+    {
+        "seed_key": "close_grip_bench_press",
+        "name": "Close Grip Bench Press",
+        "muscle_group": "triceps",
+        "equipment_type": "barbell",
+    },
     # Forearms
-    {"seed_key": "cable_wrist_curl", "name": "Cable Wrist Curl", "muscle_group": "forearms", "equipment_type": "cable"},
-    {"seed_key": "barbell_wrist_curl", "name": "Barbell Wrist Curl", "muscle_group": "forearms", "equipment_type": "barbell"},
-    {"seed_key": "machine_forearm_curl", "name": "Machine Forearm Curl", "muscle_group": "forearms", "equipment_type": "machine"},
+    {
+        "seed_key": "cable_wrist_curl",
+        "name": "Cable Wrist Curl",
+        "muscle_group": "forearms",
+        "equipment_type": "cable",
+    },
+    {
+        "seed_key": "barbell_wrist_curl",
+        "name": "Barbell Wrist Curl",
+        "muscle_group": "forearms",
+        "equipment_type": "barbell",
+    },
+    {
+        "seed_key": "machine_forearm_curl",
+        "name": "Machine Forearm Curl",
+        "muscle_group": "forearms",
+        "equipment_type": "machine",
+    },
     # Legs — Quads
-    {"seed_key": "barbell_squat", "name": "Barbell Squat", "muscle_group": "quads", "equipment_type": "barbell"},
-    {"seed_key": "front_squat", "name": "Front Squat", "muscle_group": "quads", "equipment_type": "barbell"},
-    {"seed_key": "leg_press", "name": "Leg Press", "muscle_group": "quads", "equipment_type": "machine"},
-    {"seed_key": "hack_squat", "name": "Hack Squat", "muscle_group": "quads", "equipment_type": "machine"},
-    {"seed_key": "bulgarian_split_squat", "name": "Bulgarian Split Squat", "muscle_group": "quads", "equipment_type": "dumbbell"},
+    {
+        "seed_key": "barbell_squat",
+        "name": "Barbell Squat",
+        "muscle_group": "quads",
+        "equipment_type": "barbell",
+    },
+    {
+        "seed_key": "front_squat",
+        "name": "Front Squat",
+        "muscle_group": "quads",
+        "equipment_type": "barbell",
+    },
+    {
+        "seed_key": "leg_press",
+        "name": "Leg Press",
+        "muscle_group": "quads",
+        "equipment_type": "machine",
+    },
+    {
+        "seed_key": "hack_squat",
+        "name": "Hack Squat",
+        "muscle_group": "quads",
+        "equipment_type": "machine",
+    },
+    {
+        "seed_key": "bulgarian_split_squat",
+        "name": "Bulgarian Split Squat",
+        "muscle_group": "quads",
+        "equipment_type": "dumbbell",
+    },
     {"seed_key": "lunges", "name": "Lunges", "muscle_group": "quads", "equipment_type": "dumbbell"},
-    {"seed_key": "leg_extension", "name": "Leg Extension", "muscle_group": "quads", "equipment_type": "machine"},
+    {
+        "seed_key": "leg_extension",
+        "name": "Leg Extension",
+        "muscle_group": "quads",
+        "equipment_type": "machine",
+    },
     # Legs — Hamstrings
-    {"seed_key": "leg_curl", "name": "Lying Leg Curl", "muscle_group": "hamstrings", "equipment_type": "machine"},
-    {"seed_key": "dumbbell_stiff_leg_deadlift", "name": "Dumbbell Stiff Legged Deadlift", "muscle_group": "hamstrings", "equipment_type": "dumbbell"},
-    {"seed_key": "seated_leg_curl", "name": "Seated Leg Curl", "muscle_group": "hamstrings", "equipment_type": "machine"},
+    {
+        "seed_key": "leg_curl",
+        "name": "Lying Leg Curl",
+        "muscle_group": "hamstrings",
+        "equipment_type": "machine",
+    },
+    {
+        "seed_key": "dumbbell_stiff_leg_deadlift",
+        "name": "Dumbbell Stiff Legged Deadlift",
+        "muscle_group": "hamstrings",
+        "equipment_type": "dumbbell",
+    },
+    {
+        "seed_key": "seated_leg_curl",
+        "name": "Seated Leg Curl",
+        "muscle_group": "hamstrings",
+        "equipment_type": "machine",
+    },
     # Legs — Calves
-    {"seed_key": "calf_raise", "name": "Standing Calf Raise", "muscle_group": "calves", "equipment_type": "machine"},
-    {"seed_key": "seated_calf_raise", "name": "Seated Calf Raise", "muscle_group": "calves", "equipment_type": "machine"},
+    {
+        "seed_key": "calf_raise",
+        "name": "Standing Calf Raise",
+        "muscle_group": "calves",
+        "equipment_type": "machine",
+    },
+    {
+        "seed_key": "seated_calf_raise",
+        "name": "Seated Calf Raise",
+        "muscle_group": "calves",
+        "equipment_type": "machine",
+    },
     # Legs — Glutes
-    {"seed_key": "hip_thrust", "name": "Hip Thrust", "muscle_group": "glutes", "equipment_type": "barbell"},
-    {"seed_key": "bulgarian_split_squat_glutes", "name": "Bulgarian Split Squat (Glutes)", "muscle_group": "glutes", "equipment_type": "dumbbell"},
-    {"seed_key": "walking_lunges", "name": "Walking Lunges", "muscle_group": "glutes", "equipment_type": "barbell"},
+    {
+        "seed_key": "hip_thrust",
+        "name": "Hip Thrust",
+        "muscle_group": "glutes",
+        "equipment_type": "barbell",
+    },
+    {
+        "seed_key": "bulgarian_split_squat_glutes",
+        "name": "Bulgarian Split Squat (Glutes)",
+        "muscle_group": "glutes",
+        "equipment_type": "dumbbell",
+    },
+    {
+        "seed_key": "walking_lunges",
+        "name": "Walking Lunges",
+        "muscle_group": "glutes",
+        "equipment_type": "barbell",
+    },
     # Abs (was "core")
     {"seed_key": "plank", "name": "Plank", "muscle_group": "abs", "equipment_type": "bodyweight"},
-    {"seed_key": "hanging_leg_raise", "name": "Hanging Leg Raise", "muscle_group": "abs", "equipment_type": "bodyweight"},
-    {"seed_key": "cable_crunch", "name": "Cable Crunch", "muscle_group": "abs", "equipment_type": "cable"},
-    {"seed_key": "slant_board_sit_up", "name": "Slant Board Sit-Up", "muscle_group": "abs", "equipment_type": "bodyweight"},
-    {"seed_key": "ab_wheel_rollout", "name": "Ab Wheel Rollout", "muscle_group": "abs", "equipment_type": "bodyweight"},
+    {
+        "seed_key": "hanging_leg_raise",
+        "name": "Hanging Leg Raise",
+        "muscle_group": "abs",
+        "equipment_type": "bodyweight",
+    },
+    {
+        "seed_key": "cable_crunch",
+        "name": "Cable Crunch",
+        "muscle_group": "abs",
+        "equipment_type": "cable",
+    },
+    {
+        "seed_key": "slant_board_sit_up",
+        "name": "Slant Board Sit-Up",
+        "muscle_group": "abs",
+        "equipment_type": "bodyweight",
+    },
+    {
+        "seed_key": "ab_wheel_rollout",
+        "name": "Ab Wheel Rollout",
+        "muscle_group": "abs",
+        "equipment_type": "bodyweight",
+    },
 ]
 
 # --------------------------------------------------------------------------
@@ -235,35 +610,43 @@ def build_mesocycle_structure(
                     continue
                 sets_list = []
                 for set_num in range(1, se.sets + 1):
-                    sets_list.append({
-                        "set_num": set_num,
-                        "weight": None,
-                        "reps": None,
-                        "target_reps": target_reps,
-                        "suggested_weight": None,
-                        "rir": None,
-                        "logged": False,
-                    })
-                exercise_entries.append({
-                    "exercise_id": ex.id,
-                    "exercise_name": ex.name,
-                    "muscle_group": ex.muscle_group,
-                    "equipment_type": ex.equipment_type,
-                    "sets": sets_list,
-                })
-            week_sessions.append({
-                "session_name": sess.name,
-                "day_order": sess.day_order,
-                "date": None,
-                "notes": None,
-                "exercises": exercise_entries,
-            })
+                    sets_list.append(
+                        {
+                            "set_num": set_num,
+                            "weight": None,
+                            "reps": None,
+                            "target_reps": target_reps,
+                            "suggested_weight": None,
+                            "rir": None,
+                            "logged": False,
+                        }
+                    )
+                exercise_entries.append(
+                    {
+                        "exercise_id": ex.id,
+                        "exercise_name": ex.name,
+                        "muscle_group": ex.muscle_group,
+                        "equipment_type": ex.equipment_type,
+                        "sets": sets_list,
+                    }
+                )
+            week_sessions.append(
+                {
+                    "session_name": sess.name,
+                    "day_order": sess.day_order,
+                    "date": None,
+                    "notes": None,
+                    "exercises": exercise_entries,
+                }
+            )
 
-        weeks.append({
-            "week_number": week_idx + 1,
-            "rir": week_rir,
-            "sessions": week_sessions,
-        })
+        weeks.append(
+            {
+                "week_number": week_idx + 1,
+                "rir": week_rir,
+                "sessions": week_sessions,
+            }
+        )
 
     return {"weeks": weeks}
 
@@ -273,17 +656,12 @@ def get_current_position(structure: dict) -> dict:
     for wi, week in enumerate(structure.get("weeks", [])):
         for si, session in enumerate(week.get("sessions", [])):
             non_skipped = [
-                ex for ex in session.get("exercises", [])
-                if not ex.get("skipped", False)
+                ex for ex in session.get("exercises", []) if not ex.get("skipped", False)
             ]
             if not non_skipped:
                 # All exercises skipped — session counts as complete
                 continue
-            all_logged = all(
-                s["logged"]
-                for ex in non_skipped
-                for s in ex.get("sets", [])
-            )
+            all_logged = all(s["logged"] for ex in non_skipped for s in ex.get("sets", []))
             if not all_logged:
                 return {"week_index": wi, "session_index": si, "completed": False}
     return {"completed": True}
@@ -302,7 +680,10 @@ def compute_progression(structure: dict) -> None:
             # Find matching session in previous week by session_name + day_order
             prev_session = None
             for ps in prev_week.get("sessions", []):
-                if ps["session_name"] == session["session_name"] and ps["day_order"] == session["day_order"]:
+                if (
+                    ps["session_name"] == session["session_name"]
+                    and ps["day_order"] == session["day_order"]
+                ):
                     prev_session = ps
                     break
             if not prev_session:
@@ -337,8 +718,7 @@ def compute_progression(structure: dict) -> None:
                     continue
 
                 all_hit_target = all(
-                    (s.get("reps") or 0) >= s.get("target_reps", 10)
-                    for s in logged_sets
+                    (s.get("reps") or 0) >= s.get("target_reps", 10) for s in logged_sets
                 )
 
                 increment = WEIGHT_INCREMENTS.get(exercise.get("equipment_type", ""), 2.5)
@@ -472,8 +852,14 @@ _DEMO_WEIGHTS: dict[str, float] = {
 }
 
 
-def _log_session(meso_session: dict, exercises_by_id: dict, session_date: str,
-                  rir: int, *, use_suggested: bool = False) -> None:
+def _log_session(
+    meso_session: dict,
+    exercises_by_id: dict,
+    session_date: str,
+    rir: int,
+    *,
+    use_suggested: bool = False,
+) -> None:
     """Fill a mesocycle session with realistic logged data.
 
     If use_suggested is True, uses the suggested_weight (set by compute_progression)
@@ -498,9 +884,7 @@ def _log_session(meso_session: dict, exercises_by_id: dict, session_date: str,
 async def seed_demo_mesocycle(session: AsyncSession) -> None:
     """Seed a demo mesocycle with weeks 1-2 fully logged and week 3 partially logged."""
     # Look up the Hero Split
-    result = await session.execute(
-        select(Split).where(Split.seed_key == HERO_SPLIT["seed_key"])
-    )
+    result = await session.execute(select(Split).where(Split.seed_key == HERO_SPLIT["seed_key"]))
     split = result.scalar_one_or_none()
     if not split:
         logger.warning("Hero Split not found, skipping demo mesocycle seed")
@@ -604,9 +988,7 @@ async def ensure_admin_user(session: AsyncSession) -> None:
 
     # Assign all orphan mesocycles to admin (mesocycles don't have seed_key)
     await session.execute(
-        update(Mesocycle)
-        .where(Mesocycle.user_id.is_(None))
-        .values(user_id=admin.id)
+        update(Mesocycle).where(Mesocycle.user_id.is_(None)).values(user_id=admin.id)
     )
 
     await session.commit()

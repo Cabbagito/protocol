@@ -7,6 +7,7 @@ import SplashScreen from './components/SplashScreen'
 import { getToken } from './lib/auth'
 
 // Wrap React.lazy to auto-reload on chunk load errors (stale deploys)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function lazyWithRetry(importFn: () => Promise<{ default: React.ComponentType<any> }>) {
   return lazy(() =>
     importFn().catch(() => {

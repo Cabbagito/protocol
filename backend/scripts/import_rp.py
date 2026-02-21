@@ -1,11 +1,14 @@
 """Import RP Strength training data into Protocol.
 
 Usage:
-    uv run python -m scripts.import_rp --data-file rp_training_data.json --user-name "Admin"
-    uv run python -m scripts.import_rp --data-file rp_training_data.json --user-name "Admin" --dry-run
+    uv run python -m scripts.import_rp \
+        --data-file rp_training_data.json --user-name "Admin"
+    uv run python -m scripts.import_rp \
+        --data-file rp_training_data.json --user-name "Admin" --dry-run
 
 Docker:
-    docker compose exec backend uv run python -m scripts.import_rp --data-file /app/rp_training_data.json --user-name "Admin"
+    docker compose exec backend uv run python -m scripts.import_rp \
+        --data-file /app/rp_training_data.json --user-name "Admin"
 """
 
 import argparse
@@ -157,9 +160,7 @@ def determine_exercise_order(
     return sorted(all_exercises, key=earliest_finish)
 
 
-async def resolve_exercises(
-    db: AsyncSession, rp_data: dict
-) -> dict[str, str]:
+async def resolve_exercises(db: AsyncSession, rp_data: dict) -> dict[str, str]:
     """Resolve all RP exercise names to Protocol seed exercise IDs.
 
     Returns: {rp_exercise_name: protocol_exercise_id}
@@ -177,7 +178,7 @@ async def resolve_exercises(
         else:
             print(f"  WARNING: No seed exercise for '{rp_name}' (seed_key={seed_key})")
 
-    print(f"\nExercise resolution:")
+    print("\nExercise resolution:")
     print(f"  Mapped: {len(mapping)} / {len(rp_exercise_names)}")
     if len(mapping) < len(rp_exercise_names):
         unmapped = sorted(rp_exercise_names - mapping.keys())
@@ -235,7 +236,7 @@ async def build_and_import_mesocycles(
 
         # Determine started_at from earliest session date
         earliest_date = None
-        for (w, d) in sorted(meso_sessions.keys()):
+        for w, d in sorted(meso_sessions.keys()):
             session_date = get_session_date(meso_sessions[(w, d)])
             if session_date:
                 dt = date.fromisoformat(session_date)
@@ -254,9 +255,7 @@ async def build_and_import_mesocycles(
 
         if dry_run:
             set_count = sum(
-                len(sets)
-                for session_exs in meso_sessions.values()
-                for sets in session_exs.values()
+                len(sets) for session_exs in meso_sessions.values() for sets in session_exs.values()
             )
             total_sets += set_count
             mesos_created += 1
@@ -304,12 +303,14 @@ async def build_and_import_mesocycles(
                 if max_sets == 0:
                     max_sets = 2  # fallback
 
-                db.add(SessionExercise(
-                    session_id=session_obj.id,
-                    exercise_id=ex_id,
-                    order=order,
-                    sets=max_sets,
-                ))
+                db.add(
+                    SessionExercise(
+                        session_id=session_obj.id,
+                        exercise_id=ex_id,
+                        order=order,
+                        sets=max_sets,
+                    )
+                )
 
         await db.flush()
 
@@ -347,59 +348,75 @@ async def build_and_import_mesocycles(
                             if target_reps is None:
                                 target_reps = rp_set.get("reps", 10)
 
-                            sets_list.append({
-                                "set_num": set_idx + 1,
-                                "weight": rp_set.get("weight"),
-                                "reps": rp_set.get("reps"),
-                                "target_reps": target_reps,
-                                "suggested_weight": rp_set.get("weightTarget"),
-                                "rir": None,
-                                "logged": True,
-                            })
+                            sets_list.append(
+                                {
+                                    "set_num": set_idx + 1,
+                                    "weight": rp_set.get("weight"),
+                                    "reps": rp_set.get("reps"),
+                                    "target_reps": target_reps,
+                                    "suggested_weight": rp_set.get("weightTarget"),
+                                    "rir": None,
+                                    "logged": True,
+                                }
+                            )
                         total_sets += len(sets_list)
                     else:
                         # No data for this week/day/exercise — mark as skipped
-                        sets_list = [{"set_num": 1, "weight": None, "reps": None,
-                                      "target_reps": 10, "suggested_weight": None,
-                                      "rir": None, "logged": False}]
-                        exercise_entries.append({
+                        sets_list = [
+                            {
+                                "set_num": 1,
+                                "weight": None,
+                                "reps": None,
+                                "target_reps": 10,
+                                "suggested_weight": None,
+                                "rir": None,
+                                "logged": False,
+                            }
+                        ]
+                        exercise_entries.append(
+                            {
+                                "exercise_id": ex_id,
+                                "exercise_name": ex_obj.name,
+                                "muscle_group": ex_obj.muscle_group,
+                                "equipment_type": ex_obj.equipment_type,
+                                "sets": sets_list,
+                                "skipped": True,
+                            }
+                        )
+                        continue
+
+                    exercise_entries.append(
+                        {
                             "exercise_id": ex_id,
                             "exercise_name": ex_obj.name,
                             "muscle_group": ex_obj.muscle_group,
                             "equipment_type": ex_obj.equipment_type,
                             "sets": sets_list,
-                            "skipped": True,
-                        })
-                        continue
-
-                    exercise_entries.append({
-                        "exercise_id": ex_id,
-                        "exercise_name": ex_obj.name,
-                        "muscle_group": ex_obj.muscle_group,
-                        "equipment_type": ex_obj.equipment_type,
-                        "sets": sets_list,
-                    })
+                        }
+                    )
 
                 # Determine if this session has any logged data
                 has_logged = any(
-                    s["logged"]
-                    for ex_entry in exercise_entries
-                    for s in ex_entry["sets"]
+                    s["logged"] for ex_entry in exercise_entries for s in ex_entry["sets"]
                 )
 
-                week_sessions_data.append({
-                    "session_name": session_obj.name,
-                    "day_order": day_idx,
-                    "date": session_date if has_logged else None,
-                    "notes": None,
-                    "exercises": exercise_entries,
-                })
+                week_sessions_data.append(
+                    {
+                        "session_name": session_obj.name,
+                        "day_order": day_idx,
+                        "date": session_date if has_logged else None,
+                        "notes": None,
+                        "exercises": exercise_entries,
+                    }
+                )
 
-            weeks.append({
-                "week_number": week_num,
-                "rir": week_rir,
-                "sessions": week_sessions_data,
-            })
+            weeks.append(
+                {
+                    "week_number": week_num,
+                    "rir": week_rir,
+                    "sessions": week_sessions_data,
+                }
+            )
 
         structure = {"weeks": weeks}
 
@@ -417,9 +434,7 @@ async def build_and_import_mesocycles(
         mesos_created += 1
 
         set_count = sum(
-            len(sets)
-            for session_exs in meso_sessions.values()
-            for sets in session_exs.values()
+            len(sets) for session_exs in meso_sessions.values() for sets in session_exs.values()
         )
         print(f"    Created with {set_count} logged sets")
 
@@ -427,7 +442,7 @@ async def build_and_import_mesocycles(
 
 
 async def main(data_file: str, user_name: str, *, dry_run: bool) -> None:
-    print(f"RP Strength Data Import")
+    print("RP Strength Data Import")
     print(f"{'=' * 50}")
     print(f"Data file: {data_file}")
     print(f"User: {user_name}")
@@ -435,7 +450,10 @@ async def main(data_file: str, user_name: str, *, dry_run: bool) -> None:
     print()
 
     rp_data = parse_rp_data(data_file)
-    print(f"Loaded {rp_data['exercisesWithHistory']} exercises, {len(rp_data['mesocycles'])} mesocycles")
+    print(
+        f"Loaded {rp_data['exercisesWithHistory']} exercises, "
+        f"{len(rp_data['mesocycles'])} mesocycles"
+    )
 
     async with async_session() as db:
         # Look up user

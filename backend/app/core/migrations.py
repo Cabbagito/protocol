@@ -1,9 +1,9 @@
 import os
 
+from alembic import command
 from alembic.config import Config
 from sqlalchemy import text
 
-from alembic import command
 from app.core.database import engine
 
 

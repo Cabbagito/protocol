@@ -262,16 +262,11 @@ def _derive_fields(structure: dict) -> dict:
     for week in weeks:
         for session in week.get("sessions", []):
             non_skipped = [
-                ex for ex in session.get("exercises", [])
-                if not ex.get("skipped", False)
+                ex for ex in session.get("exercises", []) if not ex.get("skipped", False)
             ]
             if not non_skipped:
                 continue
-            all_logged = all(
-                s["logged"]
-                for ex in non_skipped
-                for s in ex.get("sets", [])
-            )
+            all_logged = all(s["logged"] for ex in non_skipped for s in ex.get("sets", []))
             if all_logged:
                 workouts_completed += 1
 
@@ -309,10 +304,7 @@ def _mesocycle_to_list_item(mesocycle: Mesocycle) -> dict:
         1
         for week in weeks
         for session in week.get("sessions", [])
-        if any(
-            not ex.get("skipped", False)
-            for ex in session.get("exercises", [])
-        )
+        if any(not ex.get("skipped", False) for ex in session.get("exercises", []))
     )
     return {
         "id": mesocycle.id,
