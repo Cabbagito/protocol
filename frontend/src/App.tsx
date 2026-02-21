@@ -94,7 +94,6 @@ export default function App() {
   }
 
   return (
-    <SplashScreen>
     <QueryClientProvider client={queryClient}>
       <ChunkErrorBoundary>
       <Suspense fallback={<PageLoader className="min-h-[60vh]" />}>
@@ -104,23 +103,25 @@ export default function App() {
             path="/*"
             element={
               <ProtectedRoute>
-                <Layout>
-                  <Suspense fallback={<PageLoader className="min-h-[60vh]" />}>
-                    <Routes>
-                      <Route path="/" element={<Dashboard />} />
-                      <Route path="/exercises" element={<Exercises />} />
-                      <Route path="/splits" element={<Splits />} />
-                      <Route path="/splits/:id" element={<SplitDetail />} />
-                      <Route path="/mesocycles" element={<Mesocycles />} />
-                      <Route path="/mesocycles/:id" element={<MesocycleDetail />} />
-                      <Route path="/workout" element={<WorkoutHub />} />
-                      <Route path="/workout/:mesocycleId" element={<Workout />} />
-                      <Route path="/workouts/:mesocycleId/:weekIndex/:sessionIndex" element={<WorkoutDetail />} />
-                      <Route path="/progress" element={<Progress />} />
-                      <Route path="/settings" element={<Settings />} />
-                    </Routes>
-                  </Suspense>
-                </Layout>
+                <SplashScreen>
+                  <Layout>
+                    <Suspense fallback={<PageLoader className="min-h-[60vh]" />}>
+                      <Routes>
+                        <Route path="/" element={<Dashboard />} />
+                        <Route path="/exercises" element={<Exercises />} />
+                        <Route path="/splits" element={<Splits />} />
+                        <Route path="/splits/:id" element={<SplitDetail />} />
+                        <Route path="/mesocycles" element={<Mesocycles />} />
+                        <Route path="/mesocycles/:id" element={<MesocycleDetail />} />
+                        <Route path="/workout" element={<WorkoutHub />} />
+                        <Route path="/workout/:mesocycleId" element={<Workout />} />
+                        <Route path="/workouts/:mesocycleId/:weekIndex/:sessionIndex" element={<WorkoutDetail />} />
+                        <Route path="/progress" element={<Progress />} />
+                        <Route path="/settings" element={<Settings />} />
+                      </Routes>
+                    </Suspense>
+                  </Layout>
+                </SplashScreen>
               </ProtectedRoute>
             }
           />
@@ -128,6 +129,5 @@ export default function App() {
       </Suspense>
       </ChunkErrorBoundary>
     </QueryClientProvider>
-    </SplashScreen>
   )
 }

@@ -489,4 +489,102 @@
     to { opacity: 0; }
   }
   .splash-fade-out { animation: splash-fade-out 0.4s ease-out forwards; }
+
+  /* ===== LOGIN PAGE ANIMATIONS ===== */
+
+  /* Continuous orbit (3.2s per revolution) */
+  @keyframes login-orbit {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+  .login-orbit-1 { animation: login-orbit 3.2s linear infinite; animation-delay: 0s; }
+  .login-orbit-2 { animation: login-orbit 3.2s linear infinite; animation-delay: -1.067s; }
+  .login-orbit-3 { animation: login-orbit 3.2s linear infinite; animation-delay: -2.133s; }
+
+  /* Dot spiral entries */
+  @keyframes login-d1-entry {
+    0% { transform: translate(52px, -200px); opacity: 0; }
+    12% { opacity: 0.9; }
+    100% { transform: translate(52px, 0); opacity: 0.9; }
+  }
+  @keyframes login-d2-entry {
+    0% { transform: translate(52px, -180px); opacity: 0; }
+    12% { opacity: 0.65; }
+    100% { transform: translate(52px, 0); opacity: 0.65; }
+  }
+  @keyframes login-d3-entry {
+    0% { transform: translate(52px, -160px); opacity: 0; }
+    12% { opacity: 0.45; }
+    100% { transform: translate(52px, 0); opacity: 0.45; }
+  }
+  .login-d1-entry { animation: login-d1-entry 0.7s ease-out forwards; }
+  .login-d2-entry { animation: login-d2-entry 0.7s ease-out 0.1s forwards; }
+  .login-d3-entry { animation: login-d3-entry 0.7s ease-out 0.2s forwards; }
+
+  /* Orbit track fade */
+  @keyframes login-track-in {
+    0% { opacity: 0; } 100% { opacity: 0.35; }
+  }
+  .login-track-in { animation: login-track-in 0.6s ease-out 0.2s forwards; }
+
+  /* Pulse ring */
+  @keyframes login-pulse {
+    0% { r: 8; opacity: 0; stroke-width: 3; }
+    20% { opacity: 0.3; }
+    100% { r: 70; opacity: 0; stroke-width: 0.5; }
+  }
+  .login-pulse { animation: login-pulse 1s ease-out 0.5s forwards; }
+
+  /* Logo layer fades */
+  @keyframes login-lb-in {
+    0% { opacity: 0; transform: translate(6px, 4px) scale(0.92); }
+    100% { opacity: 0.15; transform: translate(6px, 4px) scale(1); }
+  }
+  @keyframes login-lm-in {
+    0% { opacity: 0; transform: translate(3px, 2px) scale(0.94); }
+    100% { opacity: 0.4; transform: translate(3px, 2px) scale(1); }
+  }
+  @keyframes login-lf-in {
+    0% { opacity: 0; transform: scale(0.9); }
+    60% { opacity: 1; transform: scale(1.03); }
+    100% { opacity: 1; transform: scale(1); }
+  }
+  .login-lb-in { animation: login-lb-in 0.6s ease-out 0.3s forwards; }
+  .login-lm-in { animation: login-lm-in 0.6s ease-out 0.35s forwards; }
+  .login-lf-in { animation: login-lf-in 0.6s ease-out 0.4s forwards; }
+
+  /* Wordmark fade up */
+  @keyframes login-word-in {
+    0% { opacity: 0; transform: translateY(8px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+  .login-word-in { animation: login-word-in 0.5s ease-out 0.55s forwards; }
+
+  /* Form fade up */
+  @keyframes login-form-in {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .login-form-in { animation: login-form-in 0.6s ease-out 0.8s forwards; }
+
+  /* Footer fade */
+  @keyframes login-footer-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  .login-footer-in { animation: login-footer-in 0.4s ease-out 1.3s forwards; }
+
+  /* Page exit fade */
+  @keyframes login-fade-out {
+    from { opacity: 1; }
+    to { opacity: 0; }
+  }
+  .login-fade-out { animation: login-fade-out 0.3s ease-out forwards; }
+
+  /* Ambient glow pulse */
+  @keyframes pulse-glow {
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 0.55; }
+  }
+  .pulse-glow { animation: pulse-glow 4s ease-in-out infinite; }
 }

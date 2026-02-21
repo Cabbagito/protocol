@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Protocol — Login v3</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      colors: {
+        navy: { deep: '#070d15', base: '#0d1b2a', card: '#0f1d2e', panel: '#132438', input: '#162a3e', border: '#1e3a52' },
+        protocol: { 400: '#38bdf8', 500: '#0ea5e9', 600: '#0284c7' }
+      },
+      fontFamily: {
+        sans: ['Inter', 'system-ui', 'sans-serif'],
+        mono: ['JetBrains Mono', 'monospace'],
+      }
+    }
+  }
+}
+</script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background: #050a12;
+    color: #e2e8f0;
+    overflow-x: hidden;
+  }
+
+  .variation-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; font-weight: 500; letter-spacing: 0.1em;
+    text-transform: uppercase; color: #475569; text-align: center;
+    padding: 32px 0 12px;
+  }
+  .variation-desc {
+    font-size: 13px; color: #334155; text-align: center;
+    max-width: 400px; margin: 0 auto 16px; line-height: 1.5;
+  }
+
+  .phone-frame {
+    width: 375px; height: 812px; border-radius: 44px;
+    border: 2px solid rgba(30,58,82,0.5); overflow: hidden;
+    position: relative; background: #0d1b2a;
+    box-shadow: 0 0 80px rgba(14,165,233,0.04), 0 30px 60px rgba(0,0,0,0.5);
+    flex-shrink: 0;
+  }
+  .vignette {
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse at center, transparent 60%, #070d15 100%);
+    pointer-events: none; z-index: 50; border-radius: 42px;
+  }
+
+  .login-input {
+    width: 100%; background: #162a3e; border: 1.5px solid #1e3a52;
+    border-radius: 12px; padding: 14px 16px; color: #e2e8f0;
+    font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 500;
+    outline: none; transition: all 0.3s ease;
+    text-align: center; letter-spacing: 0.05em;
+  }
+  .login-input::placeholder { color: #475569; }
+  .login-input:focus {
+    border-color: #0ea5e9;
+    box-shadow: 0 0 0 3px rgba(14,165,233,0.1), 0 0 20px rgba(14,165,233,0.05);
+  }
+  .login-btn {
+    width: 100%; padding: 14px; border-radius: 12px;
+    font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600;
+    cursor: pointer; transition: all 0.2s ease; overflow: hidden;
+    background: transparent; color: #0ea5e9;
+    border: 1.5px solid rgba(14,165,233,0.25);
+  }
+  .login-btn:active { transform: scale(0.98); }
+  .login-btn:hover { background: rgba(14,165,233,0.06); border-color: rgba(14,165,233,0.45); }
+
+  .screen {
+    position: relative; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    height: 100%; z-index: 2;
+  }
+  .ambient {
+    position: absolute; top: 28%; left: 50%;
+    width: 220px; height: 220px; transform: translate(-50%, -50%);
+    background: radial-gradient(circle, rgba(14,165,233,0.06) 0%, transparent 70%);
+    filter: blur(30px);
+    animation: pulse-glow 4s ease-in-out infinite;
+    z-index: 1;
+  }
+  .footer-msg {
+    font-size: 13px; color: #475569; text-align: center;
+    line-height: 1.5; max-width: 240px;
+  }
+  .version {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; color: #334155;
+  }
+
+
+  /* ── Shared keyframes ── */
+
+  /* Continuous orbit */
+  @keyframes c-orbit {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  /* Gradient shimmer */
+  @keyframes l-shim-s { 0%, 100% { stop-color: #0ea5e9; } 50% { stop-color: #22d3ee; } }
+  @keyframes l-shim-e { 0%, 100% { stop-color: #8b5cf6; } 50% { stop-color: #6366f1; } }
+  .l-shim-s { animation: l-shim-s 3s ease-in-out infinite; }
+  .l-shim-e { animation: l-shim-e 3s ease-in-out infinite; }
+
+  /* Logo breathing */
+  @keyframes lb-back {
+    0%, 100% { opacity: 0.12; transform: translate(6px, 4px) scale(1); }
+    50% { opacity: 0.22; transform: translate(8px, 5px) scale(1.015); }
+  }
+  @keyframes lb-mid {
+    0%, 100% { opacity: 0.35; transform: translate(3px, 2px) scale(1); }
+    50% { opacity: 0.5; transform: translate(4px, 3px) scale(1.008); }
+  }
+  @keyframes lb-front {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.003); }
+  }
+
+  /* Generic */
+  @keyframes fade-up {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes pulse-glow {
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 0.55; }
+  }
+
+
+  /* ═══════════════════════════════════════════════
+     OPTION 1 — Continuous from entry
+     Dots fly in and immediately orbit. No stop.
+     ═══════════════════════════════════════════════ */
+
+  /* Orbit groups rotate continuously from the start */
+  .o1-orbit-1 { animation: c-orbit 3.2s linear infinite; transform-origin: 110px 85px; animation-delay: 0s; }
+  .o1-orbit-2 { animation: c-orbit 3.2s linear infinite; transform-origin: 110px 85px; animation-delay: -1.067s; }
+  .o1-orbit-3 { animation: c-orbit 3.2s linear infinite; transform-origin: 110px 85px; animation-delay: -2.133s; }
+
+  /* Dots fly in from off-screen (in local rotating frame → creates spiral entry) */
+  @keyframes o1-d1-entry {
+    0% { transform: translate(52px, -200px); opacity: 0; }
+    12% { opacity: 0.9; }
+    100% { transform: translate(52px, 0); opacity: 0.9; }
+  }
+  @keyframes o1-d2-entry {
+    0% { transform: translate(52px, -180px); opacity: 0; }
+    12% { opacity: 0.65; }
+    100% { transform: translate(52px, 0); opacity: 0.65; }
+  }
+  @keyframes o1-d3-entry {
+    0% { transform: translate(52px, -160px); opacity: 0; }
+    12% { opacity: 0.45; }
+    100% { transform: translate(52px, 0); opacity: 0.45; }
+  }
+
+  /* Track fade-in */
+  @keyframes o1-track-in {
+    0% { opacity: 0; } 100% { opacity: 0.35; }
+  }
+
+  /* Subtle pulse when dots arrive */
+  @keyframes o1-pulse {
+    0% { r: 8; opacity: 0; stroke-width: 3; }
+    20% { opacity: 0.3; }
+    100% { r: 70; opacity: 0; stroke-width: 0.5; }
+  }
+
+  /* Logo layers fade in with their final breathing positions */
+  @keyframes o1-lb-in {
+    0% { opacity: 0; transform: translate(6px, 4px) scale(0.92); }
+    100% { opacity: 0.15; transform: translate(6px, 4px) scale(1); }
+  }
+  @keyframes o1-lm-in {
+    0% { opacity: 0; transform: translate(3px, 2px) scale(0.94); }
+    100% { opacity: 0.4; transform: translate(3px, 2px) scale(1); }
+  }
+  @keyframes o1-lf-in {
+    0% { opacity: 0; transform: scale(0.9); }
+    60% { opacity: 1; transform: scale(1.03); }
+    100% { opacity: 1; transform: scale(1); }
+  }
+
+  /* Wordmark */
+  @keyframes o1-word {
+    0% { opacity: 0; transform: translateY(8px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+
+
+  /* ═══════════════════════════════════════════════
+     OPTION 2 — Splash → pause → re-accelerate
+     Full splash drama, brief rest, smooth resume.
+     ═══════════════════════════════════════════════ */
+
+  /* Splash: dot orbits (decelerate to stop) */
+  @keyframes s-d1-orbit {
+    0%, 6% { transform: rotate(0deg); }
+    100% { transform: rotate(340deg); }
+  }
+  @keyframes s-d2-orbit {
+    0%, 8% { transform: rotate(120deg); }
+    100% { transform: rotate(460deg); }
+  }
+  @keyframes s-d3-orbit {
+    0%, 10% { transform: rotate(240deg); }
+    100% { transform: rotate(580deg); }
+  }
+
+  /* Splash: dot entries (fly in from off-screen) */
+  @keyframes s-d1-entry {
+    0% { transform: translate(52px, -280px); opacity: 0; }
+    5% { opacity: 1; }
+    20% { transform: translate(52px, 0px); }
+    100% { transform: translate(52px, 0px); opacity: 1; }
+  }
+  @keyframes s-d2-entry {
+    0%, 3% { transform: translate(52px, -260px); opacity: 0; }
+    8% { opacity: 1; }
+    23% { transform: translate(52px, 0px); }
+    100% { transform: translate(52px, 0px); opacity: 1; }
+  }
+  @keyframes s-d3-entry {
+    0%, 6% { transform: translate(52px, -240px); opacity: 0; }
+    11% { opacity: 1; }
+    26% { transform: translate(52px, 0px); }
+    100% { transform: translate(52px, 0px); opacity: 1; }
+  }
+
+  /* Splash: logo assembly */
+  @keyframes s-lb {
+    0%, 22% { opacity: 0; transform: translate(24px, 18px) scale(0.6); }
+    48% { opacity: 0.15; transform: translate(6px, 4px) scale(1); }
+    100% { opacity: 0.15; transform: translate(6px, 4px) scale(1); }
+  }
+  @keyframes s-lm {
+    0%, 27% { opacity: 0; transform: translate(16px, 12px) scale(0.7); }
+    53% { opacity: 0.4; transform: translate(3px, 2px) scale(1); }
+    100% { opacity: 0.4; transform: translate(3px, 2px) scale(1); }
+  }
+  @keyframes s-lf {
+    0%, 32% { opacity: 0; transform: scale(0.5); }
+    55% { opacity: 1; transform: scale(1.06); }
+    63% { transform: scale(0.97); }
+    70% { transform: scale(1.01); }
+    76%, 100% { opacity: 1; transform: scale(1); }
+  }
+
+  /* Splash: track, pulse, flash */
+  @keyframes s-track-in {
+    0%, 10% { opacity: 0; } 25% { opacity: 0.35; } 100% { opacity: 0.35; }
+  }
+  @keyframes s-pulse-1 {
+    0%, 35% { r: 10; opacity: 0; stroke-width: 3; }
+    42% { opacity: 0.35; }
+    75% { r: 80; opacity: 0; stroke-width: 0.5; }
+    100% { r: 80; opacity: 0; }
+  }
+  @keyframes s-flash {
+    0%, 50% { opacity: 0; } 56% { opacity: 0.08; } 68% { opacity: 0; } 100% { opacity: 0; }
+  }
+
+  /* Splash: wordmark punch-in */
+  @keyframes s-word {
+    0%, 48% { opacity: 0; transform: translateY(12px); letter-spacing: 8px; }
+    72% { opacity: 1; transform: translateY(0); letter-spacing: -0.5px; }
+    100% { opacity: 1; transform: translateY(0); letter-spacing: -0.5px; }
+  }
+</style>
+</head>
+<body>
+
+<div style="display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 40px 20px; min-height: 100vh;">
+
+
+  <!-- ═══════════════════════════════════════════
+       OPTION 1 — Continuous from entry
+       ═══════════════════════════════════════════ -->
+  <div class="variation-label">Option 1 — Continuous from entry</div>
+  <div class="variation-desc">Dots spiral in and immediately orbit — they never stop. The orbit IS the first thing you see. Quicker, more fluid intro.</div>
+
+  <div class="phone-frame" id="o1">
+    <div class="vignette"></div>
+    <div class="ambient"></div>
+
+    <div class="screen">
+      <svg width="220" height="200" viewBox="0 0 220 200" xmlns="http://www.w3.org/2000/svg" style="overflow: visible; margin-bottom: 24px; position: relative; z-index: 2;">
+        <defs>
+          <linearGradient id="o1G" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" class="l-shim-s"/><stop offset="100%" class="l-shim-e"/></linearGradient>
+        </defs>
+
+        <!-- Track fades in -->
+        <circle cx="110" cy="85" r="52" fill="none" stroke="#1e3a52" stroke-width="1" stroke-dasharray="3 7" opacity="0" style="animation: o1-track-in 0.6s ease-out 0.2s forwards;"/>
+
+        <!-- Subtle pulse when dots arrive -->
+        <circle cx="110" cy="85" r="8" fill="none" stroke="url(#o1G)" stroke-width="3" style="animation: o1-pulse 1s ease-out 0.5s forwards; opacity: 0;"/>
+
+        <!-- Orbit group 1: always rotating, dot flies in -->
+        <g class="o1-orbit-1">
+          <circle cx="110" cy="85" r="3" fill="#0ea5e9" opacity="0" style="animation: o1-d1-entry 0.7s ease-out forwards;"/>
+        </g>
+        <!-- Orbit group 2 -->
+        <g class="o1-orbit-2">
+          <circle cx="110" cy="85" r="2.2" fill="#8b5cf6" opacity="0" style="animation: o1-d2-entry 0.7s ease-out 0.1s forwards;"/>
+        </g>
+        <!-- Orbit group 3 -->
+        <g class="o1-orbit-3">
+          <circle cx="110" cy="85" r="1.8" fill="#22d3ee" opacity="0" style="animation: o1-d3-entry 0.7s ease-out 0.2s forwards;"/>
+        </g>
+
+        <!-- Logo layers fade in -->
+        <g transform="translate(72, 47) scale(0.76)">
+          <path d="M36 80 L36 24 L58 24 C69 24 76 31 76 40 C76 49 69 56 58 56 L48 56 L48 80 Z M48 34 L56 34 C62 34 64 37 64 40 C64 43 62 46 56 46 L48 46 Z" fill="url(#o1G)" opacity="0" style="animation: o1-lb-in 0.6s ease-out 0.3s forwards;"/>
+          <path d="M33 78 L33 22 L55 22 C66 22 73 29 73 38 C73 47 66 54 55 54 L45 54 L45 78 Z M45 32 L53 32 C59 32 61 35 61 38 C61 41 59 44 53 44 L45 44 Z" fill="url(#o1G)" opacity="0" style="animation: o1-lm-in 0.6s ease-out 0.35s forwards;"/>
+          <path d="M30 76 L30 20 L52 20 C63 20 70 27 70 36 C70 45 63 52 52 52 L42 52 L42 76 Z M42 30 L50 30 C56 30 58 33 58 36 C58 39 56 42 50 42 L42 42 Z" fill="url(#o1G)" opacity="0" style="animation: o1-lf-in 0.6s ease-out 0.4s forwards;"/>
+        </g>
+
+        <!-- Wordmark -->
+        <text x="110" y="170" font-family="Inter, sans-serif" font-size="26" font-weight="700" fill="url(#o1G)" text-anchor="middle" opacity="0" style="animation: o1-word 0.5s ease-out 0.55s forwards;">Protocol</text>
+      </svg>
+
+      <!-- Form -->
+      <div style="width: 100%; padding: 0 40px; opacity: 0; animation: fade-up 0.6s ease-out 0.8s forwards;">
+        <input type="password" class="login-input" placeholder="Password" style="margin-bottom: 12px;">
+        <button class="login-btn">Enter</button>
+      </div>
+
+      <!-- Supportive message -->
+      <div style="margin-top: 28px; opacity: 0; animation: fade-in 0.5s ease-out 1.1s forwards;">
+        <div class="footer-msg">We're with you, every rep.</div>
+      </div>
+
+      <div style="position: absolute; bottom: 44px; opacity: 0; animation: fade-in 0.4s ease-out 1.3s forwards;">
+        <span class="version">protocol-42.com</span>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════
+       OPTION 2 — Splash → pause → re-accelerate
+       ═══════════════════════════════════════════ -->
+  <div class="variation-label" style="border-top: 1px solid rgba(30,58,82,0.3);">Option 2 — Splash, pause, resume</div>
+  <div class="variation-desc">Full splash drama — dots fling in, decelerate to a stop, rest for a beat, then gently accelerate back into a continuous orbit.</div>
+
+  <div class="phone-frame" id="o2">
+    <div class="vignette"></div>
+    <div class="ambient"></div>
+
+    <div class="screen">
+      <svg width="220" height="200" viewBox="0 0 220 200" xmlns="http://www.w3.org/2000/svg" style="overflow: visible; margin-bottom: 24px; position: relative; z-index: 2;">
+        <defs>
+          <linearGradient id="o2G" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" class="l-shim-s"/><stop offset="100%" class="l-shim-e"/></linearGradient>
+          <radialGradient id="o2Flash" cx="50%" cy="42%" r="45%"><stop offset="0%" stop-color="#0ea5e9"/><stop offset="100%" stop-color="transparent"/></radialGradient>
+        </defs>
+
+        <!-- Flash -->
+        <rect width="220" height="200" fill="url(#o2Flash)" opacity="0" style="animation: s-flash 3.8s ease-out forwards;"/>
+
+        <!-- Track -->
+        <circle cx="110" cy="85" r="52" fill="none" stroke="#1e3a52" stroke-width="1" stroke-dasharray="3 7" opacity="0" style="animation: s-track-in 3.8s ease-out forwards;"/>
+
+        <!-- Pulse -->
+        <circle cx="110" cy="85" r="10" fill="none" stroke="url(#o2G)" stroke-width="3" style="animation: s-pulse-1 3.8s ease-out forwards;"/>
+
+        <!-- Splash dots (JS will transition these to continuous orbit) -->
+        <g id="o2-orbit-1" style="transform-origin: 110px 85px; animation: s-d1-orbit 3.8s cubic-bezier(0.28,0.45,0.12,1) forwards;">
+          <circle cx="110" cy="85" r="3" fill="#0ea5e9" opacity="0" style="animation: s-d1-entry 3.8s ease-out forwards;"/>
+        </g>
+        <g id="o2-orbit-2" style="transform-origin: 110px 85px; animation: s-d2-orbit 3.8s cubic-bezier(0.28,0.45,0.12,1) forwards;">
+          <circle cx="110" cy="85" r="2.2" fill="#8b5cf6" opacity="0" style="animation: s-d2-entry 3.8s ease-out forwards;"/>
+        </g>
+        <g id="o2-orbit-3" style="transform-origin: 110px 85px; animation: s-d3-orbit 3.8s cubic-bezier(0.28,0.45,0.12,1) forwards;">
+          <circle cx="110" cy="85" r="1.8" fill="#22d3ee" opacity="0" style="animation: s-d3-entry 3.8s ease-out forwards;"/>
+        </g>
+
+        <!-- Logo assembly → breathing (JS transitions) -->
+        <g transform="translate(72, 47) scale(0.76)">
+          <path id="o2-lb" d="M36 80 L36 24 L58 24 C69 24 76 31 76 40 C76 49 69 56 58 56 L48 56 L48 80 Z M48 34 L56 34 C62 34 64 37 64 40 C64 43 62 46 56 46 L48 46 Z" fill="url(#o2G)" opacity="0" style="animation: s-lb 3.8s cubic-bezier(0.22,1,0.36,1) forwards;"/>
+          <path id="o2-lm" d="M33 78 L33 22 L55 22 C66 22 73 29 73 38 C73 47 66 54 55 54 L45 54 L45 78 Z M45 32 L53 32 C59 32 61 35 61 38 C61 41 59 44 53 44 L45 44 Z" fill="url(#o2G)" opacity="0" style="animation: s-lm 3.8s cubic-bezier(0.22,1,0.36,1) forwards;"/>
+          <path id="o2-lf" d="M30 76 L30 20 L52 20 C63 20 70 27 70 36 C70 45 63 52 52 52 L42 52 L42 76 Z M42 30 L50 30 C56 30 58 33 58 36 C58 39 56 42 50 42 L42 42 Z" fill="url(#o2G)" opacity="0" style="animation: s-lf 3.8s cubic-bezier(0.34,1.56,0.64,1) forwards;"/>
+        </g>
+
+        <!-- Wordmark -->
+        <text x="110" y="170" font-family="Inter, sans-serif" font-size="26" font-weight="700" fill="url(#o2G)" text-anchor="middle" opacity="0" letter-spacing="8" style="animation: s-word 3.8s ease-out forwards;">Protocol</text>
+      </svg>
+
+      <!-- Form (fades in during splash) -->
+      <div style="width: 100%; padding: 0 40px; opacity: 0; animation: fade-up 0.7s ease-out 3.2s forwards;">
+        <input type="password" class="login-input" placeholder="Password" style="margin-bottom: 12px;">
+        <button class="login-btn">Enter</button>
+      </div>
+
+      <!-- Supportive message -->
+      <div style="margin-top: 28px; opacity: 0; animation: fade-in 0.6s ease-out 3.8s forwards;">
+        <div class="footer-msg">We're with you, every rep.</div>
+      </div>
+
+      <div style="position: absolute; bottom: 44px; opacity: 0; animation: fade-in 0.4s ease-out 4s forwards;">
+        <span class="version">protocol-42.com</span>
+      </div>
+    </div>
+  </div>
+
+
+  <div style="height: 80px;"></div>
+</div>
+
+
+<script>
+// ─── Option 2: Splash → pause → re-accelerate into continuous orbit ───
+//
+// After the splash finishes (3.8s), the dots are at rest.
+// We freeze them, wait 400ms, then use Web Animations API to
+// smoothly accelerate into continuous orbit.
+
+const SPLASH_DUR = 3800;
+const PAUSE_DUR = 400;
+const ORBIT_DUR = 3200;
+// Final splash angles (from the keyframe end values, mod 360)
+const REST_ANGLES = [340, 100, 220];
+const DOT_OPACITIES = [0.9, 0.65, 0.45];
+
+function transitionO2() {
+  // 1. Freeze dots at their splash end positions
+  REST_ANGLES.forEach((angle, i) => {
+    const g = document.getElementById(`o2-orbit-${i + 1}`);
+    const circle = g.querySelector('circle');
+
+    g.getAnimations().forEach(a => a.cancel());
+    circle.getAnimations().forEach(a => a.cancel());
+
+    g.style.transform = `rotate(${angle}deg)`;
+    circle.setAttribute('transform', `translate(52, 0)`);
+    circle.style.opacity = DOT_OPACITIES[i];
+  });
+
+  // Transition logo to breathing
+  const lb = document.getElementById('o2-lb');
+  const lm = document.getElementById('o2-lm');
+  const lf = document.getElementById('o2-lf');
+
+  [lb, lm, lf].forEach(el => el.getAnimations().forEach(a => a.cancel()));
+
+  lb.style.opacity = '0.15';
+  lb.setAttribute('transform', 'translate(6, 4) scale(1)');
+  lb.style.animation = 'lb-back 3s ease-in-out infinite';
+
+  lm.style.opacity = '0.4';
+  lm.setAttribute('transform', 'translate(3, 2) scale(1)');
+  lm.style.animation = 'lb-mid 3s ease-in-out 0.2s infinite';
+
+  lf.style.opacity = '1';
+  lf.setAttribute('transform', 'scale(1)');
+  lf.style.animation = 'lb-front 3s ease-in-out 0.4s infinite';
+
+  // 2. After pause, smoothly accelerate into orbit
+  setTimeout(() => {
+    REST_ANGLES.forEach((angle, i) => {
+      const g = document.getElementById(`o2-orbit-${i + 1}`);
+
+      // Spin-up: pure acceleration curve, NO deceleration at end.
+      // cubic-bezier(0.7, 0, 0.5, 0.5) — P2.y = P2.x means end slope = 1.0,
+      // exactly matching linear orbit speed. Duration = orbit period so
+      // speeds are identical at the handoff.
+      const spinUp = g.animate([
+        { transform: `rotate(${angle}deg)` },
+        { transform: `rotate(${angle + 360}deg)` }
+      ], {
+        duration: ORBIT_DUR,
+        easing: 'cubic-bezier(0.7, 0, 0.5, 0.5)',
+        fill: 'forwards'
+      });
+
+      spinUp.onfinish = () => {
+        spinUp.cancel();
+        // Switch to steady continuous orbit
+        g.style.animation = `c-orbit ${ORBIT_DUR}ms linear infinite`;
+        g.style.animationDelay = `-${(angle / 360) * ORBIT_DUR}ms`;
+      };
+    });
+  }, PAUSE_DUR);
+}
+
+setTimeout(transitionO2, SPLASH_DUR);
+</script>
+
+</body>
+</html>

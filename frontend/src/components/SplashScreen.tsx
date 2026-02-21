@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 
-const STORAGE_KEY = 'protocol_splash_shown'
+export const SPLASH_STORAGE_KEY = 'protocol_splash_shown'
 const ANIMATION_DURATION = 3800 // 3.8s
 
 interface SplashScreenProps {
@@ -9,7 +9,7 @@ interface SplashScreenProps {
 
 export default function SplashScreen({ children }: SplashScreenProps) {
   const [state, setState] = useState<'playing' | 'fading' | 'done'>(() =>
-    sessionStorage.getItem(STORAGE_KEY) ? 'done' : 'playing'
+    sessionStorage.getItem(SPLASH_STORAGE_KEY) ? 'done' : 'playing'
   )
 
   useEffect(() => {
@@ -22,7 +22,7 @@ export default function SplashScreen({ children }: SplashScreenProps) {
     if (state !== 'fading') return
     const doneTimer = setTimeout(() => {
       setState('done')
-      sessionStorage.setItem(STORAGE_KEY, '1')
+      sessionStorage.setItem(SPLASH_STORAGE_KEY, '1')
     }, 400)
     return () => clearTimeout(doneTimer)
   }, [state])
