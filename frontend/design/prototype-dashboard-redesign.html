@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=375, initial-scale=1.0, maximum-scale=1.0">
+<title>Protocol — Dashboard Redesign v3</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --deep: #070d15;
+    --base: #0d1b2a;
+    --card: #0f1d2e;
+    --panel: #132438;
+    --input: #162a3e;
+    --border: #1e3a52;
+    --text-1: #e2e8f0;
+    --text-2: #cbd5e1;
+    --text-m: #475569;
+    --accent-l: #38bdf8;
+    --accent: #0ea5e9;
+    --accent-d: #0284c7;
+    --accent-rgb: 14,165,233;
+    --nav-bg: rgba(13,27,42,0.95);
+    --shadow: rgba(0,0,0,0.3);
+    --vignette: #070d15;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { background: var(--deep); }
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background: var(--base);
+    color: var(--text-1);
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  .mono { font-family: 'JetBrains Mono', monospace; }
+
+  .card {
+    background: var(--card);
+    border-radius: 10px;
+    border: 1.5px solid var(--border);
+    box-shadow: 0 4px 12px var(--shadow);
+    padding: 16px;
+  }
+
+  .vignette {
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(ellipse at center, transparent 80%, var(--vignette) 100%);
+    opacity: 0.55;
+    pointer-events: none;
+    z-index: 100;
+  }
+
+  /* ─── STAGGER FADE-UP ─── */
+  @keyframes fade-up {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .stagger { animation: fade-up 0.4s ease both; }
+  .stagger-1 { animation-delay: 0.05s; }
+  .stagger-2 { animation-delay: 0.10s; }
+  .stagger-3 { animation-delay: 0.18s; }
+  .stagger-4 { animation-delay: 0.26s; }
+
+  /* ─── PULSE CURRENT (meso grid) ─── */
+  @keyframes pulse-current {
+    0%, 100% { opacity: 0.5; box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.2); }
+    50%      { opacity: 1;   box-shadow: 0 0 0 5px rgba(var(--accent-rgb), 0.45), 0 0 12px rgba(var(--accent-rgb), 0.3); }
+  }
+
+  /* ─── HERO AMBIENT GLOW — bigger, brighter, more visible ─── */
+  @keyframes pulse-glow {
+    0%, 100% { opacity: 0.35; transform: translate(-50%, -50%) scale(0.95); }
+    50%      { opacity: 0.7;  transform: translate(-50%, -50%) scale(1.08); }
+  }
+  .hero-glow {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 340px;
+    height: 260px;
+    background: radial-gradient(ellipse, rgba(var(--accent-rgb), 0.15) 0%, rgba(139,92,246,0.06) 40%, transparent 70%);
+    filter: blur(35px);
+    animation: pulse-glow 4s ease-in-out infinite;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ─── HERO CARD BREATHING BORDER + GLOW ─── */
+  @keyframes breathe-border {
+    0%, 100% {
+      border-color: var(--border);
+      box-shadow: 0 4px 12px var(--shadow), 0 0 0 0 rgba(var(--accent-rgb), 0);
+    }
+    50% {
+      border-color: rgba(var(--accent-rgb), 0.45);
+      box-shadow: 0 4px 12px var(--shadow), 0 0 20px rgba(var(--accent-rgb), 0.08);
+    }
+  }
+
+  /* ─── SHIMMER on CTA — faster, brighter ─── */
+  @keyframes shimmer-slide {
+    0%   { transform: translateX(-120%); opacity: 0; }
+    10%  { opacity: 1; }
+    90%  { opacity: 1; }
+    100% { transform: translateX(280%); opacity: 0; }
+  }
+
+  /* ─── CTA PULSE — much more visible ring ─── */
+  @keyframes cta-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(var(--accent-rgb), 0), 0 2px 8px rgba(0,0,0,0.3); }
+    50%      { box-shadow: 0 0 0 6px rgba(var(--accent-rgb), 0.2), 0 0 16px rgba(var(--accent-rgb), 0.15), 0 2px 8px rgba(0,0,0,0.3); }
+  }
+
+  /* ─── PROGRESS BAR GLOW — stronger pulse ─── */
+  @keyframes bar-glow-green {
+    0%, 100% { box-shadow: 0 0 4px rgba(74,222,128,0.3), 0 0 1px rgba(74,222,128,0.6); }
+    50%      { box-shadow: 0 0 12px rgba(74,222,128,0.7), 0 0 4px rgba(74,222,128,0.9); }
+  }
+  @keyframes bar-glow-blue {
+    0%, 100% { box-shadow: 0 0 4px rgba(var(--accent-rgb),0.3), 0 0 1px rgba(var(--accent-rgb),0.6); }
+    50%      { box-shadow: 0 0 12px rgba(var(--accent-rgb),0.7), 0 0 4px rgba(var(--accent-rgb),0.9); }
+  }
+
+  /* ─── QA CARD — border + shadow glow sweep ─── */
+  @keyframes card-glow {
+    0%, 100% {
+      border-color: var(--border);
+      box-shadow: 0 4px 12px var(--shadow);
+    }
+    50% {
+      border-color: rgba(var(--accent-rgb), 0.35);
+      box-shadow: 0 4px 12px var(--shadow), 0 0 14px rgba(var(--accent-rgb), 0.1);
+    }
+  }
+
+  /* ─── QA ICON GLOW — bg pulses brighter ─── */
+  @keyframes icon-glow {
+    0%, 100% { background: rgba(var(--color-rgb), 0.08); }
+    50%      { background: rgba(var(--color-rgb), 0.2); }
+  }
+
+  /* ─── STAT CARD — alternating subtle lift ─── */
+  @keyframes stat-lift {
+    0%, 100% { transform: translateY(0); box-shadow: 0 4px 12px var(--shadow); }
+    50%      { transform: translateY(-1.5px); box-shadow: 0 6px 18px var(--shadow), 0 0 10px rgba(var(--accent-rgb), 0.06); }
+  }
+
+  /* ─── GRID CELL STATES ─── */
+  .cell-done {
+    background: rgba(34,197,94,0.12);
+    border: 1.5px solid rgba(34,197,94,0.25);
+  }
+  .cell-current {
+    background: rgba(var(--accent-rgb), 0.15);
+    border: 2px solid var(--accent-d);
+    animation: pulse-current 2s ease-in-out infinite;
+  }
+  .cell-pending {
+    background: var(--input);
+    border: 1.5px solid var(--border);
+  }
+  .cell-deload-pending {
+    background: rgba(234,179,8,0.06);
+    border: 1.5px solid rgba(234,179,8,0.12);
+  }
+
+  /* ─── QA CARD INTERACTION ─── */
+  .qa-card {
+    transition: all 0.15s ease;
+    cursor: pointer;
+  }
+  .qa-card:active {
+    transform: scale(0.96);
+    background: var(--panel) !important;
+  }
+
+  /* ─── CTA BUTTON ─── */
+  .cta-btn {
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .cta-btn:active {
+    transform: scale(0.97);
+  }
+  .cta-btn .shimmer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 35%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.18), transparent);
+    animation: shimmer-slide 2.5s ease-in-out infinite;
+  }
+
+  /* ─── BOTTOM NAV ─── */
+  .bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--nav-bg);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-top: 1px solid rgba(255,255,255,0.06);
+    z-index: 50;
+  }
+
+  .section-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-m);
+  }
+
+  .stat-card {
+    transition: all 0.15s ease;
+  }
+  .stat-card:active {
+    transform: scale(0.97);
+  }
+
+  .grid-check { width: 12px; height: 12px; }
+
+  /* ─── QA icon containers with per-card color variables ─── */
+  .qa-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.3s ease;
+  }
+</style>
+</head>
+<body>
+
+<div class="vignette"></div>
+
+<div style="max-width: 375px; margin: 0 auto; padding-bottom: 80px;">
+
+  <!-- Header -->
+  <div class="stagger stagger-1" style="padding: 20px 20px 16px; display: flex; align-items: center; gap: 12px;">
+    <div style="width: 36px; height: 36px; border-radius: 10px; background: #0f172a; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+      <svg width="20" height="22" viewBox="0 0 42 58" fill="none">
+        <defs><linearGradient id="pg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#0ea5e9"/><stop offset="100%" stop-color="#8b5cf6"/></linearGradient></defs>
+        <path d="M2 56V2h22c11 0 18 7 18 16s-7 16-18 16H14v22H2ZM14 12v14h8c6 0 8-3 8-7s-2-7-8-7h-8Z" fill="url(#pg)"/>
+      </svg>
+    </div>
+    <div style="flex: 1;">
+      <div style="font-size: 15px; font-weight: 600; color: var(--text-1);">Protocol</div>
+      <div style="font-size: 11px; color: var(--text-m);">Saturday, February 22</div>
+    </div>
+  </div>
+
+  <!-- Hero Meso Card -->
+  <div class="stagger stagger-2" style="padding: 0 16px; margin-bottom: 12px; position: relative;">
+    <div class="hero-glow"></div>
+
+    <div class="card" style="position: relative; z-index: 1; padding: 16px 16px 14px; animation: breathe-border 4s ease-in-out infinite;">
+      <div style="display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 14px;">
+        <div>
+          <div style="font-size: 15px; font-weight: 600; color: var(--text-1);">Push Pull Legs v2</div>
+          <div class="mono" style="font-size: 11px; color: var(--text-m); margin-top: 2px;">Week 3 of 6</div>
+        </div>
+        <div style="font-size: 12px; color: var(--accent-l); font-weight: 500; cursor: pointer;">View</div>
+      </div>
+
+      <!-- Meso Grid -->
+      <div style="display: grid; grid-template-columns: 40px repeat(6, 1fr); gap: 6px; align-items: center; margin-bottom: 16px;">
+        <div></div>
+        <div style="text-align:center;"><div style="font-size:10px;font-weight:500;color:var(--text-2);">W1</div><div class="mono" style="font-size:10px;color:var(--text-m);">R3</div></div>
+        <div style="text-align:center;"><div style="font-size:10px;font-weight:500;color:var(--text-2);">W2</div><div class="mono" style="font-size:10px;color:var(--text-m);">R2</div></div>
+        <div style="text-align:center;"><div style="font-size:10px;font-weight:500;color:var(--text-2);">W3</div><div class="mono" style="font-size:10px;color:var(--text-m);">R1</div></div>
+        <div style="text-align:center;"><div style="font-size:10px;font-weight:500;color:var(--text-2);">W4</div><div class="mono" style="font-size:10px;color:var(--text-m);">R0</div></div>
+        <div style="text-align:center;"><div style="font-size:10px;font-weight:500;color:var(--text-2);">W5</div><div class="mono" style="font-size:10px;color:var(--text-m);">R0</div></div>
+        <div style="text-align:center;"><div style="font-size:10px;font-weight:500;color:var(--text-2);">W6</div><div class="mono" style="font-size:10px;color:#eab308;">DL</div></div>
+
+        <!-- Push -->
+        <div style="font-size:10px;font-weight:500;color:var(--text-m);">Push</div>
+        <div style="display:flex;justify-content:center;"><div class="cell-done" style="width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;"><svg class="grid-check" viewBox="0 0 12 12" fill="none"><path d="M2.5 6L5 8.5L9.5 3.5" stroke="#22c55e" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>
+        <div style="display:flex;justify-content:center;"><div class="cell-done" style="width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;"><svg class="grid-check" viewBox="0 0 12 12" fill="none"><path d="M2.5 6L5 8.5L9.5 3.5" stroke="#22c55e" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>
+        <div style="display:flex;justify-content:center;"><div class="cell-done" style="width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;"><svg class="grid-check" viewBox="0 0 12 12" fill="none"><path d="M2.5 6L5 8.5L9.5 3.5" stroke="#22c55e" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>
+        <div style="display:flex;justify-content:center;"><div class="cell-pending" style="width:24px;height:24px;border-radius:50%;"></div></div>
+        <div style="display:flex;justify-content:center;"><div class="cell-pending" style="width:24px;height:24px;border-radius:50%;"></div></div>
+        <div style="display:flex;justify-content:center;"><div class="cell-deload-pending" style="width:24px;height:24px;border-radius:50%;"></div></div>
+
+        <!-- Pull -->
+        <div style="font-size:10px;font-weight:500;color:var(--text-m);">Pull</div>
+        <div style="display:flex;justify-content:center;"><div class="cell-done" style="width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;"><svg class="grid-check" viewBox="0 0 12 12" fill="none"><path d="M2.5 6L5 8.5L9.5 3.5" stroke="#22c55e" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>
+        <div style="display:flex;justify-content:center;"><div class="cell-done" style="width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;"><svg class="grid-check" viewBox="0 0 12 12" fill="none"><path d="M2.5 6L5 8.5L9.5 3.5" stroke="#22c55e" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>
+        <div style="display:flex;justify-content:center;"><div class="cell-current" style="width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;"><div style="width:8px;height:8px;border-radius:50%;background:var(--accent-d);"></div></div></div>
+        <div style="display:flex;justify-content:center;"><div class="cell-pending" style="width:24px;height:24px;border-radius:50%;"></div></div>
+        <div style="display:flex;justify-content:center;"><div class="cell-pending" style="width:24px;height:24px;border-radius:50%;"></div></div>
+        <div style="display:flex;justify-content:center;"><div class="cell-deload-pending" style="width:24px;height:24px;border-radius:50%;"></div></div>
+
+        <!-- Legs -->
+        <div style="font-size:10px;font-weight:500;color:var(--text-m);">Legs</div>
+        <div style="display:flex;justify-content:center;"><div class="cell-done" style="width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;"><svg class="grid-check" viewBox="0 0 12 12" fill="none"><path d="M2.5 6L5 8.5L9.5 3.5" stroke="#22c55e" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>
+        <div style="display:flex;justify-content:center;"><div class="cell-done" style="width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;"><svg class="grid-check" viewBox="0 0 12 12" fill="none"><path d="M2.5 6L5 8.5L9.5 3.5" stroke="#22c55e" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>
+        <div style="display:flex;justify-content:center;"><div class="cell-pending" style="width:24px;height:24px;border-radius:50%;"></div></div>
+        <div style="display:flex;justify-content:center;"><div class="cell-pending" style="width:24px;height:24px;border-radius:50%;"></div></div>
+        <div style="display:flex;justify-content:center;"><div class="cell-pending" style="width:24px;height:24px;border-radius:50%;"></div></div>
+        <div style="display:flex;justify-content:center;"><div class="cell-deload-pending" style="width:24px;height:24px;border-radius:50%;"></div></div>
+      </div>
+
+      <!-- Next + CTA -->
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <div style="flex: 1;">
+          <div style="font-size: 11px; color: var(--text-m); margin-bottom: 2px;">Up next</div>
+          <div style="font-size: 13px; font-weight: 600; color: var(--text-1);">Pull Day</div>
+        </div>
+        <button class="cta-btn" style="background: var(--accent); color: white; border: none; border-radius: 10px; padding: 11px 20px; font-size: 13px; font-weight: 600; font-family: 'Inter', sans-serif; animation: cta-pulse 2.5s ease-in-out infinite;">
+          <span class="shimmer"></span>
+          Continue
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-2px;margin-left:4px;"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Two stat cards -->
+  <div class="stagger stagger-3" style="padding: 0 16px; margin-bottom: 12px; display: flex; gap: 8px;">
+    <div class="card stat-card" style="flex: 1; padding: 14px; animation: stat-lift 4s ease-in-out infinite;">
+      <div style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-m); margin-bottom: 6px;">This Week</div>
+      <div style="display: flex; align-items: baseline; gap: 3px;">
+        <span class="mono" style="font-size: 24px; font-weight: 700; color: var(--text-1);">2</span>
+        <span class="mono" style="font-size: 13px; color: var(--text-m);">/3</span>
+      </div>
+      <div style="height: 3px; background: var(--input); border-radius: 2px; margin-top: 8px; overflow: hidden;">
+        <div style="width: 66%; height: 100%; background: #4ade80; border-radius: 2px; animation: bar-glow-green 2.5s ease-in-out infinite;"></div>
+      </div>
+    </div>
+    <div class="card stat-card" style="flex: 1; padding: 14px; animation: stat-lift 4s ease-in-out infinite 2s;">
+      <div style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-m); margin-bottom: 6px;">Meso Progress</div>
+      <div style="display: flex; align-items: baseline; gap: 3px;">
+        <span class="mono" style="font-size: 24px; font-weight: 700; color: var(--text-1);">44</span>
+        <span class="mono" style="font-size: 13px; color: var(--text-m);">%</span>
+      </div>
+      <div style="height: 3px; background: var(--input); border-radius: 2px; margin-top: 8px; overflow: hidden;">
+        <div style="width: 44%; height: 100%; background: var(--accent); border-radius: 2px; animation: bar-glow-blue 2.5s ease-in-out infinite 0.5s;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Access -->
+  <div class="stagger stagger-4" style="padding: 0 16px; margin-bottom: 12px;">
+    <div class="section-label" style="margin-bottom: 10px;">Quick Access</div>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+      <!-- Mesocycles -->
+      <div class="qa-card card" style="padding: 16px 14px; display: flex; flex-direction: column; gap: 10px; animation: card-glow 4s ease-in-out infinite 0s;">
+        <div class="qa-icon" style="background: rgba(var(--accent-rgb), 0.1);">
+          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="var(--accent-l)"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z"/></svg>
+        </div>
+        <span style="font-size: 13px; font-weight: 500; color: var(--text-1);">Mesocycles</span>
+      </div>
+      <!-- Splits -->
+      <div class="qa-card card" style="padding: 16px 14px; display: flex; flex-direction: column; gap: 10px; animation: card-glow 4s ease-in-out infinite 1s;">
+        <div class="qa-icon" style="background: rgba(168,85,247,0.1);">
+          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="#a855f7"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5"/></svg>
+        </div>
+        <span style="font-size: 13px; font-weight: 500; color: var(--text-1);">Splits</span>
+      </div>
+      <!-- Exercises -->
+      <div class="qa-card card" style="padding: 16px 14px; display: flex; flex-direction: column; gap: 10px; animation: card-glow 4s ease-in-out infinite 2s;">
+        <div class="qa-icon" style="background: rgba(34,197,94,0.1);">
+          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="#22c55e"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7.5h2.25M3 12h2.25m0 0V7.5m0 4.5v4.5M3 16.5h2.25M21 7.5h-2.25m0 0V12m0-4.5v4.5m0 0h2.25m-2.25 0v4.5m0 0h2.25M6.75 7.5h10.5v9H6.75v-9Z"/></svg>
+        </div>
+        <span style="font-size: 13px; font-weight: 500; color: var(--text-1);">Exercises</span>
+      </div>
+      <!-- Progress -->
+      <div class="qa-card card" style="padding: 16px 14px; display: flex; flex-direction: column; gap: 10px; animation: card-glow 4s ease-in-out infinite 3s;">
+        <div class="qa-icon" style="background: rgba(249,115,22,0.1);">
+          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="#f97316"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18 9 11.25l4.306 4.306a11.95 11.95 0 0 1 5.814-5.518l2.74-1.22m0 0-5.94-2.281m5.94 2.28-2.28 5.941"/></svg>
+        </div>
+        <span style="font-size: 13px; font-weight: 500; color: var(--text-1);">Progress</span>
+      </div>
+      <!-- Settings -->
+      <div class="qa-card card" style="padding: 14px; display: flex; align-items: center; gap: 12px; grid-column: span 2;">
+        <div class="qa-icon" style="background: rgba(100,116,139,0.1);">
+          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="#64748b"><path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/></svg>
+        </div>
+        <span style="font-size: 13px; font-weight: 500; color: var(--text-1);">Settings</span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-m)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-left:auto;"><path d="m8.25 4.5 7.5 7.5-7.5 7.5"/></svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Nav -->
+  <div class="bottom-nav">
+    <div style="display: flex; justify-content: space-around; align-items: center; height: 48px; max-width: 375px; margin: 0 auto;">
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 2px; color: var(--accent-l);"><svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m2.25 12 8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"/></svg><span style="font-size:10px;">Home</span></div>
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 2px; color: var(--text-m);"><svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7.5h2.25M3 12h2.25m0 0V7.5m0 4.5v4.5M3 16.5h2.25M21 7.5h-2.25m0 0V12m0-4.5v4.5m0 0h2.25m-2.25 0v4.5m0 0h2.25M6.75 7.5h10.5v9H6.75v-9Z"/></svg><span style="font-size:10px;">Workout</span></div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

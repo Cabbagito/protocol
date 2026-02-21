@@ -591,6 +591,113 @@
     50% { opacity: 0.55; }
   }
   .pulse-glow { animation: pulse-glow 4s ease-in-out infinite; }
+
+/* ===== DASHBOARD ANIMATIONS ===== */
+
+  /* Hero ambient glow — larger pulse behind hero card */
+  @keyframes dash-hero-glow {
+    0%, 100% { opacity: 0.35; transform: translate(-50%, -50%) scale(0.95); }
+    50%      { opacity: 0.7;  transform: translate(-50%, -50%) scale(1.08); }
+  }
+  .dash-hero-glow {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 340px;
+    height: 260px;
+    background: radial-gradient(ellipse, rgba(var(--accent-rgb), 0.15) 0%, rgba(139,92,246,0.06) 40%, transparent 70%);
+    filter: blur(35px);
+    animation: dash-hero-glow 4s ease-in-out infinite;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Hero card breathing border + glow */
+  @keyframes dash-breathe-border {
+    0%, 100% {
+      border-color: var(--border);
+      box-shadow: 0 4px 12px var(--shadow), 0 0 0 0 rgba(var(--accent-rgb), 0);
+    }
+    50% {
+      border-color: rgba(var(--accent-rgb), 0.45);
+      box-shadow: 0 4px 12px var(--shadow), 0 0 20px rgba(var(--accent-rgb), 0.08);
+    }
+  }
+
+  /* CTA shimmer sweep */
+  @keyframes dash-shimmer {
+    0%   { transform: translateX(-120%); opacity: 0; }
+    10%  { opacity: 1; }
+    90%  { opacity: 1; }
+    100% { transform: translateX(280%); opacity: 0; }
+  }
+
+  /* CTA ring pulse */
+  @keyframes dash-cta-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(var(--accent-rgb), 0), 0 2px 8px rgba(0,0,0,0.3); }
+    50%      { box-shadow: 0 0 0 6px rgba(var(--accent-rgb), 0.2), 0 0 16px rgba(var(--accent-rgb), 0.15), 0 2px 8px rgba(0,0,0,0.3); }
+  }
+
+  /* Progress bar glow — green (this week) */
+  @keyframes dash-bar-glow-green {
+    0%, 100% { box-shadow: 0 0 4px rgba(74,222,128,0.3), 0 0 1px rgba(74,222,128,0.6); }
+    50%      { box-shadow: 0 0 12px rgba(74,222,128,0.7), 0 0 4px rgba(74,222,128,0.9); }
+  }
+
+  /* Progress bar glow — blue (meso progress) */
+  @keyframes dash-bar-glow-blue {
+    0%, 100% { box-shadow: 0 0 4px rgba(var(--accent-rgb),0.3), 0 0 1px rgba(var(--accent-rgb),0.6); }
+    50%      { box-shadow: 0 0 12px rgba(var(--accent-rgb),0.7), 0 0 4px rgba(var(--accent-rgb),0.9); }
+  }
+
+  /* Quick access card glow sweep */
+  @keyframes dash-card-glow {
+    0%, 100% {
+      border-color: var(--border);
+      box-shadow: 0 4px 12px var(--shadow);
+    }
+    50% {
+      border-color: rgba(var(--accent-rgb), 0.35);
+      box-shadow: 0 4px 12px var(--shadow), 0 0 14px rgba(var(--accent-rgb), 0.1);
+    }
+  }
+
+  /* CTA button base */
+  .dash-cta-btn {
+    position: relative;
+    overflow: hidden;
+    transition: all 0.2s ease;
+  }
+  .dash-cta-btn:active {
+    transform: scale(0.97);
+  }
+  .dash-cta-btn .dash-shimmer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 35%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.18), transparent);
+    animation: dash-shimmer 2.5s ease-in-out infinite;
+  }
+
+  /* Quick access card interaction */
+  .dash-qa-card {
+    transition: all 0.15s ease;
+    cursor: pointer;
+  }
+  .dash-qa-card:active {
+    transform: scale(0.96);
+    background: var(--panel) !important;
+  }
+
+  /* Stat card interaction */
+  .dash-stat-card {
+    transition: all 0.15s ease;
+  }
+  .dash-stat-card:active {
+    transform: scale(0.97);
+  }
 }
 
 /* ===== GRADIENT THEME OVERRIDES ===== */
