@@ -320,7 +320,7 @@ function MesocycleForm({ onSave, onCancel }: MesocycleFormProps) {
                       </span>
                     </div>
                     <div className="flex items-center gap-1 text-[10px]" style={{ color: 'var(--text-m)' }}>
-                      <span>{split.session_count} sessions</span>
+                      <span>{split.day_count} days</span>
                       <span>&middot;</span>
                       <span>{split.exercise_count} exercises</span>
                     </div>

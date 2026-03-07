@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=375, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Split Creator — Accordion</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --deep: #070d15; --base: #0d1b2a; --card: #0f1d2e; --panel: #132438;
+    --input: #162a3e; --border: #1e3a52;
+    --text-1: #e2e8f0; --text-2: #cbd5e1; --text-m: #475569;
+    --accent-l: #38bdf8; --accent: #0ea5e9; --accent-d: #0284c7;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { background: var(--deep); }
+  body {
+    background: var(--base); color: var(--text-1); font-family: 'Inter', system-ui, sans-serif;
+    max-width: 375px; margin: 0 auto; min-height: 100vh; overflow-x: hidden;
+    padding-bottom: 100px;
+  }
+  .mono { font-family: 'JetBrains Mono', monospace; }
+  .vignette {
+    position: fixed; inset: 0; pointer-events: none; z-index: 100;
+    background: radial-gradient(ellipse at center, transparent 60%, #070d15 100%);
+  }
+  ::-webkit-scrollbar { width: 0; height: 0; }
+
+  /* Header */
+  .header {
+    padding: 16px 16px 12px;
+    display: flex; align-items: center; gap: 10px;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(13,27,42,0.92); backdrop-filter: blur(12px);
+  }
+  .back-btn {
+    width: 32px; height: 32px; border-radius: 8px; border: none;
+    background: var(--panel); color: var(--text-2); cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .header-title { font-size: 15px; font-weight: 600; color: var(--text-1); }
+
+  /* Name + Color row */
+  .name-row {
+    padding: 16px; display: flex; gap: 10px; align-items: center;
+  }
+  .name-input {
+    flex: 1; height: 44px; border-radius: 12px; background: var(--input);
+    border: 1.5px solid var(--border); color: var(--text-1); font-size: 15px;
+    font-weight: 600; padding: 0 14px; font-family: 'Inter', system-ui, sans-serif;
+    outline: none; transition: border-color 0.2s;
+  }
+  .name-input:focus { border-color: var(--accent); }
+  .name-input::placeholder { color: var(--text-m); font-weight: 500; }
+  .color-btn {
+    width: 36px; height: 36px; border-radius: 50%; border: none; cursor: pointer;
+    flex-shrink: 0; transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 0 0 2.5px var(--base), 0 0 0 4.5px currentColor;
+  }
+  .color-btn:active { transform: scale(0.9); }
+
+  /* Day list */
+  .day-list { padding: 0 16px; }
+
+  /* Day card */
+  .day-card {
+    background: var(--card); border-radius: 12px; margin-bottom: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.04);
+    overflow: hidden; transition: box-shadow 0.3s;
+  }
+  .day-card.expanded {
+    box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+    border-color: rgba(56,189,248,0.1);
+  }
+
+  /* Day header (collapsed row) */
+  .day-header {
+    display: flex; align-items: center; gap: 10px; padding: 14px 14px;
+    cursor: pointer; transition: background 0.15s; user-select: none;
+  }
+  .day-header:active { background: rgba(255,255,255,0.02); }
+  .day-chevron {
+    width: 16px; height: 16px; color: var(--text-m);
+    transition: transform 0.25s ease; flex-shrink: 0;
+  }
+  .day-card.expanded .day-chevron { transform: rotate(90deg); }
+
+  .day-name-display {
+    flex: 1; font-size: 14px; font-weight: 600; color: var(--text-1);
+    min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .day-name-input {
+    flex: 1; background: transparent; border: none; border-bottom: 1.5px solid var(--accent);
+    color: var(--text-1); font-size: 14px; font-weight: 600;
+    font-family: 'Inter', system-ui, sans-serif; outline: none;
+    padding: 0 0 2px; min-width: 0;
+  }
+
+  .day-count {
+    font-size: 11px; font-weight: 500; color: var(--text-m);
+    padding: 2px 8px; border-radius: 10px; background: var(--panel);
+  }
+  .day-card.expanded .day-count { display: none; }
+
+  .day-delete {
+    width: 28px; height: 28px; border-radius: 8px; border: none;
+    background: transparent; color: var(--text-m); cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; transition: all 0.15s; flex-shrink: 0;
+  }
+  .day-delete:hover { background: rgba(239,68,68,0.1); color: #f87171; }
+
+  /* Day body (expanded) */
+  .day-body {
+    max-height: 0; overflow: hidden; transition: max-height 0.35s ease;
+  }
+  .day-card.expanded .day-body { max-height: 2000px; }
+  .day-body-inner { padding: 0 14px 14px; }
+
+  /* Exercise list inside day */
+  .ex-list { display: flex; flex-direction: column; gap: 2px; }
+  .ex-row {
+    display: flex; align-items: center; gap: 10px; padding: 9px 10px;
+    border-radius: 8px; transition: background 0.15s;
+    animation: exFadeIn 0.2s ease both;
+  }
+  .ex-row:hover { background: rgba(255,255,255,0.02); }
+  @keyframes exFadeIn {
+    from { opacity: 0; transform: translateX(-6px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  .ex-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+  .ex-name { flex: 1; font-size: 13px; font-weight: 500; color: var(--text-1); }
+  .ex-remove {
+    width: 22px; height: 22px; border-radius: 6px; border: none;
+    background: transparent; color: var(--text-m); cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; transition: all 0.15s; opacity: 0.5;
+  }
+  .ex-remove:hover { background: rgba(239,68,68,0.1); color: #f87171; opacity: 1; }
+
+  /* Add exercise trigger */
+  .add-ex-btn {
+    display: flex; align-items: center; gap: 6px; padding: 10px;
+    border: none; background: transparent; cursor: pointer;
+    color: var(--accent-l); font-size: 12px; font-weight: 600;
+    font-family: 'Inter', system-ui, sans-serif; transition: opacity 0.15s;
+    width: 100%;
+  }
+  .add-ex-btn:hover { opacity: 0.8; }
+
+  /* Inline search */
+  .search-area {
+    overflow: hidden; transition: max-height 0.3s ease, opacity 0.3s ease;
+    max-height: 0; opacity: 0;
+  }
+  .search-area.open { max-height: 600px; opacity: 1; }
+
+  .search-input-wrap {
+    position: relative; margin-bottom: 6px; margin-top: 4px;
+  }
+  .search-input {
+    width: 100%; height: 38px; border-radius: 10px; background: var(--input);
+    border: 1.5px solid var(--border); color: var(--text-1); font-size: 13px;
+    padding: 0 10px 0 34px; font-family: 'Inter', system-ui, sans-serif;
+    outline: none; transition: border-color 0.2s;
+  }
+  .search-input:focus { border-color: var(--accent); }
+  .search-input::placeholder { color: var(--text-m); }
+  .search-icon {
+    position: absolute; left: 11px; top: 50%; transform: translateY(-50%);
+    color: var(--text-m); pointer-events: none;
+  }
+
+  /* Search results */
+  .search-results {
+    max-height: 300px; overflow-y: auto; display: flex; flex-direction: column;
+    border-radius: 8px; background: var(--panel);
+    border: 1px solid rgba(255,255,255,0.04);
+  }
+  .search-group-header {
+    font-size: 10px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.06em; padding: 8px 12px 4px; position: sticky;
+    top: 0; z-index: 1; background: var(--panel);
+  }
+  .search-result-row {
+    display: flex; align-items: center; gap: 10px; padding: 9px 12px;
+    cursor: pointer; transition: background 0.12s;
+  }
+  .search-result-row:hover { background: var(--input); }
+  .search-result-row:active { background: rgba(14,165,233,0.08); }
+  .search-result-name { flex: 1; font-size: 13px; font-weight: 500; color: var(--text-1); }
+  .search-result-eq {
+    font-size: 10px; font-weight: 500; color: var(--text-m);
+    text-transform: capitalize;
+  }
+  .search-result-add {
+    width: 22px; height: 22px; border-radius: 6px;
+    border: 1.5px solid var(--border); background: transparent;
+    color: var(--accent-l); font-size: 15px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+  }
+  .search-result-row:hover .search-result-add {
+    border-color: var(--accent); background: rgba(14,165,233,0.08);
+  }
+
+  /* Add day button */
+  .add-day-btn {
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    width: 100%; padding: 14px; border-radius: 12px;
+    border: 1.5px dashed var(--border); background: transparent;
+    color: var(--accent-l); font-size: 13px; font-weight: 600;
+    cursor: pointer; font-family: 'Inter', system-ui, sans-serif;
+    transition: all 0.2s; margin-bottom: 8px;
+  }
+  .add-day-btn:hover { border-color: rgba(56,189,248,0.3); background: rgba(14,165,233,0.03); }
+  .add-day-btn:active { transform: scale(0.98); }
+
+  /* Create button */
+  .create-btn {
+    display: flex; align-items: center; justify-content: center;
+    width: 100%; height: 48px; border-radius: 14px;
+    background: var(--accent); color: white; font-size: 15px;
+    font-weight: 700; border: none; cursor: pointer;
+    font-family: 'Inter', system-ui, sans-serif;
+    transition: all 0.2s; margin-top: 8px;
+    box-shadow: 0 4px 16px rgba(14,165,233,0.25);
+  }
+  .create-btn:hover { background: var(--accent-d); }
+  .create-btn:active { transform: scale(0.98); }
+
+  /* Color picker popover */
+  .color-popover {
+    position: absolute; right: 16px; top: 70px; z-index: 60;
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    display: none; gap: 8px; flex-wrap: wrap; width: 160px;
+  }
+  .color-popover.open { display: flex; }
+  .color-option {
+    width: 28px; height: 28px; border-radius: 50%; border: none;
+    cursor: pointer; transition: transform 0.15s;
+  }
+  .color-option:active { transform: scale(0.85); }
+  .color-option.selected {
+    box-shadow: 0 0 0 2.5px var(--card), 0 0 0 4px currentColor;
+  }
+
+  /* Separator */
+  .section-sep {
+    height: 1px; background: var(--border); opacity: 0.5;
+    margin: 4px 0 12px;
+  }
+
+  /* Done button for search */
+  .search-done-btn {
+    display: flex; align-items: center; justify-content: center;
+    width: 100%; padding: 8px; margin-top: 6px;
+    border-radius: 8px; border: 1px solid var(--border);
+    background: var(--panel); color: var(--text-2);
+    font-size: 12px; font-weight: 600; cursor: pointer;
+    font-family: 'Inter', system-ui, sans-serif; transition: all 0.15s;
+  }
+  .search-done-btn:hover { border-color: var(--accent); color: var(--accent-l); }
+</style>
+</head>
+<body>
+<div class="vignette"></div>
+
+<!-- Header -->
+<div class="header">
+  <button class="back-btn">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M15 18l-6-6 6-6"/></svg>
+  </button>
+  <span class="header-title">New Split</span>
+</div>
+
+<!-- Name + Color -->
+<div class="name-row" style="position:relative;">
+  <input type="text" class="name-input" placeholder="Split name..." id="splitName" value="">
+  <button class="color-btn" id="colorBtn" onclick="toggleColorPicker()" style="background:#14b8a6;color:#14b8a6;"></button>
+  <div class="color-popover" id="colorPopover"></div>
+</div>
+
+<!-- Day List -->
+<div class="day-list" id="dayList"></div>
+
+<!-- Add Day -->
+<div style="padding: 0 16px;">
+  <button class="add-day-btn" onclick="addDay()">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+    Add Day
+  </button>
+
+  <div class="section-sep"></div>
+
+  <!-- Create -->
+  <button class="create-btn">Create Split</button>
+</div>
+
+<script>
+// ================================================================
+// DATA
+// ================================================================
+const EXERCISES = [
+  { name:'Bench Press', mg:'chest', eq:'barbell' },
+  { name:'Incline DB Press', mg:'chest', eq:'dumbbell' },
+  { name:'Cable Fly', mg:'chest', eq:'cable' },
+  { name:'Chest Dip', mg:'chest', eq:'bodyweight' },
+  { name:'Pec Deck', mg:'chest', eq:'machine' },
+  { name:'Barbell Row', mg:'back', eq:'barbell' },
+  { name:'Pull Up', mg:'back', eq:'bodyweight' },
+  { name:'Lat Pulldown', mg:'back', eq:'cable' },
+  { name:'Cable Row', mg:'back', eq:'cable' },
+  { name:'T-Bar Row', mg:'back', eq:'barbell' },
+  { name:'Overhead Press', mg:'shoulders', eq:'barbell' },
+  { name:'Lateral Raise', mg:'shoulders', eq:'dumbbell' },
+  { name:'Face Pull', mg:'shoulders', eq:'cable' },
+  { name:'Rear Delt Fly', mg:'shoulders', eq:'dumbbell' },
+  { name:'Arnold Press', mg:'shoulders', eq:'dumbbell' },
+  { name:'Barbell Curl', mg:'biceps', eq:'barbell' },
+  { name:'Hammer Curl', mg:'biceps', eq:'dumbbell' },
+  { name:'Preacher Curl', mg:'biceps', eq:'machine' },
+  { name:'Incline DB Curl', mg:'biceps', eq:'dumbbell' },
+  { name:'Tricep Pushdown', mg:'triceps', eq:'cable' },
+  { name:'Skull Crusher', mg:'triceps', eq:'barbell' },
+  { name:'Overhead Extension', mg:'triceps', eq:'cable' },
+  { name:'Close Grip Bench', mg:'triceps', eq:'barbell' },
+  { name:'Squat', mg:'quads', eq:'barbell' },
+  { name:'Leg Press', mg:'quads', eq:'machine' },
+  { name:'Leg Extension', mg:'quads', eq:'machine' },
+  { name:'Bulgarian Split Squat', mg:'quads', eq:'dumbbell' },
+  { name:'Hack Squat', mg:'quads', eq:'machine' },
+  { name:'Romanian Deadlift', mg:'hamstrings', eq:'barbell' },
+  { name:'Leg Curl', mg:'hamstrings', eq:'machine' },
+  { name:'Nordic Curl', mg:'hamstrings', eq:'bodyweight' },
+  { name:'Hip Thrust', mg:'glutes', eq:'barbell' },
+  { name:'Cable Kickback', mg:'glutes', eq:'cable' },
+  { name:'Calf Raise', mg:'calves', eq:'machine' },
+  { name:'Seated Calf Raise', mg:'calves', eq:'machine' },
+  { name:'Cable Crunch', mg:'core', eq:'cable' },
+  { name:'Hanging Leg Raise', mg:'core', eq:'bodyweight' },
+  { name:'Barbell Shrug', mg:'traps', eq:'barbell' },
+  { name:'Wrist Curl', mg:'forearms', eq:'dumbbell' },
+];
+
+const MG_COLORS = {
+  chest:'#f97316', back:'#14b8a6', shoulders:'#a855f7', biceps:'#6366f1',
+  triceps:'#ec4899', quads:'#eab308', hamstrings:'#22c55e', glutes:'#f43f5e',
+  calves:'#06b6d4', core:'#f59e0b', traps:'#8b5cf6', forearms:'#64748b',
+};
+
+const SPLIT_COLORS = [
+  '#14b8a6','#6366f1','#f97316','#ec4899',
+  '#22c55e','#eab308','#06b6d4','#f43f5e',
+];
+
+// ================================================================
+// STATE
+// ================================================================
+let splitColor = SPLIT_COLORS[0];
+let days = [
+  { id: 1, name: 'Push', exercises: ['Bench Press','Incline DB Press','Cable Fly','Overhead Press','Lateral Raise','Tricep Pushdown'] },
+  { id: 2, name: 'Pull', exercises: ['Barbell Row','Pull Up','Lat Pulldown','Cable Row','Face Pull','Barbell Curl','Hammer Curl'] },
+  { id: 3, name: 'Legs', exercises: ['Squat','Leg Press','Leg Extension','Romanian Deadlift','Leg Curl','Calf Raise'] },
+];
+let expandedDayId = 1;
+let searchOpenDayId = null;
+let editingNameDayId = null;
+let nextDayId = 4;
+
+// ================================================================
+// RENDER
+// ================================================================
+function render() {
+  const list = document.getElementById('dayList');
+  list.innerHTML = '';
+
+  days.forEach((day, di) => {
+    const isExpanded = day.id === expandedDayId;
+    const isSearchOpen = day.id === searchOpenDayId;
+    const isEditingName = day.id === editingNameDayId;
+
+    const card = document.createElement('div');
+    card.className = 'day-card' + (isExpanded ? ' expanded' : '');
+
+    // --- Header ---
+    const header = document.createElement('div');
+    header.className = 'day-header';
+
+    header.innerHTML = `
+      <svg class="day-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M9 18l6-6-6-6"/></svg>
+      ${isEditingName
+        ? `<input class="day-name-input" id="dayNameInput-${day.id}" value="${day.name}" />`
+        : `<span class="day-name-display">${day.name || 'Untitled'}</span>`
+      }
+      <span class="day-count mono">${day.exercises.length}</span>
+      <button class="day-delete" data-dayid="${day.id}">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    `;
+
+    // Header click → toggle expand
+    header.addEventListener('click', (e) => {
+      if (e.target.closest('.day-delete') || e.target.closest('.day-name-input')) return;
+      if (isExpanded && !isEditingName) {
+        expandedDayId = null;
+      } else {
+        expandedDayId = day.id;
+      }
+      searchOpenDayId = null;
+      editingNameDayId = null;
+      render();
+    });
+
+    // Delete button
+    header.querySelector('.day-delete').addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (days.length === 1) return; // keep at least one
+      days = days.filter(d => d.id !== day.id);
+      if (expandedDayId === day.id) expandedDayId = null;
+      render();
+    });
+
+    // Double-tap day name to rename
+    const nameEl = header.querySelector('.day-name-display');
+    if (nameEl) {
+      nameEl.addEventListener('dblclick', (e) => {
+        e.stopPropagation();
+        editingNameDayId = day.id;
+        render();
+        const inp = document.getElementById('dayNameInput-' + day.id);
+        if (inp) { inp.focus(); inp.select(); }
+      });
+    }
+
+    card.appendChild(header);
+
+    // Name input handlers
+    if (isEditingName) {
+      setTimeout(() => {
+        const inp = document.getElementById('dayNameInput-' + day.id);
+        if (!inp) return;
+        inp.focus();
+        inp.select();
+        inp.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') { day.name = inp.value; editingNameDayId = null; render(); }
+          if (e.key === 'Escape') { editingNameDayId = null; render(); }
+        });
+        inp.addEventListener('blur', () => { day.name = inp.value; editingNameDayId = null; render(); });
+        inp.addEventListener('click', (e) => e.stopPropagation());
+      }, 10);
+    }
+
+    // --- Body ---
+    const body = document.createElement('div');
+    body.className = 'day-body';
+
+    const inner = document.createElement('div');
+    inner.className = 'day-body-inner';
+
+    // Exercise list
+    if (day.exercises.length > 0) {
+      const exList = document.createElement('div');
+      exList.className = 'ex-list';
+
+      day.exercises.forEach((exName, ei) => {
+        const exObj = EXERCISES.find(e => e.name === exName);
+        const color = exObj ? MG_COLORS[exObj.mg] : '#475569';
+
+        const row = document.createElement('div');
+        row.className = 'ex-row';
+        row.style.animationDelay = (ei * 0.03) + 's';
+
+        row.innerHTML = `
+          <div class="ex-dot" style="background:${color};"></div>
+          <span class="ex-name">${exName}</span>
+          <button class="ex-remove">&times;</button>
+        `;
+
+        row.querySelector('.ex-remove').addEventListener('click', () => {
+          day.exercises.splice(ei, 1);
+          render();
+        });
+
+        exList.appendChild(row);
+      });
+
+      inner.appendChild(exList);
+    }
+
+    // Add exercise button / search
+    if (!isSearchOpen) {
+      const addBtn = document.createElement('button');
+      addBtn.className = 'add-ex-btn';
+      addBtn.innerHTML = `
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        Add exercise
+      `;
+      addBtn.addEventListener('click', () => {
+        searchOpenDayId = day.id;
+        render();
+        setTimeout(() => {
+          const inp = document.getElementById('searchInput-' + day.id);
+          if (inp) inp.focus();
+        }, 50);
+      });
+      inner.appendChild(addBtn);
+    } else {
+      const searchArea = document.createElement('div');
+      searchArea.className = 'search-area open';
+
+      searchArea.innerHTML = `
+        <div class="search-input-wrap">
+          <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <input class="search-input" id="searchInput-${day.id}" placeholder="Search exercises..." autocomplete="off">
+        </div>
+        <div class="search-results" id="searchResults-${day.id}"></div>
+        <button class="search-done-btn" id="searchDone-${day.id}">Done</button>
+      `;
+
+      inner.appendChild(searchArea);
+
+      setTimeout(() => {
+        const inp = document.getElementById('searchInput-' + day.id);
+        const resultsEl = document.getElementById('searchResults-' + day.id);
+        const doneBtn = document.getElementById('searchDone-' + day.id);
+        if (!inp || !resultsEl) return;
+
+        const renderResults = () => {
+          const q = inp.value.toLowerCase().trim();
+          const available = EXERCISES.filter(ex => !day.exercises.includes(ex.name));
+          let filtered = available;
+          if (q) {
+            filtered = available.filter(ex =>
+              ex.name.toLowerCase().includes(q) || ex.mg.toLowerCase().includes(q) || ex.eq.toLowerCase().includes(q)
+            );
+          }
+
+          // Group by muscle
+          const groups = {};
+          filtered.forEach(ex => {
+            if (!groups[ex.mg]) groups[ex.mg] = [];
+            groups[ex.mg].push(ex);
+          });
+
+          // Sort groups by number of results descending
+          const sortedGroups = Object.entries(groups).sort((a,b) => b[1].length - a[1].length);
+
+          resultsEl.innerHTML = '';
+
+          if (sortedGroups.length === 0) {
+            resultsEl.innerHTML = '<div style="padding:16px;text-align:center;font-size:12px;color:var(--text-m);">No exercises found</div>';
+            return;
+          }
+
+          sortedGroups.forEach(([mg, exs]) => {
+            const groupHeader = document.createElement('div');
+            groupHeader.className = 'search-group-header';
+            groupHeader.style.color = MG_COLORS[mg];
+            groupHeader.textContent = mg;
+            resultsEl.appendChild(groupHeader);
+
+            exs.forEach(ex => {
+              const row = document.createElement('div');
+              row.className = 'search-result-row';
+              row.innerHTML = `
+                <div class="ex-dot" style="background:${MG_COLORS[ex.mg]};"></div>
+                <span class="search-result-name">${ex.name}</span>
+                <span class="search-result-eq">${ex.eq}</span>
+                <div class="search-result-add">+</div>
+              `;
+              row.addEventListener('click', () => {
+                day.exercises.push(ex.name);
+                renderResults();
+                // Re-render just the exercise list above
+                renderExListAbove();
+              });
+              resultsEl.appendChild(row);
+            });
+          });
+        };
+
+        const renderExListAbove = () => {
+          // Find or create the exercise list above the search
+          let exList = inner.querySelector('.ex-list');
+          if (!exList) {
+            exList = document.createElement('div');
+            exList.className = 'ex-list';
+            inner.insertBefore(exList, searchArea);
+          }
+          exList.innerHTML = '';
+          day.exercises.forEach((exName, ei) => {
+            const exObj = EXERCISES.find(e => e.name === exName);
+            const color = exObj ? MG_COLORS[exObj.mg] : '#475569';
+            const row = document.createElement('div');
+            row.className = 'ex-row';
+            row.innerHTML = `
+              <div class="ex-dot" style="background:${color};"></div>
+              <span class="ex-name">${exName}</span>
+              <button class="ex-remove">&times;</button>
+            `;
+            row.querySelector('.ex-remove').addEventListener('click', () => {
+              day.exercises.splice(ei, 1);
+              renderExListAbove();
+              renderResults();
+            });
+            exList.appendChild(row);
+          });
+        };
+
+        inp.addEventListener('input', renderResults);
+        renderResults();
+
+        doneBtn.addEventListener('click', () => {
+          searchOpenDayId = null;
+          render();
+        });
+      }, 20);
+    }
+
+    body.appendChild(inner);
+    card.appendChild(body);
+    list.appendChild(card);
+  });
+}
+
+// ================================================================
+// COLOR PICKER
+// ================================================================
+function initColorPicker() {
+  const popover = document.getElementById('colorPopover');
+  SPLIT_COLORS.forEach(c => {
+    const btn = document.createElement('button');
+    btn.className = 'color-option' + (c === splitColor ? ' selected' : '');
+    btn.style.cssText = `background:${c};color:${c};`;
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      splitColor = c;
+      const colorBtn = document.getElementById('colorBtn');
+      colorBtn.style.background = c;
+      colorBtn.style.color = c;
+      popover.classList.remove('open');
+      initColorPicker();
+    });
+    popover.appendChild(btn);
+  });
+}
+
+function toggleColorPicker() {
+  const popover = document.getElementById('colorPopover');
+  popover.classList.toggle('open');
+}
+
+// Close popover on outside click
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('#colorPopover') && !e.target.closest('#colorBtn')) {
+    document.getElementById('colorPopover').classList.remove('open');
+  }
+});
+
+// ================================================================
+// ADD DAY
+// ================================================================
+function addDay() {
+  const id = nextDayId++;
+  days.push({ id, name: '', exercises: [] });
+  expandedDayId = id;
+  editingNameDayId = id;
+  searchOpenDayId = null;
+  render();
+}
+
+// ================================================================
+// INIT
+// ================================================================
+initColorPicker();
+render();
+</script>
+</body>
+</html>

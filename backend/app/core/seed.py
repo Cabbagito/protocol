@@ -7,7 +7,7 @@ from sqlalchemy.orm import selectinload
 
 from app.models.exercise import Exercise
 from app.models.mesocycle import Mesocycle
-from app.models.split import Session, SessionExercise, Split
+from app.models.split import Split, SplitDay, SplitDayExercise
 from app.models.user import User
 
 logger = logging.getLogger(__name__)
@@ -489,66 +489,66 @@ COMMON_EXERCISES = [
 HERO_SPLIT = {
     "seed_key": "hero_split",
     "name": "Hero Split",
-    "sessions": [
+    "days": [
         {
             "name": "Pull",
             "day_order": 0,
             "exercises": [
-                {"seed_key": "lat_pulldown", "sets": 3},
-                {"seed_key": "seated_cable_row", "sets": 3},
-                {"seed_key": "preacher_curl", "sets": 3},
-                {"seed_key": "freemotion_rear_delt_fly", "sets": 3},
-                {"seed_key": "dumbbell_shrug", "sets": 3},
-                {"seed_key": "cable_wrist_curl", "sets": 3},
+                {"seed_key": "lat_pulldown"},
+                {"seed_key": "seated_cable_row"},
+                {"seed_key": "preacher_curl"},
+                {"seed_key": "freemotion_rear_delt_fly"},
+                {"seed_key": "dumbbell_shrug"},
+                {"seed_key": "cable_wrist_curl"},
             ],
         },
         {
             "name": "Push",
             "day_order": 1,
             "exercises": [
-                {"seed_key": "incline_dumbbell_press", "sets": 3},
-                {"seed_key": "dumbbell_bench_press", "sets": 3},
-                {"seed_key": "dumbbell_skull_crusher", "sets": 3},
-                {"seed_key": "overhead_tricep_extension", "sets": 3},
-                {"seed_key": "lateral_raise", "sets": 3},
-                {"seed_key": "dumbbell_front_raise", "sets": 3},
-                {"seed_key": "tricep_pushdown", "sets": 3},
+                {"seed_key": "incline_dumbbell_press"},
+                {"seed_key": "dumbbell_bench_press"},
+                {"seed_key": "dumbbell_skull_crusher"},
+                {"seed_key": "overhead_tricep_extension"},
+                {"seed_key": "lateral_raise"},
+                {"seed_key": "dumbbell_front_raise"},
+                {"seed_key": "tricep_pushdown"},
             ],
         },
         {
             "name": "Legs",
             "day_order": 2,
             "exercises": [
-                {"seed_key": "leg_curl", "sets": 3},
-                {"seed_key": "leg_press", "sets": 3},
-                {"seed_key": "bulgarian_split_squat", "sets": 3},
-                {"seed_key": "calf_raise", "sets": 3},
-                {"seed_key": "lateral_raise", "sets": 3},
-                {"seed_key": "tricep_pushdown", "sets": 3},
+                {"seed_key": "leg_curl"},
+                {"seed_key": "leg_press"},
+                {"seed_key": "bulgarian_split_squat"},
+                {"seed_key": "calf_raise"},
+                {"seed_key": "lateral_raise"},
+                {"seed_key": "tricep_pushdown"},
             ],
         },
         {
             "name": "Pull",
             "day_order": 3,
             "exercises": [
-                {"seed_key": "lat_pulldown", "sets": 3},
-                {"seed_key": "seated_cable_row", "sets": 3},
-                {"seed_key": "lying_dumbbell_curl", "sets": 3},
-                {"seed_key": "freemotion_rear_delt_fly", "sets": 3},
-                {"seed_key": "cable_wrist_curl", "sets": 3},
-                {"seed_key": "reverse_curl", "sets": 3},
+                {"seed_key": "lat_pulldown"},
+                {"seed_key": "seated_cable_row"},
+                {"seed_key": "lying_dumbbell_curl"},
+                {"seed_key": "freemotion_rear_delt_fly"},
+                {"seed_key": "cable_wrist_curl"},
+                {"seed_key": "reverse_curl"},
             ],
         },
         {
             "name": "Push",
             "day_order": 4,
             "exercises": [
-                {"seed_key": "incline_dumbbell_press", "sets": 3},
-                {"seed_key": "dumbbell_flye", "sets": 3},
-                {"seed_key": "tricep_pushdown", "sets": 3},
-                {"seed_key": "overhead_tricep_extension", "sets": 3},
-                {"seed_key": "lateral_raise", "sets": 3},
-                {"seed_key": "preacher_curl", "sets": 3},
+                {"seed_key": "incline_dumbbell_press"},
+                {"seed_key": "dumbbell_flye"},
+                {"seed_key": "tricep_pushdown"},
+                {"seed_key": "overhead_tricep_extension"},
+                {"seed_key": "lateral_raise"},
+                {"seed_key": "preacher_curl"},
             ],
         },
     ],
@@ -587,10 +587,11 @@ WEIGHT_INCREMENTS = {
 
 
 def build_mesocycle_structure(
-    sessions: list[Session],
+    days: list[SplitDay],
     exercises_by_id: dict[str, Exercise],
     total_weeks: int,
     target_reps: int = 10,
+    sets_per_exercise: int = 3,
 ) -> dict:
     """Build the full nested JSONB structure for a mesocycle."""
     rir_scheme = calculate_rir_scheme(total_weeks)
@@ -599,17 +600,14 @@ def build_mesocycle_structure(
     for week_idx in range(total_weeks):
         week_rir = rir_scheme[week_idx]
         week_sessions = []
-        for sess in sessions:
-            if sess.is_rest_day:
-                continue
-            # Load exercises for this session
+        for day in days:
             exercise_entries = []
-            for se in sorted(sess.exercises, key=lambda x: x.order):
-                ex = exercises_by_id.get(se.exercise_id)
+            for de in sorted(day.exercises, key=lambda x: x.order):
+                ex = exercises_by_id.get(de.exercise_id)
                 if not ex:
                     continue
                 sets_list = []
-                for set_num in range(1, se.sets + 1):
+                for set_num in range(1, sets_per_exercise + 1):
                     sets_list.append(
                         {
                             "set_num": set_num,
@@ -632,8 +630,8 @@ def build_mesocycle_structure(
                 )
             week_sessions.append(
                 {
-                    "session_name": sess.name,
-                    "day_order": sess.day_order,
+                    "session_name": day.name,
+                    "day_order": day.day_order,
                     "date": None,
                     "notes": None,
                     "exercises": exercise_entries,
@@ -799,30 +797,29 @@ async def seed_default_splits(session: AsyncSession) -> int:
     session.add(split)
     await session.flush()
 
-    for sess_data in HERO_SPLIT["sessions"]:
-        sess = Session(
+    for day_data in HERO_SPLIT["days"]:
+        day = SplitDay(
             split_id=split.id,
-            name=sess_data["name"],
-            day_order=sess_data["day_order"],
+            name=day_data["name"],
+            day_order=day_data["day_order"],
         )
-        session.add(sess)
+        session.add(day)
         await session.flush()
 
-        for order, ex_data in enumerate(sess_data["exercises"]):
+        for order, ex_data in enumerate(day_data["exercises"]):
             exercise = exercises_by_key.get(ex_data["seed_key"])
             if not exercise:
                 logger.warning(
-                    "Exercise with seed_key '%s' not found, skipping in session '%s'",
+                    "Exercise with seed_key '%s' not found, skipping in day '%s'",
                     ex_data["seed_key"],
-                    sess_data["name"],
+                    day_data["name"],
                 )
                 continue
             session.add(
-                SessionExercise(
-                    session_id=sess.id,
+                SplitDayExercise(
+                    day_id=day.id,
                     exercise_id=exercise.id,
                     order=order,
-                    sets=ex_data["sets"],
                 )
             )
 
@@ -894,14 +891,14 @@ async def seed_demo_mesocycle(session: AsyncSession) -> None:
         logger.warning("Hero Split not found, skipping demo mesocycle seed")
         return
 
-    # Load sessions with their exercises eager-loaded
+    # Load days with their exercises eager-loaded
     result = await session.execute(
-        select(Session)
-        .where(Session.split_id == split.id)
-        .options(selectinload(Session.exercises))
-        .order_by(Session.day_order)
+        select(SplitDay)
+        .where(SplitDay.split_id == split.id)
+        .options(selectinload(SplitDay.exercises))
+        .order_by(SplitDay.day_order)
     )
-    sessions = result.scalars().all()
+    days = result.scalars().all()
 
     # Load exercise lookup
     result = await session.execute(select(Exercise).where(Exercise.seed_key.isnot(None)))
@@ -909,7 +906,7 @@ async def seed_demo_mesocycle(session: AsyncSession) -> None:
 
     # Build the structure
     total_weeks = 4
-    structure = build_mesocycle_structure(sessions, exercises_by_id, total_weeks)
+    structure = build_mesocycle_structure(days, exercises_by_id, total_weeks)
 
     # --- Week 1: all 5 sessions logged (RiR 3) ---
     start_date = date.today() - timedelta(days=16)

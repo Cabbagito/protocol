@@ -7,7 +7,7 @@ from sqlalchemy.orm import selectinload
 from app.core.database import get_db
 from app.core.security import get_current_user
 from app.models.exercise import Exercise
-from app.models.split import Session, SessionExercise, Split
+from app.models.split import Split, SplitDay, SplitDayExercise
 from app.models.user import User
 
 router = APIRouter()
@@ -16,62 +16,37 @@ router = APIRouter()
 # --- Pydantic Schemas ---
 
 
-class SessionExerciseCreate(BaseModel):
+class DayExerciseInput(BaseModel):
     exercise_id: str
-    order: int = Field(ge=0)
-    sets: int = Field(default=3, ge=1, le=10)
 
 
-class SessionExerciseResponse(BaseModel):
-    id: str
-    exercise_id: str
-    exercise_name: str
-    order: int
-    sets: int
-
-    class Config:
-        from_attributes = True
-
-
-class SessionCreate(BaseModel):
+class DayInput(BaseModel):
     name: str = Field(min_length=1, max_length=100)
-    is_rest_day: bool = False
-    exercises: list[SessionExerciseCreate] = []
-
-
-class SessionUpdate(BaseModel):
-    name: str = Field(min_length=1, max_length=100)
-    is_rest_day: bool = False
-    exercises: list[SessionExerciseCreate] = []
-
-
-class SessionResponse(BaseModel):
-    id: str
-    name: str
-    day_order: int
-    is_rest_day: bool
-    exercises: list[SessionExerciseResponse]
-
-    class Config:
-        from_attributes = True
+    exercises: list[DayExerciseInput] = []
 
 
 class SplitCreate(BaseModel):
     name: str = Field(min_length=1, max_length=100)
     color: str | None = Field(default=None, pattern=r"^#[0-9a-fA-F]{6}$")
+    days: list[DayInput] = []
 
 
-class SplitUpdate(BaseModel):
-    name: str = Field(min_length=1, max_length=100)
-    color: str | None = Field(default=None, pattern=r"^#[0-9a-fA-F]{6}$")
+class DayExerciseResponse(BaseModel):
+    id: str
+    exercise_id: str
+    exercise_name: str
+    muscle_group: str
+    order: int
+
+    class Config:
+        from_attributes = True
 
 
-class SplitListItem(BaseModel):
+class DayResponse(BaseModel):
     id: str
     name: str
-    color: str | None
-    session_count: int
-    exercise_count: int
+    day_order: int
+    exercises: list[DayExerciseResponse]
 
     class Config:
         from_attributes = True
@@ -81,17 +56,24 @@ class SplitResponse(BaseModel):
     id: str
     name: str
     color: str | None
-    sessions: list[SessionResponse]
+    days: list[DayResponse]
 
     class Config:
         from_attributes = True
 
 
-class SessionReorder(BaseModel):
-    session_ids: list[str]
+class SplitListItem(BaseModel):
+    id: str
+    name: str
+    color: str | None
+    day_count: int
+    exercise_count: int
+
+    class Config:
+        from_attributes = True
 
 
-# --- Split Endpoints ---
+# --- Endpoints ---
 
 
 @router.get("", response_model=list[SplitListItem])
@@ -100,9 +82,9 @@ async def list_splits(
     current_user: User = Depends(get_current_user),
 ):
     exercise_count_subq = (
-        select(func.count(SessionExercise.id))
-        .join(Session, SessionExercise.session_id == Session.id)
-        .where(Session.split_id == Split.id)
+        select(func.count(SplitDayExercise.id))
+        .join(SplitDay, SplitDayExercise.day_id == SplitDay.id)
+        .where(SplitDay.split_id == Split.id)
         .correlate(Split)
         .scalar_subquery()
         .label("exercise_count")
@@ -112,10 +94,10 @@ async def list_splits(
             Split.id,
             Split.name,
             Split.color,
-            func.count(Session.id).label("session_count"),
+            func.count(SplitDay.id).label("day_count"),
             exercise_count_subq,
         )
-        .outerjoin(Session)
+        .outerjoin(SplitDay)
         .where(or_(Split.user_id == current_user.id, Split.user_id.is_(None)))
         .group_by(Split.id)
         .order_by(Split.name)
@@ -126,7 +108,7 @@ async def list_splits(
             "id": s.id,
             "name": s.name,
             "color": s.color,
-            "session_count": s.session_count,
+            "day_count": s.day_count,
             "exercise_count": s.exercise_count or 0,
         }
         for s in splits
@@ -135,15 +117,51 @@ async def list_splits(
 
 @router.post("", response_model=SplitResponse, status_code=status.HTTP_201_CREATED)
 async def create_split(
-    split: SplitCreate,
+    split_data: SplitCreate,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    db_split = Split(name=split.name, color=split.color, user_id=current_user.id)
+    db_split = Split(name=split_data.name, color=split_data.color, user_id=current_user.id)
     db.add(db_split)
+    await db.flush()
+
+    # Validate all exercise IDs at once
+    all_exercise_ids = [ex.exercise_id for day in split_data.days for ex in day.exercises]
+    if all_exercise_ids:
+        result = await db.execute(
+            select(Exercise.id).where(
+                Exercise.id.in_(all_exercise_ids),
+                or_(Exercise.user_id == current_user.id, Exercise.user_id.is_(None)),
+            )
+        )
+        found_ids = set(row[0] for row in result.all())
+        missing = set(all_exercise_ids) - found_ids
+        if missing:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Exercise(s) not found: {', '.join(missing)}",
+            )
+
+    for day_order, day_data in enumerate(split_data.days):
+        day = SplitDay(split_id=db_split.id, name=day_data.name, day_order=day_order)
+        db.add(day)
+        await db.flush()
+        for ex_order, ex_data in enumerate(day_data.exercises):
+            db.add(SplitDayExercise(day_id=day.id, exercise_id=ex_data.exercise_id, order=ex_order))
+
     await db.commit()
-    await db.refresh(db_split)
-    return {"id": db_split.id, "name": db_split.name, "color": db_split.color, "sessions": []}
+
+    # Reload with relationships
+    result = await db.execute(
+        select(Split)
+        .options(
+            selectinload(Split.days)
+            .selectinload(SplitDay.exercises)
+            .selectinload(SplitDayExercise.exercise)
+        )
+        .where(Split.id == db_split.id)
+    )
+    return _split_to_response(result.scalar_one())
 
 
 @router.get("/{split_id}", response_model=SplitResponse)
@@ -155,9 +173,9 @@ async def get_split(
     result = await db.execute(
         select(Split)
         .options(
-            selectinload(Split.sessions)
-            .selectinload(Session.exercises)
-            .selectinload(SessionExercise.exercise)
+            selectinload(Split.days)
+            .selectinload(SplitDay.exercises)
+            .selectinload(SplitDayExercise.exercise)
         )
         .where(
             Split.id == split_id,
@@ -174,28 +192,65 @@ async def get_split(
 @router.put("/{split_id}", response_model=SplitResponse)
 async def update_split(
     split_id: str,
-    split_update: SplitUpdate,
+    split_data: SplitCreate,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     result = await db.execute(
         select(Split)
-        .options(
-            selectinload(Split.sessions)
-            .selectinload(Session.exercises)
-            .selectinload(SessionExercise.exercise)
-        )
+        .options(selectinload(Split.days).selectinload(SplitDay.exercises))
         .where(Split.id == split_id, Split.user_id == current_user.id)
     )
     split = result.scalar_one_or_none()
     if not split:
         raise HTTPException(status_code=404, detail="Split not found")
 
-    split.name = split_update.name
-    split.color = split_update.color
+    split.name = split_data.name
+    split.color = split_data.color
+
+    # Delete all existing days (cascade deletes exercises)
+    for day in split.days:
+        await db.delete(day)
+    await db.flush()
+
+    # Validate all exercise IDs at once
+    all_exercise_ids = [ex.exercise_id for day in split_data.days for ex in day.exercises]
+    if all_exercise_ids:
+        result = await db.execute(
+            select(Exercise.id).where(
+                Exercise.id.in_(all_exercise_ids),
+                or_(Exercise.user_id == current_user.id, Exercise.user_id.is_(None)),
+            )
+        )
+        found_ids = set(row[0] for row in result.all())
+        missing = set(all_exercise_ids) - found_ids
+        if missing:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Exercise(s) not found: {', '.join(missing)}",
+            )
+
+    # Recreate days from payload
+    for day_order, day_data in enumerate(split_data.days):
+        day = SplitDay(split_id=split.id, name=day_data.name, day_order=day_order)
+        db.add(day)
+        await db.flush()
+        for ex_order, ex_data in enumerate(day_data.exercises):
+            db.add(SplitDayExercise(day_id=day.id, exercise_id=ex_data.exercise_id, order=ex_order))
+
     await db.commit()
-    await db.refresh(split)
-    return _split_to_response(split)
+
+    # Reload with relationships
+    result = await db.execute(
+        select(Split)
+        .options(
+            selectinload(Split.days)
+            .selectinload(SplitDay.exercises)
+            .selectinload(SplitDayExercise.exercise)
+        )
+        .where(Split.id == split.id)
+    )
+    return _split_to_response(result.scalar_one())
 
 
 @router.delete("/{split_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -215,232 +270,23 @@ async def delete_split(
     await db.commit()
 
 
-# --- Session Endpoints ---
-
-
-@router.post(
-    "/{split_id}/sessions",
-    response_model=SessionResponse,
-    status_code=status.HTTP_201_CREATED,
-)
-async def add_session(
-    split_id: str,
-    session: SessionCreate,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    result = await db.execute(
-        select(Split).where(Split.id == split_id, Split.user_id == current_user.id)
-    )
-    split = result.scalar_one_or_none()
-    if not split:
-        raise HTTPException(status_code=404, detail="Split not found")
-
-    # Get next day_order
-    max_order_result = await db.execute(
-        select(func.coalesce(func.max(Session.day_order), -1)).where(Session.split_id == split_id)
-    )
-    next_order = max_order_result.scalar() + 1
-
-    db_session = Session(
-        split_id=split_id,
-        name=session.name,
-        day_order=next_order,
-        is_rest_day=session.is_rest_day,
-    )
-    db.add(db_session)
-    await db.flush()
-
-    # Batch-validate all exercise IDs (scoped to visible exercises)
-    if session.exercises:
-        exercise_ids = [ex.exercise_id for ex in session.exercises]
-        result = await db.execute(
-            select(Exercise.id).where(
-                Exercise.id.in_(exercise_ids),
-                or_(Exercise.user_id == current_user.id, Exercise.user_id.is_(None)),
-            )
-        )
-        found_ids = set(row[0] for row in result.all())
-        missing = set(exercise_ids) - found_ids
-        if missing:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Exercise(s) not found: {', '.join(missing)}",
-            )
-
-        for ex in session.exercises:
-            db_exercise = SessionExercise(
-                session_id=db_session.id,
-                exercise_id=ex.exercise_id,
-                order=ex.order,
-                sets=ex.sets,
-            )
-            db.add(db_exercise)
-
-    await db.commit()
-
-    # Reload with exercises
-    result = await db.execute(
-        select(Session)
-        .options(selectinload(Session.exercises).selectinload(SessionExercise.exercise))
-        .where(Session.id == db_session.id)
-    )
-    db_session = result.scalar_one()
-    return _session_to_response(db_session)
-
-
-@router.put("/{split_id}/sessions/{session_id}", response_model=SessionResponse)
-async def update_session(
-    split_id: str,
-    session_id: str,
-    session_update: SessionUpdate,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    # Verify parent split belongs to current user
-    result = await db.execute(
-        select(Split).where(Split.id == split_id, Split.user_id == current_user.id)
-    )
-    if not result.scalar_one_or_none():
-        raise HTTPException(status_code=404, detail="Split not found")
-
-    result = await db.execute(
-        select(Session)
-        .options(selectinload(Session.exercises))
-        .where(Session.id == session_id, Session.split_id == split_id)
-    )
-    session = result.scalar_one_or_none()
-    if not session:
-        raise HTTPException(status_code=404, detail="Session not found")
-
-    session.name = session_update.name
-    session.is_rest_day = session_update.is_rest_day
-
-    # Replace exercises: delete existing and add new ones
-    for ex in session.exercises:
-        await db.delete(ex)
-
-    # Batch-validate all exercise IDs (scoped to visible exercises)
-    if session_update.exercises:
-        exercise_ids = [ex.exercise_id for ex in session_update.exercises]
-        result = await db.execute(
-            select(Exercise.id).where(
-                Exercise.id.in_(exercise_ids),
-                or_(Exercise.user_id == current_user.id, Exercise.user_id.is_(None)),
-            )
-        )
-        found_ids = set(row[0] for row in result.all())
-        missing = set(exercise_ids) - found_ids
-        if missing:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Exercise(s) not found: {', '.join(missing)}",
-            )
-
-        for ex in session_update.exercises:
-            db_exercise = SessionExercise(
-                session_id=session.id,
-                exercise_id=ex.exercise_id,
-                order=ex.order,
-                sets=ex.sets,
-            )
-            db.add(db_exercise)
-
-    await db.commit()
-
-    # Reload with exercises
-    result = await db.execute(
-        select(Session)
-        .options(selectinload(Session.exercises).selectinload(SessionExercise.exercise))
-        .where(Session.id == session_id)
-    )
-    session = result.scalar_one()
-    return _session_to_response(session)
-
-
-@router.delete("/{split_id}/sessions/{session_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_session(
-    split_id: str,
-    session_id: str,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    # Verify parent split belongs to current user
-    result = await db.execute(
-        select(Split).where(Split.id == split_id, Split.user_id == current_user.id)
-    )
-    if not result.scalar_one_or_none():
-        raise HTTPException(status_code=404, detail="Split not found")
-
-    result = await db.execute(
-        select(Session).where(Session.id == session_id, Session.split_id == split_id)
-    )
-    session = result.scalar_one_or_none()
-    if not session:
-        raise HTTPException(status_code=404, detail="Session not found")
-
-    await db.delete(session)
-    await db.commit()
-
-
-@router.put("/{split_id}/sessions/reorder", response_model=list[SessionResponse])
-async def reorder_sessions(
-    split_id: str,
-    reorder: SessionReorder,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    # Verify parent split belongs to current user
-    result = await db.execute(
-        select(Split).where(Split.id == split_id, Split.user_id == current_user.id)
-    )
-    if not result.scalar_one_or_none():
-        raise HTTPException(status_code=404, detail="Split not found")
-
-    # Fetch all sessions for this split in one query, then validate and reorder
-    result = await db.execute(select(Session).where(Session.split_id == split_id))
-    sessions_by_id = {s.id: s for s in result.scalars().all()}
-
-    for i, session_id in enumerate(reorder.session_ids):
-        session = sessions_by_id.get(session_id)
-        if not session:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Session {session_id} not found in this split",
-            )
-        session.day_order = i
-
-    await db.commit()
-
-    # Return updated sessions
-    result = await db.execute(
-        select(Session)
-        .options(selectinload(Session.exercises).selectinload(SessionExercise.exercise))
-        .where(Session.split_id == split_id)
-        .order_by(Session.day_order)
-    )
-    sessions = result.scalars().all()
-    return [_session_to_response(s) for s in sessions]
-
-
 # --- Helper Functions ---
 
 
-def _session_to_response(session: Session) -> dict:
+def _day_to_response(day: SplitDay) -> dict:
     return {
-        "id": session.id,
-        "name": session.name,
-        "day_order": session.day_order,
-        "is_rest_day": session.is_rest_day,
+        "id": day.id,
+        "name": day.name,
+        "day_order": day.day_order,
         "exercises": [
             {
                 "id": ex.id,
                 "exercise_id": ex.exercise_id,
                 "exercise_name": ex.exercise.name,
+                "muscle_group": ex.exercise.muscle_group,
                 "order": ex.order,
-                "sets": ex.sets,
             }
-            for ex in session.exercises
+            for ex in day.exercises
         ],
     }
 
@@ -450,5 +296,5 @@ def _split_to_response(split: Split) -> dict:
         "id": split.id,
         "name": split.name,
         "color": split.color,
-        "sessions": [_session_to_response(s) for s in split.sessions],
+        "days": [_day_to_response(d) for d in split.days],
     }

@@ -13,36 +13,35 @@ export interface ApiError {
   detail: string
 }
 
-// Splits & Sessions
+// Splits & Days
 
-export interface SessionExercise {
+export interface DayExercise {
   id: string
   exercise_id: string
   exercise_name: string
+  muscle_group: string
   order: number
-  sets: number
 }
 
-export interface Session {
+export interface SplitDay {
   id: string
   name: string
   day_order: number
-  is_rest_day: boolean
-  exercises: SessionExercise[]
+  exercises: DayExercise[]
 }
 
 export interface Split {
   id: string
   name: string
   color: string | null
-  sessions: Session[]
+  days: SplitDay[]
 }
 
 export interface SplitListItem {
   id: string
   name: string
   color: string | null
-  session_count: number
+  day_count: number
   exercise_count: number
 }
 

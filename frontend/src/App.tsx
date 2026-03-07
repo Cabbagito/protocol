@@ -30,7 +30,7 @@ const Login = lazyWithRetry(() => import('./pages/Login'))
 const Dashboard = lazyWithRetry(() => import('./pages/Dashboard'))
 const Exercises = lazyWithRetry(() => import('./pages/Exercises'))
 const Splits = lazyWithRetry(() => import('./pages/Splits'))
-const SplitDetail = lazyWithRetry(() => import('./pages/SplitDetail'))
+const SplitEditor = lazyWithRetry(() => import('./pages/SplitEditor'))
 const Mesocycles = lazyWithRetry(() => import('./pages/Mesocycles'))
 const MesocycleDetail = lazyWithRetry(() => import('./pages/MesocycleDetail'))
 const WorkoutHub = lazyWithRetry(() => import('./pages/WorkoutHub'))
@@ -111,7 +111,8 @@ export default function App() {
                         <Route path="/" element={<Dashboard />} />
                         <Route path="/exercises" element={<Exercises />} />
                         <Route path="/splits" element={<Splits />} />
-                        <Route path="/splits/:id" element={<SplitDetail />} />
+                        <Route path="/splits/new" element={<SplitEditor />} />
+                        <Route path="/splits/:id" element={<SplitEditor />} />
                         <Route path="/mesocycles" element={<Mesocycles />} />
                         <Route path="/mesocycles/:id" element={<MesocycleDetail />} />
                         <Route path="/workout" element={<WorkoutHub />} />

@@ -1,17 +1,16 @@
-import { useState, useMemo } from 'react'
-import { Link } from 'react-router-dom'
-import { useToast } from '../components/Toast'
+import { useMemo } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { ChevronRightIcon } from '../components/Icons'
 import AppHeader from '../components/AppHeader'
 import PageLoader from '../components/PageLoader'
 import ProtocolMark from '../components/ProtocolMark'
-import { useSplits, useCreateSplit, useSplit, useExercises } from '../api/hooks'
+import { useSplits, useSplit } from '../api/hooks'
 import { getMuscleColor } from '../lib/muscleColors'
 import type { SplitListItem } from '../types'
 
 export default function Splits() {
   const { data: splits = [], isLoading } = useSplits()
-  const [showForm, setShowForm] = useState(false)
+  const navigate = useNavigate()
 
   return (
     <div>
@@ -19,7 +18,7 @@ export default function Splits() {
         title="Splits"
         subtitle={`${splits.length} splits`}
         rightContent={
-          <button onClick={() => setShowForm(!showForm)} className="plus-btn">
+          <button onClick={() => navigate('/splits/new')} className="plus-btn">
             <svg className="w-3.5 h-3.5" style={{ color: 'var(--accent-l)' }} fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
             </svg>
@@ -29,13 +28,6 @@ export default function Splits() {
       />
 
       <div className="px-4 space-y-3">
-      {showForm && (
-        <SplitForm
-          onSave={() => setShowForm(false)}
-          onCancel={() => setShowForm(false)}
-        />
-      )}
-
       {isLoading ? (
         <PageLoader />
       ) : splits.length === 0 ? (
@@ -50,7 +42,7 @@ export default function Splits() {
 
           {/* Add row */}
           <button
-            onClick={() => setShowForm(true)}
+            onClick={() => navigate('/splits/new')}
             className="add-row flex items-center justify-center gap-2 py-3 w-full stagger"
           >
             <svg className="w-4 h-4" style={{ color: 'var(--accent-l)' }} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
@@ -69,53 +61,41 @@ export default function Splits() {
 
 function SplitCard({ split }: { split: SplitListItem }) {
   const { data: splitDetail, isLoading } = useSplit(split.id)
-  const { data: exercises = [] } = useExercises()
 
-  // Build exerciseId → muscleGroup map
-  const exerciseMap = useMemo(() => {
-    const map: Record<string, string> = {}
-    for (const ex of exercises) {
-      map[ex.id] = ex.muscle_group
-    }
-    return map
-  }, [exercises])
-
-  // Compute volume per muscle group across all sessions
+  // Compute volume per muscle group across all days
   const volumeData = useMemo(() => {
     if (!splitDetail) return []
     const volumeMap: Record<string, number> = {}
-    for (const session of splitDetail.sessions) {
-      if (session.is_rest_day) continue
-      for (const ex of session.exercises) {
-        const mg = exerciseMap[ex.exercise_id] || 'unknown'
-        volumeMap[mg] = (volumeMap[mg] || 0) + ex.sets
+    for (const day of splitDetail.days) {
+      for (const ex of day.exercises) {
+        const mg = ex.muscle_group || 'unknown'
+        volumeMap[mg] = (volumeMap[mg] || 0) + 1
       }
     }
     return Object.entries(volumeMap)
-      .map(([group, sets]) => ({ group, sets }))
-      .sort((a, b) => b.sets - a.sets)
-  }, [splitDetail, exerciseMap])
+      .map(([group, count]) => ({ group, count }))
+      .sort((a, b) => b.count - a.count)
+  }, [splitDetail])
 
-  const maxVolume = volumeData.length > 0 ? volumeData[0]!.sets : 1
+  const maxVolume = volumeData.length > 0 ? volumeData[0]!.count : 1
 
-  // Compute dominant muscle group per session for schedule strip colors
-  const sessionColors = useMemo(() => {
+  // Compute dominant muscle group per day for schedule strip colors
+  const dayColors = useMemo(() => {
     if (!splitDetail) return []
-    return splitDetail.sessions.map((session) => {
-      if (session.is_rest_day) return null
-      const mgSets: Record<string, number> = {}
-      for (const ex of session.exercises) {
-        const mg = exerciseMap[ex.exercise_id] || 'unknown'
-        mgSets[mg] = (mgSets[mg] || 0) + ex.sets
+    return splitDetail.days.map((day) => {
+      const mgCounts: Record<string, number> = {}
+      for (const ex of day.exercises) {
+        const mg = ex.muscle_group || 'unknown'
+        mgCounts[mg] = (mgCounts[mg] || 0) + 1
       }
       let dominant = ''
-      let maxSets = 0
-      for (const [mg, sets] of Object.entries(mgSets)) {
-        if (sets > maxSets) { dominant = mg; maxSets = sets }
+      let maxCount = 0
+      for (const [mg, count] of Object.entries(mgCounts)) {
+        if (count > maxCount) { dominant = mg; maxCount = count }
       }
       return dominant ? getMuscleColor(dominant) : null
     })
-  }, [splitDetail, exerciseMap])
+  }, [splitDetail])
 
   return (
     <Link
@@ -137,10 +117,10 @@ function SplitCard({ split }: { split: SplitListItem }) {
         <>
           {/* Schedule strip */}
           <div className="schedule-strip flex gap-1 mb-3 pb-1" style={{ margin: '0 -4px', padding: '0 4px' }}>
-            {splitDetail.sessions.map((session, idx) => {
-              const color = sessionColors[idx]
+            {splitDetail.days.map((day, idx) => {
+              const color = dayColors[idx]
               return (
-                <div key={session.id} className="day-cell">
+                <div key={day.id} className="day-cell">
                   <div
                     className="day-num"
                     style={{
@@ -152,7 +132,7 @@ function SplitCard({ split }: { split: SplitListItem }) {
                     {idx + 1}
                   </div>
                   <span className="day-name" style={{ color: 'var(--text-m)' }}>
-                    {session.name}
+                    {day.name}
                   </span>
                 </div>
               )
@@ -162,7 +142,7 @@ function SplitCard({ split }: { split: SplitListItem }) {
           {/* Volume bars */}
           {volumeData.length > 0 && (
             <div className="space-y-1.5" style={{ padding: '8px 10px', background: 'var(--deep)', borderRadius: 8 }}>
-              {volumeData.map(({ group, sets }) => {
+              {volumeData.map(({ group, count }) => {
                 const color = getMuscleColor(group)
                 return (
                   <div key={group} className="flex items-center gap-2">
@@ -173,14 +153,14 @@ function SplitCard({ split }: { split: SplitListItem }) {
                       <div
                         className="vol-bar rounded-full h-full"
                         style={{
-                          width: `${(sets / maxVolume) * 100}%`,
+                          width: `${(count / maxVolume) * 100}%`,
                           background: color.primary,
                           opacity: 0.7,
                         }}
                       />
                     </div>
                     <span className="mono text-[9px] w-5 text-right" style={{ color: 'var(--text-m)' }}>
-                      {sets}
+                      {count}
                     </span>
                   </div>
                 )
@@ -190,93 +170,5 @@ function SplitCard({ split }: { split: SplitListItem }) {
         </>
       ) : null}
     </Link>
-  )
-}
-
-// --- Split Colors ---
-
-const SPLIT_COLORS = [
-  '#14b8a6', // teal
-  '#6366f1', // indigo
-  '#f97316', // orange
-  '#ec4899', // pink
-  '#22c55e', // green
-  '#eab308', // yellow
-  '#06b6d4', // cyan
-  '#f43f5e', // rose
-]
-
-function SplitColorPicker({ value, onChange }: { value: string | null; onChange: (c: string) => void }) {
-  return (
-    <div className="flex gap-2 items-center">
-      {SPLIT_COLORS.map((c) => (
-        <button
-          key={c}
-          type="button"
-          onClick={() => onChange(c)}
-          className="w-6 h-6 rounded-full shrink-0 transition-transform"
-          style={{
-            background: c,
-            boxShadow: value === c ? `0 0 0 2px var(--base), 0 0 0 4px ${c}` : 'none',
-            transform: value === c ? 'scale(1.1)' : 'scale(1)',
-          }}
-        />
-      ))}
-    </div>
-  )
-}
-
-// --- Split Form ---
-
-interface SplitFormProps {
-  onSave: () => void
-  onCancel: () => void
-}
-
-function SplitForm({ onSave, onCancel }: SplitFormProps) {
-  const toast = useToast()
-  const [name, setName] = useState('')
-  const [color, setColor] = useState<string | null>(SPLIT_COLORS[0]!)
-  const createSplit = useCreateSplit()
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-
-    try {
-      await createSplit.mutateAsync({ name, color })
-      onSave()
-    } catch {
-      toast.showError('Failed to save split')
-    }
-  }
-
-  return (
-    <form onSubmit={handleSubmit} className="card space-y-3">
-      <input
-        type="text"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        placeholder="Split name (e.g., PPL 6-Day)"
-        className="input"
-        autoFocus
-      />
-      <SplitColorPicker value={color} onChange={setColor} />
-      <div className="flex gap-2">
-        <button
-          type="button"
-          onClick={onCancel}
-          className="btn btn-secondary flex-1"
-        >
-          Cancel
-        </button>
-        <button
-          type="submit"
-          disabled={createSplit.isPending || !name}
-          className="btn btn-primary flex-1 disabled:opacity-50"
-        >
-          {createSplit.isPending ? 'Saving...' : 'Save'}
-        </button>
-      </div>
-    </form>
   )
 }

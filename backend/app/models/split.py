@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, ForeignKey, Integer, String
+from sqlalchemy import ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin, generate_uuid
@@ -15,15 +15,15 @@ class Split(Base, TimestampMixin):
         String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True
     )
 
-    sessions: Mapped[list["Session"]] = relationship(
+    days: Mapped[list["SplitDay"]] = relationship(
         back_populates="split",
         cascade="all, delete-orphan",
-        order_by="Session.day_order",
+        order_by="SplitDay.day_order",
     )
 
 
-class Session(Base, TimestampMixin):
-    __tablename__ = "sessions"
+class SplitDay(Base, TimestampMixin):
+    __tablename__ = "split_days"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
     split_id: Mapped[str] = mapped_column(
@@ -31,30 +31,28 @@ class Session(Base, TimestampMixin):
     )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     day_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    is_rest_day: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
-    split: Mapped["Split"] = relationship(back_populates="sessions")
-    exercises: Mapped[list["SessionExercise"]] = relationship(
-        back_populates="session",
+    split: Mapped["Split"] = relationship(back_populates="days")
+    exercises: Mapped[list["SplitDayExercise"]] = relationship(
+        back_populates="day",
         cascade="all, delete-orphan",
-        order_by="SessionExercise.order",
+        order_by="SplitDayExercise.order",
     )
 
 
-class SessionExercise(Base, TimestampMixin):
-    __tablename__ = "session_exercises"
+class SplitDayExercise(Base, TimestampMixin):
+    __tablename__ = "split_day_exercises"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
-    session_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("sessions.id", ondelete="CASCADE"), nullable=False
+    day_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("split_days.id", ondelete="CASCADE"), nullable=False
     )
     exercise_id: Mapped[str] = mapped_column(
         String(36), ForeignKey("exercises.id", ondelete="CASCADE"), nullable=False
     )
     order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    sets: Mapped[int] = mapped_column(Integer, nullable=False, default=3)
 
-    session: Mapped["Session"] = relationship(back_populates="exercises")
+    day: Mapped["SplitDay"] = relationship(back_populates="exercises")
     exercise: Mapped["Exercise"] = relationship()
 
 

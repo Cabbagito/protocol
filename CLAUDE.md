@@ -86,7 +86,7 @@ Three domains planned:
 
 **Exercise** (`/api/exercises`): Pre-seeded ~50 exercises (`user_id=NULL`, shared). User-created exercises have `user_id` set. Each has a single `muscle_group` string (one of: back, biceps, front delt, rear delt, side delt, chest, triceps, quads, hamstrings, glutes, calves, abs, traps, forearms) and `equipment_type` (barbell, dumbbell, machine, cable, bodyweight).
 
-**Split** (`/api/splits`): Training template with ordered sessions. Each session has exercises with `sets` count (no rep ranges — rep targets are set per-set in the mesocycle structure). Seed splits (`user_id=NULL`) are shared; user-created splits have `user_id` set.
+**Split** (`/api/splits`): Training template with ordered days. Each day has exercises (no sets/reps — those are a mesocycle concern, defaulting to 3 sets per exercise). Tables: `splits` → `split_days` → `split_day_exercises`. API accepts/returns nested create/update (full split with days+exercises in one request). Seed splits (`user_id=NULL`) are shared; user-created splits have `user_id` set.
 
 **Mesocycle** (`/api/mesocycles`): Core training block. Always owned by a user (`user_id` set on creation). Stores a `structure` JSONB column containing the entire nested document: `weeks[] → sessions[] → exercises[] → sets[]`. Each set has `weight`, `reps`, `target_reps`, `suggested_weight`, `rir`, and `logged` flag. No separate WorkoutLog table — all workout data lives in the structure. `is_active` bulk updates are scoped to current user.
 
@@ -107,11 +107,13 @@ Key derived fields (computed from structure, not stored): `total_weeks`, `curren
 **DB reset:** For a full reset in dev, use `docker compose down -v && docker compose up` to drop volumes and re-run migrations from scratch.
 
 **Frontend pages:**
-- Dashboard, Exercises, Splits, SplitDetail, Mesocycles, MesocycleDetail
+- Dashboard, Exercises, Splits, SplitEditor (accordion creator/editor), Mesocycles, MesocycleDetail
 - Workout (log with rest timer), WorkoutDetail, Progress (charts)
 - Settings (current user name, logout button)
 
 **Frontend routes:**
+- `/splits/new` — create new split (accordion editor)
+- `/splits/:id` — edit existing split (accordion editor)
 - `/workout/:mesocycleId` — log workout (auto-detects next session, supports `?week=N&session=N` query params for specific session)
 - `/workouts/:mesocycleId/:weekIndex/:sessionIndex` — view completed workout detail
 

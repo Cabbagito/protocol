@@ -79,7 +79,11 @@ export function useSplit(id: string) {
 export function useCreateSplit() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (data: { name: string; color?: string | null }) => api.post('/splits', data),
+    mutationFn: (data: {
+      name: string
+      color?: string | null
+      days: { name: string; exercises: { exercise_id: string }[] }[]
+    }) => api.post('/splits', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.splits.all })
     },
@@ -89,7 +93,11 @@ export function useCreateSplit() {
 export function useUpdateSplit(id: string) {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (data: { name: string; color?: string | null }) => api.put(`/splits/${id}`, data),
+    mutationFn: (data: {
+      name: string
+      color?: string | null
+      days: { name: string; exercises: { exercise_id: string }[] }[]
+    }) => api.put(`/splits/${id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.splits.detail(id) })
       queryClient.invalidateQueries({ queryKey: queryKeys.splits.all })
@@ -103,50 +111,6 @@ export function useDeleteSplit() {
     mutationFn: (id: string) => api.delete(`/splits/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.splits.all })
-    },
-  })
-}
-
-// Session mutations
-export function useAddSession(splitId: string) {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: (data: unknown) => api.post(`/splits/${splitId}/sessions`, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.splits.detail(splitId) })
-    },
-  })
-}
-
-export function useUpdateSession(splitId: string) {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: ({ sessionId, data }: { sessionId: string; data: unknown }) =>
-      api.put(`/splits/${splitId}/sessions/${sessionId}`, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.splits.detail(splitId) })
-    },
-  })
-}
-
-export function useDeleteSession(splitId: string) {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: (sessionId: string) =>
-      api.delete(`/splits/${splitId}/sessions/${sessionId}`),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.splits.detail(splitId) })
-    },
-  })
-}
-
-export function useReorderSessions(splitId: string) {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: (sessionIds: string[]) =>
-      api.put(`/splits/${splitId}/sessions/reorder`, { session_ids: sessionIds }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.splits.detail(splitId) })
     },
   })
 }

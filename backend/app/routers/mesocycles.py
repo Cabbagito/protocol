@@ -11,7 +11,7 @@ from app.core.security import get_current_user
 from app.core.seed import build_mesocycle_structure, get_current_position
 from app.models.exercise import Exercise
 from app.models.mesocycle import Mesocycle
-from app.models.split import Session, SessionExercise, Split
+from app.models.split import Split, SplitDay, SplitDayExercise
 from app.models.user import User
 
 router = APIRouter()
@@ -102,9 +102,9 @@ async def create_mesocycle(
     result = await db.execute(
         select(Split)
         .options(
-            selectinload(Split.sessions)
-            .selectinload(Session.exercises)
-            .selectinload(SessionExercise.exercise)
+            selectinload(Split.days)
+            .selectinload(SplitDay.exercises)
+            .selectinload(SplitDayExercise.exercise)
         )
         .where(
             Split.id == data.split_id,
@@ -123,7 +123,7 @@ async def create_mesocycle(
     )
 
     # Build exercise lookup by id
-    exercise_ids = [se.exercise_id for s in split.sessions for se in s.exercises]
+    exercise_ids = [de.exercise_id for d in split.days for de in d.exercises]
     if exercise_ids:
         result = await db.execute(select(Exercise).where(Exercise.id.in_(exercise_ids)))
         exercises_by_id = {e.id: e for e in result.scalars().all()}
@@ -131,7 +131,7 @@ async def create_mesocycle(
         exercises_by_id = {}
 
     # Build the JSONB structure
-    structure = build_mesocycle_structure(split.sessions, exercises_by_id, data.total_weeks)
+    structure = build_mesocycle_structure(split.days, exercises_by_id, data.total_weeks)
 
     mesocycle = Mesocycle(
         split_id=data.split_id,
