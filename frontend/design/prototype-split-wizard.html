@@ -1,0 +1,1336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=375, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Split Creation Wizard — Concepts</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --deep: #070d15; --base: #0d1b2a; --card: #0f1d2e; --panel: #132438;
+    --input: #162a3e; --border: #1e3a52;
+    --text-1: #e2e8f0; --text-2: #cbd5e1; --text-m: #475569;
+    --accent-l: #38bdf8; --accent: #0ea5e9; --accent-d: #0284c7;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { background: var(--deep); }
+  body { background: var(--base); color: var(--text-1); font-family: 'Inter', system-ui, sans-serif; max-width: 375px; margin: 0 auto; min-height: 100vh; overflow-x: hidden; }
+  .mono { font-family: 'JetBrains Mono', monospace; }
+  .vignette { position: fixed; inset: 0; background: radial-gradient(ellipse at center, transparent 60%, #070d15 100%); pointer-events: none; z-index: 100; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 0; height: 0; }
+
+  /* Concept divider */
+  .concept-divider {
+    position: relative; padding: 48px 16px 20px; text-align: center;
+    border-top: 1px solid var(--border);
+  }
+  .concept-divider:first-child { border-top: none; padding-top: 20px; }
+  .concept-label {
+    display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: 0.15em;
+    text-transform: uppercase; color: var(--accent-l); background: var(--base);
+    padding: 4px 16px; border: 1px solid rgba(56,189,248,0.2); border-radius: 20px;
+  }
+  .concept-title { font-size: 18px; font-weight: 700; color: var(--text-1); margin-top: 8px; }
+  .concept-desc { font-size: 12px; color: var(--text-m); margin-top: 4px; line-height: 1.5; }
+
+  /* Shared card */
+  .proto-card {
+    background: var(--card); border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.04);
+  }
+
+  /* Pill badge */
+  .pill {
+    font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;
+    padding: 2px 8px; border-radius: 9999px; display: inline-flex; align-items: center;
+  }
+
+  /* Button base */
+  .btn-proto {
+    height: 40px; border-radius: 12px; font-size: 14px; font-weight: 600;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    border: none; cursor: pointer; transition: all 0.2s;
+  }
+  .btn-primary { background: var(--accent); color: white; }
+  .btn-primary:hover { background: var(--accent-d); }
+  .btn-secondary { background: var(--input); color: var(--text-2); border: 1px solid var(--border); }
+
+  /* Input base */
+  .input-proto {
+    height: 40px; border-radius: 12px; background: var(--input); border: 1px solid var(--border);
+    color: var(--text-1); font-size: 14px; padding: 0 12px; width: 100%;
+    font-family: 'Inter', system-ui, sans-serif; outline: none; transition: border-color 0.2s;
+  }
+  .input-proto:focus { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+  .input-proto::placeholder { color: var(--text-m); }
+
+  /* Animations */
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes slideIn { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: translateX(0); } }
+  @keyframes scaleIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+  .anim-fade { animation: fadeUp 0.4s ease both; }
+  .anim-slide { animation: slideIn 0.3s ease both; }
+  .anim-scale { animation: scaleIn 0.3s ease both; }
+
+  /* Muscle colors map */
+  .mg-back { --mg: #14b8a6; --mg-l: #2dd4bf; }
+  .mg-biceps { --mg: #6366f1; --mg-l: #818cf8; }
+  .mg-shoulders { --mg: #a855f7; --mg-l: #c084fc; }
+  .mg-chest { --mg: #f97316; --mg-l: #fb923c; }
+  .mg-triceps { --mg: #ec4899; --mg-l: #f472b6; }
+  .mg-quads { --mg: #eab308; --mg-l: #facc15; }
+  .mg-hamstrings { --mg: #22c55e; --mg-l: #4ade80; }
+  .mg-glutes { --mg: #f43f5e; --mg-l: #fb7185; }
+  .mg-calves { --mg: #06b6d4; --mg-l: #22d3ee; }
+  .mg-core { --mg: #f59e0b; --mg-l: #fbbf24; }
+  .mg-traps { --mg: #8b5cf6; --mg-l: #a78bfa; }
+  .mg-forearms { --mg: #64748b; --mg-l: #94a3b8; }
+</style>
+</head>
+<body>
+<div class="vignette"></div>
+
+<!-- ============================================================ -->
+<!-- CONCEPT A: Template-First Wizard                             -->
+<!-- ============================================================ -->
+<div class="concept-divider" style="border-top:none; padding-top:20px;">
+  <span class="concept-label">Concept A</span>
+  <div class="concept-title">Template-First Wizard</div>
+  <div class="concept-desc">Pick a template, customize sessions, add exercises, review & save</div>
+</div>
+
+<div id="conceptA" style="padding: 0 16px 32px;">
+  <!-- Step indicators -->
+  <div style="display:flex; align-items:center; gap:4px; margin-bottom:20px; justify-content:center;">
+    <div class="a-step-dot active" data-step="1" style="width:8px;height:8px;border-radius:50%;background:var(--accent);transition:all 0.3s;cursor:pointer;"></div>
+    <div style="width:20px;height:1px;background:var(--border);"></div>
+    <div class="a-step-dot" data-step="2" style="width:8px;height:8px;border-radius:50%;background:var(--border);transition:all 0.3s;cursor:pointer;"></div>
+    <div style="width:20px;height:1px;background:var(--border);"></div>
+    <div class="a-step-dot" data-step="3" style="width:8px;height:8px;border-radius:50%;background:var(--border);transition:all 0.3s;cursor:pointer;"></div>
+    <div style="width:20px;height:1px;background:var(--border);"></div>
+    <div class="a-step-dot" data-step="4" style="width:8px;height:8px;border-radius:50%;background:var(--border);transition:all 0.3s;cursor:pointer;"></div>
+  </div>
+
+  <!-- STEP 1: Template Selection -->
+  <div id="a-step1" class="anim-fade">
+    <div style="font-size:13px;font-weight:600;color:var(--text-2);margin-bottom:12px;">Choose a starting template</div>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+
+      <!-- PPL -->
+      <div class="proto-card template-card" onclick="aSelectTemplate('ppl')" style="padding:14px;cursor:pointer;transition:all 0.2s;border:1.5px solid transparent;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+          <div>
+            <div style="font-size:15px;font-weight:700;">Push / Pull / Legs</div>
+            <div style="font-size:11px;color:var(--text-m);margin-top:2px;">6 days &middot; 2x frequency</div>
+          </div>
+          <div class="mono" style="font-size:20px;font-weight:700;color:var(--accent-l);">6</div>
+        </div>
+        <div style="display:flex;gap:4px;">
+          <div style="flex:1;height:6px;border-radius:3px;background:#f97316;opacity:0.7;"></div>
+          <div style="flex:1;height:6px;border-radius:3px;background:#14b8a6;opacity:0.7;"></div>
+          <div style="flex:1;height:6px;border-radius:3px;background:#eab308;opacity:0.7;"></div>
+          <div style="flex:1;height:6px;border-radius:3px;background:#f97316;opacity:0.7;"></div>
+          <div style="flex:1;height:6px;border-radius:3px;background:#14b8a6;opacity:0.7;"></div>
+          <div style="flex:1;height:6px;border-radius:3px;background:#eab308;opacity:0.7;"></div>
+          <div style="flex:1;height:6px;border-radius:3px;background:var(--border);opacity:0.5;"></div>
+        </div>
+        <div style="display:flex;gap:4px;margin-top:6px;">
+          <span style="font-size:9px;color:var(--text-m);">Push</span>
+          <span style="font-size:9px;color:var(--text-m);">Pull</span>
+          <span style="font-size:9px;color:var(--text-m);">Legs</span>
+          <span style="font-size:9px;color:var(--text-m);">Push</span>
+          <span style="font-size:9px;color:var(--text-m);">Pull</span>
+          <span style="font-size:9px;color:var(--text-m);">Legs</span>
+          <span style="font-size:9px;color:var(--text-m);">Rest</span>
+        </div>
+      </div>
+
+      <!-- Upper/Lower -->
+      <div class="proto-card template-card" onclick="aSelectTemplate('ul')" style="padding:14px;cursor:pointer;transition:all 0.2s;border:1.5px solid transparent;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+          <div>
+            <div style="font-size:15px;font-weight:700;">Upper / Lower</div>
+            <div style="font-size:11px;color:var(--text-m);margin-top:2px;">4 days &middot; 2x frequency</div>
+          </div>
+          <div class="mono" style="font-size:20px;font-weight:700;color:var(--accent-l);">4</div>
+        </div>
+        <div style="display:flex;gap:4px;">
+          <div style="flex:1;height:6px;border-radius:3px;background:#a855f7;opacity:0.7;"></div>
+          <div style="flex:1;height:6px;border-radius:3px;background:#22c55e;opacity:0.7;"></div>
+          <div style="flex:1;height:6px;border-radius:3px;background:var(--border);opacity:0.5;"></div>
+          <div style="flex:1;height:6px;border-radius:3px;background:#a855f7;opacity:0.7;"></div>
+          <div style="flex:1;height:6px;border-radius:3px;background:#22c55e;opacity:0.7;"></div>
+          <div style="flex:1;height:6px;border-radius:3px;background:var(--border);opacity:0.5;"></div>
+          <div style="flex:1;height:6px;border-radius:3px;background:var(--border);opacity:0.5;"></div>
+        </div>
+        <div style="display:flex;gap:4px;margin-top:6px;">
+          <span style="font-size:9px;color:var(--text-m);">Upper</span>
+          <span style="font-size:9px;color:var(--text-m);">Lower</span>
+          <span style="font-size:9px;color:var(--text-m);">Rest</span>
+          <span style="font-size:9px;color:var(--text-m);">Upper</span>
+          <span style="font-size:9px;color:var(--text-m);">Lower</span>
+          <span style="font-size:9px;color:var(--text-m);">Rest</span>
+          <span style="font-size:9px;color:var(--text-m);">Rest</span>
+        </div>
+      </div>
+
+      <!-- Bro Split -->
+      <div class="proto-card template-card" onclick="aSelectTemplate('bro')" style="padding:14px;cursor:pointer;transition:all 0.2s;border:1.5px solid transparent;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+          <div>
+            <div style="font-size:15px;font-weight:700;">Bro Split</div>
+            <div style="font-size:11px;color:var(--text-m);margin-top:2px;">5 days &middot; 1x frequency</div>
+          </div>
+          <div class="mono" style="font-size:20px;font-weight:700;color:var(--accent-l);">5</div>
+        </div>
+        <div style="display:flex;gap:4px;">
+          <div style="flex:1;height:6px;border-radius:3px;background:#f97316;opacity:0.7;"></div>
+          <div style="flex:1;height:6px;border-radius:3px;background:#14b8a6;opacity:0.7;"></div>
+          <div style="flex:1;height:6px;border-radius:3px;background:#a855f7;opacity:0.7;"></div>
+          <div style="flex:1;height:6px;border-radius:3px;background:#eab308;opacity:0.7;"></div>
+          <div style="flex:1;height:6px;border-radius:3px;background:#6366f1;opacity:0.7;"></div>
+          <div style="flex:1;height:6px;border-radius:3px;background:var(--border);opacity:0.5;"></div>
+          <div style="flex:1;height:6px;border-radius:3px;background:var(--border);opacity:0.5;"></div>
+        </div>
+        <div style="display:flex;gap:4px;margin-top:6px;">
+          <span style="font-size:9px;color:var(--text-m);">Chest</span>
+          <span style="font-size:9px;color:var(--text-m);">Back</span>
+          <span style="font-size:9px;color:var(--text-m);">Shoulders</span>
+          <span style="font-size:9px;color:var(--text-m);">Legs</span>
+          <span style="font-size:9px;color:var(--text-m);">Arms</span>
+          <span style="font-size:9px;color:var(--text-m);">Rest</span>
+          <span style="font-size:9px;color:var(--text-m);">Rest</span>
+        </div>
+      </div>
+
+      <!-- Full Body -->
+      <div class="proto-card template-card" onclick="aSelectTemplate('fb')" style="padding:14px;cursor:pointer;transition:all 0.2s;border:1.5px solid transparent;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+          <div>
+            <div style="font-size:15px;font-weight:700;">Full Body</div>
+            <div style="font-size:11px;color:var(--text-m);margin-top:2px;">3 days &middot; 3x frequency</div>
+          </div>
+          <div class="mono" style="font-size:20px;font-weight:700;color:var(--accent-l);">3</div>
+        </div>
+        <div style="display:flex;gap:4px;">
+          <div style="flex:1;height:6px;border-radius:3px;background:#0ea5e9;opacity:0.7;"></div>
+          <div style="flex:1;height:6px;border-radius:3px;background:var(--border);opacity:0.5;"></div>
+          <div style="flex:1;height:6px;border-radius:3px;background:#0ea5e9;opacity:0.7;"></div>
+          <div style="flex:1;height:6px;border-radius:3px;background:var(--border);opacity:0.5;"></div>
+          <div style="flex:1;height:6px;border-radius:3px;background:#0ea5e9;opacity:0.7;"></div>
+          <div style="flex:1;height:6px;border-radius:3px;background:var(--border);opacity:0.5;"></div>
+          <div style="flex:1;height:6px;border-radius:3px;background:var(--border);opacity:0.5;"></div>
+        </div>
+        <div style="display:flex;gap:4px;margin-top:6px;">
+          <span style="font-size:9px;color:var(--text-m);">Full</span>
+          <span style="font-size:9px;color:var(--text-m);">Rest</span>
+          <span style="font-size:9px;color:var(--text-m);">Full</span>
+          <span style="font-size:9px;color:var(--text-m);">Rest</span>
+          <span style="font-size:9px;color:var(--text-m);">Full</span>
+          <span style="font-size:9px;color:var(--text-m);">Rest</span>
+          <span style="font-size:9px;color:var(--text-m);">Rest</span>
+        </div>
+      </div>
+
+      <!-- Blank -->
+      <div class="proto-card template-card" onclick="aSelectTemplate('blank')" style="padding:14px;cursor:pointer;transition:all 0.2s;border:1.5px dashed var(--border);">
+        <div style="text-align:center;padding:8px 0;">
+          <div style="font-size:15px;font-weight:700;color:var(--text-2);">Start Blank</div>
+          <div style="font-size:11px;color:var(--text-m);margin-top:2px;">Build from scratch</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 2: Customize Sessions Timeline -->
+  <div id="a-step2" style="display:none;">
+    <div style="font-size:13px;font-weight:600;color:var(--text-2);margin-bottom:12px;">Customize your week</div>
+
+    <!-- Horizontal scrollable timeline -->
+    <div id="a-timeline" style="display:flex;gap:10px;overflow-x:auto;padding-bottom:12px;scroll-snap-type:x mandatory;">
+    </div>
+
+    <div style="display:flex;gap:8px;margin-top:16px;">
+      <button class="btn-proto btn-secondary" style="flex:1;font-size:13px;" onclick="aGoStep(1)">Back</button>
+      <button class="btn-proto btn-primary" style="flex:1;font-size:13px;" onclick="aGoStep(3)">Edit Exercises</button>
+    </div>
+  </div>
+
+  <!-- STEP 3: Exercise Picker (bottom sheet style) -->
+  <div id="a-step3" style="display:none;">
+    <div style="font-size:13px;font-weight:600;color:var(--text-2);margin-bottom:4px;">
+      Editing: <span id="a-editing-session" style="color:var(--accent-l);">Push</span>
+    </div>
+
+    <!-- Session tabs -->
+    <div id="a-session-tabs" style="display:flex;gap:6px;overflow-x:auto;padding:8px 0;margin-bottom:12px;">
+    </div>
+
+    <!-- Search -->
+    <input type="text" class="input-proto" placeholder="Search exercises..." id="a-exercise-search" oninput="aFilterExercises()" style="margin-bottom:12px;">
+
+    <!-- Muscle group filter tabs -->
+    <div id="a-mg-tabs" style="display:flex;gap:6px;overflow-x:auto;padding-bottom:10px;margin-bottom:10px;">
+      <button class="pill a-mg-tab active" data-mg="all" onclick="aFilterMG('all')" style="background:var(--accent);color:white;border:none;cursor:pointer;white-space:nowrap;">All</button>
+    </div>
+
+    <!-- Exercise list -->
+    <div id="a-exercise-list" style="max-height:320px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;">
+    </div>
+
+    <!-- Selected exercises for current session -->
+    <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border);">
+      <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-m);margin-bottom:8px;">
+        Selected (<span id="a-selected-count">0</span>)
+      </div>
+      <div id="a-selected-exercises" style="display:flex;flex-direction:column;gap:6px;"></div>
+    </div>
+
+    <div style="display:flex;gap:8px;margin-top:16px;">
+      <button class="btn-proto btn-secondary" style="flex:1;font-size:13px;" onclick="aGoStep(2)">Back</button>
+      <button class="btn-proto btn-primary" style="flex:1;font-size:13px;" onclick="aGoStep(4)">Review</button>
+    </div>
+  </div>
+
+  <!-- STEP 4: Review + Name -->
+  <div id="a-step4" style="display:none;">
+    <div style="font-size:13px;font-weight:600;color:var(--text-2);margin-bottom:12px;">Name & Review</div>
+
+    <input type="text" class="input-proto" placeholder="Split name (e.g., PPL 6-Day)" style="margin-bottom:12px;" value="Push Pull Legs">
+
+    <!-- Color picker -->
+    <div style="display:flex;gap:8px;margin-bottom:16px;" id="a-color-picker">
+      <div style="width:28px;height:28px;border-radius:50%;background:#14b8a6;cursor:pointer;box-shadow:0 0 0 2px var(--base), 0 0 0 4px #14b8a6;" onclick="aPickColor(this)"></div>
+      <div style="width:28px;height:28px;border-radius:50%;background:#6366f1;cursor:pointer;" onclick="aPickColor(this)"></div>
+      <div style="width:28px;height:28px;border-radius:50%;background:#f97316;cursor:pointer;" onclick="aPickColor(this)"></div>
+      <div style="width:28px;height:28px;border-radius:50%;background:#ec4899;cursor:pointer;" onclick="aPickColor(this)"></div>
+      <div style="width:28px;height:28px;border-radius:50%;background:#22c55e;cursor:pointer;" onclick="aPickColor(this)"></div>
+      <div style="width:28px;height:28px;border-radius:50%;background:#eab308;cursor:pointer;" onclick="aPickColor(this)"></div>
+      <div style="width:28px;height:28px;border-radius:50%;background:#06b6d4;cursor:pointer;" onclick="aPickColor(this)"></div>
+      <div style="width:28px;height:28px;border-radius:50%;background:#f43f5e;cursor:pointer;" onclick="aPickColor(this)"></div>
+    </div>
+
+    <!-- Volume overview -->
+    <div class="proto-card" style="padding:14px;margin-bottom:12px;">
+      <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-m);margin-bottom:10px;">Weekly Volume</div>
+      <div id="a-volume-bars" style="display:flex;flex-direction:column;gap:6px;"></div>
+    </div>
+
+    <!-- Session summary -->
+    <div id="a-review-sessions" style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;"></div>
+
+    <div style="display:flex;gap:8px;">
+      <button class="btn-proto btn-secondary" style="flex:1;font-size:13px;" onclick="aGoStep(3)">Back</button>
+      <button class="btn-proto btn-primary" style="flex:1;font-size:13px;">Create Split</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- CONCEPT B: Drag & Drop Week Planner                          -->
+<!-- ============================================================ -->
+<div class="concept-divider">
+  <span class="concept-label">Concept B</span>
+  <div class="concept-title">Week Planner</div>
+  <div class="concept-desc">Tap session blocks into day slots, then customize exercises</div>
+</div>
+
+<div id="conceptB" style="padding: 0 16px 32px;">
+
+  <!-- Day slots -->
+  <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-m);margin-bottom:8px;">Your Week</div>
+  <div id="b-day-slots" style="display:flex;gap:6px;margin-bottom:20px;">
+    <div class="b-day-slot" data-day="0" onclick="bTapDay(0)">
+      <div class="b-day-num">1</div>
+      <div class="b-day-label">—</div>
+    </div>
+    <div class="b-day-slot" data-day="1" onclick="bTapDay(1)">
+      <div class="b-day-num">2</div>
+      <div class="b-day-label">—</div>
+    </div>
+    <div class="b-day-slot" data-day="2" onclick="bTapDay(2)">
+      <div class="b-day-num">3</div>
+      <div class="b-day-label">—</div>
+    </div>
+    <div class="b-day-slot" data-day="3" onclick="bTapDay(3)">
+      <div class="b-day-num">4</div>
+      <div class="b-day-label">—</div>
+    </div>
+    <div class="b-day-slot" data-day="4" onclick="bTapDay(4)">
+      <div class="b-day-num">5</div>
+      <div class="b-day-label">—</div>
+    </div>
+    <div class="b-day-slot" data-day="5" onclick="bTapDay(5)">
+      <div class="b-day-num">6</div>
+      <div class="b-day-label">—</div>
+    </div>
+    <div class="b-day-slot" data-day="6" onclick="bTapDay(6)">
+      <div class="b-day-num">7</div>
+      <div class="b-day-label">—</div>
+    </div>
+  </div>
+
+  <style>
+    .b-day-slot {
+      flex:1; text-align:center; padding:8px 2px; border-radius:10px;
+      background:var(--card); border:1.5px solid var(--border); cursor:pointer;
+      transition:all 0.25s; min-width:0;
+    }
+    .b-day-slot.active { border-color: var(--accent); box-shadow: 0 0 12px rgba(14,165,233,0.15); }
+    .b-day-slot.filled { border-color: var(--filled-color, var(--accent)); }
+    .b-day-num { font-size:13px; font-weight:700; color:var(--text-1); margin-bottom:2px; }
+    .b-day-label { font-size:8px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-m); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .b-day-slot.filled .b-day-label { color: var(--filled-color, var(--accent-l)); }
+    .b-day-slot.rest { border-style: dashed; }
+  </style>
+
+  <!-- Session Palette -->
+  <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-m);margin-bottom:8px;">
+    Tap to place in selected day
+  </div>
+  <div id="b-palette" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:20px;">
+  </div>
+
+  <style>
+    .b-palette-block {
+      padding:10px 8px; border-radius:10px; background:var(--panel); cursor:pointer;
+      border:1.5px solid var(--border); transition:all 0.2s; text-align:center;
+    }
+    .b-palette-block:hover { border-color: rgba(56,189,248,0.3); }
+    .b-palette-block:active { transform: scale(0.96); }
+    .b-palette-name { font-size:12px; font-weight:600; color:var(--text-1); margin-bottom:6px; }
+    .b-palette-dots { display:flex; gap:3px; justify-content:center; }
+    .b-mg-dot { width:6px; height:6px; border-radius:50%; }
+  </style>
+
+  <!-- Live volume chart -->
+  <div class="proto-card" style="padding:14px;margin-bottom:16px;">
+    <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-m);margin-bottom:10px;">Live Volume</div>
+    <div id="b-volume" style="display:flex;flex-direction:column;gap:5px;">
+      <div style="font-size:11px;color:var(--text-m);text-align:center;padding:12px 0;">Place sessions to see volume</div>
+    </div>
+  </div>
+
+  <!-- Exercise customization area (shown when a filled day is tapped) -->
+  <div id="b-exercise-panel" style="display:none;">
+    <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-m);margin-bottom:8px;">
+      Exercises for <span id="b-panel-session" style="color:var(--accent-l);">Push</span>
+    </div>
+
+    <input type="text" class="input-proto" placeholder="Search exercises..." id="b-ex-search" oninput="bFilterExercises()" style="margin-bottom:10px;">
+
+    <!-- Muscle group grid filter -->
+    <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px;" id="b-mg-filter">
+    </div>
+
+    <div id="b-ex-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;max-height:260px;overflow-y:auto;margin-bottom:10px;">
+    </div>
+
+    <style>
+      .b-ex-card {
+        padding:8px; border-radius:8px; background:var(--panel); cursor:pointer;
+        border:1.5px solid transparent; transition:all 0.2s;
+      }
+      .b-ex-card:hover { border-color: var(--border); }
+      .b-ex-card.selected { border-color: var(--accent); background: rgba(14,165,233,0.06); }
+      .b-ex-name { font-size:11px; font-weight:600; color:var(--text-1); line-height:1.3; }
+      .b-ex-mg { font-size:9px; font-weight:600; text-transform:uppercase; letter-spacing:0.04em; margin-top:3px; }
+      .b-ex-sets { display:flex; align-items:center; gap:6px; margin-top:6px; }
+      .b-set-btn { width:22px; height:22px; border-radius:6px; border:1px solid var(--border); background:var(--input); color:var(--text-2); font-size:12px; cursor:pointer; display:flex;align-items:center;justify-content:center; }
+    </style>
+  </div>
+
+  <!-- Name & Save -->
+  <div style="margin-top:8px; padding-top:16px; border-top:1px solid var(--border);">
+    <input type="text" class="input-proto" placeholder="Split name..." style="margin-bottom:10px;">
+    <div style="display:flex;gap:8px;">
+      <div style="display:flex;gap:6px;flex:1;align-items:center;">
+        <div style="width:24px;height:24px;border-radius:50%;background:#14b8a6;cursor:pointer;box-shadow:0 0 0 2px var(--base), 0 0 0 3px #14b8a6;"></div>
+        <div style="width:24px;height:24px;border-radius:50%;background:#6366f1;cursor:pointer;"></div>
+        <div style="width:24px;height:24px;border-radius:50%;background:#f97316;cursor:pointer;"></div>
+        <div style="width:24px;height:24px;border-radius:50%;background:#ec4899;cursor:pointer;"></div>
+      </div>
+      <button class="btn-proto btn-primary" style="width:120px;font-size:13px;">Create</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- CONCEPT C: Quick Session Builder                              -->
+<!-- ============================================================ -->
+<div class="concept-divider">
+  <span class="concept-label">Concept C</span>
+  <div class="concept-title">Quick Builder</div>
+  <div class="concept-desc">Single page — name it, add sessions inline, search exercises live</div>
+</div>
+
+<div id="conceptC" style="padding: 0 16px 32px;">
+
+  <!-- Split name + color -->
+  <div style="display:flex;gap:8px;align-items:center;margin-bottom:16px;">
+    <input type="text" class="input-proto" placeholder="Split name..." value="My PPL" style="flex:1;">
+    <div id="c-color-ring" style="width:32px;height:32px;border-radius:50%;background:#14b8a6;cursor:pointer;box-shadow:0 0 0 2px var(--base), 0 0 0 3.5px #14b8a6;flex-shrink:0;" onclick="cCycleColor()"></div>
+  </div>
+
+  <!-- Session cards -->
+  <div id="c-sessions" style="display:flex;flex-direction:column;gap:12px;">
+  </div>
+
+  <style>
+    .c-session-card {
+      border-radius:10px; background:var(--card); box-shadow:0 4px 12px rgba(0,0,0,0.5);
+      border:1px solid rgba(255,255,255,0.04); overflow:hidden; animation: fadeUp 0.3s ease both;
+    }
+    .c-session-header {
+      display:flex; align-items:center; gap:8px; padding:12px 14px;
+      border-bottom:1px solid rgba(255,255,255,0.04);
+    }
+    .c-drag-handle { color:var(--text-m); cursor:grab; font-size:14px; line-height:1; }
+    .c-session-name {
+      flex:1; background:transparent; border:none; color:var(--text-1);
+      font-size:14px; font-weight:600; font-family:'Inter',system-ui,sans-serif; outline:none;
+    }
+    .c-session-name::placeholder { color:var(--text-m); }
+    .c-rest-toggle {
+      font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em;
+      padding:3px 10px; border-radius:20px; border:1px solid var(--border);
+      background:transparent; color:var(--text-m); cursor:pointer; transition:all 0.2s;
+    }
+    .c-rest-toggle.active { background:rgba(56,189,248,0.1); border-color:rgba(56,189,248,0.3); color:var(--accent-l); }
+    .c-session-body { padding:10px 14px 14px; }
+    .c-ex-search {
+      width:100%; height:36px; border-radius:10px; background:var(--input); border:1px solid var(--border);
+      color:var(--text-1); font-size:12px; padding:0 10px 0 32px;
+      font-family:'Inter',system-ui,sans-serif; outline:none; transition:border-color 0.2s;
+    }
+    .c-ex-search:focus { border-color: var(--accent); }
+    .c-search-wrap { position:relative; margin-bottom:8px; }
+    .c-search-icon { position:absolute; left:10px; top:50%; transform:translateY(-50%); color:var(--text-m); }
+    .c-ex-results {
+      max-height:200px; overflow-y:auto; display:none; flex-direction:column; gap:2px;
+      background:var(--panel); border-radius:8px; border:1px solid var(--border);
+      padding:4px; margin-bottom:8px;
+    }
+    .c-ex-results.visible { display:flex; }
+    .c-ex-result {
+      display:flex; align-items:center; justify-content:space-between; padding:8px 10px;
+      border-radius:6px; cursor:pointer; transition:background 0.15s;
+    }
+    .c-ex-result:hover { background:var(--input); }
+    .c-added-exercises { display:flex; flex-direction:column; gap:4px; }
+    .c-added-ex {
+      display:flex; align-items:center; gap:8px; padding:6px 10px;
+      background:var(--panel); border-radius:8px; animation: slideIn 0.2s ease both;
+    }
+    .c-added-ex-name { flex:1; font-size:12px; font-weight:500; color:var(--text-1); }
+    .c-set-stepper {
+      display:flex; align-items:center; gap:4px;
+    }
+    .c-set-btn {
+      width:24px; height:24px; border-radius:6px; border:1px solid var(--border);
+      background:var(--input); color:var(--text-2); font-size:13px; font-weight:600;
+      cursor:pointer; display:flex; align-items:center; justify-content:center;
+      transition:all 0.15s;
+    }
+    .c-set-btn:hover { border-color:var(--accent); color:var(--accent-l); }
+    .c-remove-btn {
+      width:20px; height:20px; border-radius:50%; border:none;
+      background:rgba(239,68,68,0.1); color:#f87171; font-size:12px;
+      cursor:pointer; display:flex; align-items:center; justify-content:center;
+    }
+    .c-volume-sidebar {
+      display:flex; gap:3px; flex-wrap:wrap; padding:8px 14px; border-top:1px solid rgba(255,255,255,0.04);
+    }
+    .c-vol-pip {
+      width:4px; border-radius:2px; transition:height 0.3s;
+    }
+  </style>
+
+  <!-- Add session button -->
+  <button id="c-add-session-btn" onclick="cAddSession()" style="
+    width:100%; margin-top:12px; padding:12px; border-radius:10px;
+    border:1.5px dashed var(--border); background:transparent;
+    color:var(--accent-l); font-size:13px; font-weight:600;
+    cursor:pointer; transition:all 0.2s; font-family:'Inter',system-ui,sans-serif;
+  ">+ Add Session</button>
+
+  <!-- Live split overview -->
+  <div id="c-overview" style="margin-top:20px; padding-top:16px; border-top:1px solid var(--border);">
+    <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-m);margin-bottom:10px;">Split Overview</div>
+
+    <!-- Schedule strip -->
+    <div id="c-strip" style="display:flex;gap:4px;margin-bottom:12px;"></div>
+
+    <!-- Volume bars -->
+    <div id="c-volume-overview" style="display:flex;flex-direction:column;gap:5px;padding:10px;background:var(--deep);border-radius:8px;">
+      <div style="font-size:10px;color:var(--text-m);text-align:center;">Add sessions to see volume</div>
+    </div>
+  </div>
+
+  <!-- Save -->
+  <button class="btn-proto btn-primary" style="width:100%;margin-top:16px;font-size:14px;">Create Split</button>
+</div>
+
+<div style="height:60px;"></div>
+
+<script>
+// ================================================================
+// SHARED DATA
+// ================================================================
+const EXERCISES = [
+  { name:'Bench Press', mg:'chest', eq:'barbell' },
+  { name:'Incline DB Press', mg:'chest', eq:'dumbbell' },
+  { name:'Cable Fly', mg:'chest', eq:'cable' },
+  { name:'Chest Dip', mg:'chest', eq:'bodyweight' },
+  { name:'Pec Deck', mg:'chest', eq:'machine' },
+  { name:'Barbell Row', mg:'back', eq:'barbell' },
+  { name:'Pull Up', mg:'back', eq:'bodyweight' },
+  { name:'Lat Pulldown', mg:'back', eq:'cable' },
+  { name:'Cable Row', mg:'back', eq:'cable' },
+  { name:'T-Bar Row', mg:'back', eq:'barbell' },
+  { name:'Overhead Press', mg:'shoulders', eq:'barbell' },
+  { name:'Lateral Raise', mg:'shoulders', eq:'dumbbell' },
+  { name:'Face Pull', mg:'shoulders', eq:'cable' },
+  { name:'Rear Delt Fly', mg:'shoulders', eq:'dumbbell' },
+  { name:'Arnold Press', mg:'shoulders', eq:'dumbbell' },
+  { name:'Barbell Curl', mg:'biceps', eq:'barbell' },
+  { name:'Hammer Curl', mg:'biceps', eq:'dumbbell' },
+  { name:'Preacher Curl', mg:'biceps', eq:'machine' },
+  { name:'Incline DB Curl', mg:'biceps', eq:'dumbbell' },
+  { name:'Tricep Pushdown', mg:'triceps', eq:'cable' },
+  { name:'Skull Crusher', mg:'triceps', eq:'barbell' },
+  { name:'Overhead Extension', mg:'triceps', eq:'cable' },
+  { name:'Close Grip Bench', mg:'triceps', eq:'barbell' },
+  { name:'Squat', mg:'quads', eq:'barbell' },
+  { name:'Leg Press', mg:'quads', eq:'machine' },
+  { name:'Leg Extension', mg:'quads', eq:'machine' },
+  { name:'Bulgarian Split Squat', mg:'quads', eq:'dumbbell' },
+  { name:'Hack Squat', mg:'quads', eq:'machine' },
+  { name:'Romanian Deadlift', mg:'hamstrings', eq:'barbell' },
+  { name:'Leg Curl', mg:'hamstrings', eq:'machine' },
+  { name:'Nordic Curl', mg:'hamstrings', eq:'bodyweight' },
+  { name:'Hip Thrust', mg:'glutes', eq:'barbell' },
+  { name:'Cable Kickback', mg:'glutes', eq:'cable' },
+  { name:'Calf Raise', mg:'calves', eq:'machine' },
+  { name:'Seated Calf Raise', mg:'calves', eq:'machine' },
+  { name:'Cable Crunch', mg:'core', eq:'cable' },
+  { name:'Hanging Leg Raise', mg:'core', eq:'bodyweight' },
+  { name:'Barbell Shrug', mg:'traps', eq:'barbell' },
+  { name:'Wrist Curl', mg:'forearms', eq:'dumbbell' },
+];
+
+const MG_COLORS = {
+  back:'#14b8a6', biceps:'#6366f1', shoulders:'#a855f7', chest:'#f97316',
+  triceps:'#ec4899', quads:'#eab308', hamstrings:'#22c55e', glutes:'#f43f5e',
+  calves:'#06b6d4', core:'#f59e0b', traps:'#8b5cf6', forearms:'#64748b',
+};
+
+const TEMPLATES = {
+  ppl: [
+    { name:'Push', rest:false, exercises:['Bench Press','Incline DB Press','Cable Fly','Overhead Press','Lateral Raise','Tricep Pushdown','Skull Crusher'] },
+    { name:'Pull', rest:false, exercises:['Barbell Row','Pull Up','Lat Pulldown','Cable Row','Face Pull','Barbell Curl','Hammer Curl'] },
+    { name:'Legs', rest:false, exercises:['Squat','Leg Press','Leg Extension','Romanian Deadlift','Leg Curl','Calf Raise'] },
+    { name:'Push', rest:false, exercises:['Bench Press','Incline DB Press','Pec Deck','Arnold Press','Lateral Raise','Overhead Extension','Close Grip Bench'] },
+    { name:'Pull', rest:false, exercises:['T-Bar Row','Pull Up','Cable Row','Lat Pulldown','Rear Delt Fly','Preacher Curl','Incline DB Curl'] },
+    { name:'Legs', rest:false, exercises:['Hack Squat','Bulgarian Split Squat','Leg Extension','Leg Curl','Hip Thrust','Seated Calf Raise'] },
+    { name:'Rest', rest:true, exercises:[] },
+  ],
+  ul: [
+    { name:'Upper', rest:false, exercises:['Bench Press','Barbell Row','Overhead Press','Pull Up','Lateral Raise','Barbell Curl','Tricep Pushdown'] },
+    { name:'Lower', rest:false, exercises:['Squat','Romanian Deadlift','Leg Press','Leg Curl','Calf Raise','Cable Crunch'] },
+    { name:'Rest', rest:true, exercises:[] },
+    { name:'Upper', rest:false, exercises:['Incline DB Press','Cable Row','Arnold Press','Lat Pulldown','Face Pull','Hammer Curl','Skull Crusher'] },
+    { name:'Lower', rest:false, exercises:['Hack Squat','Bulgarian Split Squat','Leg Extension','Hip Thrust','Seated Calf Raise','Hanging Leg Raise'] },
+    { name:'Rest', rest:true, exercises:[] },
+    { name:'Rest', rest:true, exercises:[] },
+  ],
+  bro: [
+    { name:'Chest', rest:false, exercises:['Bench Press','Incline DB Press','Cable Fly','Pec Deck','Chest Dip'] },
+    { name:'Back', rest:false, exercises:['Barbell Row','Pull Up','Lat Pulldown','Cable Row','T-Bar Row'] },
+    { name:'Shoulders', rest:false, exercises:['Overhead Press','Lateral Raise','Face Pull','Rear Delt Fly','Arnold Press'] },
+    { name:'Legs', rest:false, exercises:['Squat','Leg Press','Leg Extension','Romanian Deadlift','Leg Curl','Calf Raise'] },
+    { name:'Arms', rest:false, exercises:['Barbell Curl','Hammer Curl','Preacher Curl','Tricep Pushdown','Skull Crusher','Overhead Extension'] },
+    { name:'Rest', rest:true, exercises:[] },
+    { name:'Rest', rest:true, exercises:[] },
+  ],
+  fb: [
+    { name:'Full A', rest:false, exercises:['Bench Press','Barbell Row','Squat','Overhead Press','Romanian Deadlift','Barbell Curl'] },
+    { name:'Rest', rest:true, exercises:[] },
+    { name:'Full B', rest:false, exercises:['Incline DB Press','Pull Up','Leg Press','Lateral Raise','Leg Curl','Tricep Pushdown'] },
+    { name:'Rest', rest:true, exercises:[] },
+    { name:'Full C', rest:false, exercises:['Cable Fly','Cable Row','Hack Squat','Face Pull','Hip Thrust','Hammer Curl'] },
+    { name:'Rest', rest:true, exercises:[] },
+    { name:'Rest', rest:true, exercises:[] },
+  ],
+  blank: [
+    { name:'Day 1', rest:false, exercises:[] },
+  ],
+};
+
+function getExObj(name) { return EXERCISES.find(e => e.name === name); }
+
+// ================================================================
+// CONCEPT A: Template-First Wizard
+// ================================================================
+let aCurrentStep = 1;
+let aSessions = [];
+let aActiveSession = 0;
+let aActiveMG = 'all';
+
+function aGoStep(step) {
+  ['a-step1','a-step2','a-step3','a-step4'].forEach(id => {
+    document.getElementById(id).style.display = 'none';
+  });
+  document.getElementById('a-step' + step).style.display = 'block';
+  document.getElementById('a-step' + step).className = 'anim-fade';
+
+  document.querySelectorAll('.a-step-dot').forEach(d => {
+    d.style.background = parseInt(d.dataset.step) <= step ? 'var(--accent)' : 'var(--border)';
+  });
+  aCurrentStep = step;
+
+  if (step === 2) aRenderTimeline();
+  if (step === 3) { aRenderSessionTabs(); aRenderExercises(); aRenderSelected(); aRenderMGTabs(); }
+  if (step === 4) aRenderReview();
+}
+
+function aSelectTemplate(key) {
+  aSessions = JSON.parse(JSON.stringify(TEMPLATES[key]));
+  // Add sets to exercises
+  aSessions.forEach(s => {
+    s.exercises = s.exercises.map(name => ({ name, sets: 3 }));
+  });
+
+  document.querySelectorAll('.template-card').forEach(c => {
+    c.style.borderColor = 'transparent';
+  });
+  event.currentTarget.style.borderColor = 'var(--accent)';
+
+  setTimeout(() => aGoStep(2), 300);
+}
+
+function aRenderTimeline() {
+  const el = document.getElementById('a-timeline');
+  el.innerHTML = '';
+  aSessions.forEach((s, i) => {
+    const card = document.createElement('div');
+    card.className = 'proto-card';
+    card.style.cssText = 'min-width:140px;padding:12px;scroll-snap-align:start;cursor:pointer;transition:all 0.2s;border:1.5px solid ' + (s.rest ? 'var(--border)' : 'rgba(56,189,248,0.2)');
+    card.onclick = () => { aActiveSession = i; aGoStep(3); };
+
+    const mgs = {};
+    s.exercises.forEach(ex => {
+      const obj = getExObj(ex.name);
+      if (obj) mgs[obj.mg] = (mgs[obj.mg]||0) + ex.sets;
+    });
+
+    card.innerHTML = `
+      <div style="font-size:10px;font-weight:600;color:var(--text-m);text-transform:uppercase;letter-spacing:0.05em;">Day ${i+1}</div>
+      <div style="font-size:14px;font-weight:700;color:var(--text-1);margin:4px 0;">${s.name}</div>
+      ${s.rest ? '<div style="font-size:11px;color:var(--text-m);font-style:italic;">Rest Day</div>' : `
+        <div style="font-size:11px;color:var(--text-2);margin-bottom:6px;">${s.exercises.length} exercises</div>
+        <div style="display:flex;gap:3px;flex-wrap:wrap;">
+          ${Object.entries(mgs).map(([mg,sets]) => `
+            <span style="font-size:9px;font-weight:600;padding:1px 5px;border-radius:4px;background:${MG_COLORS[mg]}18;color:${MG_COLORS[mg]};border:1px solid ${MG_COLORS[mg]}25;">${mg} ${sets}</span>
+          `).join('')}
+        </div>
+      `}
+    `;
+    el.appendChild(card);
+  });
+
+  // Add day button
+  const addBtn = document.createElement('div');
+  addBtn.style.cssText = 'min-width:60px;display:flex;align-items:center;justify-content:center;border-radius:10px;border:1.5px dashed var(--border);cursor:pointer;padding:12px;';
+  addBtn.innerHTML = '<span style="font-size:20px;color:var(--text-m);">+</span>';
+  addBtn.onclick = () => {
+    aSessions.push({ name:'Day '+(aSessions.length+1), rest:false, exercises:[] });
+    aRenderTimeline();
+  };
+  el.appendChild(addBtn);
+}
+
+function aRenderSessionTabs() {
+  const el = document.getElementById('a-session-tabs');
+  el.innerHTML = '';
+  aSessions.forEach((s, i) => {
+    if (s.rest) return;
+    const btn = document.createElement('button');
+    btn.className = 'pill';
+    btn.style.cssText = `border:1px solid ${i===aActiveSession?'var(--accent)':'var(--border)'};background:${i===aActiveSession?'rgba(14,165,233,0.12)':'transparent'};color:${i===aActiveSession?'var(--accent-l)':'var(--text-2)'};cursor:pointer;white-space:nowrap;`;
+    btn.textContent = s.name;
+    btn.onclick = () => { aActiveSession = i; aRenderSessionTabs(); aRenderSelected(); document.getElementById('a-editing-session').textContent = s.name; };
+    el.appendChild(btn);
+  });
+  const s = aSessions[aActiveSession];
+  if (s) document.getElementById('a-editing-session').textContent = s.name;
+}
+
+function aRenderMGTabs() {
+  const el = document.getElementById('a-mg-tabs');
+  const mgs = [...new Set(EXERCISES.map(e => e.mg))];
+  el.innerHTML = `<button class="pill a-mg-tab ${aActiveMG==='all'?'active':''}" data-mg="all" onclick="aFilterMG('all')" style="background:${aActiveMG==='all'?'var(--accent)':'var(--panel)'};color:${aActiveMG==='all'?'white':'var(--text-2)'};border:1px solid ${aActiveMG==='all'?'var(--accent)':'var(--border)'};cursor:pointer;white-space:nowrap;">All</button>`;
+  mgs.forEach(mg => {
+    el.innerHTML += `<button class="pill a-mg-tab ${aActiveMG===mg?'active':''}" data-mg="${mg}" onclick="aFilterMG('${mg}')" style="background:${aActiveMG===mg?MG_COLORS[mg]+'20':'transparent'};color:${aActiveMG===mg?MG_COLORS[mg]:'var(--text-2)'};border:1px solid ${aActiveMG===mg?MG_COLORS[mg]+'40':'var(--border)'};cursor:pointer;white-space:nowrap;text-transform:capitalize;">${mg}</button>`;
+  });
+}
+
+function aFilterMG(mg) {
+  aActiveMG = mg;
+  aRenderMGTabs();
+  aRenderExercises();
+}
+
+function aFilterExercises() { aRenderExercises(); }
+
+function aRenderExercises() {
+  const el = document.getElementById('a-exercise-list');
+  const q = document.getElementById('a-exercise-search').value.toLowerCase();
+  const session = aSessions[aActiveSession];
+  const selectedNames = session ? session.exercises.map(e => e.name) : [];
+
+  let filtered = EXERCISES;
+  if (aActiveMG !== 'all') filtered = filtered.filter(e => e.mg === aActiveMG);
+  if (q) filtered = filtered.filter(e => e.name.toLowerCase().includes(q));
+
+  el.innerHTML = '';
+  filtered.forEach(ex => {
+    const isSelected = selectedNames.includes(ex.name);
+    const div = document.createElement('div');
+    div.style.cssText = `display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-radius:8px;background:${isSelected?'rgba(14,165,233,0.06)':'var(--panel)'};border:1.5px solid ${isSelected?'var(--accent)':'transparent'};cursor:pointer;transition:all 0.2s;`;
+    div.onclick = () => {
+      if (isSelected) {
+        session.exercises = session.exercises.filter(e => e.name !== ex.name);
+      } else {
+        session.exercises.push({ name:ex.name, sets:3 });
+      }
+      aRenderExercises();
+      aRenderSelected();
+    };
+    div.innerHTML = `
+      <div>
+        <div style="font-size:13px;font-weight:600;color:var(--text-1);">${ex.name}</div>
+        <span style="font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:${MG_COLORS[ex.mg]};margin-top:2px;display:inline-block;">${ex.mg} &middot; ${ex.eq}</span>
+      </div>
+      <div style="width:20px;height:20px;border-radius:50%;border:2px solid ${isSelected?'var(--accent)':'var(--border)'};display:flex;align-items:center;justify-content:center;background:${isSelected?'var(--accent)':'transparent'};">
+        ${isSelected?'<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg>':''}
+      </div>
+    `;
+    el.appendChild(div);
+  });
+}
+
+function aRenderSelected() {
+  const session = aSessions[aActiveSession];
+  if (!session) return;
+  const el = document.getElementById('a-selected-exercises');
+  document.getElementById('a-selected-count').textContent = session.exercises.length;
+  el.innerHTML = '';
+  session.exercises.forEach((ex, i) => {
+    const obj = getExObj(ex.name);
+    const div = document.createElement('div');
+    div.className = 'anim-slide';
+    div.style.cssText = 'display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--panel);border-radius:8px;border-left:3px solid ' + (obj ? MG_COLORS[obj.mg] : 'var(--border)');
+    div.innerHTML = `
+      <div style="flex:1;font-size:12px;font-weight:500;color:var(--text-1);">${ex.name}</div>
+      <div style="display:flex;align-items:center;gap:4px;">
+        <button onclick="aChangeSet(${i},-1)" style="width:22px;height:22px;border-radius:6px;border:1px solid var(--border);background:var(--input);color:var(--text-2);font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;">-</button>
+        <span class="mono" style="font-size:13px;font-weight:600;color:var(--accent-l);width:16px;text-align:center;">${ex.sets}</span>
+        <button onclick="aChangeSet(${i},1)" style="width:22px;height:22px;border-radius:6px;border:1px solid var(--border);background:var(--input);color:var(--text-2);font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;">+</button>
+      </div>
+    `;
+    el.appendChild(div);
+  });
+}
+
+function aChangeSet(exIdx, delta) {
+  const session = aSessions[aActiveSession];
+  session.exercises[exIdx].sets = Math.max(1, Math.min(10, session.exercises[exIdx].sets + delta));
+  aRenderSelected();
+}
+
+function aRenderReview() {
+  // Volume bars
+  const vol = {};
+  aSessions.forEach(s => {
+    s.exercises.forEach(ex => {
+      const obj = getExObj(ex.name);
+      if (obj) vol[obj.mg] = (vol[obj.mg]||0) + ex.sets;
+    });
+  });
+  const sorted = Object.entries(vol).sort((a,b) => b[1]-a[1]);
+  const maxV = sorted.length ? sorted[0][1] : 1;
+  const volEl = document.getElementById('a-volume-bars');
+  volEl.innerHTML = sorted.map(([mg,sets]) => `
+    <div style="display:flex;align-items:center;gap:8px;">
+      <span style="font-size:10px;font-weight:500;width:70px;text-align:right;color:var(--text-m);text-transform:capitalize;">${mg}</span>
+      <div style="flex:1;height:6px;border-radius:3px;background:var(--input);">
+        <div style="width:${(sets/maxV)*100}%;height:100%;border-radius:3px;background:${MG_COLORS[mg]};opacity:0.75;transition:width 0.5s;"></div>
+      </div>
+      <span class="mono" style="font-size:11px;font-weight:600;color:var(--text-2);width:20px;text-align:right;">${sets}</span>
+    </div>
+  `).join('');
+
+  // Sessions
+  const sessEl = document.getElementById('a-review-sessions');
+  sessEl.innerHTML = '';
+  aSessions.forEach((s, i) => {
+    const card = document.createElement('div');
+    card.className = 'proto-card anim-fade';
+    card.style.cssText = 'padding:12px;animation-delay:' + (i*0.05) + 's;';
+    card.innerHTML = `
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:${s.exercises.length?'8':'0'}px;">
+        <span style="font-size:10px;font-weight:600;color:var(--text-m);">Day ${i+1}</span>
+        <span style="font-size:13px;font-weight:700;color:var(--text-1);">${s.name}</span>
+        ${s.rest?'<span style="font-size:9px;padding:1px 6px;border-radius:4px;background:rgba(148,163,184,0.1);color:var(--text-m);">REST</span>':''}
+      </div>
+      ${s.exercises.map(ex => {
+        const obj = getExObj(ex.name);
+        return `<div style="display:flex;align-items:center;gap:6px;padding:3px 0;">
+          <div style="width:3px;height:12px;border-radius:1px;background:${obj?MG_COLORS[obj.mg]:'var(--border)'};"></div>
+          <span style="font-size:12px;color:var(--text-2);flex:1;">${ex.name}</span>
+          <span class="mono" style="font-size:11px;color:var(--text-m);">${ex.sets}s</span>
+        </div>`;
+      }).join('')}
+    `;
+    sessEl.appendChild(card);
+  });
+}
+
+function aPickColor(el) {
+  document.querySelectorAll('#a-color-picker > div').forEach(d => d.style.boxShadow = 'none');
+  const c = el.style.background;
+  el.style.boxShadow = `0 0 0 2px var(--base), 0 0 0 4px ${c}`;
+}
+
+// Step dot clicks
+document.querySelectorAll('.a-step-dot').forEach(d => {
+  d.onclick = () => aGoStep(parseInt(d.dataset.step));
+});
+
+// ================================================================
+// CONCEPT B: Week Planner
+// ================================================================
+let bDays = Array(7).fill(null); // null or session object
+let bActiveDay = 0;
+let bActiveDayMG = 'all';
+
+const B_PALETTE = [
+  { name:'Push', muscles:['chest','shoulders','triceps'], exercises:['Bench Press','Incline DB Press','Overhead Press','Lateral Raise','Tricep Pushdown'] },
+  { name:'Pull', muscles:['back','biceps'], exercises:['Barbell Row','Pull Up','Lat Pulldown','Face Pull','Barbell Curl'] },
+  { name:'Legs', muscles:['quads','hamstrings','glutes','calves'], exercises:['Squat','Romanian Deadlift','Leg Press','Leg Curl','Calf Raise'] },
+  { name:'Upper', muscles:['chest','back','shoulders','biceps','triceps'], exercises:['Bench Press','Barbell Row','Overhead Press','Barbell Curl','Tricep Pushdown'] },
+  { name:'Lower', muscles:['quads','hamstrings','glutes','calves'], exercises:['Squat','Romanian Deadlift','Leg Extension','Hip Thrust','Calf Raise'] },
+  { name:'Arms', muscles:['biceps','triceps','forearms'], exercises:['Barbell Curl','Hammer Curl','Preacher Curl','Tricep Pushdown','Skull Crusher','Wrist Curl'] },
+  { name:'Chest', muscles:['chest'], exercises:['Bench Press','Incline DB Press','Cable Fly','Pec Deck','Chest Dip'] },
+  { name:'Back', muscles:['back','traps'], exercises:['Barbell Row','Pull Up','Lat Pulldown','Cable Row','Barbell Shrug'] },
+  { name:'Rest', muscles:[], exercises:[] },
+];
+
+function bInit() {
+  const palette = document.getElementById('b-palette');
+  palette.innerHTML = '';
+  B_PALETTE.forEach(p => {
+    const block = document.createElement('div');
+    block.className = 'b-palette-block';
+    block.onclick = () => bPlaceSession(p);
+    block.innerHTML = `
+      <div class="b-palette-name">${p.name}</div>
+      <div class="b-palette-dots">
+        ${p.muscles.length ? p.muscles.map(m => `<div class="b-mg-dot" style="background:${MG_COLORS[m]};"></div>`).join('') : '<div style="font-size:9px;color:var(--text-m);">-</div>'}
+      </div>
+    `;
+    palette.appendChild(block);
+  });
+
+  // MG filter
+  const mgFilter = document.getElementById('b-mg-filter');
+  mgFilter.innerHTML = '';
+  const mgs = [...new Set(EXERCISES.map(e => e.mg))];
+  ['all', ...mgs].forEach(mg => {
+    const btn = document.createElement('button');
+    btn.className = 'pill';
+    btn.style.cssText = `font-size:9px;border:1px solid ${mg==='all'?'var(--accent)':'var(--border)'};background:${mg==='all'?'rgba(14,165,233,0.1)':'transparent'};color:${mg==='all'?'var(--accent-l)':'var(--text-m)'};cursor:pointer;text-transform:capitalize;`;
+    btn.textContent = mg === 'all' ? 'All' : mg;
+    btn.onclick = () => {
+      bActiveDayMG = mg;
+      mgFilter.querySelectorAll('.pill').forEach(p => {
+        const pmg = p.textContent.toLowerCase();
+        const isA = pmg === mg || (mg==='all' && pmg==='all');
+        p.style.borderColor = isA ? (mg==='all'?'var(--accent)':MG_COLORS[mg]) : 'var(--border)';
+        p.style.background = isA ? (mg==='all'?'rgba(14,165,233,0.1)':MG_COLORS[mg]+'15') : 'transparent';
+        p.style.color = isA ? (mg==='all'?'var(--accent-l)':MG_COLORS[mg]) : 'var(--text-m)';
+      });
+      bRenderExGrid();
+    };
+    mgFilter.appendChild(btn);
+  });
+}
+
+function bTapDay(idx) {
+  bActiveDay = idx;
+  document.querySelectorAll('.b-day-slot').forEach((s,i) => {
+    s.classList.toggle('active', i === idx);
+  });
+  // Show exercise panel if day is filled
+  const panel = document.getElementById('b-exercise-panel');
+  if (bDays[idx] && !bDays[idx].rest) {
+    panel.style.display = 'block';
+    document.getElementById('b-panel-session').textContent = bDays[idx].name;
+    bRenderExGrid();
+  } else {
+    panel.style.display = 'none';
+  }
+}
+
+function bPlaceSession(p) {
+  const isRest = p.name === 'Rest';
+  bDays[bActiveDay] = {
+    name: p.name,
+    rest: isRest,
+    muscles: p.muscles,
+    exercises: p.exercises.map(name => ({ name, sets: 3 })),
+  };
+  bRenderDays();
+  bRenderVolume();
+  // Show exercise panel
+  if (!isRest) {
+    document.getElementById('b-exercise-panel').style.display = 'block';
+    document.getElementById('b-panel-session').textContent = p.name;
+    bRenderExGrid();
+  } else {
+    document.getElementById('b-exercise-panel').style.display = 'none';
+  }
+}
+
+function bRenderDays() {
+  document.querySelectorAll('.b-day-slot').forEach((slot, i) => {
+    const d = bDays[i];
+    const label = slot.querySelector('.b-day-label');
+    if (d) {
+      slot.classList.add('filled');
+      if (d.rest) slot.classList.add('rest'); else slot.classList.remove('rest');
+      label.textContent = d.name;
+      // Color from dominant muscle
+      if (!d.rest && d.muscles.length) {
+        const c = MG_COLORS[d.muscles[0]];
+        slot.style.setProperty('--filled-color', c);
+        slot.style.borderColor = c + '60';
+      } else {
+        slot.style.borderColor = 'var(--border)';
+        slot.style.removeProperty('--filled-color');
+      }
+    } else {
+      slot.classList.remove('filled','rest');
+      label.textContent = '—';
+      slot.style.borderColor = 'var(--border)';
+    }
+    slot.classList.toggle('active', i === bActiveDay);
+  });
+}
+
+function bRenderVolume() {
+  const vol = {};
+  bDays.forEach(d => {
+    if (!d || d.rest) return;
+    d.exercises.forEach(ex => {
+      const obj = getExObj(ex.name);
+      if (obj) vol[obj.mg] = (vol[obj.mg]||0) + ex.sets;
+    });
+  });
+  const sorted = Object.entries(vol).sort((a,b) => b[1]-a[1]);
+  const maxV = sorted.length ? sorted[0][1] : 1;
+  const el = document.getElementById('b-volume');
+  if (!sorted.length) {
+    el.innerHTML = '<div style="font-size:11px;color:var(--text-m);text-align:center;padding:12px 0;">Place sessions to see volume</div>';
+    return;
+  }
+  el.innerHTML = sorted.map(([mg,sets]) => `
+    <div style="display:flex;align-items:center;gap:6px;">
+      <span style="font-size:9px;font-weight:500;width:60px;text-align:right;color:var(--text-m);text-transform:capitalize;">${mg}</span>
+      <div style="flex:1;height:5px;border-radius:3px;background:var(--input);">
+        <div style="width:${(sets/maxV)*100}%;height:100%;border-radius:3px;background:${MG_COLORS[mg]};opacity:0.7;transition:width 0.4s;"></div>
+      </div>
+      <span class="mono" style="font-size:10px;color:var(--text-m);width:16px;text-align:right;">${sets}</span>
+    </div>
+  `).join('');
+}
+
+function bFilterExercises() { bRenderExGrid(); }
+
+function bRenderExGrid() {
+  const el = document.getElementById('b-ex-grid');
+  const q = document.getElementById('b-ex-search').value.toLowerCase();
+  const day = bDays[bActiveDay];
+  if (!day) return;
+  const selectedNames = day.exercises.map(e => e.name);
+
+  let filtered = EXERCISES;
+  if (bActiveDayMG !== 'all') filtered = filtered.filter(e => e.mg === bActiveDayMG);
+  if (q) filtered = filtered.filter(e => e.name.toLowerCase().includes(q));
+
+  el.innerHTML = '';
+  filtered.forEach(ex => {
+    const isSel = selectedNames.includes(ex.name);
+    const card = document.createElement('div');
+    card.className = 'b-ex-card' + (isSel?' selected':'');
+    card.innerHTML = `
+      <div class="b-ex-name">${ex.name}</div>
+      <div class="b-ex-mg" style="color:${MG_COLORS[ex.mg]};">${ex.mg}</div>
+      ${isSel ? `
+        <div class="b-ex-sets">
+          <button class="b-set-btn" onclick="event.stopPropagation();bChangeExSets('${ex.name}',-1)">-</button>
+          <span class="mono" style="font-size:12px;font-weight:600;color:var(--accent-l);">${day.exercises.find(e=>e.name===ex.name).sets}</span>
+          <button class="b-set-btn" onclick="event.stopPropagation();bChangeExSets('${ex.name}',1)">+</button>
+        </div>
+      ` : ''}
+    `;
+    card.onclick = () => {
+      if (isSel) {
+        day.exercises = day.exercises.filter(e => e.name !== ex.name);
+      } else {
+        day.exercises.push({ name:ex.name, sets:3 });
+      }
+      bRenderExGrid();
+      bRenderVolume();
+    };
+    el.appendChild(card);
+  });
+}
+
+function bChangeExSets(name, delta) {
+  const day = bDays[bActiveDay];
+  const ex = day.exercises.find(e => e.name === name);
+  if (ex) {
+    ex.sets = Math.max(1, Math.min(10, ex.sets + delta));
+    bRenderExGrid();
+    bRenderVolume();
+  }
+}
+
+bInit();
+
+// ================================================================
+// CONCEPT C: Quick Session Builder
+// ================================================================
+let cSessions = [];
+let cColorIdx = 0;
+const C_COLORS = ['#14b8a6','#6366f1','#f97316','#ec4899','#22c55e','#eab308','#06b6d4','#f43f5e'];
+
+function cCycleColor() {
+  cColorIdx = (cColorIdx + 1) % C_COLORS.length;
+  const ring = document.getElementById('c-color-ring');
+  ring.style.background = C_COLORS[cColorIdx];
+  ring.style.boxShadow = `0 0 0 2px var(--base), 0 0 0 3.5px ${C_COLORS[cColorIdx]}`;
+}
+
+function cAddSession() {
+  const id = Date.now();
+  cSessions.push({ id, name:'', rest:false, exercises:[], searchVisible:false });
+  cRenderSessions();
+}
+
+function cRenderSessions() {
+  const container = document.getElementById('c-sessions');
+  container.innerHTML = '';
+  cSessions.forEach((s, si) => {
+    const card = document.createElement('div');
+    card.className = 'c-session-card';
+
+    // Build volume pips for this session
+    const mgSets = {};
+    s.exercises.forEach(ex => {
+      const obj = getExObj(ex.name);
+      if (obj) mgSets[obj.mg] = (mgSets[obj.mg]||0) + ex.sets;
+    });
+
+    card.innerHTML = `
+      <div class="c-session-header">
+        <span class="c-drag-handle">&#x2630;</span>
+        <input class="c-session-name" placeholder="Session name..." value="${s.name}" oninput="cSessions[${si}].name=this.value;cRenderOverview();">
+        <button class="c-rest-toggle ${s.rest?'active':''}" onclick="cSessions[${si}].rest=!cSessions[${si}].rest;cRenderSessions();">${s.rest?'REST':'Rest'}</button>
+        <button onclick="cSessions.splice(${si},1);cRenderSessions();" style="background:none;border:none;color:var(--text-m);cursor:pointer;font-size:16px;padding:0 4px;">&times;</button>
+      </div>
+      ${!s.rest ? `
+        <div class="c-session-body">
+          <div class="c-search-wrap">
+            <svg class="c-search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            <input class="c-ex-search" placeholder="Search exercises..." id="c-search-${si}" onfocus="cShowResults(${si})" oninput="cSearchExercises(${si})">
+          </div>
+          <div class="c-ex-results" id="c-results-${si}"></div>
+          <div class="c-added-exercises" id="c-added-${si}">
+            ${s.exercises.map((ex, ei) => {
+              const obj = getExObj(ex.name);
+              return `<div class="c-added-ex" style="border-left:3px solid ${obj?MG_COLORS[obj.mg]:'var(--border)'};">
+                <span class="c-added-ex-name">${ex.name}</span>
+                <div class="c-set-stepper">
+                  <button class="c-set-btn" onclick="cChangeSet(${si},${ei},-1)">-</button>
+                  <span class="mono" style="font-size:12px;font-weight:600;color:var(--accent-l);width:14px;text-align:center;">${ex.sets}</span>
+                  <button class="c-set-btn" onclick="cChangeSet(${si},${ei},1)">+</button>
+                </div>
+                <button class="c-remove-btn" onclick="cRemoveEx(${si},${ei})">&times;</button>
+              </div>`;
+            }).join('')}
+          </div>
+        </div>
+        ${Object.keys(mgSets).length ? `
+        <div class="c-volume-sidebar">
+          ${Object.entries(mgSets).sort((a,b)=>b[1]-a[1]).map(([mg,sets]) => `
+            <div style="display:flex;align-items:center;gap:3px;margin-right:8px;">
+              <div style="width:6px;height:6px;border-radius:50%;background:${MG_COLORS[mg]};"></div>
+              <span style="font-size:9px;color:var(--text-m);text-transform:capitalize;">${mg}</span>
+              <span class="mono" style="font-size:9px;color:${MG_COLORS[mg]};">${sets}</span>
+            </div>
+          `).join('')}
+        </div>
+        ` : ''}
+      ` : '<div style="padding:16px;text-align:center;font-size:12px;color:var(--text-m);font-style:italic;">Rest Day</div>'}
+    `;
+    container.appendChild(card);
+  });
+  cRenderOverview();
+}
+
+function cShowResults(si) {
+  const el = document.getElementById('c-results-' + si);
+  el.classList.add('visible');
+  cSearchExercises(si);
+  // Close on outside click
+  setTimeout(() => {
+    document.addEventListener('click', function handler(e) {
+      if (!e.target.closest('#c-results-' + si) && !e.target.closest('#c-search-' + si)) {
+        el.classList.remove('visible');
+        document.removeEventListener('click', handler);
+      }
+    });
+  }, 100);
+}
+
+function cSearchExercises(si) {
+  const q = document.getElementById('c-search-' + si).value.toLowerCase();
+  const el = document.getElementById('c-results-' + si);
+  const session = cSessions[si];
+  const selectedNames = session.exercises.map(e => e.name);
+
+  let filtered = EXERCISES.filter(e => !selectedNames.includes(e.name));
+  if (q) filtered = filtered.filter(e => e.name.toLowerCase().includes(q) || e.mg.includes(q));
+
+  // Group by muscle
+  const groups = {};
+  filtered.forEach(ex => {
+    if (!groups[ex.mg]) groups[ex.mg] = [];
+    groups[ex.mg].push(ex);
+  });
+
+  el.innerHTML = '';
+  Object.entries(groups).forEach(([mg, exs]) => {
+    const header = document.createElement('div');
+    header.style.cssText = `font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:${MG_COLORS[mg]};padding:6px 10px 2px;`;
+    header.textContent = mg;
+    el.appendChild(header);
+
+    exs.forEach(ex => {
+      const row = document.createElement('div');
+      row.className = 'c-ex-result';
+      row.innerHTML = `
+        <span style="font-size:12px;color:var(--text-1);">${ex.name}</span>
+        <span style="font-size:10px;color:var(--text-m);">${ex.eq}</span>
+      `;
+      row.onclick = (e) => {
+        e.stopPropagation();
+        session.exercises.push({ name:ex.name, sets:3 });
+        cRenderSessions();
+        // Re-focus search
+        setTimeout(() => {
+          const input = document.getElementById('c-search-' + si);
+          if (input) { input.focus(); cShowResults(si); }
+        }, 50);
+      };
+      el.appendChild(row);
+    });
+  });
+}
+
+function cChangeSet(si, ei, delta) {
+  const ex = cSessions[si].exercises[ei];
+  ex.sets = Math.max(1, Math.min(10, ex.sets + delta));
+  cRenderSessions();
+}
+
+function cRemoveEx(si, ei) {
+  cSessions[si].exercises.splice(ei, 1);
+  cRenderSessions();
+}
+
+function cRenderOverview() {
+  // Schedule strip
+  const strip = document.getElementById('c-strip');
+  strip.innerHTML = '';
+  if (cSessions.length === 0) {
+    strip.innerHTML = '<div style="font-size:10px;color:var(--text-m);">No sessions yet</div>';
+  } else {
+    cSessions.forEach((s, i) => {
+      const mgSets = {};
+      s.exercises.forEach(ex => {
+        const obj = getExObj(ex.name);
+        if (obj) mgSets[obj.mg] = (mgSets[obj.mg]||0) + ex.sets;
+      });
+      let dominant = null, maxS = 0;
+      Object.entries(mgSets).forEach(([mg,sets]) => { if (sets > maxS) { dominant = mg; maxS = sets; } });
+
+      const div = document.createElement('div');
+      div.style.cssText = `flex:1;text-align:center;padding:6px 2px;border-radius:6px;background:${dominant?MG_COLORS[dominant]+'15':'rgba(148,163,184,0.08)'};border:1px solid ${dominant?MG_COLORS[dominant]+'30':'rgba(148,163,184,0.15)'};`;
+      div.innerHTML = `
+        <div style="font-size:11px;font-weight:700;color:${dominant?MG_COLORS[dominant]:'var(--text-m)'};">${i+1}</div>
+        <div style="font-size:8px;font-weight:600;color:var(--text-m);text-transform:uppercase;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${s.name||'...'}</div>
+      `;
+      strip.appendChild(div);
+    });
+  }
+
+  // Volume overview
+  const vol = {};
+  cSessions.forEach(s => {
+    s.exercises.forEach(ex => {
+      const obj = getExObj(ex.name);
+      if (obj) vol[obj.mg] = (vol[obj.mg]||0) + ex.sets;
+    });
+  });
+  const sorted = Object.entries(vol).sort((a,b) => b[1]-a[1]);
+  const maxV = sorted.length ? sorted[0][1] : 1;
+  const volEl = document.getElementById('c-volume-overview');
+  if (!sorted.length) {
+    volEl.innerHTML = '<div style="font-size:10px;color:var(--text-m);text-align:center;">Add sessions to see volume</div>';
+  } else {
+    volEl.innerHTML = sorted.map(([mg,sets]) => `
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span style="font-size:9px;font-weight:500;width:60px;text-align:right;color:var(--text-m);text-transform:capitalize;">${mg}</span>
+        <div style="flex:1;height:5px;border-radius:3px;background:var(--input);">
+          <div style="width:${(sets/maxV)*100}%;height:100%;border-radius:3px;background:${MG_COLORS[mg]};opacity:0.7;transition:width 0.4s;"></div>
+        </div>
+        <span class="mono" style="font-size:10px;color:var(--text-m);width:16px;text-align:right;">${sets}</span>
+      </div>
+    `).join('');
+  }
+}
+
+// Initialize Concept C with some demo sessions
+cSessions = [
+  { id:1, name:'Push', rest:false, exercises:[{name:'Bench Press',sets:4},{name:'Incline DB Press',sets:3},{name:'Cable Fly',sets:3},{name:'Overhead Press',sets:3},{name:'Lateral Raise',sets:3},{name:'Tricep Pushdown',sets:3}] },
+  { id:2, name:'Pull', rest:false, exercises:[{name:'Barbell Row',sets:4},{name:'Pull Up',sets:3},{name:'Lat Pulldown',sets:3},{name:'Face Pull',sets:3},{name:'Barbell Curl',sets:3},{name:'Hammer Curl',sets:3}] },
+  { id:3, name:'Legs', rest:false, exercises:[{name:'Squat',sets:4},{name:'Leg Press',sets:3},{name:'Romanian Deadlift',sets:3},{name:'Leg Curl',sets:3},{name:'Calf Raise',sets:3}] },
+];
+cRenderSessions();
+
+// Hover effects for template cards
+document.querySelectorAll('.template-card').forEach(card => {
+  card.addEventListener('mouseenter', () => { if (card.style.borderColor === 'transparent') card.style.borderColor = 'rgba(56,189,248,0.15)'; });
+  card.addEventListener('mouseleave', () => { if (card.style.borderColor !== 'var(--accent)') card.style.borderColor = 'transparent'; });
+});
+</script>
+</body>
+</html>
