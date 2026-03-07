@@ -34,13 +34,16 @@ export interface Session {
 export interface Split {
   id: string
   name: string
+  color: string | null
   sessions: Session[]
 }
 
 export interface SplitListItem {
   id: string
   name: string
+  color: string | null
   session_count: number
+  exercise_count: number
 }
 
 // Mesocycles
@@ -49,6 +52,7 @@ export interface MesocycleListItem {
   id: string
   name: string
   split_name: string
+  split_color: string | null
   total_weeks: number
   current_week: number
   current_rir: number
@@ -106,6 +110,7 @@ export interface Mesocycle {
   name: string
   split_id: string
   split_name: string
+  split_color: string | null
   total_weeks: number
   rir_scheme: number[]
   current_week: number

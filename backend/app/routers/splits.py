@@ -58,16 +58,20 @@ class SessionResponse(BaseModel):
 
 class SplitCreate(BaseModel):
     name: str = Field(min_length=1, max_length=100)
+    color: str | None = Field(default=None, pattern=r"^#[0-9a-fA-F]{6}$")
 
 
 class SplitUpdate(BaseModel):
     name: str = Field(min_length=1, max_length=100)
+    color: str | None = Field(default=None, pattern=r"^#[0-9a-fA-F]{6}$")
 
 
 class SplitListItem(BaseModel):
     id: str
     name: str
+    color: str | None
     session_count: int
+    exercise_count: int
 
     class Config:
         from_attributes = True
@@ -76,6 +80,7 @@ class SplitListItem(BaseModel):
 class SplitResponse(BaseModel):
     id: str
     name: str
+    color: str | None
     sessions: list[SessionResponse]
 
     class Config:
@@ -94,15 +99,38 @@ async def list_splits(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    exercise_count_subq = (
+        select(func.count(SessionExercise.id))
+        .join(Session, SessionExercise.session_id == Session.id)
+        .where(Session.split_id == Split.id)
+        .correlate(Split)
+        .scalar_subquery()
+        .label("exercise_count")
+    )
     result = await db.execute(
-        select(Split.id, Split.name, func.count(Session.id).label("session_count"))
+        select(
+            Split.id,
+            Split.name,
+            Split.color,
+            func.count(Session.id).label("session_count"),
+            exercise_count_subq,
+        )
         .outerjoin(Session)
         .where(or_(Split.user_id == current_user.id, Split.user_id.is_(None)))
         .group_by(Split.id)
         .order_by(Split.name)
     )
     splits = result.all()
-    return [{"id": s.id, "name": s.name, "session_count": s.session_count} for s in splits]
+    return [
+        {
+            "id": s.id,
+            "name": s.name,
+            "color": s.color,
+            "session_count": s.session_count,
+            "exercise_count": s.exercise_count or 0,
+        }
+        for s in splits
+    ]
 
 
 @router.post("", response_model=SplitResponse, status_code=status.HTTP_201_CREATED)
@@ -111,11 +139,11 @@ async def create_split(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    db_split = Split(name=split.name, user_id=current_user.id)
+    db_split = Split(name=split.name, color=split.color, user_id=current_user.id)
     db.add(db_split)
     await db.commit()
     await db.refresh(db_split)
-    return {"id": db_split.id, "name": db_split.name, "sessions": []}
+    return {"id": db_split.id, "name": db_split.name, "color": db_split.color, "sessions": []}
 
 
 @router.get("/{split_id}", response_model=SplitResponse)
@@ -164,6 +192,7 @@ async def update_split(
         raise HTTPException(status_code=404, detail="Split not found")
 
     split.name = split_update.name
+    split.color = split_update.color
     await db.commit()
     await db.refresh(split)
     return _split_to_response(split)
@@ -420,5 +449,6 @@ def _split_to_response(split: Split) -> dict:
     return {
         "id": split.id,
         "name": split.name,
+        "color": split.color,
         "sessions": [_session_to_response(s) for s in split.sessions],
     }

@@ -85,7 +85,10 @@ function ActiveMesoCard({ meso, fullMeso }: { meso: MesocycleListItem; fullMeso:
     <Link
       to={`/mesocycles/${meso.id}`}
       className="compact-card p-4 block stagger"
-      style={{ borderColor: 'rgba(74,222,128,0.2)' }}
+      style={{
+        borderColor: 'rgba(74,222,128,0.2)',
+        borderLeft: meso.split_color ? `3px solid ${meso.split_color}` : undefined,
+      }}
     >
       {/* Top row */}
       <div className="flex items-center justify-between mb-1">
@@ -142,7 +145,10 @@ function InactiveMesoCard({ meso }: { meso: MesocycleListItem }) {
     <Link
       to={`/mesocycles/${meso.id}`}
       className="compact-card p-4 block stagger"
-      style={{ opacity: 0.6 }}
+      style={{
+        opacity: 0.6,
+        borderLeft: meso.split_color ? `3px solid ${meso.split_color}` : undefined,
+      }}
     >
       <div className="flex items-center justify-between mb-1">
         <div className="flex items-center gap-2">
@@ -164,6 +170,59 @@ function InactiveMesoCard({ meso }: { meso: MesocycleListItem }) {
         <span className="mono text-[11px]" style={{ color: 'var(--text-m)' }}>{meso.workouts_completed}/{meso.total_workouts}</span>
       </div>
     </Link>
+  )
+}
+
+// --- RIR Scheme Calculation ---
+
+function getRirScheme(weeks: number): number[] {
+  if (weeks <= 1) return [0]
+  if (weeks === 2) return [2, -1]
+  if (weeks === 3) return [3, 1, -1]
+  if (weeks === 4) return [3, 2, 1, -1]
+  if (weeks === 5) return [3, 2, 1, 0, -1]
+  const trainingWeeks = weeks - 1
+  const scheme: number[] = []
+  for (let i = 0; i < trainingWeeks; i++) {
+    scheme.push(Math.max(0, 3 - Math.floor(i * 4 / trainingWeeks)))
+  }
+  scheme.push(-1)
+  return scheme
+}
+
+// --- RIR Heatmap Strip ---
+
+function RirHeatmap({ weeks }: { weeks: number }) {
+  const scheme = getRirScheme(weeks)
+  const trainingCount = scheme.filter((r) => r >= 0).length
+
+  return (
+    <div>
+      <div className="flex justify-between text-[9px] mb-1.5" style={{ color: 'var(--text-m)' }}>
+        <span>Easy</span>
+        <span>{trainingCount} training + 1 deload</span>
+        <span>Hard</span>
+      </div>
+      <div className="flex gap-[2px]" style={{ borderRadius: 8, overflow: 'hidden' }}>
+        {scheme.map((rir, i) => {
+          const isDeload = rir === -1
+          const opacity = isDeload ? 0.4 : [1, 0.7, 0.5, 0.3][rir] ?? 0.3
+          const bg = isDeload ? '#a855f7' : '#0ea5e9'
+          return (
+            <div
+              key={i}
+              className="flex-1 flex flex-col items-center justify-center py-2"
+              style={{ background: bg, opacity, transition: 'all 0.3s ease' }}
+            >
+              <span className="mono text-[12px] font-bold text-white leading-none">
+                {isDeload ? 'D' : rir}
+              </span>
+              <span className="text-[8px] text-white/70 leading-none mt-0.5">W{i + 1}</span>
+            </div>
+          )
+        })}
+      </div>
+    </div>
   )
 }
 
@@ -203,60 +262,119 @@ function MesocycleForm({ onSave, onCancel }: MesocycleFormProps) {
     }
   }
 
-  const getRirSchemePreview = (weeks: number): string => {
-    if (weeks <= 1) return 'RiR: 0'
-    if (weeks === 2) return 'RiR: 2 \u2192 Deload'
-    if (weeks === 3) return 'RiR: 3 \u2192 1 \u2192 Deload'
-    if (weeks === 4) return 'RiR: 3 \u2192 2 \u2192 1 \u2192 Deload'
-    if (weeks === 5) return 'RiR: 3 \u2192 2 \u2192 1 \u2192 0 \u2192 Deload'
-    return 'RiR: 3 \u2192 ... \u2192 0 \u2192 Deload'
-  }
-
   return (
-    <form onSubmit={handleSubmit} className="card space-y-3">
-      <input
-        type="text"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        placeholder="Mesocycle name (e.g., February Hypertrophy)"
-        className="input"
-        autoFocus
-      />
-
-      {splits.length === 0 ? (
-        <div className="text-[var(--text-m)] text-sm py-2">
-          No splits available. <Link to="/splits" className="text-protocol-400">Create one first.</Link>
-        </div>
-      ) : (
-        <select
-          value={splitId}
-          onChange={(e) => setSplitId(e.target.value)}
-          className="input"
-        >
-          {splits.map((split) => (
-            <option key={split.id} value={split.id}>
-              {split.name} ({split.session_count} sessions)
-            </option>
-          ))}
-        </select>
-      )}
-
+    <form onSubmit={handleSubmit} className="card space-y-4">
+      {/* Name */}
       <div>
-        <label className="text-sm text-[var(--text-2)]">Total Weeks</label>
+        <div className="text-[10px] font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--text-m)' }}>
+          Name
+        </div>
         <input
-          type="number"
-          inputMode="numeric"
-          min="1"
-          max="12"
-          value={totalWeeks}
-          onChange={(e) => setTotalWeeks(parseInt(e.target.value) || 4)}
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="e.g. March Hypertrophy"
           className="input"
+          autoFocus
         />
-        <div className="text-xs text-[var(--text-m)] mt-1">
-          {getRirSchemePreview(totalWeeks)}
+      </div>
+
+      {/* Split Picker */}
+      <div>
+        <div className="text-[10px] font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--text-m)' }}>
+          Split
+        </div>
+        {splits.length === 0 ? (
+          <div className="text-[var(--text-m)] text-sm py-2">
+            No splits available. <Link to="/splits" className="text-protocol-400">Create one first.</Link>
+          </div>
+        ) : (
+          <div className="-mx-4 px-4 flex gap-2.5 overflow-x-auto scrollbar-hide pb-1">
+            {splits.map((split) => {
+              const isSelected = splitId === split.id
+              const accent = split.color || 'var(--accent)'
+              return (
+                <button
+                  key={split.id}
+                  type="button"
+                  onClick={() => setSplitId(split.id)}
+                  className="shrink-0 w-[190px] rounded-xl text-left relative overflow-hidden transition-all"
+                  style={{
+                    background: 'var(--card)',
+                    border: isSelected ? `1.5px solid ${accent}` : '1.5px solid var(--border)',
+                  }}
+                >
+                  {isSelected && (
+                    <div className="h-[3px] w-full" style={{ background: accent }} />
+                  )}
+                  <div className="p-3">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      {split.color && (
+                        <span className="w-2 h-2 rounded-full shrink-0" style={{ background: split.color }} />
+                      )}
+                      <span
+                        className="text-[13px] font-semibold truncate"
+                        style={{ color: isSelected ? 'var(--text-1)' : 'var(--text-2)' }}
+                      >
+                        {split.name}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1 text-[10px]" style={{ color: 'var(--text-m)' }}>
+                      <span>{split.session_count} sessions</span>
+                      <span>&middot;</span>
+                      <span>{split.exercise_count} exercises</span>
+                    </div>
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Weeks Stepper + RIR Heatmap */}
+      <div>
+        <div className="text-[10px] font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--text-m)' }}>
+          Duration & Intensity
+        </div>
+        <div className="rounded-xl p-4" style={{ background: 'var(--panel)', border: '1px solid rgba(255,255,255,0.04)' }}>
+          {/* Stepper */}
+          <div className="flex items-center justify-between mb-4">
+            <span className="text-[13px] font-medium" style={{ color: 'var(--text-2)' }}>Weeks</span>
+            <div className="flex items-center gap-4">
+              <button
+                type="button"
+                onClick={() => setTotalWeeks(Math.max(3, totalWeeks - 1))}
+                disabled={totalWeeks <= 3}
+                className="w-10 h-10 rounded-lg flex items-center justify-center disabled:opacity-30 transition-all active:scale-90"
+                style={{ background: 'var(--input)', border: '1px solid var(--border)' }}
+              >
+                <span className="text-lg" style={{ color: 'var(--text-2)' }}>-</span>
+              </button>
+              <span className="mono text-2xl font-bold w-6 text-center" style={{ color: 'var(--text-1)' }}>
+                {totalWeeks}
+              </span>
+              <button
+                type="button"
+                onClick={() => setTotalWeeks(Math.min(8, totalWeeks + 1))}
+                disabled={totalWeeks >= 8}
+                className="w-10 h-10 rounded-lg flex items-center justify-center disabled:opacity-30 transition-all active:scale-90"
+                style={{ background: 'var(--input)', border: '1px solid var(--border)' }}
+              >
+                <span className="text-lg" style={{ color: 'var(--text-2)' }}>+</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Divider */}
+          <div className="mb-4" style={{ height: 1, background: 'rgba(255,255,255,0.04)' }} />
+
+          {/* Heatmap */}
+          <RirHeatmap weeks={totalWeeks} />
         </div>
       </div>
 
+      {/* Actions */}
       <div className="flex gap-2">
         <button
           type="button"

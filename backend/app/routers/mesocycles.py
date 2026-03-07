@@ -36,6 +36,7 @@ class MesocycleListItem(BaseModel):
     id: str
     name: str
     split_name: str
+    split_color: str | None
     total_weeks: int
     current_week: int
     current_rir: int
@@ -53,6 +54,7 @@ class MesocycleResponse(BaseModel):
     name: str
     split_id: str
     split_name: str
+    split_color: str | None
     total_weeks: int
     rir_scheme: list[int]
     current_week: int
@@ -143,7 +145,7 @@ async def create_mesocycle(
     await db.commit()
     await db.refresh(mesocycle)
 
-    return _mesocycle_to_response(mesocycle, split.name)
+    return _mesocycle_to_response(mesocycle, split.name, split.color)
 
 
 @router.get("/active", response_model=MesocycleResponse | None)
@@ -161,7 +163,7 @@ async def get_active_mesocycle(
     if not mesocycle:
         return None
 
-    return _mesocycle_to_response(mesocycle, mesocycle.split.name)
+    return _mesocycle_to_response(mesocycle, mesocycle.split.name, mesocycle.split.color)
 
 
 @router.get("/{mesocycle_id}", response_model=MesocycleResponse)
@@ -180,7 +182,7 @@ async def get_mesocycle(
     if not mesocycle:
         raise HTTPException(status_code=404, detail="Mesocycle not found")
 
-    return _mesocycle_to_response(mesocycle, mesocycle.split.name)
+    return _mesocycle_to_response(mesocycle, mesocycle.split.name, mesocycle.split.color)
 
 
 @router.put("/{mesocycle_id}", response_model=MesocycleResponse)
@@ -219,7 +221,7 @@ async def update_mesocycle(
     await db.commit()
     await db.refresh(mesocycle)
 
-    return _mesocycle_to_response(mesocycle, mesocycle.split.name)
+    return _mesocycle_to_response(mesocycle, mesocycle.split.name, mesocycle.split.color)
 
 
 @router.delete("/{mesocycle_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -279,13 +281,16 @@ def _derive_fields(structure: dict) -> dict:
     }
 
 
-def _mesocycle_to_response(mesocycle: Mesocycle, split_name: str) -> dict:
+def _mesocycle_to_response(
+    mesocycle: Mesocycle, split_name: str, split_color: str | None = None
+) -> dict:
     derived = _derive_fields(mesocycle.structure)
     return {
         "id": mesocycle.id,
         "name": mesocycle.name,
         "split_id": mesocycle.split_id,
         "split_name": split_name,
+        "split_color": split_color,
         "total_weeks": derived["total_weeks"],
         "rir_scheme": derived["rir_scheme"],
         "current_week": derived["current_week"],
@@ -310,6 +315,7 @@ def _mesocycle_to_list_item(mesocycle: Mesocycle) -> dict:
         "id": mesocycle.id,
         "name": mesocycle.name,
         "split_name": mesocycle.split.name,
+        "split_color": mesocycle.split.color if mesocycle.split else None,
         "total_weeks": derived["total_weeks"],
         "current_week": derived["current_week"],
         "current_rir": derived["current_rir"],

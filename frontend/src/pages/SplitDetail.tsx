@@ -22,6 +22,11 @@ interface SessionExerciseInput {
   sets: number
 }
 
+const SPLIT_COLORS = [
+  '#14b8a6', '#6366f1', '#f97316', '#ec4899',
+  '#22c55e', '#eab308', '#06b6d4', '#f43f5e',
+]
+
 export default function SplitDetail() {
   const toast = useToast()
   const { id } = useParams<{ id: string }>()
@@ -29,6 +34,7 @@ export default function SplitDetail() {
   const { data: split, isLoading } = useSplit(id!)
   const [editingName, setEditingName] = useState(false)
   const [name, setName] = useState('')
+  const [editColor, setEditColor] = useState<string | null>(null)
   const [showSessionForm, setShowSessionForm] = useState(false)
   const [editingSession, setEditingSession] = useState<Session | null>(null)
   const updateSplitMutation = useUpdateSplit(id!)
@@ -39,7 +45,7 @@ export default function SplitDetail() {
   const handleUpdateName = async () => {
     if (!split || !name.trim()) return
     try {
-      await updateSplitMutation.mutateAsync({ name })
+      await updateSplitMutation.mutateAsync({ name, color: editColor })
       setEditingName(false)
     } catch {
       toast.showError('Failed to update split')
@@ -96,29 +102,49 @@ export default function SplitDetail() {
       <AppHeader
         title={
           editingName ? (
-            <div className="flex gap-2 items-center">
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="input flex-1 text-[15px]"
-                autoFocus
-              />
-              <button onClick={handleUpdateName} className="btn btn-primary text-xs py-1 px-2">
-                Save
-              </button>
-              <button onClick={() => setEditingName(false)} className="btn btn-secondary text-xs py-1 px-2">
-                Cancel
-              </button>
+            <div className="space-y-2">
+              <div className="flex gap-2 items-center">
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="input flex-1 text-[15px]"
+                  autoFocus
+                />
+                <button onClick={handleUpdateName} className="btn btn-primary text-xs py-1 px-2">
+                  Save
+                </button>
+                <button onClick={() => setEditingName(false)} className="btn btn-secondary text-xs py-1 px-2">
+                  Cancel
+                </button>
+              </div>
+              <div className="flex gap-2">
+                {SPLIT_COLORS.map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() => setEditColor(c)}
+                    className="w-5 h-5 rounded-full shrink-0"
+                    style={{
+                      background: c,
+                      boxShadow: editColor === c ? `0 0 0 2px var(--base), 0 0 0 3.5px ${c}` : 'none',
+                    }}
+                  />
+                ))}
+              </div>
             </div>
           ) : (
             <span
-              className="cursor-pointer hover:text-protocol-400"
+              className="cursor-pointer hover:text-protocol-400 flex items-center gap-2"
               onClick={() => {
                 setName(split.name)
+                setEditColor(split.color)
                 setEditingName(true)
               }}
             >
+              {split.color && (
+                <span className="w-3 h-3 rounded-full shrink-0" style={{ background: split.color }} />
+              )}
               {split.name}
             </span>
           )

@@ -79,7 +79,7 @@ export function useSplit(id: string) {
 export function useCreateSplit() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (data: { name: string }) => api.post('/splits', data),
+    mutationFn: (data: { name: string; color?: string | null }) => api.post('/splits', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.splits.all })
     },
@@ -89,7 +89,7 @@ export function useCreateSplit() {
 export function useUpdateSplit(id: string) {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (data: { name: string }) => api.put(`/splits/${id}`, data),
+    mutationFn: (data: { name: string; color?: string | null }) => api.put(`/splits/${id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.splits.detail(id) })
       queryClient.invalidateQueries({ queryKey: queryKeys.splits.all })

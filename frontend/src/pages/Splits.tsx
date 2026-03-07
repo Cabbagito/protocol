@@ -118,7 +118,11 @@ function SplitCard({ split }: { split: SplitListItem }) {
   }, [splitDetail, exerciseMap])
 
   return (
-    <Link to={`/splits/${split.id}`} className="compact-card p-4 list-row block stagger">
+    <Link
+      to={`/splits/${split.id}`}
+      className="compact-card p-4 list-row block stagger"
+      style={{ borderLeft: split.color ? `3px solid ${split.color}` : undefined }}
+    >
       {/* Top row */}
       <div className="flex items-center justify-between mb-3">
         <div className="text-[15px] font-semibold text-[var(--text-1)]">{split.name}</div>
@@ -189,6 +193,39 @@ function SplitCard({ split }: { split: SplitListItem }) {
   )
 }
 
+// --- Split Colors ---
+
+const SPLIT_COLORS = [
+  '#14b8a6', // teal
+  '#6366f1', // indigo
+  '#f97316', // orange
+  '#ec4899', // pink
+  '#22c55e', // green
+  '#eab308', // yellow
+  '#06b6d4', // cyan
+  '#f43f5e', // rose
+]
+
+function SplitColorPicker({ value, onChange }: { value: string | null; onChange: (c: string) => void }) {
+  return (
+    <div className="flex gap-2 items-center">
+      {SPLIT_COLORS.map((c) => (
+        <button
+          key={c}
+          type="button"
+          onClick={() => onChange(c)}
+          className="w-6 h-6 rounded-full shrink-0 transition-transform"
+          style={{
+            background: c,
+            boxShadow: value === c ? `0 0 0 2px var(--base), 0 0 0 4px ${c}` : 'none',
+            transform: value === c ? 'scale(1.1)' : 'scale(1)',
+          }}
+        />
+      ))}
+    </div>
+  )
+}
+
 // --- Split Form ---
 
 interface SplitFormProps {
@@ -199,13 +236,14 @@ interface SplitFormProps {
 function SplitForm({ onSave, onCancel }: SplitFormProps) {
   const toast = useToast()
   const [name, setName] = useState('')
+  const [color, setColor] = useState<string | null>(SPLIT_COLORS[0]!)
   const createSplit = useCreateSplit()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
     try {
-      await createSplit.mutateAsync({ name })
+      await createSplit.mutateAsync({ name, color })
       onSave()
     } catch {
       toast.showError('Failed to save split')
@@ -222,6 +260,7 @@ function SplitForm({ onSave, onCancel }: SplitFormProps) {
         className="input"
         autoFocus
       />
+      <SplitColorPicker value={color} onChange={setColor} />
       <div className="flex gap-2">
         <button
           type="button"

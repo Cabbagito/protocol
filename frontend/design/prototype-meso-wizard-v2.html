@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=375" />
+  <title>Meso Wizard v2 — Expanded Pills + RIR Options</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: #0d1b2a;
+      color: #e2e8f0;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+    .font-mono { font-family: 'JetBrains Mono', monospace; }
+    .vignette {
+      position: fixed; inset: 0;
+      background: radial-gradient(ellipse at center, transparent 60%, #070d15 100%);
+      pointer-events: none; z-index: 100;
+    }
+    .section-label {
+      font-size: 10px; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.12em; color: #475569; margin-bottom: 12px; padding-left: 2px;
+    }
+
+    /* ===== Expanded split pills ===== */
+    .split-pill-v2 {
+      flex-shrink: 0;
+      width: 200px;
+      background: #0f1d2e;
+      border: 1.5px solid #1e3a52;
+      border-radius: 14px;
+      padding: 14px 16px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    .split-pill-v2::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: var(--split-color);
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+    .split-pill-v2:hover { border-color: #2a5070; }
+    .split-pill-v2.selected {
+      border-color: var(--split-color);
+      background: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0) 100%);
+      box-shadow: 0 0 20px rgba(0,0,0,0.2);
+    }
+    .split-pill-v2.selected::before { opacity: 1; }
+    .split-pill-v2 .color-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--split-color);
+      flex-shrink: 0;
+    }
+    .split-pill-v2 .stat-row {
+      display: flex; gap: 12px; margin-top: 8px;
+    }
+    .split-pill-v2 .stat {
+      font-size: 11px; color: #475569;
+    }
+    .split-pill-v2 .stat .val {
+      font-weight: 600; color: #cbd5e1;
+    }
+    .split-pill-v2.selected .stat .val {
+      color: #e2e8f0;
+    }
+
+    /* Intensity mini bar */
+    .intensity-bar-track {
+      height: 3px; background: #162a3e; border-radius: 2px; flex: 1; max-width: 48px;
+    }
+    .intensity-bar-fill {
+      height: 100%; border-radius: 2px; transition: width 0.2s ease;
+    }
+
+    /* ===== Stepper ===== */
+    .stepper-btn {
+      width: 40px; height: 40px; border-radius: 10px;
+      background: #132438; border: 1px solid #1e3a52;
+      color: #cbd5e1; display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: all 0.15s ease; font-size: 18px; user-select: none;
+    }
+    .stepper-btn:hover { background: #1a3148; border-color: #2a5070; }
+    .stepper-btn:active { transform: scale(0.92); }
+
+    /* ===== Name input ===== */
+    .name-input {
+      width: 100%; background: #162a3e; border: 1.5px solid #1e3a52;
+      border-radius: 12px; padding: 12px 16px; color: #e2e8f0;
+      font-size: 15px; font-weight: 500; outline: none;
+      transition: border-color 0.2s ease; font-family: 'Inter', system-ui, sans-serif;
+    }
+    .name-input::placeholder { color: #475569; }
+    .name-input:focus { border-color: #0ea5e9; }
+
+    /* ===== CTA ===== */
+    .btn-primary {
+      width: 100%; padding: 14px; border-radius: 12px;
+      background: #0ea5e9; color: white; font-size: 15px; font-weight: 600;
+      border: none; cursor: pointer; transition: all 0.15s ease;
+      font-family: 'Inter', system-ui, sans-serif;
+    }
+    .btn-primary:hover { background: #0284c7; }
+    .btn-primary:active { transform: scale(0.98); }
+
+    /* ===== Variation dividers ===== */
+    .variation-divider {
+      border: none; height: 3px;
+      background: linear-gradient(90deg, transparent, #1e3a52, transparent);
+      margin: 48px 0;
+    }
+    .variation-label {
+      text-align: center; font-size: 11px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.2em;
+      color: #0ea5e9; margin-bottom: 24px;
+    }
+
+    /* Scrollbar hide */
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
+</head>
+<body>
+  <div class="vignette"></div>
+  <div style="max-width: 375px; margin: 0 auto; padding: 20px 0 80px;">
+
+    <!-- ========================================== -->
+    <!-- SPLIT PILLS SECTION (shared across all RIR variations) -->
+    <!-- ========================================== -->
+    <div style="padding: 0 16px;">
+      <div style="text-align: center; margin-bottom: 28px;">
+        <h1 style="font-size: 18px; font-weight: 700; margin-bottom: 4px;">New Mesocycle</h1>
+        <p style="font-size: 13px; color: #475569;">Configure your training block</p>
+      </div>
+
+      <div style="margin-bottom: 24px;">
+        <div class="section-label">Name</div>
+        <input class="name-input" placeholder="e.g. March Hypertrophy" value="March Hypertrophy" />
+      </div>
+    </div>
+
+    <!-- Split pills — full-bleed horizontal scroll -->
+    <div style="margin-bottom: 24px;">
+      <div class="section-label" style="padding-left: 18px;">Training Split</div>
+      <div class="no-scrollbar" style="display: flex; gap: 10px; overflow-x: auto; padding: 0 16px; -webkit-overflow-scrolling: touch;">
+
+        <div class="split-pill-v2 selected" style="--split-color: #0ea5e9;" onclick="selectSplit(this)">
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+            <div class="color-dot"></div>
+            <span style="font-size: 14px; font-weight: 600;">Push / Pull / Legs</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat"><span class="val">3</span> sessions</span>
+            <span class="stat"><span class="val">18</span> exercises</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 6px; margin-top: 8px;">
+            <span style="font-size: 10px; color: #475569;">Volume</span>
+            <div class="intensity-bar-track">
+              <div class="intensity-bar-fill" style="width: 72%; background: #0ea5e9;"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="split-pill-v2" style="--split-color: #a855f7;" onclick="selectSplit(this)">
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+            <div class="color-dot"></div>
+            <span style="font-size: 14px; font-weight: 600;">Upper / Lower</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat"><span class="val">2</span> sessions</span>
+            <span class="stat"><span class="val">14</span> exercises</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 6px; margin-top: 8px;">
+            <span style="font-size: 10px; color: #475569;">Volume</span>
+            <div class="intensity-bar-track">
+              <div class="intensity-bar-fill" style="width: 55%; background: #a855f7;"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="split-pill-v2" style="--split-color: #f97316;" onclick="selectSplit(this)">
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+            <div class="color-dot"></div>
+            <span style="font-size: 14px; font-weight: 600;">Full Body</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat"><span class="val">1</span> session</span>
+            <span class="stat"><span class="val">8</span> exercises</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 6px; margin-top: 8px;">
+            <span style="font-size: 10px; color: #475569;">Volume</span>
+            <div class="intensity-bar-track">
+              <div class="intensity-bar-fill" style="width: 35%; background: #f97316;"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="split-pill-v2" style="--split-color: #22c55e;" onclick="selectSplit(this)">
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+            <div class="color-dot"></div>
+            <span style="font-size: 14px; font-weight: 600;">Arnold Split</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat"><span class="val">3</span> sessions</span>
+            <span class="stat"><span class="val">16</span> exercises</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 6px; margin-top: 8px;">
+            <span style="font-size: 10px; color: #475569;">Volume</span>
+            <div class="intensity-bar-track">
+              <div class="intensity-bar-fill" style="width: 65%; background: #22c55e;"></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div style="padding: 0 16px;">
+
+    <!-- ========================================== -->
+    <!-- WEEKS STEPPER (shared) -->
+    <!-- ========================================== -->
+    <div style="margin-bottom: 24px;">
+      <div class="section-label">Duration & Intensity</div>
+      <div style="background: #0f1d2e; border: 1.5px solid #1e3a52; border-radius: 12px; padding: 16px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+          <span style="font-size: 13px; color: #cbd5e1; font-weight: 500;">Weeks</span>
+          <div style="display: flex; align-items: center; gap: 16px;">
+            <div class="stepper-btn" onclick="adjustWeeks(-1)">-</div>
+            <span class="font-mono" style="font-size: 24px; font-weight: 700; min-width: 24px; text-align: center;" id="weeks-val">5</span>
+            <div class="stepper-btn" onclick="adjustWeeks(1)">+</div>
+          </div>
+        </div>
+
+        <div style="height: 1px; background: rgba(255,255,255,0.04); margin-bottom: 14px;"></div>
+
+        <!-- RIR Display Option A: Gradient segmented bar -->
+        <div style="margin-bottom: 0;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <span style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #475569;">RIR Scheme</span>
+          </div>
+          <div id="rir-option-a"></div>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn-primary">Create Mesocycle</button>
+
+    <hr class="variation-divider" />
+
+    <!-- ========================================== -->
+    <!-- RIR OPTION A: Segmented gradient bar -->
+    <!-- ========================================== -->
+    <div class="variation-label">RIR Option A — Segmented Bar</div>
+    <p style="font-size: 12px; color: #475569; text-align: center; margin-bottom: 16px;">Each segment = 1 week. Color intensity = effort level.</p>
+    <div style="background: #0f1d2e; border-radius: 12px; padding: 16px; border: 1px solid rgba(255,255,255,0.04);">
+      <div id="rir-demo-a"></div>
+    </div>
+
+    <hr class="variation-divider" />
+
+    <!-- ========================================== -->
+    <!-- RIR OPTION B: Compact inline text with dots -->
+    <!-- ========================================== -->
+    <div class="variation-label">RIR Option B — Inline Text Flow</div>
+    <p style="font-size: 12px; color: #475569; text-align: center; margin-bottom: 16px;">Minimal text-based. Arrows show progression direction.</p>
+    <div style="background: #0f1d2e; border-radius: 12px; padding: 16px; border: 1px solid rgba(255,255,255,0.04);">
+      <div id="rir-demo-b"></div>
+    </div>
+
+    <hr class="variation-divider" />
+
+    <!-- ========================================== -->
+    <!-- RIR OPTION C: Timeline nodes -->
+    <!-- ========================================== -->
+    <div class="variation-label">RIR Option C — Node Timeline</div>
+    <p style="font-size: 12px; color: #475569; text-align: center; margin-bottom: 16px;">Connected dots on a rail. Size encodes intensity.</p>
+    <div style="background: #0f1d2e; border-radius: 12px; padding: 16px; border: 1px solid rgba(255,255,255,0.04);">
+      <div id="rir-demo-c"></div>
+    </div>
+
+    <hr class="variation-divider" />
+
+    <!-- ========================================== -->
+    <!-- RIR OPTION D: Mini bar chart (always single row) -->
+    <!-- ========================================== -->
+    <div class="variation-label">RIR Option D — Mini Columns</div>
+    <p style="font-size: 12px; color: #475569; text-align: center; margin-bottom: 16px;">Compact vertical bars. Height = effort. Always one line.</p>
+    <div style="background: #0f1d2e; border-radius: 12px; padding: 16px; border: 1px solid rgba(255,255,255,0.04);">
+      <div id="rir-demo-d"></div>
+    </div>
+
+    <hr class="variation-divider" />
+
+    <!-- ========================================== -->
+    <!-- RIR OPTION E: Heatmap strip -->
+    <!-- ========================================== -->
+    <div class="variation-label">RIR Option E — Heatmap Strip</div>
+    <p style="font-size: 12px; color: #475569; text-align: center; margin-bottom: 16px;">Continuous color strip. Cool to hot as intensity rises.</p>
+    <div style="background: #0f1d2e; border-radius: 12px; padding: 16px; border: 1px solid rgba(255,255,255,0.04);">
+      <div id="rir-demo-e"></div>
+    </div>
+
+    </div>
+  </div>
+
+  <script>
+    // ===== RIR CALC =====
+    function calcRIR(weeks) {
+      if (weeks <= 1) return [0];
+      if (weeks === 2) return [2, -1];
+      if (weeks === 3) return [3, 1, -1];
+      if (weeks === 4) return [3, 2, 1, -1];
+      if (weeks === 5) return [3, 2, 1, 0, -1];
+      const training = weeks - 1;
+      const scheme = [];
+      for (let i = 0; i < training; i++) {
+        scheme.push(Math.max(0, 3 - Math.floor(i * 4 / training)));
+      }
+      scheme.push(-1);
+      return scheme;
+    }
+
+    // Intensity: 0 = easy (RIR 3), 1 = hard (RIR 0)
+    function rirToIntensity(rir) {
+      if (rir === -1) return 0; // deload
+      return (3 - rir) / 3;
+    }
+
+    // ===== OPTION A: Segmented gradient bar =====
+    function renderSegmentBar(containerId, weeks) {
+      const scheme = calcRIR(weeks);
+      const el = document.getElementById(containerId);
+      let html = '<div style="display: flex; gap: 3px; height: 32px; align-items: stretch;">';
+
+      scheme.forEach((rir, i) => {
+        const isDeload = rir === -1;
+        const intensity = rirToIntensity(rir);
+        // Blue gradient: lighter for easy, more saturated for hard
+        const opacity = isDeload ? 0.4 : 0.3 + intensity * 0.7;
+        const bg = isDeload
+          ? `rgba(168, 85, 247, 0.35)`
+          : `rgba(14, 165, 233, ${opacity})`;
+        const textColor = isDeload ? '#c084fc' : '#38bdf8';
+        const label = isDeload ? 'D' : rir;
+        const radius = i === 0 ? '8px 0 0 8px' : i === scheme.length - 1 ? '0 8px 8px 0' : '0';
+
+        html += `<div style="flex: 1; background: ${bg}; border-radius: ${radius}; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; transition: all 0.3s ease; min-width: 0;">
+          <span class="font-mono" style="font-size: 13px; font-weight: 700; color: ${textColor}; line-height: 1;">${label}</span>
+          <span style="font-size: 8px; color: ${isDeload ? 'rgba(168,85,247,0.6)' : 'rgba(56,189,248,0.5)'}; line-height: 1;">W${i+1}</span>
+        </div>`;
+      });
+
+      html += '</div>';
+      // Label underneath
+      html += `<div style="display: flex; justify-content: space-between; margin-top: 6px;">
+        <span style="font-size: 10px; color: #475569;">Easy</span>
+        <span style="font-size: 10px; color: #475569;">${weeks - 1} training + 1 deload</span>
+        <span style="font-size: 10px; color: #475569;">Hard</span>
+      </div>`;
+
+      el.innerHTML = html;
+    }
+
+    // ===== OPTION B: Inline text flow =====
+    function renderInlineText(containerId, weeks) {
+      const scheme = calcRIR(weeks);
+      const el = document.getElementById(containerId);
+
+      let html = '<div style="display: flex; align-items: center; justify-content: center; gap: 0; height: 28px;">';
+
+      scheme.forEach((rir, i) => {
+        const isDeload = rir === -1;
+        const label = isDeload ? 'Deload' : `RIR ${rir}`;
+        const color = isDeload ? '#c084fc' : '#38bdf8';
+        const weight = isDeload ? '500' : '600';
+        const size = isDeload ? '12px' : '13px';
+
+        html += `<span class="font-mono" style="font-size: ${size}; font-weight: ${weight}; color: ${color}; white-space: nowrap;">${label}</span>`;
+
+        if (i < scheme.length - 1) {
+          html += `<svg width="20" height="12" viewBox="0 0 20 12" style="flex-shrink: 0; margin: 0 2px;"><path d="M4 6h12M13 3l3 3-3 3" stroke="#1e3a52" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+        }
+      });
+
+      html += '</div>';
+      html += `<div style="text-align: center; margin-top: 6px; font-size: 10px; color: #475569;">${weeks} weeks &middot; intensity increases weekly</div>`;
+
+      el.innerHTML = html;
+    }
+
+    // ===== OPTION C: Node timeline =====
+    function renderNodeTimeline(containerId, weeks) {
+      const scheme = calcRIR(weeks);
+      const el = document.getElementById(containerId);
+
+      let html = '<div style="display: flex; align-items: center; height: 44px; position: relative;">';
+
+      scheme.forEach((rir, i) => {
+        const isDeload = rir === -1;
+        const intensity = rirToIntensity(rir);
+        const size = isDeload ? 10 : 10 + intensity * 12; // 10-22px
+        const color = isDeload ? '#a855f7' : '#0ea5e9';
+        const glow = isDeload ? 'none' : `0 0 ${intensity * 10}px rgba(14,165,233,${intensity * 0.4})`;
+        const label = isDeload ? 'D' : rir;
+        const textColor = isDeload ? '#c084fc' : '#38bdf8';
+
+        // Connector line (before each node except first)
+        if (i > 0) {
+          const lineColor = isDeload ? 'rgba(168,85,247,0.2)' : 'rgba(14,165,233,0.2)';
+          html += `<div style="flex: 1; height: 2px; background: ${lineColor}; transition: all 0.3s ease;"></div>`;
+        }
+
+        // Node
+        html += `<div style="display: flex; flex-direction: column; align-items: center; gap: 3px; flex-shrink: 0; position: relative;">
+          <div style="width: ${size}px; height: ${size}px; border-radius: 50%; background: ${color}; box-shadow: ${glow}; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center;">
+            ${size >= 16 ? `<span class="font-mono" style="font-size: ${Math.max(8, size * 0.45)}px; font-weight: 700; color: white; line-height: 1;">${label}</span>` : ''}
+          </div>
+          <span style="font-size: 8px; color: #475569; position: absolute; top: 100%; margin-top: 2px;">W${i+1}</span>
+        </div>`;
+      });
+
+      html += '</div>';
+      html += '<div style="height: 16px;"></div>'; // spacer for week labels
+
+      el.innerHTML = html;
+    }
+
+    // ===== OPTION D: Mini columns =====
+    function renderMiniColumns(containerId, weeks) {
+      const scheme = calcRIR(weeks);
+      const el = document.getElementById(containerId);
+      const maxH = 36;
+
+      let html = '<div style="display: flex; align-items: flex-end; gap: 6px; height: 56px; justify-content: center;">';
+
+      scheme.forEach((rir, i) => {
+        const isDeload = rir === -1;
+        const intensity = rirToIntensity(rir);
+        const h = isDeload ? 10 : 10 + intensity * (maxH - 10);
+        const color = isDeload ? '#a855f7' : '#0ea5e9';
+        const opacity = isDeload ? 0.5 : 0.5 + intensity * 0.5;
+        const label = isDeload ? 'D' : rir;
+        const textColor = isDeload ? '#c084fc' : '#38bdf8';
+        const w = Math.max(28, Math.floor((375 - 32 - (scheme.length - 1) * 6) / scheme.length));
+
+        html += `<div style="display: flex; flex-direction: column; align-items: center; gap: 4px; flex: 1; max-width: 48px;">
+          <span class="font-mono" style="font-size: 10px; font-weight: 600; color: ${textColor};">${label}</span>
+          <div style="width: 100%; height: ${h}px; background: ${color}; opacity: ${opacity}; border-radius: 4px 4px 2px 2px; transition: all 0.3s ease;"></div>
+          <span style="font-size: 8px; color: #475569;">W${i+1}</span>
+        </div>`;
+      });
+
+      html += '</div>';
+
+      el.innerHTML = html;
+    }
+
+    // ===== OPTION E: Heatmap strip =====
+    function renderHeatmap(containerId, weeks) {
+      const scheme = calcRIR(weeks);
+      const el = document.getElementById(containerId);
+
+      // Build gradient stops
+      let html = '<div style="position: relative;">';
+
+      // The strip
+      html += '<div style="display: flex; gap: 2px; height: 8px; margin-bottom: 8px;">';
+      scheme.forEach((rir, i) => {
+        const isDeload = rir === -1;
+        const intensity = rirToIntensity(rir);
+        // Color interpolation: blue → cyan → sky for training, purple for deload
+        let color;
+        if (isDeload) {
+          color = 'rgba(168, 85, 247, 0.5)';
+        } else {
+          // From cool blue to hot bright blue
+          const r = Math.round(14 + intensity * 42);
+          const g = Math.round(165 - intensity * 30);
+          const b = Math.round(233 + intensity * 15);
+          color = `rgba(${r}, ${g}, ${Math.min(b, 248)}, ${0.3 + intensity * 0.7})`;
+        }
+        const radius = i === 0 ? '4px 0 0 4px' : i === scheme.length - 1 ? '0 4px 4px 0' : '0';
+        html += `<div style="flex: 1; background: ${color}; border-radius: ${radius}; transition: all 0.3s ease;"></div>`;
+      });
+      html += '</div>';
+
+      // Labels below
+      html += '<div style="display: flex; gap: 2px;">';
+      scheme.forEach((rir, i) => {
+        const isDeload = rir === -1;
+        const label = isDeload ? 'D' : rir;
+        const color = isDeload ? '#c084fc' : '#38bdf8';
+        html += `<div style="flex: 1; text-align: center;">
+          <span class="font-mono" style="font-size: 11px; font-weight: 600; color: ${color};">${label}</span>
+          <br><span style="font-size: 8px; color: #475569;">W${i+1}</span>
+        </div>`;
+      });
+      html += '</div>';
+
+      html += '</div>';
+
+      el.innerHTML = html;
+    }
+
+    // ===== STATE =====
+    let currentWeeks = 5;
+
+    function adjustWeeks(delta) {
+      currentWeeks = Math.min(8, Math.max(3, currentWeeks + delta));
+      document.getElementById('weeks-val').textContent = currentWeeks;
+      renderAll();
+    }
+
+    function selectSplit(el) {
+      document.querySelectorAll('.split-pill-v2').forEach(p => p.classList.remove('selected'));
+      el.classList.add('selected');
+    }
+
+    function renderAll() {
+      const w = currentWeeks;
+      renderSegmentBar('rir-option-a', w);
+      renderSegmentBar('rir-demo-a', w);
+      renderInlineText('rir-demo-b', w);
+      renderNodeTimeline('rir-demo-c', w);
+      renderMiniColumns('rir-demo-d', w);
+      renderHeatmap('rir-demo-e', w);
+    }
+
+    renderAll();
+  </script>
+</body>
+</html>

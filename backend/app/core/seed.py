@@ -784,14 +784,18 @@ async def seed_exercises(session: AsyncSession) -> int:
 async def seed_default_splits(session: AsyncSession) -> int:
     """Seed default splits (insert-only, never overwrites user edits)."""
     result = await session.execute(select(Split).where(Split.seed_key == HERO_SPLIT["seed_key"]))
-    if result.scalar_one_or_none():
+    existing = result.scalar_one_or_none()
+    if existing:
+        if not existing.color:
+            existing.color = "#06b6d4"
+            await session.commit()
         return 0
 
     # Build exercise lookup by seed_key
     result = await session.execute(select(Exercise).where(Exercise.seed_key.isnot(None)))
     exercises_by_key = {e.seed_key: e for e in result.scalars().all()}
 
-    split = Split(name=HERO_SPLIT["name"], seed_key=HERO_SPLIT["seed_key"])
+    split = Split(name=HERO_SPLIT["name"], seed_key=HERO_SPLIT["seed_key"], color="#06b6d4")
     session.add(split)
     await session.flush()
 
