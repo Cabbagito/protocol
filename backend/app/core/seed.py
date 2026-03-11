@@ -489,6 +489,7 @@ COMMON_EXERCISES = [
 HERO_SPLIT = {
     "seed_key": "hero_split",
     "name": "Hero Split",
+    "color": "#06b6d4",
     "days": [
         {
             "name": "Pull",
@@ -553,6 +554,238 @@ HERO_SPLIT = {
         },
     ],
 }
+
+
+PPL_3DAY = {
+    "seed_key": "ppl_3day",
+    "name": "Push/Pull/Legs",
+    "color": "#8b5cf6",
+    "days": [
+        {
+            "name": "Push",
+            "day_order": 0,
+            "exercises": [
+                {"seed_key": "incline_dumbbell_press"},
+                {"seed_key": "dumbbell_bench_press"},
+                {"seed_key": "cable_fly"},
+                {"seed_key": "dumbbell_shoulder_press"},
+                {"seed_key": "lateral_raise"},
+                {"seed_key": "tricep_pushdown"},
+                {"seed_key": "overhead_tricep_extension"},
+            ],
+        },
+        {
+            "name": "Pull",
+            "day_order": 1,
+            "exercises": [
+                {"seed_key": "lat_pulldown"},
+                {"seed_key": "seated_cable_row"},
+                {"seed_key": "machine_chest_supported_row"},
+                {"seed_key": "face_pull"},
+                {"seed_key": "preacher_curl"},
+                {"seed_key": "bayesian_curl"},
+                {"seed_key": "dumbbell_shrug"},
+            ],
+        },
+        {
+            "name": "Legs",
+            "day_order": 2,
+            "exercises": [
+                {"seed_key": "leg_press"},
+                {"seed_key": "hack_squat"},
+                {"seed_key": "leg_extension"},
+                {"seed_key": "leg_curl"},
+                {"seed_key": "seated_leg_curl"},
+                {"seed_key": "calf_raise"},
+                {"seed_key": "hip_thrust"},
+            ],
+        },
+    ],
+}
+
+UPPER_LOWER_4DAY = {
+    "seed_key": "upper_lower_4day",
+    "name": "Upper/Lower",
+    "color": "#f59e0b",
+    "days": [
+        {
+            "name": "Upper A",
+            "day_order": 0,
+            "exercises": [
+                {"seed_key": "incline_dumbbell_press"},
+                {"seed_key": "cable_fly"},
+                {"seed_key": "lat_pulldown"},
+                {"seed_key": "seated_cable_row"},
+                {"seed_key": "lateral_raise"},
+                {"seed_key": "preacher_curl"},
+                {"seed_key": "tricep_pushdown"},
+            ],
+        },
+        {
+            "name": "Lower A",
+            "day_order": 1,
+            "exercises": [
+                {"seed_key": "leg_press"},
+                {"seed_key": "hack_squat"},
+                {"seed_key": "leg_curl"},
+                {"seed_key": "leg_extension"},
+                {"seed_key": "calf_raise"},
+                {"seed_key": "hip_thrust"},
+            ],
+        },
+        {
+            "name": "Upper B",
+            "day_order": 2,
+            "exercises": [
+                {"seed_key": "dumbbell_bench_press"},
+                {"seed_key": "pec_deck"},
+                {"seed_key": "machine_chest_supported_row"},
+                {"seed_key": "lat_prayer"},
+                {"seed_key": "dumbbell_shoulder_press"},
+                {"seed_key": "bayesian_curl"},
+                {"seed_key": "overhead_tricep_extension"},
+            ],
+        },
+        {
+            "name": "Lower B",
+            "day_order": 3,
+            "exercises": [
+                {"seed_key": "bulgarian_split_squat"},
+                {"seed_key": "leg_press"},
+                {"seed_key": "seated_leg_curl"},
+                {"seed_key": "dumbbell_stiff_leg_deadlift"},
+                {"seed_key": "leg_extension"},
+                {"seed_key": "seated_calf_raise"},
+            ],
+        },
+    ],
+}
+
+ARNOLD_6DAY = {
+    "seed_key": "arnold_6day",
+    "name": "Arnold Split",
+    "color": "#ef4444",
+    "days": [
+        {
+            "name": "Chest & Back 1",
+            "day_order": 0,
+            "exercises": [
+                {"seed_key": "incline_dumbbell_press"},
+                {"seed_key": "dumbbell_bench_press"},
+                {"seed_key": "cable_fly"},
+                {"seed_key": "lat_pulldown"},
+                {"seed_key": "seated_cable_row"},
+                {"seed_key": "dumbbell_row"},
+            ],
+        },
+        {
+            "name": "Shoulders & Arms 1",
+            "day_order": 1,
+            "exercises": [
+                {"seed_key": "dumbbell_shoulder_press"},
+                {"seed_key": "lateral_raise"},
+                {"seed_key": "face_pull"},
+                {"seed_key": "preacher_curl"},
+                {"seed_key": "tricep_pushdown"},
+                {"seed_key": "overhead_tricep_extension"},
+            ],
+        },
+        {
+            "name": "Legs 1",
+            "day_order": 2,
+            "exercises": [
+                {"seed_key": "leg_press"},
+                {"seed_key": "hack_squat"},
+                {"seed_key": "leg_curl"},
+                {"seed_key": "leg_extension"},
+                {"seed_key": "calf_raise"},
+                {"seed_key": "hip_thrust"},
+            ],
+        },
+        {
+            "name": "Chest & Back 2",
+            "day_order": 3,
+            "exercises": [
+                {"seed_key": "dumbbell_press_flye"},
+                {"seed_key": "incline_dumbbell_flye"},
+                {"seed_key": "pec_deck"},
+                {"seed_key": "machine_chest_supported_row"},
+                {"seed_key": "lat_prayer"},
+                {"seed_key": "parallel_grip_lat_pulldown"},
+            ],
+        },
+        {
+            "name": "Shoulders & Arms 2",
+            "day_order": 4,
+            "exercises": [
+                {"seed_key": "dumbbell_shoulder_press"},
+                {"seed_key": "cable_lateral_raise"},
+                {"seed_key": "freemotion_rear_delt_fly"},
+                {"seed_key": "incline_dumbbell_curl"},
+                {"seed_key": "bayesian_curl"},
+                {"seed_key": "dumbbell_skull_crusher"},
+            ],
+        },
+        {
+            "name": "Legs 2",
+            "day_order": 5,
+            "exercises": [
+                {"seed_key": "bulgarian_split_squat"},
+                {"seed_key": "leg_press"},
+                {"seed_key": "seated_leg_curl"},
+                {"seed_key": "dumbbell_stiff_leg_deadlift"},
+                {"seed_key": "seated_calf_raise"},
+                {"seed_key": "walking_lunges"},
+            ],
+        },
+    ],
+}
+
+FULL_BODY_3DAY = {
+    "seed_key": "full_body_3day",
+    "name": "Full Body",
+    "color": "#10b981",
+    "days": [
+        {
+            "name": "Full Body A",
+            "day_order": 0,
+            "exercises": [
+                {"seed_key": "incline_dumbbell_press"},
+                {"seed_key": "lat_pulldown"},
+                {"seed_key": "leg_press"},
+                {"seed_key": "lateral_raise"},
+                {"seed_key": "preacher_curl"},
+                {"seed_key": "leg_curl"},
+            ],
+        },
+        {
+            "name": "Full Body B",
+            "day_order": 1,
+            "exercises": [
+                {"seed_key": "dumbbell_bench_press"},
+                {"seed_key": "seated_cable_row"},
+                {"seed_key": "hack_squat"},
+                {"seed_key": "face_pull"},
+                {"seed_key": "tricep_pushdown"},
+                {"seed_key": "calf_raise"},
+            ],
+        },
+        {
+            "name": "Full Body C",
+            "day_order": 2,
+            "exercises": [
+                {"seed_key": "cable_fly"},
+                {"seed_key": "machine_chest_supported_row"},
+                {"seed_key": "bulgarian_split_squat"},
+                {"seed_key": "dumbbell_shoulder_press"},
+                {"seed_key": "bayesian_curl"},
+                {"seed_key": "leg_extension"},
+            ],
+        },
+    ],
+}
+
+DEFAULT_SPLITS = [HERO_SPLIT, PPL_3DAY, UPPER_LOWER_4DAY, ARNOLD_6DAY, FULL_BODY_3DAY]
 
 
 def calculate_rir_scheme(total_weeks: int) -> list[int]:
@@ -781,51 +1014,60 @@ async def seed_exercises(session: AsyncSession) -> int:
 
 async def seed_default_splits(session: AsyncSession) -> int:
     """Seed default splits (insert-only, never overwrites user edits)."""
-    result = await session.execute(select(Split).where(Split.seed_key == HERO_SPLIT["seed_key"]))
-    existing = result.scalar_one_or_none()
-    if existing:
-        if not existing.color:
-            existing.color = "#06b6d4"
-            await session.commit()
-        return 0
+    # Check which splits already exist
+    result = await session.execute(
+        select(Split.seed_key).where(Split.seed_key.isnot(None))
+    )
+    existing_keys = set(result.scalars().all())
 
     # Build exercise lookup by seed_key
     result = await session.execute(select(Exercise).where(Exercise.seed_key.isnot(None)))
     exercises_by_key = {e.seed_key: e for e in result.scalars().all()}
 
-    split = Split(name=HERO_SPLIT["name"], seed_key=HERO_SPLIT["seed_key"], color="#06b6d4")
-    session.add(split)
-    await session.flush()
+    added = 0
+    for split_data in DEFAULT_SPLITS:
+        if split_data["seed_key"] in existing_keys:
+            continue
 
-    for day_data in HERO_SPLIT["days"]:
-        day = SplitDay(
-            split_id=split.id,
-            name=day_data["name"],
-            day_order=day_data["day_order"],
+        color = split_data.get("color", "#06b6d4")
+        split = Split(
+            name=split_data["name"], seed_key=split_data["seed_key"], color=color
         )
-        session.add(day)
+        session.add(split)
         await session.flush()
 
-        for order, ex_data in enumerate(day_data["exercises"]):
-            exercise = exercises_by_key.get(ex_data["seed_key"])
-            if not exercise:
-                logger.warning(
-                    "Exercise with seed_key '%s' not found, skipping in day '%s'",
-                    ex_data["seed_key"],
-                    day_data["name"],
-                )
-                continue
-            session.add(
-                SplitDayExercise(
-                    day_id=day.id,
-                    exercise_id=exercise.id,
-                    order=order,
-                )
+        for day_data in split_data["days"]:
+            day = SplitDay(
+                split_id=split.id,
+                name=day_data["name"],
+                day_order=day_data["day_order"],
             )
+            session.add(day)
+            await session.flush()
 
-    await session.commit()
-    logger.info("Seeded default split: %s", HERO_SPLIT["name"])
-    return 1
+            for order, ex_data in enumerate(day_data["exercises"]):
+                exercise = exercises_by_key.get(ex_data["seed_key"])
+                if not exercise:
+                    logger.warning(
+                        "Exercise with seed_key '%s' not found, skipping in day '%s'",
+                        ex_data["seed_key"],
+                        day_data["name"],
+                    )
+                    continue
+                session.add(
+                    SplitDayExercise(
+                        day_id=day.id,
+                        exercise_id=exercise.id,
+                        order=order,
+                    )
+                )
+
+        added += 1
+        logger.info("Seeded default split: %s", split_data["name"])
+
+    if added:
+        await session.commit()
+    return added
 
 
 # Realistic weights per exercise seed_key (kg)
