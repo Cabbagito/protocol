@@ -228,6 +228,7 @@ export function useLogSets() {
       sets: { exercise_id: string; set_num: number; weight: number; reps: number; rir?: number | null; set_type?: string | null }[]
       notes?: string | null
       exercise_updates?: { exercise_id: string; skipped?: boolean }[] | null
+      complete?: boolean
     }) => api.post('/workouts/log', data),
   })
 }

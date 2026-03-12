@@ -821,9 +821,15 @@ def build_mesocycle_structure(
     total_weeks: int,
     target_reps: int = 10,
     sets_per_exercise: int = 3,
+    exercise_performances: dict | None = None,
 ) -> dict:
-    """Build the full nested JSONB structure for a mesocycle."""
+    """Build the full nested JSONB structure for a mesocycle.
+
+    If exercise_performances is provided (dict mapping exercise_id to ExercisePerformance),
+    uses stored working_weight, working_reps, and num_sets for week 1 seeding.
+    """
     rir_scheme = calculate_rir_scheme(total_weeks)
+    perf_map = exercise_performances or {}
 
     weeks = []
     for week_idx in range(total_weeks):
@@ -835,15 +841,21 @@ def build_mesocycle_structure(
                 ex = exercises_by_id.get(de.exercise_id)
                 if not ex:
                     continue
+
+                perf = perf_map.get(ex.id)
+                ex_sets = perf.num_sets if perf and perf.num_sets else sets_per_exercise
+                ex_target_reps = perf.working_reps if perf and perf.working_reps else target_reps
+                ex_suggested = perf.working_weight if perf and perf.working_weight else None
+
                 sets_list = []
-                for set_num in range(1, sets_per_exercise + 1):
+                for set_num in range(1, ex_sets + 1):
                     sets_list.append(
                         {
                             "set_num": set_num,
                             "weight": None,
                             "reps": None,
-                            "target_reps": target_reps,
-                            "suggested_weight": None,
+                            "target_reps": ex_target_reps,
+                            "suggested_weight": ex_suggested if week_idx == 0 else None,
                             "rir": None,
                             "logged": False,
                         }
@@ -854,6 +866,7 @@ def build_mesocycle_structure(
                         "exercise_name": ex.name,
                         "muscle_group": ex.muscle_group,
                         "equipment_type": ex.equipment_type,
+                        "technique": None,
                         "sets": sets_list,
                     }
                 )
@@ -894,69 +907,155 @@ def get_current_position(structure: dict) -> dict:
     return {"completed": True}
 
 
-def compute_progression(structure: dict) -> None:
-    """Compute suggested weights for the next week based on previous week performance.
+def handle_weight_bump(structure: dict, week_index: int, session_index: int) -> None:
+    """Recalculate target_reps when the user changes weight from suggested.
+
+    Called before compute_progression. For each logged set where the user changed
+    the weight from suggested, recalculates target_reps using e1RM equivalence
+    and propagates the new weight to all future unlogged instances of the same
+    exercise in the same session slot.
+
+    Mutates the structure in place.
+    """
+    import math
+
+    weeks = structure.get("weeks", [])
+    if week_index >= len(weeks):
+        return
+
+    session = weeks[week_index]["sessions"][session_index]
+    session_name = session["session_name"]
+    day_order = session["day_order"]
+
+    for exercise in session.get("exercises", []):
+        if exercise.get("skipped", False):
+            continue
+
+        exercise_id = exercise["exercise_id"]
+
+        for s in exercise.get("sets", []):
+            if not s.get("logged"):
+                continue
+
+            suggested = s.get("suggested_weight")
+            actual_weight = s.get("weight") or 0
+            if suggested is None or actual_weight == 0:
+                continue
+            if actual_weight == suggested:
+                continue
+
+            # Weight was changed — recalculate target_reps via e1RM
+            target = s.get("target_reps", 10)
+            e1rm = suggested * (1 + target / 30)
+            new_reps = math.floor(30 * (e1rm / actual_weight - 1))
+            new_reps = max(new_reps, 5)
+            s["target_reps"] = new_reps
+
+        # Propagate actual weights to future unlogged instances in same session slot
+        logged_sets = [s for s in exercise.get("sets", []) if s.get("logged")]
+        if not logged_sets:
+            continue
+
+        for wi in range(week_index + 1, len(weeks)):
+            for future_session in weeks[wi].get("sessions", []):
+                if (
+                    future_session["session_name"] != session_name
+                    or future_session["day_order"] != day_order
+                ):
+                    continue
+                for fe in future_session.get("exercises", []):
+                    if fe["exercise_id"] != exercise_id:
+                        continue
+                    for fs in fe.get("sets", []):
+                        if fs.get("logged"):
+                            continue
+                        # Find matching logged set by set_num
+                        matching = next(
+                            (ls for ls in logged_sets if ls["set_num"] == fs["set_num"]),
+                            None,
+                        )
+                        if matching and matching.get("weight"):
+                            fs["suggested_weight"] = matching["weight"]
+
+
+def compute_progression(structure: dict, week_index: int, session_index: int) -> None:
+    """Compute per-set rep progression from a completed session to the next week's same session.
+
+    New algorithm: for each logged set, if reps >= target_reps, next week's
+    matching set gets target_reps + 1. Weight carries forward as suggested_weight.
+    Only modifies unlogged sets in the next week.
 
     Mutates the structure in place.
     """
     weeks = structure.get("weeks", [])
-    for wi in range(1, len(weeks)):
-        prev_week = weeks[wi - 1]
-        curr_week = weeks[wi]
-        for si, session in enumerate(curr_week.get("sessions", [])):
-            # Find matching session in previous week by session_name + day_order
-            prev_session = None
-            for ps in prev_week.get("sessions", []):
-                if (
-                    ps["session_name"] == session["session_name"]
-                    and ps["day_order"] == session["day_order"]
-                ):
-                    prev_session = ps
-                    break
-            if not prev_session:
+    if week_index >= len(weeks):
+        return
+
+    next_week_index = week_index + 1
+    if next_week_index >= len(weeks):
+        return
+
+    # Skip progression into deload weeks (RIR = -1)
+    next_week = weeks[next_week_index]
+    if next_week.get("rir") == -1:
+        return
+
+    completed_session = weeks[week_index]["sessions"][session_index]
+    session_name = completed_session["session_name"]
+    day_order = completed_session["day_order"]
+
+    # Find matching session in next week
+    next_session = None
+    for ns in next_week.get("sessions", []):
+        if ns["session_name"] == session_name and ns["day_order"] == day_order:
+            next_session = ns
+            break
+    if not next_session:
+        return
+
+    for exercise in completed_session.get("exercises", []):
+        if exercise.get("skipped", False):
+            continue
+
+        exercise_id = exercise["exercise_id"]
+
+        # Find matching exercise in next week
+        next_exercise = None
+        for ne in next_session.get("exercises", []):
+            if ne["exercise_id"] == exercise_id:
+                next_exercise = ne
+                break
+        if not next_exercise:
+            continue
+
+        if next_exercise.get("skipped", False):
+            continue
+
+        # Build set lookup from completed session
+        logged_sets = {s["set_num"]: s for s in exercise.get("sets", []) if s.get("logged")}
+        if not logged_sets:
+            continue
+
+        for next_set in next_exercise.get("sets", []):
+            if next_set.get("logged"):
                 continue
 
-            for ei, exercise in enumerate(session.get("exercises", [])):
-                # Skip if current exercise is skipped
-                if exercise.get("skipped", False):
-                    continue
+            prev_set = logged_sets.get(next_set["set_num"])
+            if not prev_set:
+                continue
 
-                # Find matching exercise in previous session
-                prev_exercise = None
-                for pe in prev_session.get("exercises", []):
-                    if pe["exercise_id"] == exercise["exercise_id"]:
-                        prev_exercise = pe
-                        break
-                if not prev_exercise:
-                    continue
+            # Carry weight forward
+            prev_weight = prev_set.get("weight") or 0
+            if prev_weight > 0:
+                next_set["suggested_weight"] = prev_weight
 
-                # Skip if previous exercise was skipped
-                if prev_exercise.get("skipped", False):
-                    continue
-
-                # Check if all sets in previous week were logged and hit target_reps
-                prev_sets = prev_exercise.get("sets", [])
-                logged_sets = [s for s in prev_sets if s.get("logged")]
-                if not logged_sets:
-                    continue
-
-                last_weight = max(s.get("weight", 0) or 0 for s in logged_sets)
-                if last_weight == 0:
-                    continue
-
-                all_hit_target = all(
-                    (s.get("reps") or 0) >= s.get("target_reps", 10) for s in logged_sets
-                )
-
-                increment = WEIGHT_INCREMENTS.get(exercise.get("equipment_type", ""), 2.5)
-                if all_hit_target and increment > 0:
-                    suggested = last_weight + increment
-                else:
-                    suggested = last_weight
-
-                for s in exercise.get("sets", []):
-                    if not s.get("logged"):
-                        s["suggested_weight"] = suggested
+            # Per-set rep progression
+            prev_reps = prev_set.get("reps") or 0
+            prev_target = prev_set.get("target_reps", 10)
+            if prev_reps >= prev_target:
+                next_set["target_reps"] = prev_target + 1
+            else:
+                next_set["target_reps"] = prev_target
 
 
 async def seed_exercises(session: AsyncSession) -> int:
@@ -1011,9 +1110,7 @@ async def seed_exercises(session: AsyncSession) -> int:
 async def seed_default_splits(session: AsyncSession) -> int:
     """Seed default splits (insert-only, never overwrites user edits)."""
     # Check which splits already exist
-    result = await session.execute(
-        select(Split.seed_key).where(Split.seed_key.isnot(None))
-    )
+    result = await session.execute(select(Split.seed_key).where(Split.seed_key.isnot(None)))
     existing_keys = set(result.scalars().all())
 
     # Build exercise lookup by seed_key
@@ -1026,9 +1123,7 @@ async def seed_default_splits(session: AsyncSession) -> int:
             continue
 
         color = split_data.get("color", "#06b6d4")
-        split = Split(
-            name=split_data["name"], seed_key=split_data["seed_key"], color=color
-        )
+        split = Split(name=split_data["name"], seed_key=split_data["seed_key"], color=color)
         session.add(split)
         await session.flush()
 
@@ -1149,30 +1244,28 @@ async def seed_demo_mesocycle(session: AsyncSession) -> None:
     # --- Week 1: all 5 sessions logged (RiR 3) ---
     start_date = date.today() - timedelta(days=16)
     week1 = structure["weeks"][0]
-    for day_idx, meso_session in enumerate(week1["sessions"]):
-        day = (start_date + timedelta(days=day_idx)).isoformat()
+    for si, meso_session in enumerate(week1["sessions"]):
+        day = (start_date + timedelta(days=si)).isoformat()
         _log_session(meso_session, exercises_by_id, day, rir=3)
-
-    # Compute progression so week 2 gets suggested weights
-    compute_progression(structure)
+        # Compute progression for each completed session
+        compute_progression(structure, 0, si)
 
     # --- Week 2: all 5 sessions logged (RiR 2), using suggested weights ---
     week2_start = date.today() - timedelta(days=9)
     week2 = structure["weeks"][1]
-    for day_idx, meso_session in enumerate(week2["sessions"]):
-        day = (week2_start + timedelta(days=day_idx)).isoformat()
+    for si, meso_session in enumerate(week2["sessions"]):
+        day = (week2_start + timedelta(days=si)).isoformat()
         _log_session(meso_session, exercises_by_id, day, rir=2, use_suggested=True)
-
-    # Compute progression so week 3 gets suggested weights
-    compute_progression(structure)
+        compute_progression(structure, 1, si)
 
     # --- Week 3: first 2 sessions logged (Pull, Push), Legs is next ---
     week3_start = date.today() - timedelta(days=2)
     week3 = structure["weeks"][2]
-    for day_idx in range(2):  # only first 2 sessions
-        meso_session = week3["sessions"][day_idx]
-        day = (week3_start + timedelta(days=day_idx)).isoformat()
+    for si in range(2):  # only first 2 sessions
+        meso_session = week3["sessions"][si]
+        day = (week3_start + timedelta(days=si)).isoformat()
         _log_session(meso_session, exercises_by_id, day, rir=1, use_suggested=True)
+        compute_progression(structure, 2, si)
 
     meso = Mesocycle(
         split_id=split.id,

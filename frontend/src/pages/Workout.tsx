@@ -332,6 +332,35 @@ export default function Workout() {
       })
     }
 
+    // Send final save with complete=true to trigger progression + performance tracking
+    if (mesocycleId && template && !isFutureSession) {
+      const completed = sets.filter(s => s.completed && !skippedExercises.has(s.exercise_id))
+      const exerciseUpdates = template.exercises.map(ex => ({
+        exercise_id: ex.exercise_id,
+        skipped: skippedExercises.has(ex.exercise_id),
+      }))
+      try {
+        await logSets.mutateAsync({
+          mesocycle_id: mesocycleId,
+          week_index: template.week_index,
+          session_index: template.session_index,
+          sets: completed.map(s => ({
+            exercise_id: s.exercise_id,
+            set_num: s.set_num,
+            weight: s.weight ?? 0,
+            reps: s.reps ?? 0,
+            rir: s.rir,
+            set_type: s.set_type ?? null,
+          })),
+          notes: null,
+          exercise_updates: exerciseUpdates,
+          complete: true,
+        })
+      } catch {
+        toast.showError('Failed to finalize workout')
+      }
+    }
+
     queryClient.invalidateQueries({ queryKey: queryKeys.workouts.all })
     queryClient.invalidateQueries({ queryKey: queryKeys.mesocycles.active })
     queryClient.invalidateQueries({ queryKey: queryKeys.mesocycles.all })

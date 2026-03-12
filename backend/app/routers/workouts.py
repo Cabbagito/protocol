@@ -1,14 +1,18 @@
+from datetime import UTC, datetime
 from datetime import date as date_type
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy import or_, select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.security import get_current_user
-from app.core.seed import compute_progression, get_current_position
+from app.core.seed import compute_progression, get_current_position, handle_weight_bump
+from app.models.base import generate_uuid
 from app.models.exercise import Exercise
+from app.models.exercise_performance import ExercisePerformance
 from app.models.mesocycle import Mesocycle
 from app.models.user import User
 
@@ -39,6 +43,7 @@ class LogSetsRequest(BaseModel):
     sets: list[SetLog]
     notes: str | None = None
     exercise_updates: list[ExerciseUpdate] | None = None
+    complete: bool = False
 
 
 class WorkoutTemplateExercise(BaseModel):
@@ -64,6 +69,49 @@ class ProgressEntry(BaseModel):
     total_reps: int
     total_sets: int
     volume: float
+
+
+# --- Helpers ---
+
+
+async def update_exercise_performances(db: AsyncSession, user_id: str, session: dict) -> None:
+    """Upsert exercise_performances for each non-skipped exercise in a completed session."""
+    for exercise in session.get("exercises", []):
+        if exercise.get("skipped", False):
+            continue
+
+        logged_sets = [s for s in exercise.get("sets", []) if s.get("logged")]
+        if not logged_sets:
+            continue
+
+        working_weight = max((s.get("weight") or 0) for s in logged_sets)
+        working_reps = logged_sets[0].get("target_reps", 10)
+        num_sets = len(logged_sets)
+
+        if working_weight == 0:
+            continue
+
+        now = datetime.now(UTC)
+        stmt = pg_insert(ExercisePerformance).values(
+            id=generate_uuid(),
+            user_id=user_id,
+            exercise_id=exercise["exercise_id"],
+            working_weight=working_weight,
+            working_reps=working_reps,
+            num_sets=num_sets,
+            created_at=now,
+            updated_at=now,
+        )
+        stmt = stmt.on_conflict_do_update(
+            constraint="uq_exercise_performances_user_exercise",
+            set_={
+                "working_weight": stmt.excluded.working_weight,
+                "working_reps": stmt.excluded.working_reps,
+                "num_sets": stmt.excluded.num_sets,
+                "updated_at": now,
+            },
+        )
+        await db.execute(stmt)
 
 
 # --- Endpoints ---
@@ -207,8 +255,11 @@ async def log_sets(
             else:
                 set_data["logged"] = False
 
-    # Recompute progression for future weeks
-    compute_progression(structure)
+    # Only compute progression on explicit end-of-workout
+    if data.complete:
+        handle_weight_bump(structure, data.week_index, data.session_index)
+        compute_progression(structure, data.week_index, data.session_index)
+        await update_exercise_performances(db, current_user.id, session)
 
     # Mark structure as modified for SQLAlchemy to detect the change
     from sqlalchemy.orm.attributes import flag_modified
@@ -345,6 +396,15 @@ async def replace_exercise(
     if not new_exercise:
         raise HTTPException(status_code=404, detail="New exercise not found")
 
+    # Look up performance data for the new exercise
+    perf_result = await db.execute(
+        select(ExercisePerformance).where(
+            ExercisePerformance.user_id == current_user.id,
+            ExercisePerformance.exercise_id == data.new_exercise_id,
+        )
+    )
+    perf = perf_result.scalar_one_or_none()
+
     structure = mesocycle.structure
     weeks = structure.get("weeks", [])
 
@@ -379,7 +439,11 @@ async def replace_exercise(
             if not s.get("logged"):
                 s["weight"] = None
                 s["reps"] = None
-                s["suggested_weight"] = None
+                if perf:
+                    s["suggested_weight"] = perf.working_weight
+                    s["target_reps"] = perf.working_reps or s.get("target_reps", 10)
+                else:
+                    s["suggested_weight"] = None
 
     # Replace in current week
     replace_in_exercise(target_ex)
@@ -396,9 +460,6 @@ async def replace_exercise(
                     for fe in future_session.get("exercises", []):
                         if fe["exercise_id"] == data.old_exercise_id:
                             replace_in_exercise(fe)
-
-    # Re-run progression
-    compute_progression(structure)
 
     from sqlalchemy.orm.attributes import flag_modified
 

@@ -10,6 +10,7 @@ from app.core.database import get_db
 from app.core.security import get_current_user
 from app.core.seed import build_mesocycle_structure, get_current_position
 from app.models.exercise import Exercise
+from app.models.exercise_performance import ExercisePerformance
 from app.models.mesocycle import Mesocycle
 from app.models.split import Split, SplitDay, SplitDayExercise
 from app.models.user import User
@@ -130,8 +131,21 @@ async def create_mesocycle(
     else:
         exercises_by_id = {}
 
+    # Query exercise performances for cross-meso memory
+    perf_map = {}
+    if exercise_ids:
+        perf_result = await db.execute(
+            select(ExercisePerformance).where(
+                ExercisePerformance.user_id == current_user.id,
+                ExercisePerformance.exercise_id.in_(exercise_ids),
+            )
+        )
+        perf_map = {p.exercise_id: p for p in perf_result.scalars().all()}
+
     # Build the JSONB structure
-    structure = build_mesocycle_structure(split.days, exercises_by_id, data.total_weeks)
+    structure = build_mesocycle_structure(
+        split.days, exercises_by_id, data.total_weeks, exercise_performances=perf_map
+    )
 
     mesocycle = Mesocycle(
         split_id=data.split_id,
