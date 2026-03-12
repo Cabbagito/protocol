@@ -81,8 +81,7 @@ export default function Workout() {
 
   const isFutureSession = useMemo(() => {
     if (!template || !currentPos) return false
-    return template.week_index !== currentPos.weekIndex
-        || template.session_index !== currentPos.sessionIndex
+    return template.week_index > currentPos.weekIndex
   }, [template, currentPos])
 
   // Reset state when navigating to a different session
