@@ -175,19 +175,17 @@ function InactiveMesoCard({ meso }: { meso: MesocycleListItem }) {
 
 // --- RIR Scheme Calculation ---
 
+const RIR_SCHEMES: Record<number, number[]> = {
+  3: [2, 0, -1],
+  4: [3, 1, 0, -1],
+  5: [3, 2, 1, 0, -1],
+  6: [3, 2, 1, 0, 0, -1],
+  7: [3, 2, 2, 1, 1, 0, -1],
+  8: [3, 3, 2, 2, 1, 1, 0, -1],
+}
+
 function getRirScheme(weeks: number): number[] {
-  if (weeks <= 1) return [0]
-  if (weeks === 2) return [2, -1]
-  if (weeks === 3) return [3, 1, -1]
-  if (weeks === 4) return [3, 2, 1, -1]
-  if (weeks === 5) return [3, 2, 1, 0, -1]
-  const trainingWeeks = weeks - 1
-  const scheme: number[] = []
-  for (let i = 0; i < trainingWeeks; i++) {
-    scheme.push(Math.max(0, 3 - Math.floor(i * 4 / trainingWeeks)))
-  }
-  scheme.push(-1)
-  return scheme
+  return RIR_SCHEMES[weeks] ?? [0]
 }
 
 // --- RIR Heatmap Strip ---

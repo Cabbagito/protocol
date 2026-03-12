@@ -23,7 +23,7 @@ router = APIRouter()
 class MesocycleCreate(BaseModel):
     split_id: str
     name: str = Field(min_length=1, max_length=100)
-    total_weeks: int = Field(default=4, ge=1, le=12)
+    total_weeks: int = Field(default=4, ge=3, le=8)
     started_at: date_type | None = None
 
 

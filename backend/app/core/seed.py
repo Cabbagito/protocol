@@ -788,25 +788,21 @@ FULL_BODY_3DAY = {
 DEFAULT_SPLITS = [HERO_SPLIT, PPL_3DAY, UPPER_LOWER_4DAY, ARNOLD_6DAY, FULL_BODY_3DAY]
 
 
+RIR_SCHEMES: dict[int, list[int]] = {
+    3: [2, 0, -1],
+    4: [3, 1, 0, -1],
+    5: [3, 2, 1, 0, -1],
+    6: [3, 2, 1, 0, 0, -1],
+    7: [3, 2, 2, 1, 1, 0, -1],
+    8: [3, 3, 2, 2, 1, 1, 0, -1],
+}
+
+
 def calculate_rir_scheme(total_weeks: int) -> list[int]:
-    """Calculate RiR scheme based on total weeks."""
-    if total_weeks <= 1:
-        return [0]
-    if total_weeks == 2:
-        return [2, -1]
-    if total_weeks == 3:
-        return [3, 1, -1]
-    if total_weeks == 4:
-        return [3, 2, 1, -1]
-    if total_weeks == 5:
-        return [3, 2, 1, 0, -1]
-    training_weeks = total_weeks - 1
-    scheme = []
-    for i in range(training_weeks):
-        rir = max(0, 3 - int(i * 4 / training_weeks))
-        scheme.append(rir)
-    scheme.append(-1)
-    return scheme
+    """Return the RiR scheme for a mesocycle of 3-8 weeks."""
+    if total_weeks not in RIR_SCHEMES:
+        raise ValueError(f"Unsupported week count: {total_weeks}. Must be 3-8.")
+    return RIR_SCHEMES[total_weeks]
 
 
 # Weight increment defaults by equipment type
