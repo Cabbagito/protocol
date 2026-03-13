@@ -894,6 +894,7 @@ type SetState = 'pending' | 'logged' | 'exceeded' | 'under'
 function getSetState(set: WorkingSet): SetState {
   if (!set.completed) return 'pending'
   if (set.set_type === 'myorep_match') return 'logged'
+  if (set.suggested_weight == null) return 'logged'
   if ((set.reps ?? 0) > set.target_reps) return 'exceeded'
   if ((set.reps ?? 0) < set.target_reps) return 'under'
   return 'logged'
@@ -1111,7 +1112,7 @@ const SetRow = memo(function SetRow({ set, exercise, allSets, onUpdate, onComple
           }
           onChange={(e) => onUpdate(exercise.exercise_id, set.set_num, 'reps', parseInt(e.target.value) || 0)}
           readOnly={set.completed || locked || isMatchLocked}
-          placeholder={isMatchLocked ? (mmRefLogged ? `${resolvedTargetReps}` : '...') : `${resolvedTargetReps}`}
+          placeholder={isMatchLocked ? (mmRefLogged ? `${resolvedTargetReps}` : '...') : (set.suggested_weight != null ? `${resolvedTargetReps}` : '')}
           className="set-input reps-ghost"
           style={{
             background: isMatchLocked ? 'rgba(251,191,36,0.06)' : styles.inputBg,
