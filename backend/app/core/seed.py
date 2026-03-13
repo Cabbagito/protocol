@@ -934,7 +934,7 @@ def handle_weight_bump(structure: dict, week_index: int, session_index: int) -> 
         exercise_id = exercise["exercise_id"]
 
         for s in exercise.get("sets", []):
-            if not s.get("logged"):
+            if not s.get("logged") or s.get("skipped"):
                 continue
 
             suggested = s.get("suggested_weight")
@@ -952,7 +952,10 @@ def handle_weight_bump(structure: dict, week_index: int, session_index: int) -> 
             s["target_reps"] = new_reps
 
         # Propagate actual weights to future unlogged instances in same session slot
-        logged_sets = [s for s in exercise.get("sets", []) if s.get("logged")]
+        logged_sets = [
+            s for s in exercise.get("sets", [])
+            if s.get("logged") and not s.get("skipped")
+        ]
         if not logged_sets:
             continue
 
@@ -1031,8 +1034,11 @@ def compute_progression(structure: dict, week_index: int, session_index: int) ->
         if next_exercise.get("skipped", False):
             continue
 
-        # Build set lookup from completed session
-        logged_sets = {s["set_num"]: s for s in exercise.get("sets", []) if s.get("logged")}
+        # Build set lookup from completed session (exclude skipped sets)
+        logged_sets = {
+            s["set_num"]: s for s in exercise.get("sets", [])
+            if s.get("logged") and not s.get("skipped")
+        }
         if not logged_sets:
             continue
 

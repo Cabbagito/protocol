@@ -95,7 +95,10 @@ async def update_exercise_performances(db: AsyncSession, user_id: str, session: 
         if exercise.get("skipped", False):
             continue
 
-        logged_sets = [s for s in exercise.get("sets", []) if s.get("logged")]
+        logged_sets = [
+            s for s in exercise.get("sets", [])
+            if s.get("logged") and not s.get("skipped")
+        ]
         if not logged_sets:
             continue
 
