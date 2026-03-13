@@ -6,6 +6,7 @@ import type {
   SplitListItem,
   Mesocycle,
   MesocycleListItem,
+  MesoSet,
   WorkoutTemplate,
   WorkoutHistoryItem,
   WorkoutDetailResponse,
@@ -228,8 +229,27 @@ export function useLogSets() {
       sets: { exercise_id: string; set_num: number; weight: number; reps: number; rir?: number | null; set_type?: string | null }[]
       notes?: string | null
       exercise_updates?: { exercise_id: string; skipped?: boolean }[] | null
+      skipped_sets?: { exercise_id: string; set_num: number }[] | null
       complete?: boolean
     }) => api.post('/workouts/log', data),
+  })
+}
+
+export function useModifySets() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (data: {
+      mesocycle_id: string
+      week_index: number
+      session_index: number
+      exercise_id: string
+      action: 'add' | 'remove'
+      set_num?: number
+    }) => api.post<{ status: string; sets: MesoSet[]; exercise_id: string }>('/workouts/modify-sets', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.workouts.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.mesocycles.all })
+    },
   })
 }
 

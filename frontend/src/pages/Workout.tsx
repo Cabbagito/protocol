@@ -3,7 +3,7 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useToast } from '../components/Toast'
 // Icons inlined in CompletedButton
-import { useLogSets, useMesocycle, useExercises, useUpdateExerciseNote, useReplaceExercise, queryKeys } from '../api/hooks'
+import { useLogSets, useModifySets, useMesocycle, useExercises, useUpdateExerciseNote, useReplaceExercise, queryKeys } from '../api/hooks'
 import { api } from '../api/client'
 import PageLoader from '../components/PageLoader'
 import AppHeader from '../components/AppHeader'
@@ -51,6 +51,7 @@ export default function Workout() {
   })
   const { data: mesocycle } = useMesocycle(mesocycleId!)
   const logSets = useLogSets()
+  const modifySets = useModifySets()
   const updateExerciseNote = useUpdateExerciseNote()
   const replaceExercise = useReplaceExercise()
   const [sets, setSets] = useState<WorkingSet[]>([])
@@ -58,9 +59,11 @@ export default function Workout() {
   const [isSaving, setIsSaving] = useState(false)
   const [headerExpanded, setHeaderExpanded] = useState(false)
   const [skippedExercises, setSkippedExercises] = useState<Set<string>>(new Set())
+  const [skippedSets, setSkippedSets] = useState<Set<string>>(new Set())
   const [exerciseNotes, setExerciseNotes] = useState<Record<string, string>>({})
   const [noteModal, setNoteModal] = useState<{ exerciseId: string; exerciseName: string } | null>(null)
   const [replaceModal, setReplaceModal] = useState<{ exerciseId: string; exerciseIndex: number; muscleGroup: string; equipmentType: string } | null>(null)
+  const modifyingRef = useRef(false)
   const pendingSavesRef = useRef(0)
   const prevCompletedRef = useRef(0)
   const prevSkippedRef = useRef<string>('')
@@ -90,6 +93,7 @@ export default function Workout() {
     setInitialized(false)
     setSets([])
     setSkippedExercises(new Set())
+    setSkippedSets(new Set())
     setExerciseNotes({})
     setHeaderExpanded(false)
     prevCompletedRef.current = 0
@@ -101,9 +105,11 @@ export default function Workout() {
     if (template && !initialized) {
       const initialSets: WorkingSet[] = []
       const initialSkipped = new Set<string>()
+      const initialSkippedSets = new Set<string>()
       for (const ex of template.exercises) {
         if (ex.skipped) initialSkipped.add(ex.exercise_id)
         for (const s of ex.sets) {
+          if (s.skipped) initialSkippedSets.add(`${ex.exercise_id}:${s.set_num}`)
           initialSets.push({
             ...s,
             exercise_id: ex.exercise_id,
@@ -118,6 +124,7 @@ export default function Workout() {
       }
       setSets(initialSets)
       setSkippedExercises(initialSkipped)
+      setSkippedSets(initialSkippedSets)
       setExerciseNotes(template.exercise_notes ?? {})
       prevCompletedRef.current = initialSets.filter(s => s.completed).length
       prevSkippedRef.current = [...initialSkipped].sort().join(',')
@@ -139,16 +146,17 @@ export default function Workout() {
         (s) => s.exercise_id === exerciseId && s.set_num === setNum
       )?.weight ?? null
 
+      const numValue = value as number
       return prev.map((s) => {
         if (s.exercise_id !== exerciseId) return s
-        if (s.set_num === setNum) return { ...s, weight: value }
+        if (s.set_num === setNum) return { ...s, weight: numValue }
         if (
           s.set_num > setNum &&
           !s.completed &&
           (s.set_type ?? 'straight') !== 'myorep_match' &&
           (s.weight === oldWeight || s.weight === null || s.weight === 0)
         ) {
-          return { ...s, weight: value }
+          return { ...s, weight: numValue }
         }
         return s
       })
@@ -182,9 +190,10 @@ export default function Workout() {
   }, [isFutureSession, setAnimKey, bumpAnim])
 
   // Auto-save
-  const triggerAutoSave = useCallback((currentSets: WorkingSet[], currentSkipped?: Set<string>) => {
-    if (!mesocycleId || !template || isFutureSession) return
+  const triggerAutoSave = useCallback((currentSets: WorkingSet[], currentSkipped?: Set<string>, currentSkippedSets?: Set<string>) => {
+    if (!mesocycleId || !template || isFutureSession || modifyingRef.current) return
     const skipped = currentSkipped ?? skippedExercises
+    const skipSets = currentSkippedSets ?? skippedSets
     const completed = currentSets.filter(s => s.completed && !skipped.has(s.exercise_id))
 
     // Build exercise updates for skipped state
@@ -192,6 +201,12 @@ export default function Workout() {
       exercise_id: ex.exercise_id,
       skipped: skipped.has(ex.exercise_id),
     }))
+
+    // Build skipped sets payload
+    const skippedSetsPayload = [...skipSets].map(key => {
+      const parts = key.split(':')
+      return { exercise_id: parts[0]!, set_num: parseInt(parts[1]!) }
+    })
 
     // Snapshot keys currently in 'saving' phase
     const savingKeys = [...animPhaseRef.current.entries()]
@@ -215,6 +230,7 @@ export default function Workout() {
       })),
       notes: null,
       exercise_updates: exerciseUpdates,
+      skipped_sets: skippedSetsPayload.length > 0 ? skippedSetsPayload : null,
     }).then(() => {
       // Update cached templates so navigating away and back shows correct logged state
       const loggedKeys = new Set(
@@ -279,28 +295,147 @@ export default function Workout() {
         bumpAnim()
       }, 600)
     })
-  }, [mesocycleId, template, logSets, toast, isFutureSession, skippedExercises, bumpAnim, queryClient])
+  }, [mesocycleId, template, logSets, toast, isFutureSession, skippedExercises, skippedSets, bumpAnim, queryClient])
 
-  // Trigger auto-save when completed count or skipped set changes
+  // Trigger auto-save when completed count or skipped state changes
+  const prevSkippedSetsRef = useRef<string>('')
   useEffect(() => {
     if (!initialized) return
     const count = sets.filter(s => s.completed).length
     const skippedKey = [...skippedExercises].sort().join(',')
-    if (count !== prevCompletedRef.current || skippedKey !== prevSkippedRef.current) {
-      triggerAutoSave(sets, skippedExercises)
+    const skippedSetsKey = [...skippedSets].sort().join(',')
+    if (count !== prevCompletedRef.current || skippedKey !== prevSkippedRef.current || skippedSetsKey !== prevSkippedSetsRef.current) {
+      triggerAutoSave(sets, skippedExercises, skippedSets)
     }
     prevCompletedRef.current = count
     prevSkippedRef.current = skippedKey
-  }, [sets, initialized, triggerAutoSave, skippedExercises])
+    prevSkippedSetsRef.current = skippedSetsKey
+  }, [sets, initialized, triggerAutoSave, skippedExercises, skippedSets])
 
   const toggleSkip = useCallback((exerciseId: string) => {
     setSkippedExercises(prev => {
       const next = new Set(prev)
-      if (next.has(exerciseId)) next.delete(exerciseId)
-      else next.add(exerciseId)
+      if (next.has(exerciseId)) {
+        next.delete(exerciseId)
+        // Also clear individual set skips for this exercise
+        setSkippedSets(prevSets => {
+          const nextSets = new Set(prevSets)
+          for (const key of nextSets) {
+            if (key.startsWith(`${exerciseId}:`)) nextSets.delete(key)
+          }
+          return nextSets
+        })
+      } else {
+        next.add(exerciseId)
+      }
       return next
     })
   }, [])
+
+  const toggleSkipSet = useCallback((exerciseId: string, setNum: number) => {
+    const key = `${exerciseId}:${setNum}`
+    setSkippedSets(prev => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+  }, [])
+
+  const handleAddSet = useCallback(async (exerciseId: string) => {
+    if (!mesocycleId || !template) return
+    modifyingRef.current = true
+    try {
+      const result = await modifySets.mutateAsync({
+        mesocycle_id: mesocycleId,
+        week_index: template.week_index,
+        session_index: template.session_index,
+        exercise_id: exerciseId,
+        action: 'add',
+      })
+      // Find exercise name from current sets
+      const existingSet = sets.find(s => s.exercise_id === exerciseId)
+      const exerciseName = existingSet?.exercise_name ?? ''
+      // Replace sets for this exercise with response data
+      setSets(prev => {
+        const otherSets = prev.filter(s => s.exercise_id !== exerciseId)
+        const newSets: WorkingSet[] = result.sets.map(s => ({
+          ...s,
+          exercise_id: exerciseId,
+          exercise_name: exerciseName,
+          weight: s.logged ? (s.weight ?? 0) : (s.suggested_weight ?? s.weight ?? 0),
+          reps: s.reps ?? 0,
+          rir: template.target_rir >= 0 ? template.target_rir : null,
+          completed: s.logged,
+        }))
+        // Maintain exercise ordering from template
+        const orderedSets: WorkingSet[] = []
+        for (const ex of template.exercises) {
+          if (ex.exercise_id === exerciseId) {
+            orderedSets.push(...newSets)
+          } else {
+            orderedSets.push(...otherSets.filter(s => s.exercise_id === ex.exercise_id))
+          }
+        }
+        return orderedSets
+      })
+    } catch {
+      toast.showError('Failed to add set')
+    } finally {
+      modifyingRef.current = false
+    }
+  }, [mesocycleId, template, modifySets, sets, toast])
+
+  const handleRemoveSet = useCallback(async (exerciseId: string, setNum: number) => {
+    if (!mesocycleId || !template) return
+    modifyingRef.current = true
+    try {
+      const result = await modifySets.mutateAsync({
+        mesocycle_id: mesocycleId,
+        week_index: template.week_index,
+        session_index: template.session_index,
+        exercise_id: exerciseId,
+        action: 'remove',
+        set_num: setNum,
+      })
+      const existingSet = sets.find(s => s.exercise_id === exerciseId)
+      const exerciseName = existingSet?.exercise_name ?? ''
+      // Clear any skip for the removed set
+      setSkippedSets(prev => {
+        const next = new Set(prev)
+        // Remove all skip keys for this exercise and re-map to new set_nums
+        for (const key of prev) {
+          if (key.startsWith(`${exerciseId}:`)) next.delete(key)
+        }
+        return next
+      })
+      setSets(prev => {
+        const otherSets = prev.filter(s => s.exercise_id !== exerciseId)
+        const newSets: WorkingSet[] = result.sets.map(s => ({
+          ...s,
+          exercise_id: exerciseId,
+          exercise_name: exerciseName,
+          weight: s.logged ? (s.weight ?? 0) : (s.suggested_weight ?? s.weight ?? 0),
+          reps: s.reps ?? 0,
+          rir: template.target_rir >= 0 ? template.target_rir : null,
+          completed: s.logged,
+        }))
+        const orderedSets: WorkingSet[] = []
+        for (const ex of template.exercises) {
+          if (ex.exercise_id === exerciseId) {
+            orderedSets.push(...newSets)
+          } else {
+            orderedSets.push(...otherSets.filter(s => s.exercise_id === ex.exercise_id))
+          }
+        }
+        return orderedSets
+      })
+    } catch {
+      toast.showError('Failed to remove set')
+    } finally {
+      modifyingRef.current = false
+    }
+  }, [mesocycleId, template, modifySets, sets, toast])
 
   const handleSaveNote = useCallback((exerciseId: string, note: string | null) => {
     if (!mesocycleId) return
@@ -373,6 +508,10 @@ export default function Workout() {
           })),
           notes: null,
           exercise_updates: exerciseUpdates,
+          skipped_sets: skippedSets.size > 0 ? [...skippedSets].map(key => {
+            const parts = key.split(':')
+            return { exercise_id: parts[0]!, set_num: parseInt(parts[1]!) }
+          }) : null,
           complete: true,
         })
       } catch {
@@ -412,7 +551,7 @@ export default function Workout() {
   }
 
   // Compute completion excluding skipped exercises
-  const activeSets = sets.filter(s => !skippedExercises.has(s.exercise_id))
+  const activeSets = sets.filter(s => !skippedExercises.has(s.exercise_id) && !skippedSets.has(`${s.exercise_id}:${s.set_num}`))
   const completedSets = activeSets.filter(s => s.completed).length
   const totalSets = activeSets.length
 
@@ -495,6 +634,10 @@ export default function Workout() {
             note={exerciseNotes[ex.exercise_id]}
             onEditNote={() => setNoteModal({ exerciseId: ex.exercise_id, exerciseName: ex.exercise_name })}
             onReplace={() => setReplaceModal({ exerciseId: ex.exercise_id, exerciseIndex: ex.exerciseIndex, muscleGroup: ex.muscle_group, equipmentType: ex.equipment_type })}
+            onAddSet={handleAddSet}
+            onRemoveSet={handleRemoveSet}
+            onToggleSkipSet={toggleSkipSet}
+            skippedSets={skippedSets}
             animPhaseRef={animPhaseRef}
             onClearAnim={clearAnim}
           />
@@ -781,6 +924,136 @@ function ExercisePicker({ initialMuscleGroup, initialEquipmentType, currentExerc
   )
 }
 
+// --- Swipeable Row ---
+
+interface SwipeableRowProps {
+  children: React.ReactNode
+  onSwipeLeft?: () => void
+  onSwipeRight?: () => void
+  leftLabel?: string
+  rightLabel?: string
+  leftColor?: string
+  rightColor?: string
+  disabled?: boolean
+}
+
+function SwipeableRow({ children, onSwipeLeft, onSwipeRight, leftLabel = 'Skip', rightLabel = 'Delete', leftColor = '#f59e0b', rightColor = '#ef4444', disabled }: SwipeableRowProps) {
+  const rowRef = useRef<HTMLDivElement>(null)
+  const startX = useRef(0)
+  const startY = useRef(0)
+  const currentX = useRef(0)
+  const swiping = useRef(false)
+  const directionLocked = useRef(false)
+  const isHorizontal = useRef(false)
+  const [offset, setOffset] = useState(0)
+  const [transitioning, setTransitioning] = useState(false)
+  const THRESHOLD = 60
+  const MAX_SWIPE = 80
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    if (disabled) return
+    const touch = e.touches[0]
+    if (!touch) return
+    startX.current = touch.clientX
+    startY.current = touch.clientY
+    currentX.current = 0
+    swiping.current = true
+    directionLocked.current = false
+    isHorizontal.current = false
+    setTransitioning(false)
+  }, [disabled])
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (!swiping.current || disabled) return
+    const touch = e.touches[0]
+    if (!touch) return
+    const dx = touch.clientX - startX.current
+    const dy = touch.clientY - startY.current
+
+    if (!directionLocked.current) {
+      if (Math.abs(dx) > 8 || Math.abs(dy) > 8) {
+        directionLocked.current = true
+        isHorizontal.current = Math.abs(dx) > Math.abs(dy)
+      }
+      return
+    }
+
+    if (!isHorizontal.current) return
+
+    // Swipe left (negative dx) => show delete on right (only if onSwipeLeft exists)
+    // Swipe right (positive dx) => show skip on left (only if onSwipeRight exists)
+    let clampedDx = dx
+    if (dx < 0 && !onSwipeLeft) clampedDx = 0
+    if (dx > 0 && !onSwipeRight) clampedDx = 0
+    clampedDx = Math.max(-MAX_SWIPE, Math.min(MAX_SWIPE, clampedDx))
+
+    currentX.current = clampedDx
+    setOffset(clampedDx)
+  }, [disabled, onSwipeLeft, onSwipeRight])
+
+  const handleTouchEnd = useCallback(() => {
+    if (!swiping.current) return
+    swiping.current = false
+    setTransitioning(true)
+
+    if (currentX.current < -THRESHOLD && onSwipeLeft) {
+      setOffset(-MAX_SWIPE)
+    } else if (currentX.current > THRESHOLD && onSwipeRight) {
+      setOffset(MAX_SWIPE)
+    } else {
+      setOffset(0)
+    }
+  }, [onSwipeLeft, onSwipeRight])
+
+  const handleAction = useCallback((action: (() => void) | undefined) => {
+    if (action) action()
+    setTransitioning(true)
+    setOffset(0)
+  }, [])
+
+  return (
+    <div className="relative overflow-hidden rounded-lg">
+      {/* Left action (skip - revealed on swipe right) */}
+      {onSwipeRight && (
+        <button
+          onClick={() => handleAction(onSwipeRight)}
+          className="absolute inset-y-0 left-0 flex items-center justify-center text-xs font-semibold uppercase tracking-wider"
+          style={{ width: MAX_SWIPE, background: leftColor, color: '#fff', opacity: offset > 0 ? 1 : 0 }}
+        >
+          {leftLabel}
+        </button>
+      )}
+      {/* Right action (delete - revealed on swipe left) */}
+      {onSwipeLeft && (
+        <button
+          onClick={() => handleAction(onSwipeLeft)}
+          className="absolute inset-y-0 right-0 flex items-center justify-center text-xs font-semibold uppercase tracking-wider"
+          style={{ width: MAX_SWIPE, background: rightColor, color: '#fff', opacity: offset < 0 ? 1 : 0 }}
+        >
+          {rightLabel}
+        </button>
+      )}
+      {/* Content */}
+      <div
+        ref={rowRef}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        style={{
+          transform: `translateX(${offset}px)`,
+          transition: transitioning ? 'transform 0.2s ease' : 'none',
+          position: 'relative',
+          zIndex: 1,
+          background: 'var(--panel)',
+        }}
+        onTransitionEnd={() => setTransitioning(false)}
+      >
+        {children}
+      </div>
+    </div>
+  )
+}
+
 // --- Exercise Card ---
 
 interface ExerciseCardProps {
@@ -798,11 +1071,15 @@ interface ExerciseCardProps {
   note?: string
   onEditNote: () => void
   onReplace: () => void
+  onAddSet: (exerciseId: string) => void
+  onRemoveSet: (exerciseId: string, setNum: number) => void
+  onToggleSkipSet: (exerciseId: string, setNum: number) => void
+  skippedSets: Set<string>
   animPhaseRef: React.MutableRefObject<Map<string, 'saving' | 'success'>>
   onClearAnim: (exerciseId: string, setNum: number) => void
 }
 
-function ExerciseCard({ exercise, sets, allSets, targetRir, onUpdateSet, onCompleteSet, onUncompleteSet, locked, skipped, onToggleSkip, note, onEditNote, onReplace, animPhaseRef, onClearAnim }: ExerciseCardProps) {
+function ExerciseCard({ exercise, sets, allSets, targetRir, onUpdateSet, onCompleteSet, onUncompleteSet, locked, skipped, onToggleSkip, note, onEditNote, onReplace, onAddSet, onRemoveSet, onToggleSkipSet, skippedSets, animPhaseRef, onClearAnim }: ExerciseCardProps) {
   const [menuOpen, setMenuOpen] = useState(false)
   const color = getMuscleColor(exercise.muscle_group)
 
@@ -898,21 +1175,48 @@ function ExerciseCard({ exercise, sets, allSets, targetRir, onUpdateSet, onCompl
         </div>
 
         {/* Set rows */}
-        {sets.map((set) => (
-          <SetRow
-            key={set.set_num}
-            set={set}
-            exercise={exercise}
-            allSets={allSets}
-            targetRir={targetRir}
-            onUpdate={onUpdateSet}
-            onComplete={onCompleteSet}
-            onUncomplete={onUncompleteSet}
-            locked={locked}
-            animPhase={animPhaseRef.current.get(`${exercise.exercise_id}:${set.set_num}`)}
-            onClearAnim={onClearAnim}
-          />
-        ))}
+        {sets.map((set) => {
+          const setSkipKey = `${exercise.exercise_id}:${set.set_num}`
+          const isSetSkipped = skippedSets.has(setSkipKey)
+          const canDelete = !set.completed && !locked && sets.length > 1
+          const canSkip = !set.completed && !locked
+          return (
+            <SwipeableRow
+              key={set.set_num}
+              onSwipeLeft={canDelete ? () => onRemoveSet(exercise.exercise_id, set.set_num) : undefined}
+              onSwipeRight={canSkip ? () => onToggleSkipSet(exercise.exercise_id, set.set_num) : undefined}
+              leftLabel={isSetSkipped ? 'Unskip' : 'Skip'}
+              disabled={locked}
+            >
+              <div style={{ opacity: isSetSkipped ? 0.4 : 1 }}>
+                <SetRow
+                  set={set}
+                  exercise={exercise}
+                  allSets={allSets}
+                  targetRir={targetRir}
+                  onUpdate={onUpdateSet}
+                  onComplete={onCompleteSet}
+                  onUncomplete={onUncompleteSet}
+                  locked={locked || isSetSkipped}
+                  animPhase={animPhaseRef.current.get(`${exercise.exercise_id}:${set.set_num}`)}
+                  onClearAnim={onClearAnim}
+                  strikethrough={isSetSkipped}
+                />
+              </div>
+            </SwipeableRow>
+          )
+        })}
+
+        {/* Add Set button */}
+        {!locked && (
+          <button
+            onClick={() => onAddSet(exercise.exercise_id)}
+            className="w-full py-2 text-center text-xs font-medium active:bg-white/5 rounded-b-lg"
+            style={{ color: 'var(--text-m)', opacity: 0.6 }}
+          >
+            + Add Set
+          </button>
+        )}
       </div>
 
       <BottomSheet
@@ -954,6 +1258,7 @@ interface SetRowProps {
   locked?: boolean
   animPhase?: 'saving' | 'success'
   onClearAnim: (exerciseId: string, setNum: number) => void
+  strikethrough?: boolean
 }
 
 type SetState = 'pending' | 'logged' | 'exceeded' | 'under'
@@ -997,7 +1302,7 @@ const SET_TYPE_LABELS: Record<string, { label: string; color: string; bg: string
 
 const STRAIGHT_PILL = { color: 'var(--text-2)', bg: 'rgba(255,255,255,0.04)', border: 'rgba(255,255,255,0.12)' }
 
-const SetRow = memo(function SetRow({ set, exercise, allSets, onUpdate, onComplete, onUncomplete, locked, animPhase, onClearAnim }: SetRowProps) {
+const SetRow = memo(function SetRow({ set, exercise, allSets, onUpdate, onComplete, onUncomplete, locked, animPhase, onClearAnim, strikethrough }: SetRowProps) {
   const [typePopoverOpen, setTypePopoverOpen] = useState(false)
   const [jiggleTarget, setJiggleTarget] = useState<'weight' | 'reps' | null>(null)
   const jiggleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -1151,6 +1456,7 @@ const SetRow = memo(function SetRow({ set, exercise, allSets, onUpdate, onComple
             border: `1px solid ${isMatchLocked ? 'rgba(251,191,36,0.15)' : styles.inputBorder}`,
             color: isMatchLocked ? '#fbbf24' : styles.textColor,
             opacity: isMatchLocked && !mmRefLogged ? 0.5 : 1,
+            textDecoration: strikethrough ? 'line-through' : undefined,
           }}
           onClick={() => { if (isMatchLocked && !set.completed) triggerLockJiggle('weight') }}
         />
@@ -1186,6 +1492,7 @@ const SetRow = memo(function SetRow({ set, exercise, allSets, onUpdate, onComple
             border: `1px solid ${isMatchLocked ? 'rgba(251,191,36,0.15)' : styles.inputBorder}`,
             color: isMatchLocked ? '#fbbf24' : styles.textColor,
             opacity: isMatchLocked && !mmRefLogged ? 0.5 : 1,
+            textDecoration: strikethrough ? 'line-through' : undefined,
           }}
           onClick={() => { if (isMatchLocked && !set.completed) triggerLockJiggle('weight') }}
         />

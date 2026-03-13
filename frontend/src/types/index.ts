@@ -74,6 +74,7 @@ export interface MesoSet {
   rir: number | null
   logged: boolean
   set_type?: SetType
+  skipped?: boolean
 }
 
 export interface MesoExercise {
