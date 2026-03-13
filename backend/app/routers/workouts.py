@@ -36,6 +36,11 @@ class ExerciseUpdate(BaseModel):
     skipped: bool | None = None
 
 
+class SkippedSetInfo(BaseModel):
+    exercise_id: str
+    set_num: int
+
+
 class LogSetsRequest(BaseModel):
     mesocycle_id: str
     week_index: int = Field(ge=0)
@@ -43,7 +48,17 @@ class LogSetsRequest(BaseModel):
     sets: list[SetLog]
     notes: str | None = None
     exercise_updates: list[ExerciseUpdate] | None = None
+    skipped_sets: list[SkippedSetInfo] | None = None
     complete: bool = False
+
+
+class ModifySetsRequest(BaseModel):
+    mesocycle_id: str
+    week_index: int = Field(ge=0)
+    session_index: int = Field(ge=0)
+    exercise_id: str
+    action: str = Field(pattern=r"^(add|remove)$")
+    set_num: int | None = None
 
 
 class WorkoutTemplateExercise(BaseModel):
@@ -240,6 +255,11 @@ async def log_sets(
     for s in data.sets:
         logged_map[(s.exercise_id, s.set_num)] = s
 
+    # Build skipped sets lookup
+    skipped_set_keys: set[tuple[str, int]] = set()
+    if data.skipped_sets:
+        skipped_set_keys = {(s.exercise_id, s.set_num) for s in data.skipped_sets}
+
     # Apply logged data to the structure (and un-log sets not in payload)
     for exercise in session.get("exercises", []):
         for set_data in exercise.get("sets", []):
@@ -254,6 +274,7 @@ async def log_sets(
                     set_data["set_type"] = log.set_type
             else:
                 set_data["logged"] = False
+            set_data["skipped"] = key in skipped_set_keys
 
     # Only compute progression on explicit end-of-workout
     if data.complete:
@@ -467,6 +488,150 @@ async def replace_exercise(
     await db.commit()
 
     return {"status": "ok"}
+
+
+@router.post("/modify-sets")
+async def modify_sets(
+    data: ModifySetsRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Add or remove a set from an exercise, propagating to future unlogged weeks."""
+    result = await db.execute(
+        select(Mesocycle)
+        .where(Mesocycle.id == data.mesocycle_id, Mesocycle.user_id == current_user.id)
+        .with_for_update()
+    )
+    mesocycle = result.scalar_one_or_none()
+    if not mesocycle:
+        raise HTTPException(status_code=404, detail="Mesocycle not found")
+
+    structure = mesocycle.structure
+    weeks = structure.get("weeks", [])
+
+    if data.week_index >= len(weeks):
+        raise HTTPException(status_code=400, detail="Invalid week index")
+
+    week = weeks[data.week_index]
+    sessions = week.get("sessions", [])
+
+    if data.session_index >= len(sessions):
+        raise HTTPException(status_code=400, detail="Invalid session index")
+
+    session = sessions[data.session_index]
+    session_name = session["session_name"]
+    day_order = session["day_order"]
+
+    # Find the target exercise
+    target_exercise = None
+    for ex in session.get("exercises", []):
+        if ex["exercise_id"] == data.exercise_id:
+            target_exercise = ex
+            break
+
+    if not target_exercise:
+        raise HTTPException(status_code=404, detail="Exercise not found in session")
+
+    sets_list = target_exercise.get("sets", [])
+
+    if data.action == "add":
+        # Clone from last set
+        last_set = sets_list[-1] if sets_list else {}
+        new_set = {
+            "set_num": len(sets_list) + 1,
+            "weight": None,
+            "reps": None,
+            "target_reps": last_set.get("target_reps", 10),
+            "suggested_weight": last_set.get("suggested_weight"),
+            "rir": None,
+            "logged": False,
+            "set_type": None,
+        }
+        sets_list.append(new_set)
+        target_exercise["sets"] = sets_list
+        new_set_count = len(sets_list)
+
+        # Propagate to future weeks
+        for wi in range(data.week_index + 1, len(weeks)):
+            future_week = weeks[wi]
+            for future_session in future_week.get("sessions", []):
+                if (
+                    future_session["session_name"] == session_name
+                    and future_session["day_order"] == day_order
+                ):
+                    for fe in future_session.get("exercises", []):
+                        if fe["exercise_id"] == data.exercise_id:
+                            future_sets = fe.get("sets", [])
+                            has_logged = any(s.get("logged") for s in future_sets)
+                            if not has_logged and len(future_sets) < new_set_count:
+                                last_fs = future_sets[-1] if future_sets else {}
+                                future_sets.append({
+                                    "set_num": len(future_sets) + 1,
+                                    "weight": None,
+                                    "reps": None,
+                                    "target_reps": last_fs.get("target_reps", 10),
+                                    "suggested_weight": last_fs.get("suggested_weight"),
+                                    "rir": None,
+                                    "logged": False,
+                                    "set_type": None,
+                                })
+                                fe["sets"] = future_sets
+
+    elif data.action == "remove":
+        if data.set_num is None:
+            raise HTTPException(status_code=400, detail="set_num required for remove action")
+
+        if len(sets_list) <= 1:
+            raise HTTPException(status_code=400, detail="Cannot remove the only set")
+
+        target_set = None
+        for s in sets_list:
+            if s["set_num"] == data.set_num:
+                target_set = s
+                break
+
+        if not target_set:
+            raise HTTPException(status_code=400, detail="Set not found")
+
+        if target_set.get("logged"):
+            raise HTTPException(status_code=400, detail="Cannot remove a logged set")
+
+        sets_list.remove(target_set)
+        # Renumber
+        for i, s in enumerate(sets_list):
+            s["set_num"] = i + 1
+        target_exercise["sets"] = sets_list
+        new_set_count = len(sets_list)
+
+        # Propagate to future weeks
+        for wi in range(data.week_index + 1, len(weeks)):
+            future_week = weeks[wi]
+            for future_session in future_week.get("sessions", []):
+                if (
+                    future_session["session_name"] == session_name
+                    and future_session["day_order"] == day_order
+                ):
+                    for fe in future_session.get("exercises", []):
+                        if fe["exercise_id"] == data.exercise_id:
+                            future_sets = fe.get("sets", [])
+                            has_logged = any(s.get("logged") for s in future_sets)
+                            if not has_logged and len(future_sets) > new_set_count:
+                                # Remove last unlogged set
+                                future_sets.pop()
+                                for i, s in enumerate(future_sets):
+                                    s["set_num"] = i + 1
+                                fe["sets"] = future_sets
+
+    from sqlalchemy.orm.attributes import flag_modified
+
+    flag_modified(mesocycle, "structure")
+    await db.commit()
+
+    return {
+        "status": "ok",
+        "exercise_id": data.exercise_id,
+        "sets": target_exercise["sets"],
+    }
 
 
 @router.get("/history/{mesocycle_id}")
