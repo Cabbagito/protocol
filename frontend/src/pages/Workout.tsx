@@ -11,6 +11,7 @@ import RirBadge from '../components/RirBadge'
 import MuscleGroupBadge from '../components/MuscleGroupBadge'
 import MesoGrid from '../components/MesoGrid'
 import BottomSheet from '../components/BottomSheet'
+import { MuscleGroupChips, EquipmentTypeToggles } from '../components/ExerciseFilters'
 import { getCurrentPosition } from '../lib/mesoUtils'
 import { getMuscleColor } from '../lib/muscleColors'
 import type { WorkoutTemplate, MesoExercise, MesoSet, Mesocycle, SetType } from '../types'
@@ -61,7 +62,7 @@ export default function Workout() {
   const [skippedSets, setSkippedSets] = useState<Set<string>>(new Set())
   const [exerciseNotes, setExerciseNotes] = useState<Record<string, string>>({})
   const [noteModal, setNoteModal] = useState<{ exerciseId: string; exerciseName: string } | null>(null)
-  const [replaceModal, setReplaceModal] = useState<{ exerciseId: string; exerciseIndex: number; muscleGroup: string } | null>(null)
+  const [replaceModal, setReplaceModal] = useState<{ exerciseId: string; exerciseIndex: number; muscleGroup: string; equipmentType: string } | null>(null)
   const modifyingRef = useRef(false)
   const pendingSavesRef = useRef(0)
   const prevCompletedRef = useRef(0)
@@ -632,7 +633,7 @@ export default function Workout() {
             onToggleSkip={() => toggleSkip(ex.exercise_id)}
             note={exerciseNotes[ex.exercise_id]}
             onEditNote={() => setNoteModal({ exerciseId: ex.exercise_id, exerciseName: ex.exercise_name })}
-            onReplace={() => setReplaceModal({ exerciseId: ex.exercise_id, exerciseIndex: ex.exerciseIndex, muscleGroup: ex.muscle_group })}
+            onReplace={() => setReplaceModal({ exerciseId: ex.exercise_id, exerciseIndex: ex.exerciseIndex, muscleGroup: ex.muscle_group, equipmentType: ex.equipment_type })}
             onAddSet={handleAddSet}
             onRemoveSet={handleRemoveSet}
             onToggleSkipSet={toggleSkipSet}
@@ -696,7 +697,8 @@ export default function Workout() {
       {/* Replace Exercise Picker */}
       {replaceModal && (
         <ExercisePicker
-          muscleGroup={replaceModal.muscleGroup}
+          initialMuscleGroup={replaceModal.muscleGroup}
+          initialEquipmentType={replaceModal.equipmentType}
           currentExerciseId={replaceModal.exerciseId}
           onSelect={handleReplace}
           onClose={() => setReplaceModal(null)}
@@ -767,23 +769,48 @@ function NoteModal({ exerciseName, initialNote, onSave, onClose }: {
 
 // --- Exercise Picker (Replace) ---
 
-function ExercisePicker({ muscleGroup, currentExerciseId, onSelect, onClose }: {
-  muscleGroup: string
+function ExercisePicker({ initialMuscleGroup, initialEquipmentType, currentExerciseId, onSelect, onClose }: {
+  initialMuscleGroup: string
+  initialEquipmentType: string
   currentExerciseId: string
   onSelect: (exerciseId: string, applyToFuture: boolean) => void
   onClose: () => void
 }) {
   const { data: exercises } = useExercises()
   const [search, setSearch] = useState('')
+  const [selectedMuscleGroups, setSelectedMuscleGroups] = useState<Set<string>>(() => new Set([initialMuscleGroup]))
+  const [selectedEquipmentTypes, setSelectedEquipmentTypes] = useState<Set<string>>(() => new Set([initialEquipmentType]))
   const [applyToFuture, setApplyToFuture] = useState(true)
   const [selectedId, setSelectedId] = useState<string | null>(null)
 
+  const toggleMuscleGroup = (mg: string) => {
+    setSelectedMuscleGroups(prev => {
+      const next = new Set(prev)
+      if (next.has(mg)) next.delete(mg)
+      else next.add(mg)
+      return next
+    })
+  }
+
+  const toggleEquipmentType = (et: string) => {
+    setSelectedEquipmentTypes(prev => {
+      const next = new Set(prev)
+      if (next.has(et)) next.delete(et)
+      else next.add(et)
+      return next
+    })
+  }
+
   const filtered = useMemo(() => {
     if (!exercises) return []
-    return exercises
-      .filter(ex => ex.muscle_group === muscleGroup && ex.id !== currentExerciseId)
-      .filter(ex => !search || ex.name.toLowerCase().includes(search.toLowerCase()))
-  }, [exercises, muscleGroup, currentExerciseId, search])
+    return exercises.filter(ex => {
+      if (ex.id === currentExerciseId) return false
+      if (search && !ex.name.toLowerCase().includes(search.toLowerCase())) return false
+      if (selectedMuscleGroups.size > 0 && !selectedMuscleGroups.has(ex.muscle_group)) return false
+      if (selectedEquipmentTypes.size > 0 && !selectedEquipmentTypes.has(ex.equipment_type)) return false
+      return true
+    })
+  }, [exercises, currentExerciseId, search, selectedMuscleGroups, selectedEquipmentTypes])
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col" style={{ background: 'var(--base)' }}>
@@ -803,43 +830,64 @@ function ExercisePicker({ muscleGroup, currentExerciseId, onSelect, onClose }: {
           type="text"
           value={search}
           onChange={e => setSearch(e.target.value)}
-          placeholder={`Search ${muscleGroup} exercises...`}
+          placeholder="Search exercises..."
           className="input"
           style={{ fontSize: 15 }}
         />
       </div>
 
+      {/* Muscle Group Chips */}
+      <div className="px-4 pb-2">
+        <MuscleGroupChips selected={selectedMuscleGroups} onToggle={toggleMuscleGroup} />
+      </div>
+
+      {/* Equipment Type Toggles */}
+      <div className="px-4 pb-3">
+        <EquipmentTypeToggles selected={selectedEquipmentTypes} onToggle={toggleEquipmentType} />
+      </div>
+
       {/* List */}
       <div className="flex-1 overflow-y-auto px-4">
-        {filtered.map(ex => (
-          <button
-            key={ex.id}
-            onClick={() => setSelectedId(ex.id === selectedId ? null : ex.id)}
-            className="w-full flex items-center gap-3 py-3 border-b"
-            style={{
-              borderColor: 'rgba(255,255,255,0.04)',
-              background: ex.id === selectedId ? 'rgba(var(--accent-rgb),0.08)' : undefined,
-            }}
-          >
-            <div
-              className="w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0"
+        {filtered.map(ex => {
+          const color = getMuscleColor(ex.muscle_group)
+          return (
+            <button
+              key={ex.id}
+              onClick={() => setSelectedId(ex.id === selectedId ? null : ex.id)}
+              className="w-full flex items-center gap-3 py-3 border-b"
               style={{
-                borderColor: ex.id === selectedId ? 'var(--accent)' : 'var(--border)',
-                background: ex.id === selectedId ? 'var(--accent)' : undefined,
+                borderColor: 'rgba(255,255,255,0.04)',
+                background: ex.id === selectedId ? 'rgba(var(--accent-rgb),0.08)' : undefined,
               }}
             >
-              {ex.id === selectedId && (
-                <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
-                </svg>
-              )}
-            </div>
-            <div className="text-left">
-              <div className="text-sm font-medium text-[var(--text-1)]">{ex.name}</div>
-              <div className="text-[11px] text-[var(--text-m)] capitalize">{ex.equipment_type}</div>
-            </div>
-          </button>
-        ))}
+              <div
+                className="w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0"
+                style={{
+                  borderColor: ex.id === selectedId ? 'var(--accent)' : 'var(--border)',
+                  background: ex.id === selectedId ? 'var(--accent)' : undefined,
+                }}
+              >
+                {ex.id === selectedId && (
+                  <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                  </svg>
+                )}
+              </div>
+              <div className="text-left">
+                <div className="text-sm font-medium text-[var(--text-1)]">{ex.name}</div>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: color.light }}>
+                    {ex.muscle_group}
+                  </span>
+                  <span className="text-[10px]" style={{ color: 'var(--text-m)' }}>&middot;</span>
+                  <span className="text-[10px] capitalize" style={{ color: 'var(--text-m)' }}>
+                    {ex.equipment_type}
+                  </span>
+                </div>
+              </div>
+            </button>
+          )
+        })}
         {filtered.length === 0 && (
           <div className="text-center text-[var(--text-m)] py-8 text-sm">No exercises found</div>
         )}
