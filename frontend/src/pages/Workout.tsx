@@ -126,13 +126,32 @@ export default function Workout() {
 
   const updateSet = useCallback((exerciseId: string, setNum: number, field: keyof WorkingSet, value: number | boolean | string) => {
     if (isFutureSession) return
-    setSets((prev) =>
-      prev.map((s) =>
-        s.exercise_id === exerciseId && s.set_num === setNum
-          ? { ...s, [field]: value }
-          : s
-      )
-    )
+    setSets((prev) => {
+      if (field !== 'weight') {
+        return prev.map((s) =>
+          s.exercise_id === exerciseId && s.set_num === setNum
+            ? { ...s, [field]: value }
+            : s
+        )
+      }
+      const oldWeight = prev.find(
+        (s) => s.exercise_id === exerciseId && s.set_num === setNum
+      )?.weight ?? null
+
+      return prev.map((s) => {
+        if (s.exercise_id !== exerciseId) return s
+        if (s.set_num === setNum) return { ...s, weight: value }
+        if (
+          s.set_num > setNum &&
+          !s.completed &&
+          (s.set_type ?? 'straight') !== 'myorep_match' &&
+          (s.weight === oldWeight || s.weight === null || s.weight === 0)
+        ) {
+          return { ...s, weight: value }
+        }
+        return s
+      })
+    })
   }, [isFutureSession])
 
   const completeSet = useCallback((exerciseId: string, setNum: number) => {
