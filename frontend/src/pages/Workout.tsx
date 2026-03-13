@@ -1175,6 +1175,7 @@ function ExerciseCard({ exercise, sets, allSets, targetRir, onUpdateSet, onCompl
         </div>
 
         {/* Set rows */}
+        <div className="space-y-1.5">
         {sets.map((set) => {
           const setSkipKey = `${exercise.exercise_id}:${set.set_num}`
           const isSetSkipped = skippedSets.has(setSkipKey)
@@ -1206,6 +1207,7 @@ function ExerciseCard({ exercise, sets, allSets, targetRir, onUpdateSet, onCompl
             </SwipeableRow>
           )
         })}
+        </div>
 
         {/* Add Set button */}
         {!locked && (
@@ -1379,7 +1381,7 @@ const SetRow = memo(function SetRow({ set, exercise, allSets, onUpdate, onComple
     : undefined
 
   return (
-    <div className="flex items-center gap-2 mb-1.5 rounded-lg px-2 py-1.5" style={{ background: rowBg }}>
+    <div className="flex items-center gap-2 rounded-lg px-2 py-1.5" style={{ background: rowBg }}>
       {/* Set number / type indicator */}
       <div className="w-8 flex justify-center relative">
         <button
