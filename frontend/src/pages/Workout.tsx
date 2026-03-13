@@ -449,8 +449,8 @@ export default function Workout() {
           <MesoGrid
             mesocycle={mesocycle}
             compact
-            viewingWeek={isFutureSession ? template.week_index : undefined}
-            viewingSession={isFutureSession ? template.session_index : undefined}
+            viewingWeek={(template.week_index !== currentPos?.weekIndex || template.session_index !== currentPos?.sessionIndex) ? template.week_index : undefined}
+            viewingSession={(template.week_index !== currentPos?.weekIndex || template.session_index !== currentPos?.sessionIndex) ? template.session_index : undefined}
           />
         )}
         drawerExpanded={headerExpanded}
