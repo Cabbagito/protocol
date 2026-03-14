@@ -60,6 +60,7 @@ export default function Workout() {
   const [headerExpanded, setHeaderExpanded] = useState(false)
   const [skippedExercises, setSkippedExercises] = useState<Set<string>>(new Set())
   const [skippedSets, setSkippedSets] = useState<Set<string>>(new Set())
+  const [removedExercises, setRemovedExercises] = useState<Set<string>>(new Set())
   const [exerciseNotes, setExerciseNotes] = useState<Record<string, string>>({})
   const [noteModal, setNoteModal] = useState<{ exerciseId: string; exerciseName: string } | null>(null)
   const [replaceModal, setReplaceModal] = useState<{ exerciseId: string; exerciseIndex: number; muscleGroup: string; equipmentType: string } | null>(null)
@@ -94,6 +95,7 @@ export default function Workout() {
     setSets([])
     setSkippedExercises(new Set())
     setSkippedSets(new Set())
+    setRemovedExercises(new Set())
     setExerciseNotes({})
     setHeaderExpanded(false)
     prevCompletedRef.current = 0
@@ -327,6 +329,19 @@ export default function Workout() {
         })
       } else {
         next.add(exerciseId)
+        // Mark all unlogged sets as skipped
+        setSets(currentSets => {
+          setSkippedSets(prevSets => {
+            const nextSets = new Set(prevSets)
+            for (const s of currentSets) {
+              if (s.exercise_id === exerciseId && !s.completed) {
+                nextSets.add(`${exerciseId}:${s.set_num}`)
+              }
+            }
+            return nextSets
+          })
+          return currentSets
+        })
       }
       return next
     })
@@ -338,6 +353,20 @@ export default function Workout() {
       const next = new Set(prev)
       if (next.has(key)) next.delete(key)
       else next.add(key)
+      return next
+    })
+  }, [])
+
+  const removeExercise = useCallback((exerciseId: string) => {
+    setRemovedExercises(prev => {
+      const next = new Set(prev)
+      next.add(exerciseId)
+      return next
+    })
+    // Also mark as skipped so it's excluded from save
+    setSkippedExercises(prev => {
+      const next = new Set(prev)
+      next.add(exerciseId)
       return next
     })
   }, [])
@@ -551,20 +580,22 @@ export default function Workout() {
   }
 
   // Compute completion excluding skipped exercises
-  const activeSets = sets.filter(s => !skippedExercises.has(s.exercise_id) && !skippedSets.has(`${s.exercise_id}:${s.set_num}`))
+  const activeSets = sets.filter(s => !skippedExercises.has(s.exercise_id) && !removedExercises.has(s.exercise_id) && !skippedSets.has(`${s.exercise_id}:${s.set_num}`))
   const completedSets = activeSets.filter(s => s.completed).length
   const totalSets = activeSets.length
 
-  const exerciseGroups = template.exercises.map((ex, idx) => ({
-    ...ex,
-    exerciseIndex: idx,
-    workingSets: sets.filter((s) => s.exercise_id === ex.exercise_id),
-  }))
+  const exerciseGroups = template.exercises
+    .map((ex, idx) => ({
+      ...ex,
+      exerciseIndex: idx,
+      workingSets: sets.filter((s) => s.exercise_id === ex.exercise_id),
+    }))
+    .filter(ex => !removedExercises.has(ex.exercise_id))
 
   const rirLabel = template.target_rir === -1 ? 'Deload' : `RiR ${template.target_rir}`
 
   return (
-    <div className="pb-4">
+    <div className="pb-20">
       <AppHeader
         title={template.session_name}
         subtitle={isFutureSession ? `Week ${template.week_number} · ${rirLabel}` : `Week ${template.week_number}`}
@@ -637,6 +668,7 @@ export default function Workout() {
             onAddSet={handleAddSet}
             onRemoveSet={handleRemoveSet}
             onToggleSkipSet={toggleSkipSet}
+            onRemoveExercise={() => removeExercise(ex.exercise_id)}
             skippedSets={skippedSets}
             animPhaseRef={animPhaseRef}
             onClearAnim={clearAnim}
@@ -924,135 +956,6 @@ function ExercisePicker({ initialMuscleGroup, initialEquipmentType, currentExerc
   )
 }
 
-// --- Swipeable Row ---
-
-interface SwipeableRowProps {
-  children: React.ReactNode
-  onSwipeLeft?: () => void
-  onSwipeRight?: () => void
-  leftLabel?: string
-  rightLabel?: string
-  leftColor?: string
-  rightColor?: string
-  disabled?: boolean
-}
-
-function SwipeableRow({ children, onSwipeLeft, onSwipeRight, leftLabel = 'Skip', rightLabel = 'Delete', leftColor = '#f59e0b', rightColor = '#ef4444', disabled }: SwipeableRowProps) {
-  const rowRef = useRef<HTMLDivElement>(null)
-  const startX = useRef(0)
-  const startY = useRef(0)
-  const currentX = useRef(0)
-  const swiping = useRef(false)
-  const directionLocked = useRef(false)
-  const isHorizontal = useRef(false)
-  const [offset, setOffset] = useState(0)
-  const [transitioning, setTransitioning] = useState(false)
-  const THRESHOLD = 60
-  const MAX_SWIPE = 80
-
-  const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    if (disabled) return
-    const touch = e.touches[0]
-    if (!touch) return
-    startX.current = touch.clientX
-    startY.current = touch.clientY
-    currentX.current = 0
-    swiping.current = true
-    directionLocked.current = false
-    isHorizontal.current = false
-    setTransitioning(false)
-  }, [disabled])
-
-  const handleTouchMove = useCallback((e: React.TouchEvent) => {
-    if (!swiping.current || disabled) return
-    const touch = e.touches[0]
-    if (!touch) return
-    const dx = touch.clientX - startX.current
-    const dy = touch.clientY - startY.current
-
-    if (!directionLocked.current) {
-      if (Math.abs(dx) > 8 || Math.abs(dy) > 8) {
-        directionLocked.current = true
-        isHorizontal.current = Math.abs(dx) > Math.abs(dy)
-      }
-      return
-    }
-
-    if (!isHorizontal.current) return
-
-    // Swipe left (negative dx) => show delete on right (only if onSwipeLeft exists)
-    // Swipe right (positive dx) => show skip on left (only if onSwipeRight exists)
-    let clampedDx = dx
-    if (dx < 0 && !onSwipeLeft) clampedDx = 0
-    if (dx > 0 && !onSwipeRight) clampedDx = 0
-    clampedDx = Math.max(-MAX_SWIPE, Math.min(MAX_SWIPE, clampedDx))
-
-    currentX.current = clampedDx
-    setOffset(clampedDx)
-  }, [disabled, onSwipeLeft, onSwipeRight])
-
-  const handleTouchEnd = useCallback(() => {
-    if (!swiping.current) return
-    swiping.current = false
-    setTransitioning(true)
-
-    if (currentX.current < -THRESHOLD && onSwipeLeft) {
-      setOffset(-MAX_SWIPE)
-    } else if (currentX.current > THRESHOLD && onSwipeRight) {
-      setOffset(MAX_SWIPE)
-    } else {
-      setOffset(0)
-    }
-  }, [onSwipeLeft, onSwipeRight])
-
-  const handleAction = useCallback((action: (() => void) | undefined) => {
-    if (action) action()
-    setTransitioning(true)
-    setOffset(0)
-  }, [])
-
-  return (
-    <div className="relative overflow-hidden rounded-lg">
-      {/* Left action (skip - revealed on swipe right) */}
-      {onSwipeRight && (
-        <button
-          onClick={() => handleAction(onSwipeRight)}
-          className="absolute inset-y-0 left-0 flex items-center justify-center text-xs font-semibold uppercase tracking-wider"
-          style={{ width: MAX_SWIPE, background: leftColor, color: '#fff', opacity: offset > 0 ? 1 : 0 }}
-        >
-          {leftLabel}
-        </button>
-      )}
-      {/* Right action (delete - revealed on swipe left) */}
-      {onSwipeLeft && (
-        <button
-          onClick={() => handleAction(onSwipeLeft)}
-          className="absolute inset-y-0 right-0 flex items-center justify-center text-xs font-semibold uppercase tracking-wider"
-          style={{ width: MAX_SWIPE, background: rightColor, color: '#fff', opacity: offset < 0 ? 1 : 0 }}
-        >
-          {rightLabel}
-        </button>
-      )}
-      {/* Content */}
-      <div
-        ref={rowRef}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-        style={{
-          transform: `translateX(${offset}px)`,
-          transition: transitioning ? 'transform 0.2s ease' : 'none',
-          position: 'relative',
-          zIndex: 1,
-          background: 'var(--panel)',
-        }}
-        onTransitionEnd={() => setTransitioning(false)}
-      >
-        {children}
-      </div>
-    </div>
-  )
-}
 
 // --- Exercise Card ---
 
@@ -1074,63 +977,31 @@ interface ExerciseCardProps {
   onAddSet: (exerciseId: string) => void
   onRemoveSet: (exerciseId: string, setNum: number) => void
   onToggleSkipSet: (exerciseId: string, setNum: number) => void
+  onRemoveExercise: () => void
   skippedSets: Set<string>
   animPhaseRef: React.MutableRefObject<Map<string, 'saving' | 'success'>>
   onClearAnim: (exerciseId: string, setNum: number) => void
 }
 
-function ExerciseCard({ exercise, sets, allSets, targetRir, onUpdateSet, onCompleteSet, onUncompleteSet, locked, skipped, onToggleSkip, note, onEditNote, onReplace, onAddSet, onRemoveSet, onToggleSkipSet, skippedSets, animPhaseRef, onClearAnim }: ExerciseCardProps) {
+function ExerciseCard({ exercise, sets, allSets, targetRir, onUpdateSet, onCompleteSet, onUncompleteSet, locked, skipped, onToggleSkip, note, onEditNote, onReplace, onAddSet, onRemoveSet, onToggleSkipSet, onRemoveExercise, skippedSets, animPhaseRef, onClearAnim }: ExerciseCardProps) {
   const [menuOpen, setMenuOpen] = useState(false)
   const color = getMuscleColor(exercise.muscle_group)
 
-  if (skipped) {
-    return (
-      <div
-        className="exercise-card flex items-center justify-between"
-        style={{ borderColor: 'rgba(255,255,255,0.04)', opacity: 0.5 }}
-      >
-        <div className="flex items-center gap-2.5 min-w-0">
-          <MuscleGroupBadge muscleGroup={exercise.muscle_group} />
-          <span className="text-sm font-medium text-[var(--text-2)] truncate">{exercise.exercise_name}</span>
-        </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <span
-            className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded"
-            style={{ background: 'rgba(148,163,184,0.1)', color: 'var(--text-2)' }}
-          >
-            Skipped
-          </span>
-          {!locked && (
-            <button
-              onClick={() => setMenuOpen(true)}
-              className="p-1.5 -mr-1 rounded-lg active:bg-white/5"
-            >
-              <EllipsisIcon />
-            </button>
-          )}
-        </div>
-
-        <BottomSheet
-          open={menuOpen}
-          onClose={() => setMenuOpen(false)}
-          title={exercise.exercise_name}
-          actions={[
-            {
-              label: 'Unskip Exercise',
-              icon: <UnskipIcon />,
-              onClick: onToggleSkip,
-            },
-          ]}
-        />
-      </div>
-    )
-  }
-
   return (
-    <div className="exercise-card" style={{ borderColor: color.cardBorder }}>
+    <div className="exercise-card" style={{ borderColor: skipped ? 'rgba(255,255,255,0.04)' : color.cardBorder, opacity: skipped ? 0.6 : 1 }}>
       {/* Header row */}
       <div className="flex items-start justify-between mb-2">
-        <MuscleGroupBadge muscleGroup={exercise.muscle_group} />
+        <div className="flex items-center gap-2">
+          <MuscleGroupBadge muscleGroup={exercise.muscle_group} />
+          {skipped && (
+            <span
+              className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded"
+              style={{ background: 'rgba(148,163,184,0.1)', color: 'var(--text-2)' }}
+            >
+              Skipped
+            </span>
+          )}
+        </div>
         {!locked && (
           <button
             onClick={() => setMenuOpen(true)}
@@ -1180,31 +1051,26 @@ function ExerciseCard({ exercise, sets, allSets, targetRir, onUpdateSet, onCompl
           const setSkipKey = `${exercise.exercise_id}:${set.set_num}`
           const isSetSkipped = skippedSets.has(setSkipKey)
           const canDelete = !set.completed && !locked && sets.length > 1
-          const canSkip = !set.completed && !locked
           return (
-            <SwipeableRow
-              key={set.set_num}
-              onSwipeLeft={canDelete ? () => onRemoveSet(exercise.exercise_id, set.set_num) : undefined}
-              onSwipeRight={canSkip ? () => onToggleSkipSet(exercise.exercise_id, set.set_num) : undefined}
-              leftLabel={isSetSkipped ? 'Unskip' : 'Skip'}
-              disabled={locked}
-            >
-              <div style={{ opacity: isSetSkipped ? 0.4 : 1 }}>
-                <SetRow
-                  set={set}
-                  exercise={exercise}
-                  allSets={allSets}
-                  targetRir={targetRir}
-                  onUpdate={onUpdateSet}
-                  onComplete={onCompleteSet}
-                  onUncomplete={onUncompleteSet}
-                  locked={locked || isSetSkipped}
-                  animPhase={animPhaseRef.current.get(`${exercise.exercise_id}:${set.set_num}`)}
-                  onClearAnim={onClearAnim}
-                  strikethrough={isSetSkipped}
-                />
-              </div>
-            </SwipeableRow>
+            <div key={set.set_num} style={{ opacity: isSetSkipped ? 0.4 : 1 }}>
+              <SetRow
+                set={set}
+                exercise={exercise}
+                allSets={allSets}
+                targetRir={targetRir}
+                onUpdate={onUpdateSet}
+                onComplete={onCompleteSet}
+                onUncomplete={onUncompleteSet}
+                locked={locked}
+                isSkipped={isSetSkipped}
+                onSkipSet={() => onToggleSkipSet(exercise.exercise_id, set.set_num)}
+                onRemoveSet={() => onRemoveSet(exercise.exercise_id, set.set_num)}
+                canRemove={canDelete}
+                animPhase={animPhaseRef.current.get(`${exercise.exercise_id}:${set.set_num}`)}
+                onClearAnim={onClearAnim}
+                strikethrough={isSetSkipped}
+              />
+            </div>
           )
         })}
         </div>
@@ -1232,14 +1098,20 @@ function ExerciseCard({ exercise, sets, allSets, targetRir, onUpdateSet, onCompl
             onClick: onReplace,
           },
           {
-            label: 'Skip Exercise',
-            icon: <SkipIcon />,
+            label: skipped ? 'Unskip Exercise' : 'Skip Exercise',
+            icon: skipped ? <UnskipIcon /> : <SkipIcon />,
             onClick: onToggleSkip,
           },
           {
             label: note ? 'Edit Note' : 'Add Note',
             icon: <NoteIcon />,
             onClick: onEditNote,
+          },
+          {
+            label: 'Remove Exercise',
+            icon: <TrashIcon />,
+            onClick: onRemoveExercise,
+            variant: 'danger' as const,
           },
         ]}
       />
@@ -1258,6 +1130,10 @@ interface SetRowProps {
   onComplete: (exerciseId: string, setNum: number) => void
   onUncomplete: (exerciseId: string, setNum: number) => void
   locked?: boolean
+  isSkipped?: boolean
+  onSkipSet: () => void
+  onRemoveSet: () => void
+  canRemove: boolean
   animPhase?: 'saving' | 'success'
   onClearAnim: (exerciseId: string, setNum: number) => void
   strikethrough?: boolean
@@ -1304,7 +1180,7 @@ const SET_TYPE_LABELS: Record<string, { label: string; color: string; bg: string
 
 const STRAIGHT_PILL = { color: 'var(--text-2)', bg: 'rgba(255,255,255,0.04)', border: 'rgba(255,255,255,0.12)' }
 
-const SetRow = memo(function SetRow({ set, exercise, allSets, onUpdate, onComplete, onUncomplete, locked, animPhase, onClearAnim, strikethrough }: SetRowProps) {
+const SetRow = memo(function SetRow({ set, exercise, allSets, onUpdate, onComplete, onUncomplete, locked, isSkipped, onSkipSet, onRemoveSet, canRemove, animPhase, onClearAnim, strikethrough }: SetRowProps) {
   const [typePopoverOpen, setTypePopoverOpen] = useState(false)
   const [jiggleTarget, setJiggleTarget] = useState<'weight' | 'reps' | null>(null)
   const jiggleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -1386,7 +1262,7 @@ const SetRow = memo(function SetRow({ set, exercise, allSets, onUpdate, onComple
       <div className="w-8 flex justify-center relative">
         <button
           onClick={() => !locked && !set.completed && setTypePopoverOpen(!typePopoverOpen)}
-          disabled={locked || set.completed}
+          disabled={locked || (set.completed && !isSkipped)}
           className="min-w-[28px] h-7 rounded-md flex items-center justify-center text-[11px] font-semibold disabled:cursor-default"
           style={typeInfo ? {
             background: typeInfo.bg,
@@ -1438,6 +1314,32 @@ const SetRow = memo(function SetRow({ set, exercise, allSets, onUpdate, onComple
                 <span className="w-4 text-center font-semibold text-[11px]" style={{ color: '#fbbf24' }}>MM</span>
                 Myorep Match
               </button>
+              <div className="my-1 mx-2 border-t" style={{ borderColor: 'rgba(255,255,255,0.06)' }} />
+              <button
+                onClick={() => { onSkipSet(); setTypePopoverOpen(false) }}
+                className="w-full px-3 py-2 text-left text-[13px] flex items-center gap-2"
+                style={{ color: isSkipped ? '#f59e0b' : 'var(--text-m)' }}
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                  {isSkipped
+                    ? <path strokeLinecap="round" strokeLinejoin="round" d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3" />
+                    : <path strokeLinecap="round" strokeLinejoin="round" d="M3 8.689c0-.864.933-1.406 1.683-.977l7.108 4.061a1.125 1.125 0 0 1 0 1.954l-7.108 4.061A1.125 1.125 0 0 1 3 16.811V8.69ZM12.75 8.689c0-.864.933-1.406 1.683-.977l7.108 4.061a1.125 1.125 0 0 1 0 1.954l-7.108 4.061a1.125 1.125 0 0 1-1.683-.977V8.69Z" />
+                  }
+                </svg>
+                {isSkipped ? 'Unskip Set' : 'Skip Set'}
+              </button>
+              {canRemove && (
+                <button
+                  onClick={() => { onRemoveSet(); setTypePopoverOpen(false) }}
+                  className="w-full px-3 py-2 text-left text-[13px] flex items-center gap-2"
+                  style={{ color: '#f87171' }}
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                  </svg>
+                  Remove Set
+                </button>
+              )}
             </div>
           </>
         )}
@@ -1451,7 +1353,7 @@ const SetRow = memo(function SetRow({ set, exercise, allSets, onUpdate, onComple
           step="0.5"
           value={isMatchLocked ? (resolvedWeight ?? set.weight ?? '') : (set.weight || '')}
           onChange={(e) => onUpdate(exercise.exercise_id, set.set_num, 'weight', parseFloat(e.target.value) || 0)}
-          readOnly={set.completed || locked || isMatchLocked}
+          readOnly={set.completed || locked || isMatchLocked || isSkipped}
           className="set-input"
           style={{
             background: isMatchLocked ? 'rgba(251,191,36,0.06)' : styles.inputBg,
@@ -1486,7 +1388,7 @@ const SetRow = memo(function SetRow({ set, exercise, allSets, onUpdate, onComple
             : (set.completed ? (set.reps ?? '') : (set.reps || ''))
           }
           onChange={(e) => onUpdate(exercise.exercise_id, set.set_num, 'reps', parseInt(e.target.value) || 0)}
-          readOnly={set.completed || locked || isMatchLocked}
+          readOnly={set.completed || locked || isMatchLocked || isSkipped}
           placeholder={isMatchLocked ? (mmRefLogged ? `${resolvedTargetReps}` : '...') : (set.suggested_weight != null ? `${resolvedTargetReps}` : '')}
           className="set-input reps-ghost"
           style={{
@@ -1671,6 +1573,14 @@ function NoteIcon() {
   return (
     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
       <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Z" />
+    </svg>
+  )
+}
+
+function TrashIcon() {
+  return (
+    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
     </svg>
   )
 }
