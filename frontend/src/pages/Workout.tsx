@@ -988,6 +988,7 @@ function ExerciseCard({ exercise, sets, allSets, targetRir, onUpdateSet, onCompl
   const color = getMuscleColor(exercise.muscle_group)
 
   return (
+    <>
     <div className="exercise-card" style={{ borderColor: skipped ? 'rgba(255,255,255,0.04)' : color.cardBorder, opacity: skipped ? 0.6 : 1 }}>
       {/* Header row */}
       <div className="flex items-start justify-between mb-2">
@@ -1086,36 +1087,37 @@ function ExerciseCard({ exercise, sets, allSets, targetRir, onUpdateSet, onCompl
           </button>
         )}
       </div>
-
-      <BottomSheet
-        open={menuOpen}
-        onClose={() => setMenuOpen(false)}
-        title={exercise.exercise_name}
-        actions={[
-          {
-            label: 'Replace Exercise',
-            icon: <ReplaceIcon />,
-            onClick: onReplace,
-          },
-          {
-            label: skipped ? 'Unskip Exercise' : 'Skip Exercise',
-            icon: skipped ? <UnskipIcon /> : <SkipIcon />,
-            onClick: onToggleSkip,
-          },
-          {
-            label: note ? 'Edit Note' : 'Add Note',
-            icon: <NoteIcon />,
-            onClick: onEditNote,
-          },
-          {
-            label: 'Remove Exercise',
-            icon: <TrashIcon />,
-            onClick: onRemoveExercise,
-            variant: 'danger' as const,
-          },
-        ]}
-      />
     </div>
+
+    <BottomSheet
+      open={menuOpen}
+      onClose={() => setMenuOpen(false)}
+      title={exercise.exercise_name}
+      actions={[
+        {
+          label: 'Replace Exercise',
+          icon: <ReplaceIcon />,
+          onClick: onReplace,
+        },
+        {
+          label: skipped ? 'Unskip Exercise' : 'Skip Exercise',
+          icon: skipped ? <UnskipIcon /> : <SkipIcon />,
+          onClick: onToggleSkip,
+        },
+        {
+          label: note ? 'Edit Note' : 'Add Note',
+          icon: <NoteIcon />,
+          onClick: onEditNote,
+        },
+        {
+          label: 'Remove Exercise',
+          icon: <TrashIcon />,
+          onClick: onRemoveExercise,
+          variant: 'danger' as const,
+        },
+      ]}
+    />
+    </>
   )
 }
 
