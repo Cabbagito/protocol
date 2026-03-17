@@ -388,15 +388,22 @@ export default function Workout() {
       // Replace sets for this exercise with response data
       setSets(prev => {
         const otherSets = prev.filter(s => s.exercise_id !== exerciseId)
-        const newSets: WorkingSet[] = result.sets.map(s => ({
-          ...s,
-          exercise_id: exerciseId,
-          exercise_name: exerciseName,
-          weight: s.logged ? (s.weight ?? 0) : (s.suggested_weight ?? s.weight ?? 0),
-          reps: s.reps ?? 0,
-          rir: template.target_rir >= 0 ? template.target_rir : null,
-          completed: s.logged,
-        }))
+        // Preserve locally-entered weights/reps for existing sets
+        const localValues = new Map<number, { weight: number; reps: number }>()
+        prev.filter(s => s.exercise_id === exerciseId && !s.completed)
+          .forEach(s => localValues.set(s.set_num, { weight: s.weight, reps: s.reps ?? 0 }))
+        const newSets: WorkingSet[] = result.sets.map(s => {
+          const local = !s.logged ? localValues.get(s.set_num) : undefined
+          return {
+            ...s,
+            exercise_id: exerciseId,
+            exercise_name: exerciseName,
+            weight: s.logged ? (s.weight ?? 0) : (local?.weight ?? s.suggested_weight ?? s.weight ?? 0),
+            reps: s.logged ? (s.reps ?? 0) : (local?.reps ?? s.reps ?? 0),
+            rir: template.target_rir >= 0 ? template.target_rir : null,
+            completed: s.logged,
+          }
+        })
         // Maintain exercise ordering from template
         const orderedSets: WorkingSet[] = []
         for (const ex of template.exercises) {
@@ -440,15 +447,25 @@ export default function Workout() {
       })
       setSets(prev => {
         const otherSets = prev.filter(s => s.exercise_id !== exerciseId)
-        const newSets: WorkingSet[] = result.sets.map(s => ({
-          ...s,
-          exercise_id: exerciseId,
-          exercise_name: exerciseName,
-          weight: s.logged ? (s.weight ?? 0) : (s.suggested_weight ?? s.weight ?? 0),
-          reps: s.reps ?? 0,
-          rir: template.target_rir >= 0 ? template.target_rir : null,
-          completed: s.logged,
-        }))
+        // Preserve locally-entered weights/reps, mapping old set_nums to new (accounting for removed set)
+        const localValues = new Map<number, { weight: number; reps: number }>()
+        prev.filter(s => s.exercise_id === exerciseId && !s.completed && s.set_num !== setNum)
+          .forEach(s => {
+            const newNum = s.set_num > setNum ? s.set_num - 1 : s.set_num
+            localValues.set(newNum, { weight: s.weight, reps: s.reps ?? 0 })
+          })
+        const newSets: WorkingSet[] = result.sets.map(s => {
+          const local = !s.logged ? localValues.get(s.set_num) : undefined
+          return {
+            ...s,
+            exercise_id: exerciseId,
+            exercise_name: exerciseName,
+            weight: s.logged ? (s.weight ?? 0) : (local?.weight ?? s.suggested_weight ?? s.weight ?? 0),
+            reps: s.logged ? (s.reps ?? 0) : (local?.reps ?? s.reps ?? 0),
+            rir: template.target_rir >= 0 ? template.target_rir : null,
+            completed: s.logged,
+          }
+        })
         const orderedSets: WorkingSet[] = []
         for (const ex of template.exercises) {
           if (ex.exercise_id === exerciseId) {
@@ -1053,7 +1070,7 @@ function ExerciseCard({ exercise, sets, allSets, targetRir, onUpdateSet, onCompl
           const isSetSkipped = skippedSets.has(setSkipKey)
           const canDelete = !set.completed && !locked && sets.length > 1
           return (
-            <div key={set.set_num} style={{ opacity: isSetSkipped ? 0.4 : 1 }}>
+            <div key={set.set_num}>
               <SetRow
                 set={set}
                 exercise={exercise}
@@ -1259,9 +1276,10 @@ const SetRow = memo(function SetRow({ set, exercise, allSets, onUpdate, onComple
     : undefined
 
   return (
-    <div className="flex items-center gap-2 rounded-lg px-2 py-1.5" style={{ background: rowBg }}>
+    <div className="relative">
+      <div className="flex items-center gap-2 rounded-lg px-2 py-1.5" style={{ background: rowBg, opacity: isSkipped ? 0.4 : 1 }}>
       {/* Set number / type indicator */}
-      <div className="w-8 flex justify-center relative">
+      <div className="w-8 flex justify-center">
         <button
           onClick={() => !locked && !set.completed && setTypePopoverOpen(!typePopoverOpen)}
           disabled={locked || (set.completed && !isSkipped)}
@@ -1278,73 +1296,6 @@ const SetRow = memo(function SetRow({ set, exercise, allSets, onUpdate, onComple
         >
           {typeInfo ? typeInfo.label : set.set_num}
         </button>
-
-        {/* Type selection popover */}
-        {typePopoverOpen && (
-          <>
-            <div className="fixed inset-0 z-40" onClick={() => setTypePopoverOpen(false)} />
-            <div
-              className="absolute left-0 top-8 z-50 rounded-lg py-1 min-w-[140px]"
-              style={{
-                background: 'var(--panel)',
-                border: '1px solid rgba(255,255,255,0.08)',
-                boxShadow: '0 8px 24px rgba(0,0,0,0.6)',
-              }}
-            >
-              <button
-                onClick={() => handleSetTypeChange('straight')}
-                className="w-full px-3 py-2 text-left text-[13px] flex items-center gap-2"
-                style={{ color: setType === 'straight' ? 'var(--accent-l)' : 'var(--text-m)' }}
-              >
-                <span className="w-4 text-center font-semibold text-[11px]">#</span>
-                Straight
-              </button>
-              <button
-                onClick={() => handleSetTypeChange('myorep')}
-                className="w-full px-3 py-2 text-left text-[13px] flex items-center gap-2"
-                style={{ color: setType === 'myorep' ? '#2dd4bf' : 'var(--text-m)' }}
-              >
-                <span className="w-4 text-center font-semibold text-[11px]" style={{ color: '#2dd4bf' }}>MR</span>
-                Myorep
-              </button>
-              <button
-                onClick={() => !isFirstSet && handleSetTypeChange('myorep_match')}
-                disabled={isFirstSet}
-                className="w-full px-3 py-2 text-left text-[13px] flex items-center gap-2 disabled:opacity-30"
-                style={{ color: setType === 'myorep_match' ? '#fbbf24' : 'var(--text-m)' }}
-              >
-                <span className="w-4 text-center font-semibold text-[11px]" style={{ color: '#fbbf24' }}>MM</span>
-                Myorep Match
-              </button>
-              <div className="my-1 mx-2 border-t" style={{ borderColor: 'rgba(255,255,255,0.06)' }} />
-              <button
-                onClick={() => { onSkipSet(); setTypePopoverOpen(false) }}
-                className="w-full px-3 py-2 text-left text-[13px] flex items-center gap-2"
-                style={{ color: isSkipped ? '#f59e0b' : 'var(--text-m)' }}
-              >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                  {isSkipped
-                    ? <path strokeLinecap="round" strokeLinejoin="round" d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3" />
-                    : <path strokeLinecap="round" strokeLinejoin="round" d="M3 8.689c0-.864.933-1.406 1.683-.977l7.108 4.061a1.125 1.125 0 0 1 0 1.954l-7.108 4.061A1.125 1.125 0 0 1 3 16.811V8.69ZM12.75 8.689c0-.864.933-1.406 1.683-.977l7.108 4.061a1.125 1.125 0 0 1 0 1.954l-7.108 4.061a1.125 1.125 0 0 1-1.683-.977V8.69Z" />
-                  }
-                </svg>
-                {isSkipped ? 'Unskip Set' : 'Skip Set'}
-              </button>
-              {canRemove && (
-                <button
-                  onClick={() => { onRemoveSet(); setTypePopoverOpen(false) }}
-                  className="w-full px-3 py-2 text-left text-[13px] flex items-center gap-2"
-                  style={{ color: '#f87171' }}
-                >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
-                  </svg>
-                  Remove Set
-                </button>
-              )}
-            </div>
-          </>
-        )}
       </div>
 
       {/* Weight input */}
@@ -1441,23 +1392,90 @@ const SetRow = memo(function SetRow({ set, exercise, allSets, onUpdate, onComple
             <button
               onClick={() => {
                 const effectiveWeight = isMatchLocked ? (resolvedWeight ?? set.weight ?? 0) : (set.weight ?? 0)
-                if (effectiveWeight > 0) {
+                const effectiveReps = set.reps ?? 0
+                if (effectiveWeight > 0 && (isMatchLocked || effectiveReps > 0)) {
                   if (isMatchLocked) {
                     onUpdate(exercise.exercise_id, set.set_num, 'weight', effectiveWeight)
-                    onUpdate(exercise.exercise_id, set.set_num, 'reps', resolvedTargetReps)
-                  } else if (!(set.reps ?? 0)) {
                     onUpdate(exercise.exercise_id, set.set_num, 'reps', resolvedTargetReps)
                   }
                   onComplete(exercise.exercise_id, set.set_num)
                 }
               }}
-              disabled={isMatchLocked ? !mmRefLogged : !(set.weight ?? 0)}
+              disabled={isMatchLocked ? !mmRefLogged : (!(set.weight ?? 0) || !(set.reps ?? 0))}
               className="w-9 h-9 rounded-lg border-2 flex items-center justify-center check-pop disabled:opacity-30 disabled:cursor-not-allowed"
               style={{ borderColor: isMatchLocked ? 'rgba(251,191,36,0.3)' : 'var(--border)' }}
             />
           )
         })()}
       </div>
+      </div>
+
+      {/* Type selection popover - rendered outside opacity container */}
+      {typePopoverOpen && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setTypePopoverOpen(false)} />
+          <div
+            className="absolute left-2 top-full z-50 rounded-lg py-1 min-w-[140px] mt-0.5"
+            style={{
+              background: 'var(--panel)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.6)',
+            }}
+          >
+            <button
+              onClick={() => handleSetTypeChange('straight')}
+              className="w-full px-3 py-2 text-left text-[13px] flex items-center gap-2"
+              style={{ color: setType === 'straight' ? 'var(--accent-l)' : 'var(--text-m)' }}
+            >
+              <span className="w-4 text-center font-semibold text-[11px]">#</span>
+              Straight
+            </button>
+            <button
+              onClick={() => handleSetTypeChange('myorep')}
+              className="w-full px-3 py-2 text-left text-[13px] flex items-center gap-2"
+              style={{ color: setType === 'myorep' ? '#2dd4bf' : 'var(--text-m)' }}
+            >
+              <span className="w-4 text-center font-semibold text-[11px]" style={{ color: '#2dd4bf' }}>MR</span>
+              Myorep
+            </button>
+            <button
+              onClick={() => !isFirstSet && handleSetTypeChange('myorep_match')}
+              disabled={isFirstSet}
+              className="w-full px-3 py-2 text-left text-[13px] flex items-center gap-2 disabled:opacity-30"
+              style={{ color: setType === 'myorep_match' ? '#fbbf24' : 'var(--text-m)' }}
+            >
+              <span className="w-4 text-center font-semibold text-[11px]" style={{ color: '#fbbf24' }}>MM</span>
+              Myorep Match
+            </button>
+            <div className="my-1 mx-2 border-t" style={{ borderColor: 'rgba(255,255,255,0.06)' }} />
+            <button
+              onClick={() => { onSkipSet(); setTypePopoverOpen(false) }}
+              className="w-full px-3 py-2 text-left text-[13px] flex items-center gap-2"
+              style={{ color: isSkipped ? '#f59e0b' : 'var(--text-m)' }}
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                {isSkipped
+                  ? <path strokeLinecap="round" strokeLinejoin="round" d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3" />
+                  : <path strokeLinecap="round" strokeLinejoin="round" d="M3 8.689c0-.864.933-1.406 1.683-.977l7.108 4.061a1.125 1.125 0 0 1 0 1.954l-7.108 4.061A1.125 1.125 0 0 1 3 16.811V8.69ZM12.75 8.689c0-.864.933-1.406 1.683-.977l7.108 4.061a1.125 1.125 0 0 1 0 1.954l-7.108 4.061a1.125 1.125 0 0 1-1.683-.977V8.69Z" />
+                }
+              </svg>
+              {isSkipped ? 'Unskip Set' : 'Skip Set'}
+            </button>
+            {canRemove && (
+              <button
+                onClick={() => { onRemoveSet(); setTypePopoverOpen(false) }}
+                className="w-full px-3 py-2 text-left text-[13px] flex items-center gap-2"
+                style={{ color: '#f87171' }}
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                </svg>
+                Remove Set
+              </button>
+            )}
+          </div>
+        </>
+      )}
     </div>
   )
 })
