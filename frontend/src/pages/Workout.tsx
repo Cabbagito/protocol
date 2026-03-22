@@ -388,10 +388,10 @@ export default function Workout() {
       // Replace sets for this exercise with response data
       setSets(prev => {
         const otherSets = prev.filter(s => s.exercise_id !== exerciseId)
-        // Preserve locally-entered weights/reps for existing sets
-        const localValues = new Map<number, { weight: number; reps: number }>()
+        // Preserve all locally-entered data for existing unlogged sets
+        const localValues = new Map<number, WorkingSet>()
         prev.filter(s => s.exercise_id === exerciseId && !s.completed)
-          .forEach(s => localValues.set(s.set_num, { weight: s.weight, reps: s.reps ?? 0 }))
+          .forEach(s => localValues.set(s.set_num, s))
         const newSets: WorkingSet[] = result.sets.map(s => {
           const local = !s.logged ? localValues.get(s.set_num) : undefined
           return {
@@ -400,7 +400,8 @@ export default function Workout() {
             exercise_name: exerciseName,
             weight: s.logged ? (s.weight ?? 0) : (local?.weight ?? s.suggested_weight ?? s.weight ?? 0),
             reps: s.logged ? (s.reps ?? 0) : (local?.reps ?? s.reps ?? 0),
-            rir: template.target_rir >= 0 ? template.target_rir : null,
+            rir: s.logged ? s.rir : (local?.rir ?? (template.target_rir >= 0 ? template.target_rir : null)),
+            set_type: s.logged ? s.set_type : (local?.set_type ?? s.set_type),
             completed: s.logged,
           }
         })
@@ -447,12 +448,12 @@ export default function Workout() {
       })
       setSets(prev => {
         const otherSets = prev.filter(s => s.exercise_id !== exerciseId)
-        // Preserve locally-entered weights/reps, mapping old set_nums to new (accounting for removed set)
-        const localValues = new Map<number, { weight: number; reps: number }>()
+        // Preserve all locally-entered data, mapping old set_nums to new (accounting for removed set)
+        const localValues = new Map<number, WorkingSet>()
         prev.filter(s => s.exercise_id === exerciseId && !s.completed && s.set_num !== setNum)
           .forEach(s => {
             const newNum = s.set_num > setNum ? s.set_num - 1 : s.set_num
-            localValues.set(newNum, { weight: s.weight, reps: s.reps ?? 0 })
+            localValues.set(newNum, s)
           })
         const newSets: WorkingSet[] = result.sets.map(s => {
           const local = !s.logged ? localValues.get(s.set_num) : undefined
@@ -462,7 +463,8 @@ export default function Workout() {
             exercise_name: exerciseName,
             weight: s.logged ? (s.weight ?? 0) : (local?.weight ?? s.suggested_weight ?? s.weight ?? 0),
             reps: s.logged ? (s.reps ?? 0) : (local?.reps ?? s.reps ?? 0),
-            rir: template.target_rir >= 0 ? template.target_rir : null,
+            rir: s.logged ? s.rir : (local?.rir ?? (template.target_rir >= 0 ? template.target_rir : null)),
+            set_type: s.logged ? s.set_type : (local?.set_type ?? s.set_type),
             completed: s.logged,
           }
         })
