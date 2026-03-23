@@ -11,6 +11,7 @@ type SetState = 'met' | 'exceeded' | 'under'
 
 function getSetState(set: MesoSet): SetState {
   if (set.set_type === 'myorep_match') return 'met'
+  if (set.target_reps == null) return 'met'  // No target — neutral
   const reps = set.reps ?? 0
   if (reps > set.target_reps) return 'exceeded'
   if (reps >= set.target_reps) return 'met'
@@ -350,7 +351,7 @@ export default function WorkoutDetail() {
                       <div className="mono text-[13px] font-medium text-center" style={{ color: colors.text }}>
                         {set.reps ?? 0}
                       </div>
-                      <div className="mono text-[11px] text-center text-[var(--text-m)]">{set.target_reps}</div>
+                      <div className="mono text-[11px] text-center text-[var(--text-m)]">{set.target_reps ?? '—'}</div>
                       <div className="flex justify-center">
                         <SetStatusIcon state={state} />
                       </div>

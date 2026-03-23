@@ -103,7 +103,8 @@ async def update_exercise_performances(db: AsyncSession, user_id: str, session: 
             continue
 
         working_weight = max((s.get("weight") or 0) for s in logged_sets)
-        working_reps = logged_sets[0].get("target_reps", 10)
+        # Use target_reps if available, otherwise use actual reps from first set
+        working_reps = logged_sets[0].get("target_reps") or logged_sets[0].get("reps") or None
         num_sets = len(logged_sets)
 
         if working_weight == 0:
@@ -459,15 +460,54 @@ async def replace_exercise(
         ex_data["exercise_name"] = new_exercise.name
         ex_data["muscle_group"] = new_exercise.muscle_group
         ex_data["equipment_type"] = new_exercise.equipment_type
-        for s in ex_data.get("sets", []):
+
+        current_sets = ex_data.get("sets", [])
+        logged_count = sum(1 for s in current_sets if s.get("logged"))
+        unlogged_count = len(current_sets) - logged_count
+
+        # Adjust set count to match performance data (only unlogged sets)
+        desired_sets = perf.num_sets if perf and perf.num_sets else unlogged_count
+        target_reps = perf.working_reps if perf and perf.working_reps else None
+        suggested = perf.working_weight if perf else None
+
+        if desired_sets > unlogged_count:
+            # Add missing sets
+            last_num = current_sets[-1]["set_num"] if current_sets else 0
+            for i in range(desired_sets - unlogged_count):
+                current_sets.append({
+                    "set_num": last_num + 1 + i,
+                    "weight": None,
+                    "reps": None,
+                    "target_reps": target_reps,
+                    "suggested_weight": suggested,
+                    "rir": None,
+                    "logged": False,
+                    "set_type": None,
+                })
+            ex_data["sets"] = current_sets
+        elif desired_sets < unlogged_count:
+            # Remove excess unlogged sets from the end
+            to_remove = unlogged_count - desired_sets
+            new_sets = []
+            removed = 0
+            for s in reversed(current_sets):
+                if not s.get("logged") and removed < to_remove:
+                    removed += 1
+                else:
+                    new_sets.append(s)
+            new_sets.reverse()
+            # Renumber
+            for i, s in enumerate(new_sets):
+                s["set_num"] = i + 1
+            ex_data["sets"] = new_sets
+            current_sets = new_sets
+
+        for s in current_sets:
             if not s.get("logged"):
                 s["weight"] = None
                 s["reps"] = None
-                if perf:
-                    s["suggested_weight"] = perf.working_weight
-                    s["target_reps"] = perf.working_reps or s.get("target_reps", 10)
-                else:
-                    s["suggested_weight"] = None
+                s["suggested_weight"] = suggested
+                s["target_reps"] = target_reps
 
     # Replace in current week
     replace_in_exercise(target_ex)
@@ -544,7 +584,7 @@ async def modify_sets(
             "set_num": len(sets_list) + 1,
             "weight": None,
             "reps": None,
-            "target_reps": last_set.get("target_reps", 10),
+            "target_reps": last_set.get("target_reps"),
             "suggested_weight": last_set.get("suggested_weight"),
             "rir": None,
             "logged": False,
@@ -572,7 +612,7 @@ async def modify_sets(
                                     "set_num": len(future_sets) + 1,
                                     "weight": None,
                                     "reps": None,
-                                    "target_reps": last_fs.get("target_reps", 10),
+                                    "target_reps": last_fs.get("target_reps"),
                                     "suggested_weight": last_fs.get("suggested_weight"),
                                     "rir": None,
                                     "logged": False,
