@@ -12,6 +12,7 @@ import {
 } from 'recharts'
 import AppHeader from '../components/AppHeader'
 import PageLoader from '../components/PageLoader'
+import { formatWeight } from '../lib/weightUtils'
 import { useExercises, useActiveMesocycle, useWorkoutHistory, useExerciseProgress } from '../api/hooks'
 
 export default function Progress() {
@@ -220,7 +221,7 @@ export default function Progress() {
                   </div>
                   <div className="bg-[var(--card)] rounded p-3">
                     <div className="text-xl font-bold text-protocol-400">
-                      {Math.max(...progressData.map((d) => d.max_weight))}
+                      {formatWeight(Math.max(...progressData.map((d) => d.max_weight)))}
                       <span className="text-sm ml-0.5">kg</span>
                     </div>
                     <div className="text-xs text-[var(--text-2)]">PR Weight</div>
