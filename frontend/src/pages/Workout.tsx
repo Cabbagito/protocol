@@ -512,6 +512,9 @@ export default function Workout() {
       setReplaceModal(null)
       setInitialized(false)
       setSets([])
+      // Remove stale template cache to prevent useEffect from re-initializing
+      // with old exercise data before the fresh template arrives
+      queryClient.removeQueries({ queryKey: ['workouts', 'template'] })
       queryClient.invalidateQueries({ queryKey: queryKeys.workouts.all })
       queryClient.invalidateQueries({ queryKey: queryKeys.mesocycles.all })
     } catch {
