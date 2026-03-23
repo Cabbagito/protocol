@@ -1169,6 +1169,7 @@ function getSetState(set: WorkingSet): SetState {
   if (!set.completed) return 'pending'
   if (set.set_type === 'myorep_match') return 'logged'
   if (set.suggested_weight == null) return 'logged'
+  if (set.target_reps == null) return 'logged'  // No target yet — no judgment
   if ((set.reps ?? 0) > set.target_reps) return 'exceeded'
   if ((set.reps ?? 0) < set.target_reps) return 'under'
   return 'logged'
@@ -1267,8 +1268,6 @@ const SetRow = memo(function SetRow({ set, exercise, allSets, onUpdate, onComple
           break
         }
       }
-    } else if (newType === 'straight') {
-      onUpdate(exercise.exercise_id, set.set_num, 'target_reps', 10)
     }
     setTypePopoverOpen(false)
   }
@@ -1347,7 +1346,7 @@ const SetRow = memo(function SetRow({ set, exercise, allSets, onUpdate, onComple
           }
           onChange={(e) => onUpdate(exercise.exercise_id, set.set_num, 'reps', parseInt(e.target.value) || 0)}
           readOnly={set.completed || locked || isMatchLocked || isSkipped}
-          placeholder={isMatchLocked ? (mmRefLogged ? `${resolvedTargetReps}` : '...') : (set.suggested_weight != null ? `${resolvedTargetReps}` : '')}
+          placeholder={isMatchLocked ? (mmRefLogged ? `${resolvedTargetReps ?? ''}` : '...') : (set.suggested_weight != null && resolvedTargetReps != null ? `${resolvedTargetReps}` : '')}
           className="set-input reps-ghost"
           style={{
             background: isMatchLocked ? 'rgba(251,191,36,0.06)' : styles.inputBg,
@@ -1401,7 +1400,7 @@ const SetRow = memo(function SetRow({ set, exercise, allSets, onUpdate, onComple
                 if (effectiveWeight > 0 && (isMatchLocked || effectiveReps > 0)) {
                   if (isMatchLocked) {
                     onUpdate(exercise.exercise_id, set.set_num, 'weight', effectiveWeight)
-                    onUpdate(exercise.exercise_id, set.set_num, 'reps', resolvedTargetReps)
+                    onUpdate(exercise.exercise_id, set.set_num, 'reps', resolvedTargetReps ?? 0)
                   }
                   onComplete(exercise.exercise_id, set.set_num)
                 }

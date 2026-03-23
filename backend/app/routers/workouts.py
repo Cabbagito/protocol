@@ -103,7 +103,8 @@ async def update_exercise_performances(db: AsyncSession, user_id: str, session: 
             continue
 
         working_weight = max((s.get("weight") or 0) for s in logged_sets)
-        working_reps = logged_sets[0].get("target_reps", 10)
+        # Use target_reps if available, otherwise use actual reps from first set
+        working_reps = logged_sets[0].get("target_reps") or logged_sets[0].get("reps") or None
         num_sets = len(logged_sets)
 
         if working_weight == 0:
@@ -466,7 +467,7 @@ async def replace_exercise(
 
         # Adjust set count to match performance data (only unlogged sets)
         desired_sets = perf.num_sets if perf and perf.num_sets else unlogged_count
-        target_reps = perf.working_reps if perf and perf.working_reps else 10
+        target_reps = perf.working_reps if perf and perf.working_reps else None
         suggested = perf.working_weight if perf else None
 
         if desired_sets > unlogged_count:
@@ -583,7 +584,7 @@ async def modify_sets(
             "set_num": len(sets_list) + 1,
             "weight": None,
             "reps": None,
-            "target_reps": last_set.get("target_reps", 10),
+            "target_reps": last_set.get("target_reps"),
             "suggested_weight": last_set.get("suggested_weight"),
             "rir": None,
             "logged": False,
@@ -611,7 +612,7 @@ async def modify_sets(
                                     "set_num": len(future_sets) + 1,
                                     "weight": None,
                                     "reps": None,
-                                    "target_reps": last_fs.get("target_reps", 10),
+                                    "target_reps": last_fs.get("target_reps"),
                                     "suggested_weight": last_fs.get("suggested_weight"),
                                     "rir": None,
                                     "logged": False,

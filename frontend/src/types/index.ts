@@ -69,7 +69,7 @@ export interface MesoSet {
   set_num: number
   weight: number | null
   reps: number | null
-  target_reps: number
+  target_reps: number | null
   suggested_weight: number | null
   rir: number | null
   logged: boolean

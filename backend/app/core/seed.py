@@ -819,7 +819,7 @@ def build_mesocycle_structure(
     days: list[SplitDay],
     exercises_by_id: dict[str, Exercise],
     total_weeks: int,
-    target_reps: int = 10,
+    target_reps: int | None = None,
     sets_per_exercise: int = 3,
     exercise_performances: dict | None = None,
 ) -> dict:
@@ -844,7 +844,9 @@ def build_mesocycle_structure(
 
                 perf = perf_map.get(ex.id)
                 ex_sets = perf.num_sets if perf and perf.num_sets else sets_per_exercise
-                ex_target_reps = perf.working_reps if perf and perf.working_reps else target_reps
+                ex_target_reps = (
+                    perf.working_reps if perf and perf.working_reps else target_reps
+                )
                 ex_suggested = perf.working_weight if perf and perf.working_weight else None
 
                 sets_list = []
@@ -945,7 +947,9 @@ def handle_weight_bump(structure: dict, week_index: int, session_index: int) -> 
                 continue
 
             # Weight was changed — recalculate target_reps via e1RM
-            target = s.get("target_reps", 10)
+            target = s.get("target_reps")
+            if target is None:
+                continue  # No target yet, nothing to recalculate
             e1rm = suggested * (1 + target / 30)
             new_reps = math.floor(30 * (e1rm / actual_weight - 1))
             new_reps = max(new_reps, 5)
@@ -1057,8 +1061,11 @@ def compute_progression(structure: dict, week_index: int, session_index: int) ->
 
             # Per-set rep progression
             prev_reps = prev_set.get("reps") or 0
-            prev_target = prev_set.get("target_reps", 10)
-            if prev_reps >= prev_target:
+            prev_target = prev_set.get("target_reps")
+            if prev_target is None:
+                # No target yet — use actual reps as baseline for next week
+                next_set["target_reps"] = prev_reps if prev_reps > 0 else None
+            elif prev_reps >= prev_target:
                 next_set["target_reps"] = prev_target + 1
             else:
                 next_set["target_reps"] = prev_target
