@@ -5,6 +5,7 @@ import { useWorkoutDetail } from '../api/hooks'
 import MuscleGroupBadge from '../components/MuscleGroupBadge'
 import RirBadge from '../components/RirBadge'
 import { getMuscleColor } from '../lib/muscleColors'
+import { formatWeight } from '../lib/weightUtils'
 import type { MesoExercise, MesoSet } from '../types'
 
 type SetState = 'met' | 'exceeded' | 'under'
@@ -346,7 +347,7 @@ export default function WorkoutDetail() {
                         )}
                       </div>
                       <div className="mono text-[13px] font-medium text-center" style={{ color: colors.text }}>
-                        {set.weight ?? 0}
+                        {formatWeight(set.weight ?? 0)}
                       </div>
                       <div className="mono text-[13px] font-medium text-center" style={{ color: colors.text }}>
                         {set.reps ?? 0}
@@ -370,7 +371,7 @@ export default function WorkoutDetail() {
                     <div>
                       <div className="text-[9px] uppercase tracking-wider text-[var(--text-m)]">Best Set</div>
                       <div className="mono text-[12px] font-semibold text-[var(--text-2)]">
-                        {summary.bestWeight} &times; {summary.bestReps}
+                        {formatWeight(summary.bestWeight)} &times; {summary.bestReps}
                       </div>
                     </div>
                     <div style={{ width: 1, height: 20, background: 'var(--border)' }} />
@@ -387,7 +388,7 @@ export default function WorkoutDetail() {
                         <path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" />
                       </svg>
                       <span className="mono text-[11px] font-semibold" style={{ color: '#22c55e' }}>
-                        +{summary.weightGain % 1 === 0 ? summary.weightGain.toFixed(1) : summary.weightGain}
+                        +{formatWeight(summary.weightGain)}
                       </span>
                     </div>
                   )}

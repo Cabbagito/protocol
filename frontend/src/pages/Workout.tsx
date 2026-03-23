@@ -13,6 +13,7 @@ import MesoGrid from '../components/MesoGrid'
 import BottomSheet from '../components/BottomSheet'
 import { MuscleGroupChips, EquipmentTypeToggles } from '../components/ExerciseFilters'
 import { getCurrentPosition } from '../lib/mesoUtils'
+import { parseWeight, formatWeight } from '../lib/weightUtils'
 import { getMuscleColor } from '../lib/muscleColors'
 import type { WorkoutTemplate, MesoExercise, MesoSet, Mesocycle, SetType } from '../types'
 
@@ -1305,11 +1306,11 @@ const SetRow = memo(function SetRow({ set, exercise, allSets, onUpdate, onComple
       {/* Weight input */}
       <div className="flex-1 relative">
         <input
-          type="number"
+          type="text"
           inputMode="decimal"
-          step="0.5"
-          value={isMatchLocked ? (resolvedWeight ?? set.weight ?? '') : (set.weight || '')}
-          onChange={(e) => onUpdate(exercise.exercise_id, set.set_num, 'weight', parseFloat(e.target.value) || 0)}
+          pattern="[0-9]*[.,]?[0-9]*"
+          value={isMatchLocked ? (resolvedWeight != null ? formatWeight(resolvedWeight) : set.weight != null ? formatWeight(set.weight) : '') : (set.weight ? formatWeight(set.weight) : '')}
+          onChange={(e) => onUpdate(exercise.exercise_id, set.set_num, 'weight', parseWeight(e.target.value))}
           readOnly={set.completed || locked || isMatchLocked || isSkipped}
           className="set-input"
           style={{
