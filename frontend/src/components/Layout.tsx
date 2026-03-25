@@ -2,6 +2,7 @@ import { Link, useLocation } from 'react-router-dom'
 import { useEffect } from 'react'
 import { clsx } from 'clsx'
 import { HomeIcon, DumbbellIcon } from './Icons'
+import { useKeyboardVisible } from '../lib/useKeyboardVisible'
 
 const navItems = [
   { path: '/', label: 'Home', icon: HomeIcon },
@@ -10,6 +11,7 @@ const navItems = [
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const { pathname } = useLocation()
+  const keyboardOpen = useKeyboardVisible()
 
   useEffect(() => {
     window.scrollTo(0, 0)
@@ -21,6 +23,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         {children}
       </main>
 
+      {!keyboardOpen && (
       <nav
         className="fixed bottom-0 left-0 right-0 pb-[env(safe-area-inset-bottom)]"
         style={{
@@ -52,6 +55,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           })}
         </div>
       </nav>
+      )}
     </div>
   )
 }
