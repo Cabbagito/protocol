@@ -22,7 +22,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import async_session
-from app.core.seed import calculate_rir_scheme
+from app.domain.progression import calculate_rir_scheme
 from app.models.exercise import Exercise
 from app.models.mesocycle import Mesocycle
 from app.models.split import Session, SessionExercise, Split

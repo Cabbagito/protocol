@@ -6,9 +6,9 @@ from sqlalchemy.orm import selectinload
 
 from app.core.database import get_db
 from app.core.security import get_current_user
-from app.models.exercise import Exercise
 from app.models.split import Split, SplitDay, SplitDayExercise
 from app.models.user import User
+from app.services.common import validate_exercise_ids
 
 router = APIRouter()
 
@@ -125,22 +125,8 @@ async def create_split(
     db.add(db_split)
     await db.flush()
 
-    # Validate all exercise IDs at once
     all_exercise_ids = [ex.exercise_id for day in split_data.days for ex in day.exercises]
-    if all_exercise_ids:
-        result = await db.execute(
-            select(Exercise.id).where(
-                Exercise.id.in_(all_exercise_ids),
-                or_(Exercise.user_id == current_user.id, Exercise.user_id.is_(None)),
-            )
-        )
-        found_ids = set(row[0] for row in result.all())
-        missing = set(all_exercise_ids) - found_ids
-        if missing:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Exercise(s) not found: {', '.join(missing)}",
-            )
+    await validate_exercise_ids(db, all_exercise_ids, current_user.id)
 
     for day_order, day_data in enumerate(split_data.days):
         day = SplitDay(split_id=db_split.id, name=day_data.name, day_order=day_order)
@@ -213,22 +199,8 @@ async def update_split(
         await db.delete(day)
     await db.flush()
 
-    # Validate all exercise IDs at once
     all_exercise_ids = [ex.exercise_id for day in split_data.days for ex in day.exercises]
-    if all_exercise_ids:
-        result = await db.execute(
-            select(Exercise.id).where(
-                Exercise.id.in_(all_exercise_ids),
-                or_(Exercise.user_id == current_user.id, Exercise.user_id.is_(None)),
-            )
-        )
-        found_ids = set(row[0] for row in result.all())
-        missing = set(all_exercise_ids) - found_ids
-        if missing:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Exercise(s) not found: {', '.join(missing)}",
-            )
+    await validate_exercise_ids(db, all_exercise_ids, current_user.id)
 
     # Recreate days from payload
     for day_order, day_data in enumerate(split_data.days):
