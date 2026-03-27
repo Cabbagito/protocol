@@ -1344,7 +1344,7 @@ const SetRow = memo(function SetRow({ set, exercise, allSets, onUpdate, onComple
           type="number"
           inputMode="numeric"
           value={isMatchLocked
-            ? (set.completed ? (set.reps ?? '') : (mmRefLogged ? resolvedTargetReps : ''))
+            ? (set.completed ? (set.reps ?? '') : (mmRefLogged ? (resolvedTargetReps ?? '') : ''))
             : (set.completed ? (set.reps ?? '') : (set.reps || ''))
           }
           onChange={(e) => onUpdate(exercise.exercise_id, set.set_num, 'reps', parseInt(e.target.value) || 0)}
