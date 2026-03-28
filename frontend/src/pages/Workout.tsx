@@ -9,6 +9,7 @@ import AppHeader from '../components/AppHeader'
 import RirBadge from '../components/RirBadge'
 import MesoGrid from '../components/MesoGrid'
 import { getCurrentPosition } from '../lib/mesoUtils'
+import { getExerciseHistory } from '../lib/exerciseHistory'
 import { useKeyboardVisible } from '../lib/useKeyboardVisible'
 import { useAnimPhase } from '../hooks/useAnimPhase'
 import { useWorkoutState } from '../hooks/useWorkoutState'
@@ -156,13 +157,17 @@ export default function Workout() {
   const completedSets = activeSets.filter(s => s.completed).length
   const totalSets = activeSets.length
 
-  const exerciseGroups = template.exercises
+  const exerciseGroups = useMemo(() => template.exercises
     .map((ex, idx) => ({
       ...ex,
       exerciseIndex: idx,
       workingSets: sets.filter((s) => s.exercise_id === ex.exercise_id),
+      history: mesocycle ? getExerciseHistory(
+        mesocycle.structure, ex.exercise_id, template.week_index, template.session_index,
+      ) : [],
     }))
-    .filter(ex => !removedExercises.has(ex.exercise_id))
+    .filter(ex => !removedExercises.has(ex.exercise_id)),
+  [template, sets, mesocycle, removedExercises])
 
   const rirLabel = template.target_rir === -1 ? 'Deload' : `RiR ${template.target_rir}`
 
@@ -244,6 +249,7 @@ export default function Workout() {
             skippedSets={skippedSets}
             animPhaseRef={animPhaseRef}
             onClearAnim={clearAnim}
+            history={ex.history}
           />
         ))}
       </div>

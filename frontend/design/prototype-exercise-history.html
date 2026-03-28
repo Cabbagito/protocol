@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Exercise History — Protocol</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --deep: #070d15;
+    --base: #0d1b2a;
+    --card: #0f1d2e;
+    --panel: #132438;
+    --input: #162a3e;
+    --border: #1e3a52;
+    --text-1: #e2e8f0;
+    --text-2: #cbd5e1;
+    --text-m: #475569;
+    --accent-l: #38bdf8;
+    --accent: #0ea5e9;
+    --accent-d: #0284c7;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html { background: var(--deep); }
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background: var(--base);
+    color: var(--text-1);
+    max-width: 375px;
+    margin: 0 auto;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .font-mono { font-family: 'JetBrains Mono', monospace; }
+
+  /* Vignette */
+  .vignette {
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(ellipse at center, transparent 60%, #070d15 100%);
+    pointer-events: none;
+    z-index: 100;
+  }
+
+  /* Exercise card */
+  .exercise-card {
+    background: var(--card);
+    border-radius: 10px;
+    padding: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+  }
+
+  /* Frosted panel */
+  .panel-frosted {
+    background: var(--panel);
+    border: 1px solid rgba(255,255,255,0.04);
+    border-radius: 8px;
+    padding: 4px;
+  }
+
+  /* Set input */
+  .set-input {
+    width: 100%;
+    height: 40px;
+    border-radius: 12px;
+    text-align: center;
+    font-size: 14px;
+    font-weight: 500;
+    outline: none;
+    font-family: 'JetBrains Mono', monospace;
+    transition: border-color 0.15s;
+  }
+  .set-input:focus { box-shadow: 0 0 0 1px #0ea5e9; }
+
+  /* Check button */
+  .check-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: transform 0.1s;
+  }
+  .check-btn:active { transform: scale(0.85); }
+
+  /* History row - the inline tappable summary */
+  .history-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 8px;
+    margin: 4px 0 8px 0;
+    border-radius: 8px;
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,255,255,0.03);
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .history-row:hover {
+    background: rgba(255,255,255,0.04);
+    border-color: rgba(255,255,255,0.06);
+  }
+  .history-row:active {
+    background: rgba(255,255,255,0.06);
+  }
+
+  /* Bottom sheet (for menu) */
+  .sheet-backdrop {
+    background: rgba(0,0,0,0.6);
+    border-radius: 12px;
+    overflow: hidden;
+    margin-top: 8px;
+  }
+  .sheet {
+    background: var(--card);
+    border-top-left-radius: 16px;
+    border-top-right-radius: 16px;
+    padding: 0 0 16px 0;
+  }
+  .sheet-handle {
+    width: 36px;
+    height: 4px;
+    border-radius: 2px;
+    background: rgba(255,255,255,0.12);
+    margin: 10px auto 0;
+  }
+
+  /* Menu action row */
+  .menu-action {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 20px;
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--text-2);
+    cursor: pointer;
+    transition: background 0.12s;
+  }
+  .menu-action:active { background: rgba(255,255,255,0.04); }
+  .menu-action.danger { color: #f87171; }
+
+  /* History popup modal */
+  .popup-backdrop {
+    background: rgba(0,0,0,0.7);
+    border-radius: 12px;
+    padding: 20px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .popup {
+    background: var(--card);
+    border-radius: 14px;
+    border: 1px solid rgba(255,255,255,0.06);
+    box-shadow: 0 24px 48px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.03);
+    width: 100%;
+    max-height: 480px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .popup-header {
+    padding: 16px 16px 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    flex-shrink: 0;
+  }
+  .popup-body {
+    padding: 12px 16px 16px;
+    overflow-y: auto;
+    flex: 1;
+  }
+
+  /* History session card */
+  .history-session {
+    background: var(--panel);
+    border: 1px solid rgba(255,255,255,0.04);
+    border-radius: 10px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+  }
+  .history-session:last-child { margin-bottom: 0; }
+
+  /* Set state dots */
+  .state-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* Set type pill in history */
+  .set-type-pill {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    padding: 1px 4px;
+    border-radius: 4px;
+    line-height: 1.3;
+  }
+
+  /* Section label */
+  .section-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-m);
+    padding: 24px 16px 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+    opacity: 0.4;
+  }
+</style>
+</head>
+<body>
+
+<div class="vignette"></div>
+
+<!-- ====== SECTION: Exercise Cards with Inline History ====== -->
+<div class="section-label">Exercise Cards — Inline History</div>
+
+<div class="px-3 space-y-3 pb-4">
+
+  <!-- Card 1: Bench Press -->
+  <div class="exercise-card" style="border: 1.5px solid rgba(249,115,22,0.35);">
+    <div class="flex items-start justify-between mb-2">
+      <div class="flex items-center gap-2">
+        <span class="text-[11px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded"
+          style="background: rgba(249,115,22,0.1); border: 1px solid rgba(249,115,22,0.15); color: #fb923c;">
+          Chest
+        </span>
+      </div>
+      <button class="p-1.5 -mr-1 -mt-0.5 rounded-lg active:bg-white/5">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2">
+          <circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="mb-0.5">
+      <h2 class="text-base font-semibold" style="color: var(--text-1);">Bench Press</h2>
+      <span class="text-xs capitalize" style="color: var(--text-m);">Barbell</span>
+    </div>
+
+    <!-- ★ INLINE HISTORY ROW -->
+    <div class="history-row">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke="#475569" style="opacity: 0.55; flex-shrink: 0;">
+        <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+      </svg>
+      <span class="text-[12px] font-medium font-mono" style="color: var(--text-m);">3×10 @ 60kg</span>
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2.5" style="opacity: 0.35; margin-left: auto;">
+        <polyline points="9 18 15 12 9 6"/>
+      </svg>
+    </div>
+
+    <!-- Sets panel -->
+    <div class="panel-frosted">
+      <div class="flex items-center mb-2 px-2 pt-1">
+        <div class="w-8 text-center text-[11px] font-medium uppercase tracking-wider" style="color: var(--text-m);">#</div>
+        <div class="flex-1 text-center text-[11px] font-medium uppercase tracking-wider" style="color: var(--text-m);">Weight</div>
+        <div class="flex-1 text-center text-[11px] font-medium uppercase tracking-wider" style="color: var(--text-m);">Reps</div>
+        <div class="w-12 text-center text-[11px] font-medium uppercase tracking-wider" style="color: var(--text-m);">Log</div>
+      </div>
+
+      <!-- Set 1 — Logged -->
+      <div class="flex items-center gap-2 rounded-lg px-2 py-1.5">
+        <div class="w-8 flex justify-center">
+          <span class="min-w-[28px] h-7 rounded-md flex items-center justify-center text-[11px] font-semibold"
+            style="color: rgba(56,189,248,0.6); background: rgba(56,189,248,0.06); border: 1px solid rgba(56,189,248,0.1);">1</span>
+        </div>
+        <div class="flex-1">
+          <input type="text" value="60" readonly class="set-input font-mono"
+            style="background: #0c2d4e; border: 1px solid #164e7a; color: #38bdf8;">
+        </div>
+        <div class="flex-1">
+          <input type="text" value="10" readonly class="set-input font-mono"
+            style="background: #0c2d4e; border: 1px solid #164e7a; color: #38bdf8;">
+        </div>
+        <div class="w-12 flex justify-center">
+          <div class="check-btn" style="background: #0284c7;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- Set 2 — Logged -->
+      <div class="flex items-center gap-2 rounded-lg px-2 py-1.5">
+        <div class="w-8 flex justify-center">
+          <span class="min-w-[28px] h-7 rounded-md flex items-center justify-center text-[11px] font-semibold"
+            style="color: rgba(56,189,248,0.6); background: rgba(56,189,248,0.06); border: 1px solid rgba(56,189,248,0.1);">2</span>
+        </div>
+        <div class="flex-1">
+          <input type="text" value="60" readonly class="set-input font-mono"
+            style="background: #0c2d4e; border: 1px solid #164e7a; color: #38bdf8;">
+        </div>
+        <div class="flex-1">
+          <input type="text" value="10" readonly class="set-input font-mono"
+            style="background: #0c2d4e; border: 1px solid #164e7a; color: #38bdf8;">
+        </div>
+        <div class="w-12 flex justify-center">
+          <div class="check-btn" style="background: #0284c7;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- Set 3 — Pending -->
+      <div class="flex items-center gap-2 rounded-lg px-2 py-1.5">
+        <div class="w-8 flex justify-center">
+          <span class="min-w-[28px] h-7 rounded-md flex items-center justify-center text-[11px] font-semibold"
+            style="color: rgba(71,85,105,0.7); background: rgba(71,85,105,0.08); border: 1px solid rgba(71,85,105,0.12);">3</span>
+        </div>
+        <div class="flex-1">
+          <input type="text" placeholder="60" class="set-input font-mono"
+            style="background: var(--input); border: 1px solid var(--border); color: var(--text-2);">
+        </div>
+        <div class="flex-1">
+          <input type="text" placeholder="10" class="set-input font-mono"
+            style="background: var(--input); border: 1px solid var(--border); color: var(--text-2);">
+        </div>
+        <div class="w-12 flex justify-center">
+          <div class="check-btn" style="border: 2px solid var(--border);"></div>
+        </div>
+      </div>
+
+      <button class="w-full py-2 text-center text-xs font-medium rounded-b-lg" style="color: var(--text-m); opacity: 0.6;">+ Add Set</button>
+    </div>
+  </div>
+
+  <!-- Card 2: Lateral Raise -->
+  <div class="exercise-card" style="border: 1.5px solid rgba(168,85,247,0.35);">
+    <div class="flex items-start justify-between mb-2">
+      <div class="flex items-center gap-2">
+        <span class="text-[11px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded"
+          style="background: rgba(168,85,247,0.1); border: 1px solid rgba(168,85,247,0.15); color: #c084fc;">
+          Side Delt
+        </span>
+      </div>
+      <button class="p-1.5 -mr-1 -mt-0.5 rounded-lg active:bg-white/5">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2">
+          <circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="mb-0.5">
+      <h2 class="text-base font-semibold" style="color: var(--text-1);">Lateral Raise</h2>
+      <span class="text-xs capitalize" style="color: var(--text-m);">Dumbbell</span>
+    </div>
+
+    <!-- ★ INLINE HISTORY ROW — different format -->
+    <div class="history-row">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke="#475569" style="opacity: 0.55; flex-shrink: 0;">
+        <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+      </svg>
+      <span class="text-[12px] font-medium font-mono" style="color: var(--text-m);">12kg · 15, 12, 10</span>
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2.5" style="opacity: 0.35; margin-left: auto;">
+        <polyline points="9 18 15 12 9 6"/>
+      </svg>
+    </div>
+
+    <!-- Sets panel -->
+    <div class="panel-frosted">
+      <div class="flex items-center mb-2 px-2 pt-1">
+        <div class="w-8 text-center text-[11px] font-medium uppercase tracking-wider" style="color: var(--text-m);">#</div>
+        <div class="flex-1 text-center text-[11px] font-medium uppercase tracking-wider" style="color: var(--text-m);">Weight</div>
+        <div class="flex-1 text-center text-[11px] font-medium uppercase tracking-wider" style="color: var(--text-m);">Reps</div>
+        <div class="w-12 text-center text-[11px] font-medium uppercase tracking-wider" style="color: var(--text-m);">Log</div>
+      </div>
+
+      <div class="flex items-center gap-2 rounded-lg px-2 py-1.5">
+        <div class="w-8 flex justify-center">
+          <span class="min-w-[28px] h-7 rounded-md flex items-center justify-center text-[11px] font-semibold"
+            style="color: rgba(71,85,105,0.7); background: rgba(71,85,105,0.08); border: 1px solid rgba(71,85,105,0.12);">1</span>
+        </div>
+        <div class="flex-1">
+          <input type="text" placeholder="12" class="set-input font-mono" style="background: var(--input); border: 1px solid var(--border); color: var(--text-2);">
+        </div>
+        <div class="flex-1">
+          <input type="text" placeholder="15" class="set-input font-mono" style="background: var(--input); border: 1px solid var(--border); color: var(--text-2);">
+        </div>
+        <div class="w-12 flex justify-center">
+          <div class="check-btn" style="border: 2px solid var(--border);"></div>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2 rounded-lg px-2 py-1.5">
+        <div class="w-8 flex justify-center">
+          <span class="min-w-[28px] h-7 rounded-md flex items-center justify-center text-[11px] font-semibold"
+            style="color: rgba(71,85,105,0.7); background: rgba(71,85,105,0.08); border: 1px solid rgba(71,85,105,0.12);">2</span>
+        </div>
+        <div class="flex-1">
+          <input type="text" placeholder="12" class="set-input font-mono" style="background: var(--input); border: 1px solid var(--border); color: var(--text-2);">
+        </div>
+        <div class="flex-1">
+          <input type="text" placeholder="12" class="set-input font-mono" style="background: var(--input); border: 1px solid var(--border); color: var(--text-2);">
+        </div>
+        <div class="w-12 flex justify-center">
+          <div class="check-btn" style="border: 2px solid var(--border);"></div>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2 rounded-lg px-2 py-1.5">
+        <div class="w-8 flex justify-center">
+          <span class="min-w-[28px] h-7 rounded-md flex items-center justify-center text-[11px] font-semibold"
+            style="color: rgba(71,85,105,0.7); background: rgba(71,85,105,0.08); border: 1px solid rgba(71,85,105,0.12);">3</span>
+        </div>
+        <div class="flex-1">
+          <input type="text" placeholder="12" class="set-input font-mono" style="background: var(--input); border: 1px solid var(--border); color: var(--text-2);">
+        </div>
+        <div class="flex-1">
+          <input type="text" placeholder="10" class="set-input font-mono" style="background: var(--input); border: 1px solid var(--border); color: var(--text-2);">
+        </div>
+        <div class="w-12 flex justify-center">
+          <div class="check-btn" style="border: 2px solid var(--border);"></div>
+        </div>
+      </div>
+
+      <button class="w-full py-2 text-center text-xs font-medium rounded-b-lg" style="color: var(--text-m); opacity: 0.6;">+ Add Set</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ====== SECTION: Exercise Menu with History Option ====== -->
+<div class="section-label">Exercise Menu — History Option</div>
+
+<div class="px-3 pb-4">
+  <div class="sheet-backdrop">
+    <div class="sheet">
+      <div class="sheet-handle"></div>
+      <div class="px-5 pt-4 pb-2">
+        <h3 class="text-[15px] font-semibold" style="color: var(--text-1);">Bench Press</h3>
+      </div>
+
+      <div class="menu-action" style="color: var(--accent-l);">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+        </svg>
+        View History
+      </div>
+
+      <div class="mx-5 border-t" style="border-color: rgba(255,255,255,0.05);"></div>
+
+      <div class="menu-action">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <path d="M16 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V8l-5-5z"/><polyline points="14 3 14 8 21 8"/>
+          <path d="M8 13h3m-3 4h6"/>
+        </svg>
+        Replace Exercise
+      </div>
+
+      <div class="menu-action">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <path d="M3 8.689c0-.864.933-1.406 1.683-.977l7.108 4.061a1.125 1.125 0 010 1.954l-7.108 4.061A1.125 1.125 0 013 16.811V8.69zM12.75 8.689c0-.864.933-1.406 1.683-.977l7.108 4.061a1.125 1.125 0 010 1.954l-7.108 4.061a1.125 1.125 0 01-1.683-.977V8.69z"/>
+        </svg>
+        Skip Exercise
+      </div>
+
+      <div class="menu-action">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+        </svg>
+        Add Note
+      </div>
+
+      <div class="mx-5 border-t" style="border-color: rgba(255,255,255,0.05);"></div>
+
+      <div class="menu-action danger">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <path d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/>
+        </svg>
+        Remove Exercise
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ====== SECTION: History Popup ====== -->
+<div class="section-label" id="historySheet">History Popup</div>
+
+<div class="px-3 pb-8">
+  <div class="popup-backdrop">
+    <div class="popup">
+
+      <!-- Header -->
+      <div class="popup-header flex items-center justify-between">
+        <div>
+          <h3 class="text-[15px] font-semibold" style="color: var(--text-1);">Bench Press</h3>
+          <span class="text-[11px] uppercase tracking-wider font-medium" style="color: #fb923c;">Chest · Barbell</span>
+        </div>
+        <button class="p-2 -mr-2 rounded-lg active:bg-white/5">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Scrollable body -->
+      <div class="popup-body">
+
+        <!-- Session 1 — Week 4: straight sets, all logged -->
+        <div class="history-session">
+          <div class="flex items-center gap-2 mb-2.5">
+            <span class="text-[11px] font-medium uppercase tracking-wider" style="color: var(--accent-l);">Week 4</span>
+            <span class="text-[11px]" style="color: var(--text-m);">·</span>
+            <span class="text-[12px] font-medium" style="color: var(--text-2);">Mon, Mar 23</span>
+          </div>
+          <div class="space-y-1">
+            <div class="flex items-center gap-2 text-[12px]">
+              <span class="w-5 text-center font-mono font-medium" style="color: var(--text-m);">1</span>
+              <div class="state-dot" style="background: #38bdf8;"></div>
+              <span class="font-mono font-medium" style="color: #38bdf8;">60kg</span>
+              <span style="color: var(--text-m);">×</span>
+              <span class="font-mono font-medium" style="color: #38bdf8;">10</span>
+            </div>
+            <div class="flex items-center gap-2 text-[12px]">
+              <span class="w-5 text-center font-mono font-medium" style="color: var(--text-m);">2</span>
+              <div class="state-dot" style="background: #38bdf8;"></div>
+              <span class="font-mono font-medium" style="color: #38bdf8;">60kg</span>
+              <span style="color: var(--text-m);">×</span>
+              <span class="font-mono font-medium" style="color: #38bdf8;">10</span>
+            </div>
+            <div class="flex items-center gap-2 text-[12px]">
+              <span class="w-5 text-center font-mono font-medium" style="color: var(--text-m);">3</span>
+              <div class="state-dot" style="background: #38bdf8;"></div>
+              <span class="font-mono font-medium" style="color: #38bdf8;">60kg</span>
+              <span style="color: var(--text-m);">×</span>
+              <span class="font-mono font-medium" style="color: #38bdf8;">10</span>
+            </div>
+          </div>
+          <div class="mt-2 pt-2" style="border-top: 1px solid rgba(255,255,255,0.04);">
+            <span class="text-[11px] font-mono" style="color: var(--text-m);">3 sets · 60kg · 30 reps</span>
+          </div>
+        </div>
+
+        <!-- Session 2 — Week 3: mixed results with exceeded + under -->
+        <div class="history-session">
+          <div class="flex items-center gap-2 mb-2.5">
+            <span class="text-[11px] font-medium uppercase tracking-wider" style="color: var(--accent-l);">Week 3</span>
+            <span class="text-[11px]" style="color: var(--text-m);">·</span>
+            <span class="text-[12px] font-medium" style="color: var(--text-2);">Mon, Mar 16</span>
+          </div>
+          <div class="space-y-1">
+            <div class="flex items-center gap-2 text-[12px]">
+              <span class="w-5 text-center font-mono font-medium" style="color: var(--text-m);">1</span>
+              <div class="state-dot" style="background: #c084fc;"></div>
+              <span class="font-mono font-medium" style="color: #c084fc;">57.5kg</span>
+              <span style="color: var(--text-m);">×</span>
+              <span class="font-mono font-medium" style="color: #c084fc;">12</span>
+            </div>
+            <div class="flex items-center gap-2 text-[12px]">
+              <span class="w-5 text-center font-mono font-medium" style="color: var(--text-m);">2</span>
+              <div class="state-dot" style="background: #38bdf8;"></div>
+              <span class="font-mono font-medium" style="color: #38bdf8;">57.5kg</span>
+              <span style="color: var(--text-m);">×</span>
+              <span class="font-mono font-medium" style="color: #38bdf8;">10</span>
+            </div>
+            <div class="flex items-center gap-2 text-[12px]">
+              <span class="w-5 text-center font-mono font-medium" style="color: var(--text-m);">3</span>
+              <div class="state-dot" style="background: #f87171;"></div>
+              <span class="font-mono font-medium" style="color: #f87171;">57.5kg</span>
+              <span style="color: var(--text-m);">×</span>
+              <span class="font-mono font-medium" style="color: #f87171;">8</span>
+            </div>
+          </div>
+          <div class="mt-2 pt-2" style="border-top: 1px solid rgba(255,255,255,0.04);">
+            <span class="text-[11px] font-mono" style="color: var(--text-m);">3 sets · 57.5kg · 30 reps</span>
+          </div>
+        </div>
+
+        <!-- Session 3 — Week 2: has a Myorep set -->
+        <div class="history-session">
+          <div class="flex items-center gap-2 mb-2.5">
+            <span class="text-[11px] font-medium uppercase tracking-wider" style="color: var(--accent-l);">Week 2</span>
+            <span class="text-[11px]" style="color: var(--text-m);">·</span>
+            <span class="text-[12px] font-medium" style="color: var(--text-2);">Mon, Mar 9</span>
+          </div>
+          <div class="space-y-1">
+            <!-- Straight sets -->
+            <div class="flex items-center gap-2 text-[12px]">
+              <span class="w-5 text-center font-mono font-medium" style="color: var(--text-m);">1</span>
+              <div class="state-dot" style="background: #38bdf8;"></div>
+              <span class="font-mono font-medium" style="color: #38bdf8;">55kg</span>
+              <span style="color: var(--text-m);">×</span>
+              <span class="font-mono font-medium" style="color: #38bdf8;">10</span>
+            </div>
+            <div class="flex items-center gap-2 text-[12px]">
+              <span class="w-5 text-center font-mono font-medium" style="color: var(--text-m);">2</span>
+              <div class="state-dot" style="background: #38bdf8;"></div>
+              <span class="font-mono font-medium" style="color: #38bdf8;">55kg</span>
+              <span style="color: var(--text-m);">×</span>
+              <span class="font-mono font-medium" style="color: #38bdf8;">10</span>
+            </div>
+            <!-- Myorep set -->
+            <div class="flex items-center gap-2 text-[12px]">
+              <span class="w-5 flex justify-center">
+                <span class="set-type-pill" style="background: rgba(45,212,191,0.1); border: 1px solid rgba(45,212,191,0.2); color: #2dd4bf;">MR</span>
+              </span>
+              <div class="state-dot" style="background: #2dd4bf;"></div>
+              <span class="font-mono font-medium" style="color: #2dd4bf;">55kg</span>
+              <span style="color: var(--text-m);">×</span>
+              <span class="font-mono font-medium" style="color: #2dd4bf;">18</span>
+            </div>
+            <!-- Myorep Match sets -->
+            <div class="flex items-center gap-2 text-[12px]">
+              <span class="w-5 flex justify-center">
+                <span class="set-type-pill" style="background: rgba(251,191,36,0.1); border: 1px solid rgba(251,191,36,0.2); color: #fbbf24;">MM</span>
+              </span>
+              <div class="state-dot" style="background: #fbbf24;"></div>
+              <span class="font-mono font-medium" style="color: #fbbf24;">55kg</span>
+              <span style="color: var(--text-m);">×</span>
+              <span class="font-mono font-medium" style="color: #fbbf24;">18</span>
+            </div>
+            <div class="flex items-center gap-2 text-[12px]">
+              <span class="w-5 flex justify-center">
+                <span class="set-type-pill" style="background: rgba(251,191,36,0.1); border: 1px solid rgba(251,191,36,0.2); color: #fbbf24;">MM</span>
+              </span>
+              <div class="state-dot" style="background: #fbbf24;"></div>
+              <span class="font-mono font-medium" style="color: #fbbf24;">55kg</span>
+              <span style="color: var(--text-m);">×</span>
+              <span class="font-mono font-medium" style="color: #fbbf24;">15</span>
+            </div>
+          </div>
+          <div class="mt-2 pt-2" style="border-top: 1px solid rgba(255,255,255,0.04);">
+            <span class="text-[11px] font-mono" style="color: var(--text-m);">5 sets · 55kg · 71 reps</span>
+          </div>
+        </div>
+
+        <!-- Session 4 — Week 1: Myorep + Myorep Match -->
+        <div class="history-session">
+          <div class="flex items-center gap-2 mb-2.5">
+            <span class="text-[11px] font-medium uppercase tracking-wider" style="color: var(--accent-l);">Week 1</span>
+            <span class="text-[11px]" style="color: var(--text-m);">·</span>
+            <span class="text-[12px] font-medium" style="color: var(--text-2);">Mon, Mar 2</span>
+          </div>
+          <div class="space-y-1">
+            <div class="flex items-center gap-2 text-[12px]">
+              <span class="w-5 text-center font-mono font-medium" style="color: var(--text-m);">1</span>
+              <div class="state-dot" style="background: #38bdf8;"></div>
+              <span class="font-mono font-medium" style="color: #38bdf8;">52.5kg</span>
+              <span style="color: var(--text-m);">×</span>
+              <span class="font-mono font-medium" style="color: #38bdf8;">10</span>
+            </div>
+            <div class="flex items-center gap-2 text-[12px]">
+              <span class="w-5 text-center font-mono font-medium" style="color: var(--text-m);">2</span>
+              <div class="state-dot" style="background: #c084fc;"></div>
+              <span class="font-mono font-medium" style="color: #c084fc;">52.5kg</span>
+              <span style="color: var(--text-m);">×</span>
+              <span class="font-mono font-medium" style="color: #c084fc;">11</span>
+            </div>
+            <!-- Myorep -->
+            <div class="flex items-center gap-2 text-[12px]">
+              <span class="w-5 flex justify-center">
+                <span class="set-type-pill" style="background: rgba(45,212,191,0.1); border: 1px solid rgba(45,212,191,0.2); color: #2dd4bf;">MR</span>
+              </span>
+              <div class="state-dot" style="background: #2dd4bf;"></div>
+              <span class="font-mono font-medium" style="color: #2dd4bf;">52.5kg</span>
+              <span style="color: var(--text-m);">×</span>
+              <span class="font-mono font-medium" style="color: #2dd4bf;">20</span>
+            </div>
+            <!-- Myorep Match -->
+            <div class="flex items-center gap-2 text-[12px]">
+              <span class="w-5 flex justify-center">
+                <span class="set-type-pill" style="background: rgba(251,191,36,0.1); border: 1px solid rgba(251,191,36,0.2); color: #fbbf24;">MM</span>
+              </span>
+              <div class="state-dot" style="background: #fbbf24;"></div>
+              <span class="font-mono font-medium" style="color: #fbbf24;">52.5kg</span>
+              <span style="color: var(--text-m);">×</span>
+              <span class="font-mono font-medium" style="color: #fbbf24;">20</span>
+            </div>
+          </div>
+          <div class="mt-2 pt-2" style="border-top: 1px solid rgba(255,255,255,0.04);">
+            <span class="text-[11px] font-mono" style="color: var(--text-m);">4 sets · 52.5kg · 61 reps</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

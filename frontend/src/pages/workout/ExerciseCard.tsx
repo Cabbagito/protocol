@@ -2,7 +2,10 @@ import { useState } from 'react'
 import MuscleGroupBadge from '../../components/MuscleGroupBadge'
 import BottomSheet from '../../components/BottomSheet'
 import { getMuscleColor } from '../../lib/muscleColors'
-import { EllipsisIcon, ReplaceIcon, SkipIcon, UnskipIcon, NoteIcon, TrashIcon } from './icons'
+import { formatHistorySummary } from '../../lib/exerciseHistory'
+import type { ExerciseSessionHistory } from '../../lib/exerciseHistory'
+import { EllipsisIcon, ReplaceIcon, SkipIcon, UnskipIcon, NoteIcon, TrashIcon, HistoryIcon } from './icons'
+import { ExerciseHistoryPopup } from './ExerciseHistoryPopup'
 import { SetRow } from './SetRow'
 import type { WorkingSet, MesoExercise } from '../../types'
 
@@ -28,11 +31,15 @@ export interface ExerciseCardProps {
   skippedSets: Set<string>
   animPhaseRef: React.MutableRefObject<Map<string, 'saving' | 'success'>>
   onClearAnim: (exerciseId: string, setNum: number) => void
+  history: ExerciseSessionHistory[]
 }
 
-export function ExerciseCard({ exercise, sets, allSets, targetRir, onUpdateSet, onCompleteSet, onUncompleteSet, locked, skipped, onToggleSkip, note, onEditNote, onReplace, onAddSet, onRemoveSet, onToggleSkipSet, onRemoveExercise, skippedSets, animPhaseRef, onClearAnim }: ExerciseCardProps) {
+export function ExerciseCard({ exercise, sets, allSets, targetRir, onUpdateSet, onCompleteSet, onUncompleteSet, locked, skipped, onToggleSkip, note, onEditNote, onReplace, onAddSet, onRemoveSet, onToggleSkipSet, onRemoveExercise, skippedSets, animPhaseRef, onClearAnim, history }: ExerciseCardProps) {
   const [menuOpen, setMenuOpen] = useState(false)
+  const [historyOpen, setHistoryOpen] = useState(false)
   const color = getMuscleColor(exercise.muscle_group)
+  const lastSession = history.length > 0 ? history[0] : null
+  const summaryText = lastSession ? formatHistorySummary(lastSession.sets) : null
 
   return (
     <>
@@ -67,6 +74,24 @@ export function ExerciseCard({ exercise, sets, allSets, targetRir, onUpdateSet, 
           <span className="text-xs text-[var(--text-m)] capitalize">{exercise.equipment_type}</span>
         )}
       </div>
+
+      {/* Inline history summary */}
+      {summaryText && (
+        <button
+          onClick={() => setHistoryOpen(true)}
+          className="flex items-center gap-1.5 w-full mb-2 py-1 px-2 -mx-0.5 rounded-lg active:bg-white/5"
+          style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.03)' }}
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" strokeWidth={2} stroke="var(--text-m)" style={{ opacity: 0.55, flexShrink: 0 }}>
+            <circle cx="12" cy="12" r="10" />
+            <polyline points="12 6 12 12 16 14" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          <span className="text-[12px] font-medium font-mono" style={{ color: 'var(--text-m)' }}>{summaryText}</span>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--text-m)" strokeWidth={2.5} style={{ opacity: 0.35, marginLeft: 'auto' }}>
+            <polyline points="9 18 15 12 9 6" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
+      )}
 
       {/* Note */}
       {note && (
@@ -136,11 +161,26 @@ export function ExerciseCard({ exercise, sets, allSets, targetRir, onUpdateSet, 
       </div>
     </div>
 
+    {historyOpen && (
+      <ExerciseHistoryPopup
+        exerciseName={exercise.exercise_name}
+        muscleGroup={exercise.muscle_group}
+        equipmentType={exercise.equipment_type}
+        history={history}
+        onClose={() => setHistoryOpen(false)}
+      />
+    )}
+
     <BottomSheet
       open={menuOpen}
       onClose={() => setMenuOpen(false)}
       title={exercise.exercise_name}
       actions={[
+        ...(history.length > 0 ? [{
+          label: 'View History',
+          icon: <HistoryIcon />,
+          onClick: () => setHistoryOpen(true),
+        }] : []),
         {
           label: 'Replace Exercise',
           icon: <ReplaceIcon />,
