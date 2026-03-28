@@ -50,7 +50,7 @@ const WorkoutDetail = lazyWithRetry(() => import('./pages/WorkoutDetail'))
 const Progress = lazyWithRetry(() => import('./pages/Progress'))
 const Settings = lazyWithRetry(() => import('./pages/Settings'))
 
-// Error boundary for chunk load failures that persist after reload
+// Error boundary for chunk load failures and unexpected runtime errors
 class ChunkErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
   state = { hasError: false }
   static getDerivedStateFromError() { return { hasError: true } }
@@ -59,7 +59,7 @@ class ChunkErrorBoundary extends Component<{ children: ReactNode }, { hasError: 
       return (
         <div className="min-h-screen flex items-center justify-center p-6">
           <div className="text-center">
-            <p className="text-[var(--text-2)] mb-4">A new version is available.</p>
+            <p className="text-[var(--text-2)] mb-4">Something went wrong.</p>
             <button
               onClick={() => clearServiceWorkerCaches().then(() => window.location.reload())}
               className="btn btn-primary"

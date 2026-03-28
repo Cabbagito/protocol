@@ -143,6 +143,20 @@ export default function Workout() {
     }
   }, [mesocycle, currentPos])
 
+  const exerciseGroups = useMemo(() => {
+    if (!template) return []
+    return template.exercises
+      .map((ex, idx) => ({
+        ...ex,
+        exerciseIndex: idx,
+        workingSets: sets.filter((s) => s.exercise_id === ex.exercise_id),
+        history: mesocycle ? getExerciseHistory(
+          mesocycle.structure, ex.exercise_id, template.week_index, template.session_index,
+        ) : [],
+      }))
+      .filter(ex => !removedExercises.has(ex.exercise_id))
+  }, [template, sets, mesocycle, removedExercises])
+
   // Loading / error states
   if (isLoading) {
     return <PageLoader className="min-h-[60vh]" />
@@ -156,18 +170,6 @@ export default function Workout() {
   const activeSets = sets.filter(s => !skippedExercises.has(s.exercise_id) && !removedExercises.has(s.exercise_id) && !skippedSets.has(`${s.exercise_id}:${s.set_num}`))
   const completedSets = activeSets.filter(s => s.completed).length
   const totalSets = activeSets.length
-
-  const exerciseGroups = useMemo(() => template.exercises
-    .map((ex, idx) => ({
-      ...ex,
-      exerciseIndex: idx,
-      workingSets: sets.filter((s) => s.exercise_id === ex.exercise_id),
-      history: mesocycle ? getExerciseHistory(
-        mesocycle.structure, ex.exercise_id, template.week_index, template.session_index,
-      ) : [],
-    }))
-    .filter(ex => !removedExercises.has(ex.exercise_id)),
-  [template, sets, mesocycle, removedExercises])
 
   const rirLabel = template.target_rir === -1 ? 'Deload' : `RiR ${template.target_rir}`
 
