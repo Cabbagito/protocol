@@ -174,7 +174,7 @@ export default function Workout() {
   const rirLabel = template.target_rir === -1 ? 'Deload' : `RiR ${template.target_rir}`
 
   return (
-    <div className="pb-20">
+    <div>
       <AppHeader
         title={template.session_name}
         subtitle={isFutureSession ? `Week ${template.week_number} · ${rirLabel}` : `Week ${template.week_number}`}

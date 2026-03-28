@@ -12,30 +12,39 @@ const navItems = [
 export default function Layout({ children }: { children: React.ReactNode }) {
   const { pathname } = useLocation()
   const keyboardOpen = useKeyboardVisible()
-  const mainRef = useRef<HTMLDivElement>(null)
+  const scrollRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    mainRef.current?.scrollTo(0, 0)
+    scrollRef.current?.scrollTo(0, 0)
   }, [pathname])
 
   return (
-    <div className="min-h-screen flex flex-col">
-      {/* Mask behind the status bar so scrolling content doesn't peek through */}
+    <>
+      {/* Safe-area mask behind status bar */}
       <div
         className="fixed top-0 left-0 right-0 z-50"
         style={{ height: 'env(safe-area-inset-top)', background: 'var(--base)' }}
       />
-      <main
-        ref={mainRef}
-        data-main-scroll
-        className="flex-1 pb-16 md:pb-20 max-w-lg mx-auto w-full"
-      >
-        {children}
-      </main>
 
+      {/* Inner scroll container — fixed, so iOS keyboard can't push it */}
+      <div
+        ref={scrollRef}
+        data-main-scroll
+        className="fixed left-0 right-0 overflow-y-auto overscroll-y-contain"
+        style={{
+          top: 'env(safe-area-inset-top)',
+          bottom: keyboardOpen ? '0' : 'calc(48px + env(safe-area-inset-bottom))',
+        }}
+      >
+        <div className="max-w-lg mx-auto w-full">
+          {children}
+        </div>
+      </div>
+
+      {/* Nav — fixed at bottom, body safe-area padding covers the gap below */}
       {!keyboardOpen && (
       <nav
-        className="fixed bottom-0 left-0 right-0 pb-[env(safe-area-inset-bottom)]"
+        className="fixed bottom-0 left-0 right-0 z-40 pb-[env(safe-area-inset-bottom)]"
         style={{
           background: 'var(--nav-bg)',
           backdropFilter: 'blur(12px)',
@@ -66,6 +75,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         </div>
       </nav>
       )}
-    </div>
+    </>
   )
 }
