@@ -19,7 +19,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   }, [pathname])
 
   return (
-    <div className="h-dvh flex flex-col" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+    <div className="h-full flex flex-col" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
       <main
         ref={mainRef}
         data-main-scroll

@@ -8,6 +8,7 @@
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
     overscroll-behavior-y: contain;
+    height: 100%;
   }
 
   body {
@@ -17,6 +18,11 @@
     overscroll-behavior: none;
     padding-left: env(safe-area-inset-left);
     padding-right: env(safe-area-inset-right);
+    height: 100%;
+  }
+
+  #root {
+    height: 100%;
   }
 
   /* Vignette overlay — softer on mobile, full on desktop */
