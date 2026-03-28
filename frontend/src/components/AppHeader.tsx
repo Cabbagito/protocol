@@ -1,3 +1,4 @@
+import { useRef, useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { ChevronDownIcon } from './Icons'
 import ProtocolMark from './ProtocolMark'
@@ -25,92 +26,112 @@ export default function AppHeader({
   onHeaderAreaClick,
 }: AppHeaderProps) {
   const hasProgressBar = progressPercent !== undefined
+  const headerRef = useRef<HTMLDivElement>(null)
+  const [height, setHeight] = useState(96)
+
+  useEffect(() => {
+    const el = headerRef.current
+    if (!el) return
+    const ro = new ResizeObserver((entries) => {
+      const entry = entries[0]
+      if (entry) setHeight(entry.contentRect.height)
+    })
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
 
   return (
-    <div
-      className="sticky top-0 z-40 relative"
-      style={{
-        background: 'var(--base)',
-        borderBottom: hasProgressBar ? 'none' : '1px solid rgba(255,255,255,0.04)',
-      }}
-    >
-      {/* Main header row */}
+    <>
+      {/* Spacer to reserve space in document flow */}
+      <div style={{ height }} />
+
       <div
-        className={`px-5 pt-5 pb-4 flex items-center gap-3 min-h-[96px]${onHeaderAreaClick ? ' cursor-pointer' : ''}`}
-        onClick={onHeaderAreaClick}
+        ref={headerRef}
+        className="fixed left-0 right-0 z-40"
+        style={{
+          top: 'env(safe-area-inset-top)',
+          background: 'var(--base)',
+          borderBottom: hasProgressBar ? 'none' : '1px solid rgba(255,255,255,0.04)',
+        }}
       >
-        <Link
-          to="/"
-          className="flex-shrink-0"
-          onClick={(e) => e.stopPropagation()}
+        {/* Main header row */}
+        <div
+          className={`px-5 pt-5 pb-4 flex items-center gap-3 min-h-[96px]${onHeaderAreaClick ? ' cursor-pointer' : ''}`}
+          onClick={onHeaderAreaClick}
         >
-          <ProtocolMark mode="idle" className="w-9 h-9" />
-        </Link>
-
-        <div className="flex-1 min-w-0">
-          <h1 className="text-[15px] font-semibold truncate text-[var(--text-1)]">
-            {title}
-          </h1>
-          {breadcrumb ? (
-            <Link
-              to={breadcrumb.to}
-              className="text-[11px] text-[var(--text-m)] hover:text-[var(--text-2)] transition-colors"
-              onClick={(e) => e.stopPropagation()}
-            >
-              &#8249; {breadcrumb.label}
-            </Link>
-          ) : subtitle ? (
-            <p className="text-[11px] text-[var(--text-m)]">{subtitle}</p>
-          ) : null}
-        </div>
-
-        {rightContent && (
-          <div
-            className="flex-shrink-0 flex items-center gap-2"
+          <Link
+            to="/"
+            className="flex-shrink-0"
             onClick={(e) => e.stopPropagation()}
           >
-            {rightContent}
+            <ProtocolMark mode="idle" className="w-9 h-9" />
+          </Link>
+
+          <div className="flex-1 min-w-0">
+            <h1 className="text-[15px] font-semibold truncate text-[var(--text-1)]">
+              {title}
+            </h1>
+            {breadcrumb ? (
+              <Link
+                to={breadcrumb.to}
+                className="text-[11px] text-[var(--text-m)] hover:text-[var(--text-2)] transition-colors"
+                onClick={(e) => e.stopPropagation()}
+              >
+                &#8249; {breadcrumb.label}
+              </Link>
+            ) : subtitle ? (
+              <p className="text-[11px] text-[var(--text-m)]">{subtitle}</p>
+            ) : null}
           </div>
-        )}
 
-        {/* Drawer expand indicator */}
+          {rightContent && (
+            <div
+              className="flex-shrink-0 flex items-center gap-2"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {rightContent}
+            </div>
+          )}
+
+          {/* Drawer expand indicator */}
+          {drawerContent && (
+            <ChevronDownIcon
+              className={`w-4 h-4 flex-shrink-0 text-[var(--text-m)] transition-transform duration-300 ${drawerExpanded ? 'rotate-180' : ''}`}
+            />
+          )}
+        </div>
+
+        {/* Progress bar (replaces border) */}
+        {hasProgressBar && <ProgressBar percent={progressPercent} />}
+
+        {/* Expandable drawer — absolutely positioned overlay, animated with translateY (GPU-only) */}
         {drawerContent && (
-          <ChevronDownIcon
-            className={`w-4 h-4 flex-shrink-0 text-[var(--text-m)] transition-transform duration-300 ${drawerExpanded ? 'rotate-180' : ''}`}
-          />
-        )}
-      </div>
-
-      {/* Progress bar (replaces border) */}
-      {hasProgressBar && <ProgressBar percent={progressPercent} />}
-
-      {/* Expandable drawer — absolutely positioned overlay, animated with translateY (GPU-only) */}
-      {drawerContent && (
-        <div
-          className="absolute left-0 right-0 overflow-hidden pointer-events-none"
-          style={{ top: '100%', paddingBottom: 60 }}
-        >
           <div
-            className="transition-transform duration-300 ease-in-out"
-            style={{
-              transform: drawerExpanded ? 'translateY(0)' : 'translateY(-100%)',
-              willChange: 'transform',
-              padding: '6px 8px 0',
-            }}
+            className="absolute left-0 right-0 overflow-hidden pointer-events-none"
+            style={{ top: '100%', paddingBottom: 60 }}
           >
-            <div className="pointer-events-auto" style={{
-              background: 'var(--panel)',
-              borderRadius: 12,
-              boxShadow: '0 16px 48px rgba(0,0,0,0.6)',
-              border: '1.5px solid var(--border)',
-            }}>
-              <div className="px-4 pt-4 pb-5">
-                {drawerContent}
+            <div
+              className="transition-transform duration-300 ease-in-out"
+              style={{
+                transform: drawerExpanded ? 'translateY(0)' : 'translateY(-100%)',
+                willChange: 'transform',
+                padding: '6px 8px 0',
+              }}
+            >
+              <div className="pointer-events-auto" style={{
+                background: 'var(--panel)',
+                borderRadius: 12,
+                boxShadow: '0 16px 48px rgba(0,0,0,0.6)',
+                border: '1.5px solid var(--border)',
+              }}>
+                <div className="px-4 pt-4 pb-5">
+                  {drawerContent}
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
-    </div>
+        )}
+      </div>
+    </>
   )
 }
