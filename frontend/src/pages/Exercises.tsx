@@ -9,6 +9,7 @@ import { MuscleGroupChips, EquipmentTypeToggles } from '../components/ExerciseFi
 import AppHeader from '../components/AppHeader'
 import PageLoader from '../components/PageLoader'
 import ExerciseSparkline from '../components/ExerciseSparkline'
+import SearchInput from '../components/SearchInput'
 import type { Exercise } from '../types'
 
 export default function Exercises() {
@@ -78,18 +79,7 @@ export default function Exercises() {
       )}
 
       {/* Search bar */}
-      <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg" style={{ background: 'var(--input)', border: '1px solid var(--border)' }}>
-        <svg className="w-4 h-4 shrink-0" style={{ color: 'var(--text-m)' }} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-        </svg>
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search exercises..."
-          className="bg-transparent text-sm text-[var(--text-1)] placeholder-[var(--text-m)] outline-none flex-1"
-        />
-      </div>
+      <SearchInput value={searchQuery} onChange={setSearchQuery} />
 
       {/* Muscle group filter chips */}
       <MuscleGroupChips

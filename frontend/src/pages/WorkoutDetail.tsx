@@ -6,6 +6,8 @@ import MuscleGroupBadge from '../components/MuscleGroupBadge'
 import RirBadge from '../components/RirBadge'
 import { getMuscleColor } from '../lib/muscleColors'
 import { formatWeight } from '../lib/weightUtils'
+import { SET_TYPE_LABELS, STRAIGHT_PILL } from '../lib/setConstants'
+import { formatVolume } from '../lib/formatters'
 import type { MesoExercise, MesoSet } from '../types'
 
 type SetState = 'met' | 'exceeded' | 'under'
@@ -24,13 +26,6 @@ const SET_COLORS: Record<SetState, { text: string; icon: string; bg: string }> =
   exceeded: { text: '#c084fc', icon: '#a855f7', bg: 'rgba(168,85,247,0.06)' },
   under: { text: '#f87171', icon: '#ef4444', bg: 'rgba(239,68,68,0.04)' },
 }
-
-const SET_TYPE_LABELS: Record<string, { label: string; color: string; bg: string; border: string; rowBg: string }> = {
-  myorep: { label: 'MR', color: '#2dd4bf', bg: 'rgba(45,212,191,0.12)', border: 'rgba(45,212,191,0.3)', rowBg: 'rgba(45,212,191,0.04)' },
-  myorep_match: { label: 'MM', color: '#fbbf24', bg: 'rgba(251,191,36,0.12)', border: 'rgba(251,191,36,0.3)', rowBg: 'rgba(251,191,36,0.05)' },
-}
-
-const STRAIGHT_PILL = { color: 'var(--text-2)', bg: 'rgba(255,255,255,0.04)', border: 'rgba(255,255,255,0.12)' }
 
 function SetStatusIcon({ state }: { state: SetState }) {
   if (state === 'met') {
@@ -129,12 +124,6 @@ export default function WorkoutDetail() {
   // Derive RiR from first logged set
   const firstLoggedSet = allLoggedSets[0]
   const rir = firstLoggedSet?.rir ?? null
-
-  // Format volume for display
-  const formatVolume = (v: number) => {
-    if (v >= 1000) return `${(v / 1000).toFixed(1).replace(/\.0$/, '')}k`
-    return v.toLocaleString()
-  }
 
   // Volume by muscle group
   const muscleVolume: Record<string, number> = {}

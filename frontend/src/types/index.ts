@@ -156,6 +156,14 @@ export interface WorkoutDetailResponse {
   exercise_notes?: Record<string, string>
 }
 
+// Working set (extends MesoSet with workout-specific fields)
+
+export interface WorkingSet extends MesoSet {
+  exercise_id: string
+  exercise_name: string
+  completed: boolean
+}
+
 // Exercise progress
 
 export interface ProgressEntry {
