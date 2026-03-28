@@ -703,7 +703,7 @@ export default function Workout() {
 
       {/* Context-aware sticky button */}
       {!keyboardOpen && !isFutureSession && completedSets === totalSets && totalSets > 0 && (
-        <div className="fixed bottom-16 left-0 right-0 z-30 px-4 pb-3">
+        <div className="sticky bottom-0 z-30 px-4 pb-3">
           <div className="max-w-lg mx-auto">
             <button
               onClick={handleFinishOrNext}
@@ -718,7 +718,7 @@ export default function Workout() {
 
       {/* Go to current workout CTA */}
       {!keyboardOpen && isFutureSession && currentWorkoutInfo && (
-        <div className="fixed bottom-16 left-0 right-0 z-30 px-4 pb-3">
+        <div className="sticky bottom-0 z-30 px-4 pb-3">
           <div className="max-w-lg mx-auto flex flex-col gap-1.5">
             <button
               onClick={() => navigate(`/workout/${mesocycleId}`)}

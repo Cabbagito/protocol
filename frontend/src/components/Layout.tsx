@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom'
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { clsx } from 'clsx'
 import { HomeIcon, DumbbellIcon } from './Icons'
 import { useKeyboardVisible } from '../lib/useKeyboardVisible'
@@ -12,20 +12,25 @@ const navItems = [
 export default function Layout({ children }: { children: React.ReactNode }) {
   const { pathname } = useLocation()
   const keyboardOpen = useKeyboardVisible()
+  const mainRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    window.scrollTo(0, 0)
+    mainRef.current?.scrollTo(0, 0)
   }, [pathname])
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <main className="flex-1 pb-16 md:pb-20 max-w-lg mx-auto w-full">
+    <div className="h-dvh flex flex-col" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+      <main
+        ref={mainRef}
+        data-main-scroll
+        className="flex-1 overflow-y-auto overscroll-y-contain max-w-lg mx-auto w-full"
+      >
         {children}
       </main>
 
       {!keyboardOpen && (
       <nav
-        className="fixed bottom-0 left-0 right-0 pb-[env(safe-area-inset-bottom)]"
+        className="flex-shrink-0 pb-[env(safe-area-inset-bottom)]"
         style={{
           background: 'var(--nav-bg)',
           backdropFilter: 'blur(12px)',

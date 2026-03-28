@@ -30,8 +30,6 @@ export default function AppHeader({
     <div
       className="sticky top-0 z-40 relative"
       style={{
-        marginTop: 'calc(-1 * env(safe-area-inset-top, 0px))',
-        paddingTop: 'env(safe-area-inset-top, 0px)',
         background: 'var(--base)',
         borderBottom: hasProgressBar ? 'none' : '1px solid rgba(255,255,255,0.04)',
       }}

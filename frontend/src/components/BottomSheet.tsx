@@ -18,12 +18,13 @@ export default function BottomSheet({ open, onClose, title, actions }: BottomShe
   const sheetRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
+    const scrollEl = document.querySelector<HTMLElement>('[data-main-scroll]')
     if (open) {
-      document.body.style.overflow = 'hidden'
+      if (scrollEl) scrollEl.style.overflow = 'hidden'
     } else {
-      document.body.style.overflow = ''
+      if (scrollEl) scrollEl.style.overflow = ''
     }
-    return () => { document.body.style.overflow = '' }
+    return () => { if (scrollEl) scrollEl.style.overflow = '' }
   }, [open])
 
   if (!open) return null
