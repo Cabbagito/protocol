@@ -37,85 +37,25 @@ bun run lint
 
 **Split container deployment:** In production, three containers — Caddy serves the React frontend and reverse-proxies `/api/*` to the backend; FastAPI is a pure API server (no static file serving); PostgreSQL for data. In development, Vite proxies `/api` requests to the backend container.
 
-**Auth:** Multi-user password-based JWT with bcrypt hashing. Each user has a unique password. `APP_PASSWORD` env var bootstraps the admin user on first run. JWT `sub` contains the user UUID, tokens valid 1 year. `get_current_user` dependency returns a `User` object. Login iterates all users checking bcrypt hashes.
+**Auth:** Multi-user password-based JWT with bcrypt hashing. Each user has a unique password (no username). `APP_PASSWORD` env var bootstraps the admin user on first run. JWT `sub` contains the user UUID, tokens valid 1 year. `get_current_user` dependency returns a `User` object. Login iterates all users checking bcrypt hashes.
 
-**Database:** PostgreSQL with async SQLAlchemy and Alembic migrations. Migrations run automatically on startup (`alembic upgrade head`). In development, PostgreSQL runs in Docker; in production, VPS-hosted PostgreSQL via Docker Compose.
+**Database:** PostgreSQL with async SQLAlchemy and Alembic migrations. Migrations run automatically on startup (`alembic upgrade head`).
 
-## Infrastructure
-
-**Local dev (`docker-compose.yml`):** Three containers — PostgreSQL on :5432, FastAPI on :8000, Vite on :5173. Frontend proxies `/api` to `http://backend:8000`. Hot reload via volume mounts.
-
-**Production (`docker-compose.prod.yml`):** Three containers — PostgreSQL, FastAPI (no exposed ports), Caddy on :80/:443. Caddy serves the baked-in React frontend, reverse-proxies `/api/*` to backend, and auto-provisions SSL via Let's Encrypt. `backend/Dockerfile` builds the API image; `Dockerfile.caddy` builds frontend + Caddy image. All secrets via `.env` file (see `.env.prod.example`).
-
-**Database:** PostgreSQL, accessed only through FastAPI backend. Runs as a Docker container in both dev and production.
-
-**Hosting:** Live at `protocol-42.com`. VPS with Caddy auto-provisioning SSL via Let's Encrypt for the domain.
-
-**CI/CD (`.github/workflows/deploy.yml`):** GitHub Actions deploys on every push to `main` (also supports manual `workflow_dispatch`). Uses `appleboy/ssh-action` to SSH into the VPS, pulls latest code, rebuilds containers with `docker compose -f docker-compose.prod.yml up -d --build --remove-orphans`, and prunes dangling images. Required GitHub secrets: `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY`.
-
-## Key Patterns
-
-**Backend structure:**
-- `app/core/` - Config (pydantic-settings), database session, JWT security (bcrypt + passlib)
-- `app/models/` - SQLAlchemy models (inherit from `Base`, `TimestampMixin`); `User` model for auth
-- `app/routers/` - FastAPI routers, each protected with `Depends(get_current_user)` which returns a `User`
-- Pydantic schemas defined inline in routers
-
-**Frontend structure:**
-- `src/api/client.ts` - Fetch wrapper with auto-auth headers and 401 redirect
-- `src/lib/auth.ts` - Token + UserInfo storage (localStorage)
-- `src/components/Icons.tsx` - Shared SVG icon components (all icons live here)
-- `src/components/Toast.tsx` - Error toast notification system
-- `src/pages/` - Route pages (lazy-loaded via React.lazy)
-- Tailwind with custom `protocol-*` color palette and `.btn`, `.input`, `.card` component classes
-
-**Docker networking:** Frontend container proxies to `http://backend:8000` via `API_URL` env var.
+**Backend pattern:** Thin routers delegate to service layer (`app/services/`). Pydantic schemas in `app/schemas/`, one file per domain. Domain logic (progression calculations) isolated in `app/domain/` with no DB dependencies.
 
 ## Data Model
 
-Three domains planned:
-1. **Gym:** Exercise, Split/Session/SessionExercise, Mesocycle (with JSONB structure)
-2. **Diet:** FoodItem, FoodLog, DailyTargets (with Claude Vision for photo estimation)
-3. **Glucose:** GlucoseSettings, GlucoseLog (insulin calculations)
+**Data ownership:** Exercise, Split, and Mesocycle have a nullable `user_id` FK. `NULL` = system/seed data (visible to all users). `<uuid>` = user-created (visible only to owner). Reads filter with `user_id = current OR user_id IS NULL`; writes require `user_id = current`.
 
-**Currently implemented (Phase 1 - Gym MVP):**
+**Exercise** (`/api/exercises`): Pre-seeded ~78 exercises (`user_id=NULL`, shared). Each has a single `muscle_group` (back, biceps, front delt, rear delt, side delt, chest, triceps, quads, hamstrings, glutes, calves, abs, traps, forearms) and `equipment_type` (barbell, dumbbell, machine, cable, bodyweight).
 
-**User** (`users` table): Multi-user auth. Fields: `id` (UUID), `name`, `password_hash` (bcrypt), `is_admin`. Admin user is bootstrapped from `APP_PASSWORD` on first run via `ensure_admin_user()`.
+**Split** (`/api/splits`): Training template with ordered days. Each day has exercises (no sets/reps — those are a mesocycle concern, defaulting to 3 sets). Tables: `splits` -> `split_days` -> `split_day_exercises`. API accepts/returns nested create/update in one request.
 
-**Data ownership:** Exercise, Split, and Mesocycle have a nullable `user_id` FK. `NULL` = system/seed data (visible to all users). `<uuid>` = user-created (visible only to owner). Queries use `WHERE user_id = current_user.id OR user_id IS NULL` for reads, `WHERE user_id = current_user.id` for writes.
+**Mesocycle** (`/api/mesocycles`): Core training block, always user-owned. Stores a `structure` JSONB column: `weeks[] -> sessions[] -> exercises[] -> sets[]`. Each set has `weight`, `reps`, `target_reps`, `suggested_weight`, `rir`, and `logged` flag. No separate WorkoutLog table — all workout data lives in the structure.
 
-**Exercise** (`/api/exercises`): Pre-seeded ~50 exercises (`user_id=NULL`, shared). User-created exercises have `user_id` set. Each has a single `muscle_group` string (one of: back, biceps, front delt, rear delt, side delt, chest, triceps, quads, hamstrings, glutes, calves, abs, traps, forearms) and `equipment_type` (barbell, dumbbell, machine, cable, bodyweight).
-
-**Split** (`/api/splits`): Training template with ordered days. Each day has exercises (no sets/reps — those are a mesocycle concern, defaulting to 3 sets per exercise). Tables: `splits` → `split_days` → `split_day_exercises`. API accepts/returns nested create/update (full split with days+exercises in one request). Seed splits (`user_id=NULL`) are shared; user-created splits have `user_id` set.
-
-**Mesocycle** (`/api/mesocycles`): Core training block. Always owned by a user (`user_id` set on creation). Stores a `structure` JSONB column containing the entire nested document: `weeks[] → sessions[] → exercises[] → sets[]`. Each set has `weight`, `reps`, `target_reps`, `suggested_weight`, `rir`, and `logged` flag. No separate WorkoutLog table — all workout data lives in the structure. `is_active` bulk updates are scoped to current user.
-
-Key derived fields (computed from structure, not stored): `total_weeks`, `current_week`, `rir_scheme`, `current_rir`, `workouts_completed`.
-
-**"Where we left off" algorithm:** Scans structure for the first session with any unlogged sets — determines current position automatically.
+**"Where we left off":** Scans structure for the first session with any unlogged sets.
 
 **Progression:** Computed eagerly when a session is saved. If all sets hit `target_reps`, next week's `suggested_weight` increases by equipment-specific increment (barbell 2.5, dumbbell 2.0, machine 5.0, cable 2.5).
-
-**Workout endpoints** (`/api/workouts`):
-- `GET /template/{meso_id}` — auto-detect next session
-- `GET /template/{meso_id}/{week}/{session}` — specific session
-- `POST /log` — log sets into structure, triggers progression
-- `GET /history/{meso_id}` — list of completed sessions
-- `GET /detail/{meso_id}/{week}/{session}` — view logged session
-- `GET /progress/{exercise_id}` — weight progression across all mesos
-
-**DB reset:** For a full reset in dev, use `docker compose down -v && docker compose up` to drop volumes and re-run migrations from scratch.
-
-**Frontend pages:**
-- Dashboard, Exercises, Splits, SplitEditor (accordion creator/editor), Mesocycles, MesocycleDetail
-- Workout (log with rest timer), WorkoutDetail, Progress (charts)
-- Settings (current user name, logout button)
-
-**Frontend routes:**
-- `/splits/new` — create new split (accordion editor)
-- `/splits/:id` — edit existing split (accordion editor)
-- `/workout/:mesocycleId` — log workout (auto-detects next session, supports `?week=N&session=N` query params for specific session)
-- `/workouts/:mesocycleId/:weekIndex/:sessionIndex` — view completed workout detail
 
 ## Environment Variables
 
@@ -139,30 +79,4 @@ Key derived fields (computed from structure, not stored): `total_weeks`, `curren
 
 **Workflow:** Work on feature/fix branches, merge to `main`.
 
-## Production Debugging (public)
-
-**Deployment status** — check via GitHub Actions:
-```bash
-gh run list --limit 5                  # Recent deploys
-gh run view <run-id>                   # Job summary
-gh run view <run-id> --log             # Full build logs
-gh run view <run-id> --log-failed      # Only failed step logs
-gh workflow run deploy.yml             # Manual deploy trigger
-```
-
-**Live site health** — no auth needed:
-```bash
-curl -s https://protocol-42.com/api/health     # API health check
-curl -s -o /dev/null -w "%{http_code}" https://protocol-42.com/  # HTTP status
-```
-
 Server access (SSH, hcloud, DB queries, authenticated API calls) requires operator keys — see `CLAUDE.local.md`.
-
-## Documentation
-
-**Keep CLAUDE.md updated** when making changes that affect:
-- New models, routers, or API endpoints
-- New frontend pages or major components
-- Changes to the data model or architecture
-- New environment variables or configuration
-- Infrastructure or deployment changes

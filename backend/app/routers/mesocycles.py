@@ -1,69 +1,18 @@
-from datetime import date as date_type
-
 from fastapi import APIRouter, Depends, status
-from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.security import get_current_user
 from app.models.user import User
+from app.schemas.mesocycle import (
+    MesocycleCreate,
+    MesocycleListItem,
+    MesocycleResponse,
+    MesocycleUpdate,
+)
 from app.services import mesocycle_service
 
 router = APIRouter()
-
-
-# --- Pydantic Schemas ---
-
-
-class MesocycleCreate(BaseModel):
-    split_id: str
-    name: str = Field(min_length=1, max_length=100)
-    total_weeks: int = Field(default=4, ge=3, le=8)
-    started_at: date_type | None = None
-
-
-class MesocycleUpdate(BaseModel):
-    name: str | None = None
-    is_active: bool | None = None
-
-
-class MesocycleListItem(BaseModel):
-    id: str
-    name: str
-    split_name: str
-    split_color: str | None
-    total_weeks: int
-    current_week: int
-    current_rir: int
-    is_active: bool
-    started_at: date_type
-    workouts_completed: int
-    total_workouts: int
-
-    class Config:
-        from_attributes = True
-
-
-class MesocycleResponse(BaseModel):
-    id: str
-    name: str
-    split_id: str
-    split_name: str
-    split_color: str | None
-    total_weeks: int
-    rir_scheme: list[int]
-    current_week: int
-    current_rir: int
-    is_active: bool
-    started_at: date_type
-    workouts_completed: int
-    structure: dict
-
-    class Config:
-        from_attributes = True
-
-
-# --- Endpoints ---
 
 
 @router.get("", response_model=list[MesocycleListItem])

@@ -1,24 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.security import create_access_token, verify_password
 from app.models.user import User
+from app.schemas.auth import LoginRequest, TokenResponse
 
 router = APIRouter()
-
-
-class LoginRequest(BaseModel):
-    password: str
-
-
-class TokenResponse(BaseModel):
-    access_token: str
-    token_type: str = "bearer"
-    user_name: str
-    is_admin: bool
 
 
 @router.post("/login", response_model=TokenResponse)

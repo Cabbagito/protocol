@@ -1,0 +1,22 @@
+{
+  "lat_pulldown": 60,
+  "seated_cable_row": 55,
+  "preacher_curl": 25,
+  "freemotion_rear_delt_fly": 15,
+  "dumbbell_shrug": 30,
+  "cable_wrist_curl": 15,
+  "incline_dumbbell_press": 28,
+  "dumbbell_bench_press": 32,
+  "dumbbell_skull_crusher": 12,
+  "overhead_tricep_extension": 25,
+  "lateral_raise": 10,
+  "dumbbell_front_raise": 10,
+  "tricep_pushdown": 30,
+  "leg_curl": 45,
+  "leg_press": 150,
+  "bulgarian_split_squat": 20,
+  "calf_raise": 80,
+  "lying_dumbbell_curl": 12,
+  "reverse_curl": 20,
+  "dumbbell_flye": 16
+}

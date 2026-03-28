@@ -1,79 +1,13 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, Field
-from sqlalchemy import func, or_, select
+from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from app.core.database import get_db
 from app.core.security import get_current_user
-from app.models.split import Split, SplitDay, SplitDayExercise
 from app.models.user import User
-from app.services.common import validate_exercise_ids
+from app.schemas.split import SplitCreate, SplitListItem, SplitResponse
+from app.services import split_service
 
 router = APIRouter()
-
-
-# --- Pydantic Schemas ---
-
-
-class DayExerciseInput(BaseModel):
-    exercise_id: str
-
-
-class DayInput(BaseModel):
-    name: str = Field(min_length=1, max_length=100)
-    exercises: list[DayExerciseInput] = []
-
-
-class SplitCreate(BaseModel):
-    name: str = Field(min_length=1, max_length=100)
-    color: str | None = Field(default=None, pattern=r"^#[0-9a-fA-F]{6}$")
-    days: list[DayInput] = []
-
-
-class DayExerciseResponse(BaseModel):
-    id: str
-    exercise_id: str
-    exercise_name: str
-    muscle_group: str
-    order: int
-
-    class Config:
-        from_attributes = True
-
-
-class DayResponse(BaseModel):
-    id: str
-    name: str
-    day_order: int
-    exercises: list[DayExerciseResponse]
-
-    class Config:
-        from_attributes = True
-
-
-class SplitResponse(BaseModel):
-    id: str
-    name: str
-    color: str | None
-    days: list[DayResponse]
-
-    class Config:
-        from_attributes = True
-
-
-class SplitListItem(BaseModel):
-    id: str
-    name: str
-    color: str | None
-    day_count: int
-    exercise_count: int
-
-    class Config:
-        from_attributes = True
-
-
-# --- Endpoints ---
 
 
 @router.get("", response_model=list[SplitListItem])
@@ -81,38 +15,7 @@ async def list_splits(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    exercise_count_subq = (
-        select(func.count(SplitDayExercise.id))
-        .join(SplitDay, SplitDayExercise.day_id == SplitDay.id)
-        .where(SplitDay.split_id == Split.id)
-        .correlate(Split)
-        .scalar_subquery()
-        .label("exercise_count")
-    )
-    result = await db.execute(
-        select(
-            Split.id,
-            Split.name,
-            Split.color,
-            func.count(SplitDay.id).label("day_count"),
-            exercise_count_subq,
-        )
-        .outerjoin(SplitDay)
-        .where(or_(Split.user_id == current_user.id, Split.user_id.is_(None)))
-        .group_by(Split.id)
-        .order_by(Split.name)
-    )
-    splits = result.all()
-    return [
-        {
-            "id": s.id,
-            "name": s.name,
-            "color": s.color,
-            "day_count": s.day_count,
-            "exercise_count": s.exercise_count or 0,
-        }
-        for s in splits
-    ]
+    return await split_service.list_splits(db, current_user.id)
 
 
 @router.post("", response_model=SplitResponse, status_code=status.HTTP_201_CREATED)
@@ -121,33 +24,7 @@ async def create_split(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    db_split = Split(name=split_data.name, color=split_data.color, user_id=current_user.id)
-    db.add(db_split)
-    await db.flush()
-
-    all_exercise_ids = [ex.exercise_id for day in split_data.days for ex in day.exercises]
-    await validate_exercise_ids(db, all_exercise_ids, current_user.id)
-
-    for day_order, day_data in enumerate(split_data.days):
-        day = SplitDay(split_id=db_split.id, name=day_data.name, day_order=day_order)
-        db.add(day)
-        await db.flush()
-        for ex_order, ex_data in enumerate(day_data.exercises):
-            db.add(SplitDayExercise(day_id=day.id, exercise_id=ex_data.exercise_id, order=ex_order))
-
-    await db.commit()
-
-    # Reload with relationships
-    result = await db.execute(
-        select(Split)
-        .options(
-            selectinload(Split.days)
-            .selectinload(SplitDay.exercises)
-            .selectinload(SplitDayExercise.exercise)
-        )
-        .where(Split.id == db_split.id)
-    )
-    return _split_to_response(result.scalar_one())
+    return await split_service.create_split(db, current_user.id, data=split_data)
 
 
 @router.get("/{split_id}", response_model=SplitResponse)
@@ -156,23 +33,7 @@ async def get_split(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    result = await db.execute(
-        select(Split)
-        .options(
-            selectinload(Split.days)
-            .selectinload(SplitDay.exercises)
-            .selectinload(SplitDayExercise.exercise)
-        )
-        .where(
-            Split.id == split_id,
-            or_(Split.user_id == current_user.id, Split.user_id.is_(None)),
-        )
-    )
-    split = result.scalar_one_or_none()
-    if not split:
-        raise HTTPException(status_code=404, detail="Split not found")
-
-    return _split_to_response(split)
+    return await split_service.get_split(db, split_id, current_user.id)
 
 
 @router.put("/{split_id}", response_model=SplitResponse)
@@ -182,47 +43,7 @@ async def update_split(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    result = await db.execute(
-        select(Split)
-        .options(selectinload(Split.days).selectinload(SplitDay.exercises))
-        .where(Split.id == split_id, Split.user_id == current_user.id)
-    )
-    split = result.scalar_one_or_none()
-    if not split:
-        raise HTTPException(status_code=404, detail="Split not found")
-
-    split.name = split_data.name
-    split.color = split_data.color
-
-    # Delete all existing days (cascade deletes exercises)
-    for day in split.days:
-        await db.delete(day)
-    await db.flush()
-
-    all_exercise_ids = [ex.exercise_id for day in split_data.days for ex in day.exercises]
-    await validate_exercise_ids(db, all_exercise_ids, current_user.id)
-
-    # Recreate days from payload
-    for day_order, day_data in enumerate(split_data.days):
-        day = SplitDay(split_id=split.id, name=day_data.name, day_order=day_order)
-        db.add(day)
-        await db.flush()
-        for ex_order, ex_data in enumerate(day_data.exercises):
-            db.add(SplitDayExercise(day_id=day.id, exercise_id=ex_data.exercise_id, order=ex_order))
-
-    await db.commit()
-
-    # Reload with relationships
-    result = await db.execute(
-        select(Split)
-        .options(
-            selectinload(Split.days)
-            .selectinload(SplitDay.exercises)
-            .selectinload(SplitDayExercise.exercise)
-        )
-        .where(Split.id == split.id)
-    )
-    return _split_to_response(result.scalar_one())
+    return await split_service.update_split(db, split_id, current_user.id, data=split_data)
 
 
 @router.delete("/{split_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -231,42 +52,4 @@ async def delete_split(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    result = await db.execute(
-        select(Split).where(Split.id == split_id, Split.user_id == current_user.id)
-    )
-    split = result.scalar_one_or_none()
-    if not split:
-        raise HTTPException(status_code=404, detail="Split not found")
-
-    await db.delete(split)
-    await db.commit()
-
-
-# --- Helper Functions ---
-
-
-def _day_to_response(day: SplitDay) -> dict:
-    return {
-        "id": day.id,
-        "name": day.name,
-        "day_order": day.day_order,
-        "exercises": [
-            {
-                "id": ex.id,
-                "exercise_id": ex.exercise_id,
-                "exercise_name": ex.exercise.name,
-                "muscle_group": ex.exercise.muscle_group,
-                "order": ex.order,
-            }
-            for ex in day.exercises
-        ],
-    }
-
-
-def _split_to_response(split: Split) -> dict:
-    return {
-        "id": split.id,
-        "name": split.name,
-        "color": split.color,
-        "days": [_day_to_response(d) for d in split.days],
-    }
+    await split_service.delete_split(db, split_id, current_user.id)

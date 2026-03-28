@@ -1,5 +1,7 @@
 """Shared async DB helpers used by multiple services."""
 
+from typing import Any
+
 from fastapi import HTTPException
 from sqlalchemy import or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -59,3 +61,48 @@ async def get_user_mesocycle(
     if not mesocycle:
         raise HTTPException(status_code=404, detail="Mesocycle not found")
     return mesocycle
+
+
+async def get_visible_entity(
+    db: AsyncSession,
+    model: type,
+    entity_id: str,
+    user_id: str,
+    *,
+    options: list[Any] | None = None,
+) -> Any:
+    """Fetch entity visible to user (owned or system). Raises 404."""
+    query = select(model).where(
+        model.id == entity_id,
+        or_(model.user_id == user_id, model.user_id.is_(None)),
+    )
+    if options:
+        for opt in options:
+            query = query.options(opt)
+    result = await db.execute(query)
+    entity = result.scalar_one_or_none()
+    if not entity:
+        name = model.__tablename__.rstrip("s").title()
+        raise HTTPException(status_code=404, detail=f"{name} not found")
+    return entity
+
+
+async def get_owned_entity(
+    db: AsyncSession,
+    model: type,
+    entity_id: str,
+    user_id: str,
+    *,
+    options: list[Any] | None = None,
+) -> Any:
+    """Fetch entity owned by user (write access). Raises 404."""
+    query = select(model).where(model.id == entity_id, model.user_id == user_id)
+    if options:
+        for opt in options:
+            query = query.options(opt)
+    result = await db.execute(query)
+    entity = result.scalar_one_or_none()
+    if not entity:
+        name = model.__tablename__.rstrip("s").title()
+        raise HTTPException(status_code=404, detail=f"{name} not found")
+    return entity

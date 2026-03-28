@@ -1,0 +1,559 @@
+[
+  {
+    "seed_key": "hero_split",
+    "name": "Hero Split",
+    "color": "#06b6d4",
+    "days": [
+      {
+        "name": "Pull",
+        "day_order": 0,
+        "exercises": [
+          {
+            "seed_key": "lat_pulldown"
+          },
+          {
+            "seed_key": "seated_cable_row"
+          },
+          {
+            "seed_key": "preacher_curl"
+          },
+          {
+            "seed_key": "freemotion_rear_delt_fly"
+          },
+          {
+            "seed_key": "dumbbell_shrug"
+          },
+          {
+            "seed_key": "cable_wrist_curl"
+          }
+        ]
+      },
+      {
+        "name": "Push",
+        "day_order": 1,
+        "exercises": [
+          {
+            "seed_key": "incline_dumbbell_press"
+          },
+          {
+            "seed_key": "dumbbell_bench_press"
+          },
+          {
+            "seed_key": "dumbbell_skull_crusher"
+          },
+          {
+            "seed_key": "overhead_tricep_extension"
+          },
+          {
+            "seed_key": "lateral_raise"
+          },
+          {
+            "seed_key": "dumbbell_front_raise"
+          },
+          {
+            "seed_key": "tricep_pushdown"
+          }
+        ]
+      },
+      {
+        "name": "Legs",
+        "day_order": 2,
+        "exercises": [
+          {
+            "seed_key": "leg_curl"
+          },
+          {
+            "seed_key": "leg_press"
+          },
+          {
+            "seed_key": "bulgarian_split_squat"
+          },
+          {
+            "seed_key": "calf_raise"
+          },
+          {
+            "seed_key": "lateral_raise"
+          },
+          {
+            "seed_key": "tricep_pushdown"
+          }
+        ]
+      },
+      {
+        "name": "Pull",
+        "day_order": 3,
+        "exercises": [
+          {
+            "seed_key": "lat_pulldown"
+          },
+          {
+            "seed_key": "seated_cable_row"
+          },
+          {
+            "seed_key": "lying_dumbbell_curl"
+          },
+          {
+            "seed_key": "freemotion_rear_delt_fly"
+          },
+          {
+            "seed_key": "cable_wrist_curl"
+          },
+          {
+            "seed_key": "reverse_curl"
+          }
+        ]
+      },
+      {
+        "name": "Push",
+        "day_order": 4,
+        "exercises": [
+          {
+            "seed_key": "incline_dumbbell_press"
+          },
+          {
+            "seed_key": "dumbbell_flye"
+          },
+          {
+            "seed_key": "tricep_pushdown"
+          },
+          {
+            "seed_key": "overhead_tricep_extension"
+          },
+          {
+            "seed_key": "lateral_raise"
+          },
+          {
+            "seed_key": "preacher_curl"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "seed_key": "ppl_3day",
+    "name": "Push/Pull/Legs",
+    "color": "#8b5cf6",
+    "days": [
+      {
+        "name": "Push",
+        "day_order": 0,
+        "exercises": [
+          {
+            "seed_key": "incline_dumbbell_press"
+          },
+          {
+            "seed_key": "dumbbell_bench_press"
+          },
+          {
+            "seed_key": "cable_fly"
+          },
+          {
+            "seed_key": "dumbbell_shoulder_press"
+          },
+          {
+            "seed_key": "lateral_raise"
+          },
+          {
+            "seed_key": "tricep_pushdown"
+          },
+          {
+            "seed_key": "overhead_tricep_extension"
+          }
+        ]
+      },
+      {
+        "name": "Pull",
+        "day_order": 1,
+        "exercises": [
+          {
+            "seed_key": "lat_pulldown"
+          },
+          {
+            "seed_key": "seated_cable_row"
+          },
+          {
+            "seed_key": "machine_chest_supported_row"
+          },
+          {
+            "seed_key": "face_pull"
+          },
+          {
+            "seed_key": "preacher_curl"
+          },
+          {
+            "seed_key": "bayesian_curl"
+          },
+          {
+            "seed_key": "dumbbell_shrug"
+          }
+        ]
+      },
+      {
+        "name": "Legs",
+        "day_order": 2,
+        "exercises": [
+          {
+            "seed_key": "leg_press"
+          },
+          {
+            "seed_key": "hack_squat"
+          },
+          {
+            "seed_key": "leg_extension"
+          },
+          {
+            "seed_key": "leg_curl"
+          },
+          {
+            "seed_key": "seated_leg_curl"
+          },
+          {
+            "seed_key": "calf_raise"
+          },
+          {
+            "seed_key": "hip_thrust"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "seed_key": "upper_lower_4day",
+    "name": "Upper/Lower",
+    "color": "#f59e0b",
+    "days": [
+      {
+        "name": "Upper A",
+        "day_order": 0,
+        "exercises": [
+          {
+            "seed_key": "incline_dumbbell_press"
+          },
+          {
+            "seed_key": "cable_fly"
+          },
+          {
+            "seed_key": "lat_pulldown"
+          },
+          {
+            "seed_key": "seated_cable_row"
+          },
+          {
+            "seed_key": "lateral_raise"
+          },
+          {
+            "seed_key": "preacher_curl"
+          },
+          {
+            "seed_key": "tricep_pushdown"
+          }
+        ]
+      },
+      {
+        "name": "Lower A",
+        "day_order": 1,
+        "exercises": [
+          {
+            "seed_key": "leg_press"
+          },
+          {
+            "seed_key": "hack_squat"
+          },
+          {
+            "seed_key": "leg_curl"
+          },
+          {
+            "seed_key": "leg_extension"
+          },
+          {
+            "seed_key": "calf_raise"
+          },
+          {
+            "seed_key": "hip_thrust"
+          }
+        ]
+      },
+      {
+        "name": "Upper B",
+        "day_order": 2,
+        "exercises": [
+          {
+            "seed_key": "dumbbell_bench_press"
+          },
+          {
+            "seed_key": "pec_deck"
+          },
+          {
+            "seed_key": "machine_chest_supported_row"
+          },
+          {
+            "seed_key": "lat_prayer"
+          },
+          {
+            "seed_key": "dumbbell_shoulder_press"
+          },
+          {
+            "seed_key": "bayesian_curl"
+          },
+          {
+            "seed_key": "overhead_tricep_extension"
+          }
+        ]
+      },
+      {
+        "name": "Lower B",
+        "day_order": 3,
+        "exercises": [
+          {
+            "seed_key": "bulgarian_split_squat"
+          },
+          {
+            "seed_key": "leg_press"
+          },
+          {
+            "seed_key": "seated_leg_curl"
+          },
+          {
+            "seed_key": "dumbbell_stiff_leg_deadlift"
+          },
+          {
+            "seed_key": "leg_extension"
+          },
+          {
+            "seed_key": "seated_calf_raise"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "seed_key": "arnold_6day",
+    "name": "Arnold Split",
+    "color": "#ef4444",
+    "days": [
+      {
+        "name": "Chest & Back 1",
+        "day_order": 0,
+        "exercises": [
+          {
+            "seed_key": "incline_dumbbell_press"
+          },
+          {
+            "seed_key": "dumbbell_bench_press"
+          },
+          {
+            "seed_key": "cable_fly"
+          },
+          {
+            "seed_key": "lat_pulldown"
+          },
+          {
+            "seed_key": "seated_cable_row"
+          },
+          {
+            "seed_key": "dumbbell_row"
+          }
+        ]
+      },
+      {
+        "name": "Shoulders & Arms 1",
+        "day_order": 1,
+        "exercises": [
+          {
+            "seed_key": "dumbbell_shoulder_press"
+          },
+          {
+            "seed_key": "lateral_raise"
+          },
+          {
+            "seed_key": "face_pull"
+          },
+          {
+            "seed_key": "preacher_curl"
+          },
+          {
+            "seed_key": "tricep_pushdown"
+          },
+          {
+            "seed_key": "overhead_tricep_extension"
+          }
+        ]
+      },
+      {
+        "name": "Legs 1",
+        "day_order": 2,
+        "exercises": [
+          {
+            "seed_key": "leg_press"
+          },
+          {
+            "seed_key": "hack_squat"
+          },
+          {
+            "seed_key": "leg_curl"
+          },
+          {
+            "seed_key": "leg_extension"
+          },
+          {
+            "seed_key": "calf_raise"
+          },
+          {
+            "seed_key": "hip_thrust"
+          }
+        ]
+      },
+      {
+        "name": "Chest & Back 2",
+        "day_order": 3,
+        "exercises": [
+          {
+            "seed_key": "dumbbell_press_flye"
+          },
+          {
+            "seed_key": "incline_dumbbell_flye"
+          },
+          {
+            "seed_key": "pec_deck"
+          },
+          {
+            "seed_key": "machine_chest_supported_row"
+          },
+          {
+            "seed_key": "lat_prayer"
+          },
+          {
+            "seed_key": "parallel_grip_lat_pulldown"
+          }
+        ]
+      },
+      {
+        "name": "Shoulders & Arms 2",
+        "day_order": 4,
+        "exercises": [
+          {
+            "seed_key": "dumbbell_shoulder_press"
+          },
+          {
+            "seed_key": "cable_lateral_raise"
+          },
+          {
+            "seed_key": "freemotion_rear_delt_fly"
+          },
+          {
+            "seed_key": "incline_dumbbell_curl"
+          },
+          {
+            "seed_key": "bayesian_curl"
+          },
+          {
+            "seed_key": "dumbbell_skull_crusher"
+          }
+        ]
+      },
+      {
+        "name": "Legs 2",
+        "day_order": 5,
+        "exercises": [
+          {
+            "seed_key": "bulgarian_split_squat"
+          },
+          {
+            "seed_key": "leg_press"
+          },
+          {
+            "seed_key": "seated_leg_curl"
+          },
+          {
+            "seed_key": "dumbbell_stiff_leg_deadlift"
+          },
+          {
+            "seed_key": "seated_calf_raise"
+          },
+          {
+            "seed_key": "walking_lunges"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "seed_key": "full_body_3day",
+    "name": "Full Body",
+    "color": "#10b981",
+    "days": [
+      {
+        "name": "Full Body A",
+        "day_order": 0,
+        "exercises": [
+          {
+            "seed_key": "incline_dumbbell_press"
+          },
+          {
+            "seed_key": "lat_pulldown"
+          },
+          {
+            "seed_key": "leg_press"
+          },
+          {
+            "seed_key": "lateral_raise"
+          },
+          {
+            "seed_key": "preacher_curl"
+          },
+          {
+            "seed_key": "leg_curl"
+          }
+        ]
+      },
+      {
+        "name": "Full Body B",
+        "day_order": 1,
+        "exercises": [
+          {
+            "seed_key": "dumbbell_bench_press"
+          },
+          {
+            "seed_key": "seated_cable_row"
+          },
+          {
+            "seed_key": "hack_squat"
+          },
+          {
+            "seed_key": "face_pull"
+          },
+          {
+            "seed_key": "tricep_pushdown"
+          },
+          {
+            "seed_key": "calf_raise"
+          }
+        ]
+      },
+      {
+        "name": "Full Body C",
+        "day_order": 2,
+        "exercises": [
+          {
+            "seed_key": "cable_fly"
+          },
+          {
+            "seed_key": "machine_chest_supported_row"
+          },
+          {
+            "seed_key": "bulgarian_split_squat"
+          },
+          {
+            "seed_key": "dumbbell_shoulder_press"
+          },
+          {
+            "seed_key": "bayesian_curl"
+          },
+          {
+            "seed_key": "leg_extension"
+          }
+        ]
+      }
+    ]
+  }
+]
