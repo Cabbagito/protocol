@@ -4,6 +4,8 @@ import { clsx } from 'clsx'
 import { HomeIcon, DumbbellIcon } from './Icons'
 import { useKeyboardVisible } from '../lib/useKeyboardVisible'
 
+const NAV_HEIGHT = 'calc(48px + env(safe-area-inset-bottom))'
+
 const navItems = [
   { path: '/', label: 'Home', icon: HomeIcon },
   { path: '/workout', label: 'Workout', icon: DumbbellIcon },
@@ -19,18 +21,23 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   }, [pathname])
 
   return (
-    <div className="fixed inset-0 flex flex-col" style={{ paddingTop: 'env(safe-area-inset-top)', background: 'var(--base)' }}>
+    <>
       <main
         ref={mainRef}
         data-main-scroll
-        className="flex-1 overflow-y-auto overscroll-y-contain max-w-lg mx-auto w-full"
+        className="overflow-y-auto overscroll-y-contain max-w-lg mx-auto w-full"
+        style={{
+          paddingTop: 'env(safe-area-inset-top)',
+          paddingBottom: keyboardOpen ? undefined : NAV_HEIGHT,
+          height: '100%',
+        }}
       >
         {children}
       </main>
 
       {!keyboardOpen && (
       <nav
-        className="flex-shrink-0 pb-[env(safe-area-inset-bottom)]"
+        className="fixed bottom-0 left-0 right-0 pb-[env(safe-area-inset-bottom)]"
         style={{
           background: 'var(--nav-bg)',
           backdropFilter: 'blur(12px)',
@@ -61,6 +68,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         </div>
       </nav>
       )}
-    </div>
+    </>
   )
 }
