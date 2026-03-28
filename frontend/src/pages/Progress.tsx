@@ -12,6 +12,7 @@ import {
 } from 'recharts'
 import AppHeader from '../components/AppHeader'
 import PageLoader from '../components/PageLoader'
+import MetricToggle from '../components/MetricToggle'
 import { formatWeight } from '../lib/weightUtils'
 import { useExercises, useActiveMesocycle, useWorkoutHistory, useExerciseProgress } from '../api/hooks'
 
@@ -138,21 +139,7 @@ export default function Progress() {
         </select>
 
         {/* Strength / Stimulus toggle */}
-        <div className="flex rounded-lg overflow-hidden mb-4" style={{ border: '1px solid var(--border)' }}>
-          {(['strength', 'stimulus'] as const).map((m) => (
-            <button
-              key={m}
-              onClick={() => setMetric(m)}
-              className="flex-1 py-1.5 text-[12px] font-medium transition-colors"
-              style={{
-                background: metric === m ? 'rgba(139,92,246,0.15)' : 'transparent',
-                color: metric === m ? '#a78bfa' : 'var(--text-m)',
-              }}
-            >
-              {m === 'strength' ? 'Strength' : 'Stimulus'}
-            </button>
-          ))}
-        </div>
+        <MetricToggle value={metric} onChange={setMetric} className="mb-4" />
 
         {progressData.length === 0 ? (
           <div className="text-[var(--text-m)] text-sm text-center py-8">

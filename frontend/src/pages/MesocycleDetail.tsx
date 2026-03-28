@@ -5,178 +5,13 @@ import AppHeader from '../components/AppHeader'
 import PageLoader from '../components/PageLoader'
 import MesoGrid from '../components/MesoGrid'
 import ProgressBar from '../components/ProgressBar'
+import MesoSparkline from '../components/MesoSparkline'
 import { useMesocycle, useWorkoutHistory, useUpdateMesocycle, useDeleteMesocycle } from '../api/hooks'
 import { getMuscleColor } from '../lib/muscleColors'
+import { getExerciseProgression, getVolumeByMuscleGroup, formatVolume } from '../lib/mesoAnalysis'
+import MetricToggle from '../components/MetricToggle'
 import { getCurrentPosition } from '../lib/mesoUtils'
-import type { Mesocycle, MesoSession } from '../types'
-
-// --- Helper functions ---
-
-interface ExerciseProgression {
-  exerciseId: string
-  exerciseName: string
-  muscleGroup: string
-  strengthData: { weekNum: number; value: number }[]
-  currentE1rm: number
-  e1rmDelta: number
-  stimulusData: { weekNum: number; value: number }[]
-  currentVolume: number
-  volumeDelta: number
-}
-
-function formatVolume(v: number): string {
-  if (v >= 10000) return `${(v / 1000).toFixed(0)}k`
-  if (v >= 1000) return `${(v / 1000).toFixed(1)}k`
-  return v.toFixed(0)
-}
-
-function getExerciseProgression(mesocycle: Mesocycle): ExerciseProgression[] {
-  const exerciseMap = new Map<string, {
-    name: string
-    muscleGroup: string
-    weekE1rm: Map<number, number>
-    weekVolume: Map<number, number>
-  }>()
-
-  for (const week of mesocycle.structure.weeks) {
-    for (const session of week.sessions) {
-      for (const exercise of session.exercises) {
-        if (!exerciseMap.has(exercise.exercise_id)) {
-          exerciseMap.set(exercise.exercise_id, {
-            name: exercise.exercise_name,
-            muscleGroup: exercise.muscle_group,
-            weekE1rm: new Map(),
-            weekVolume: new Map(),
-          })
-        }
-        const entry = exerciseMap.get(exercise.exercise_id)!
-        for (const set of exercise.sets) {
-          if (set.logged && set.weight !== null && set.weight > 0) {
-            const e1rm = set.weight * (1 + (set.reps ?? 0) / 30)
-            const existing = entry.weekE1rm.get(week.week_number) ?? 0
-            if (e1rm > existing) {
-              entry.weekE1rm.set(week.week_number, e1rm)
-            }
-            const vol = set.weight * (set.reps ?? 0)
-            entry.weekVolume.set(week.week_number, (entry.weekVolume.get(week.week_number) ?? 0) + vol)
-          }
-        }
-      }
-    }
-  }
-
-  const results: ExerciseProgression[] = []
-  for (const [id, entry] of exerciseMap) {
-    if (entry.weekE1rm.size < 2) continue
-    const sortedE1rm = [...entry.weekE1rm.entries()].sort((a, b) => a[0] - b[0])
-    const strengthData = sortedE1rm.map(([weekNum, value]) => ({ weekNum, value: Math.round(value * 10) / 10 }))
-    const sortedVol = [...entry.weekVolume.entries()].sort((a, b) => a[0] - b[0])
-    const stimulusData = sortedVol.map(([weekNum, value]) => ({ weekNum, value: Math.round(value) }))
-
-    const firstE1rm = strengthData[0]!.value
-    const lastE1rm = strengthData[strengthData.length - 1]!.value
-    const firstVol = stimulusData[0]!.value
-    const lastVol = stimulusData[stimulusData.length - 1]!.value
-
-    results.push({
-      exerciseId: id,
-      exerciseName: entry.name,
-      muscleGroup: entry.muscleGroup,
-      strengthData,
-      currentE1rm: lastE1rm,
-      e1rmDelta: lastE1rm - firstE1rm,
-      stimulusData,
-      currentVolume: lastVol,
-      volumeDelta: lastVol - firstVol,
-    })
-  }
-
-  results.sort((a, b) => b.strengthData.length - a.strengthData.length || b.e1rmDelta - a.e1rmDelta)
-  return results.slice(0, 6)
-}
-
-interface VolumeEntry {
-  muscleGroup: string
-  sets: number
-}
-
-function getVolumeByMuscleGroup(mesocycle: Mesocycle): VolumeEntry[] {
-  const volumeMap = new Map<string, number>()
-
-  // Use week 1 since the template is the same each week
-  const week = mesocycle.structure.weeks[0]
-  if (!week) return []
-
-  for (const session of week.sessions) {
-    for (const exercise of session.exercises) {
-      const mg = exercise.muscle_group
-      volumeMap.set(mg, (volumeMap.get(mg) ?? 0) + exercise.sets.length)
-    }
-  }
-
-  return [...volumeMap.entries()]
-    .map(([muscleGroup, sets]) => ({ muscleGroup, sets }))
-    .sort((a, b) => b.sets - a.sets)
-    .slice(0, 6)
-}
-
-// --- Sparkline component ---
-
-function MesoSparkline({ weights, color }: { weights: number[]; color: string }) {
-  if (weights.length < 2) return null
-
-  const W = 136
-  const H = 40
-  const padX = 4
-  const padTop = 6
-  const padBot = 4
-  const plotW = W - padX * 2
-  const plotH = H - padTop - padBot
-
-  const min = Math.min(...weights)
-  const max = Math.max(...weights)
-  const range = max - min || 1
-
-  const points = weights.map((w, i) => {
-    const x = padX + (i / (weights.length - 1)) * plotW
-    const y = padTop + plotH - ((w - min) / range) * plotH
-    return { x, y }
-  })
-
-  const polyline = points.map((p) => `${p.x},${p.y}`).join(' ')
-  const last = points[points.length - 1]!
-
-  // Gradient fill path: line path + close along bottom
-  const fillPath =
-    `M${points[0]!.x},${points[0]!.y} ` +
-    points.slice(1).map((p) => `L${p.x},${p.y}`).join(' ') +
-    ` L${last.x},${H - padBot} L${points[0]!.x},${H - padBot} Z`
-
-  const gradId = `grad-${Math.random().toString(36).slice(2, 8)}`
-
-  return (
-    <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`}>
-      <defs>
-        <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={color} stopOpacity={0.15} />
-          <stop offset="100%" stopColor={color} stopOpacity={0} />
-        </linearGradient>
-      </defs>
-      <path d={fillPath} fill={`url(#${gradId})`} />
-      <polyline
-        fill="none"
-        stroke={color}
-        strokeWidth={1.5}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        points={polyline}
-      />
-      <circle cx={last.x} cy={last.y} r={3} fill={color} />
-    </svg>
-  )
-}
-
-// --- Main component ---
+import type { MesoSession } from '../types'
 
 export default function MesocycleDetail() {
   const toast = useToast()
@@ -375,21 +210,7 @@ export default function MesocycleDetail() {
               >
                 Progression
               </span>
-              <div className="flex rounded-md overflow-hidden" style={{ border: '1px solid var(--border)' }}>
-                {(['strength', 'stimulus'] as const).map((m) => (
-                  <button
-                    key={m}
-                    onClick={() => setProgressionMetric(m)}
-                    className="px-2.5 py-0.5 text-[9px] font-medium transition-colors"
-                    style={{
-                      background: progressionMetric === m ? 'rgba(139,92,246,0.15)' : 'transparent',
-                      color: progressionMetric === m ? '#a78bfa' : 'var(--text-m)',
-                    }}
-                  >
-                    {m === 'strength' ? 'Strength' : 'Stimulus'}
-                  </button>
-                ))}
-              </div>
+              <MetricToggle value={progressionMetric} onChange={setProgressionMetric} size="sm" />
             </div>
             <div
               className="-mx-4 px-4 pb-2 flex gap-2.5 overflow-x-auto"
