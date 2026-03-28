@@ -4,7 +4,7 @@
 
 @layer base {
   html {
-    background: var(--deep);
+    background: var(--base);
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
     overscroll-behavior-y: contain;
