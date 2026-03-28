@@ -6,14 +6,25 @@ import PageLoader from './components/PageLoader'
 import SplashScreen from './components/SplashScreen'
 import { getToken } from './lib/auth'
 
+// Clear all service worker caches and unregister SWs so a reload fetches fresh assets
+async function clearServiceWorkerCaches() {
+  const keys = await caches.keys()
+  await Promise.all(keys.map((key) => caches.delete(key)))
+  const registrations = await navigator.serviceWorker?.getRegistrations()
+  if (registrations) {
+    await Promise.all(registrations.map((r) => r.unregister()))
+  }
+}
+
 // Wrap React.lazy to auto-reload on chunk load errors (stale deploys)
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function lazyWithRetry(importFn: () => Promise<{ default: React.ComponentType<any> }>) {
   return lazy(() =>
-    importFn().catch(() => {
+    importFn().catch(async () => {
       const hasReloaded = sessionStorage.getItem('chunk_reload')
       if (!hasReloaded) {
         sessionStorage.setItem('chunk_reload', '1')
+        await clearServiceWorkerCaches()
         window.location.reload()
         return new Promise(() => {}) // never resolves — page is reloading
       }
@@ -50,7 +61,7 @@ class ChunkErrorBoundary extends Component<{ children: ReactNode }, { hasError: 
           <div className="text-center">
             <p className="text-[var(--text-2)] mb-4">A new version is available.</p>
             <button
-              onClick={() => window.location.reload()}
+              onClick={() => clearServiceWorkerCaches().then(() => window.location.reload())}
               className="btn btn-primary"
             >
               Reload app
