@@ -2,7 +2,7 @@ import { useState, useCallback, useRef, useMemo } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useToast } from '../components/Toast'
-import { useMesocycle, useUpdateExerciseNote, useReplaceExercise, queryKeys } from '../api/hooks'
+import { useMesocycle, useUpdateExerciseNote, useReplaceExercise, useAddExercise, useReorderExercise, useRemoveExerciseFromSession, queryKeys } from '../api/hooks'
 import { api } from '../api/client'
 import PageLoader from '../components/PageLoader'
 import AppHeader from '../components/AppHeader'
@@ -44,11 +44,15 @@ export default function Workout() {
   const { data: mesocycle } = useMesocycle(mesocycleId!)
   const updateExerciseNote = useUpdateExerciseNote()
   const replaceExercise = useReplaceExercise()
+  const addExerciseMutation = useAddExercise()
+  const reorderExerciseMutation = useReorderExercise()
+  const removeExerciseMutation = useRemoveExerciseFromSession()
 
   // UI state
   const [headerExpanded, setHeaderExpanded] = useState(false)
   const [noteModal, setNoteModal] = useState<{ exerciseId: string; exerciseName: string } | null>(null)
   const [replaceModal, setReplaceModal] = useState<{ exerciseId: string; exerciseIndex: number; muscleGroup: string; equipmentType: string } | null>(null)
+  const [addExerciseOpen, setAddExerciseOpen] = useState(false)
 
   // Refs shared across hooks
   const modifyingRef = useRef(false)
@@ -73,7 +77,7 @@ export default function Workout() {
     sets, setSets, initialized, skippedExercises, skippedSets, setSkippedSets,
     removedExercises, exerciseNotes, setExerciseNotes,
     updateSet, completeSet, uncompleteSet,
-    toggleSkip, toggleSkipSet, removeExercise, resetForReplace,
+    toggleSkip, toggleSkipSet, resetForReplace,
   } = useWorkoutState({
     template, isFutureSession, weekParam, sessionParam,
     animPhaseRef, setAnimKey, bumpAnim, prevCompletedRef, prevSkippedRef,
@@ -130,6 +134,68 @@ export default function Workout() {
       toast.showError('Failed to replace exercise')
     }
   }, [mesocycleId, template, replaceModal, replaceExercise, queryClient, toast, resetForReplace])
+
+  // Add exercise handler
+  const handleAddExercise = useCallback(async (newExerciseId: string) => {
+    if (!mesocycleId || !template) return
+    try {
+      await addExerciseMutation.mutateAsync({
+        mesocycle_id: mesocycleId,
+        week_index: template.week_index,
+        session_index: template.session_index,
+        exercise_id: newExerciseId,
+        apply_to_future: true,
+      })
+      setAddExerciseOpen(false)
+      resetForReplace()
+      queryClient.removeQueries({ queryKey: ['workouts', 'template'] })
+      queryClient.invalidateQueries({ queryKey: queryKeys.workouts.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.mesocycles.all })
+    } catch {
+      toast.showError('Failed to add exercise')
+    }
+  }, [mesocycleId, template, addExerciseMutation, queryClient, toast, resetForReplace])
+
+  // Reorder exercise handler
+  const handleReorderExercise = useCallback(async (exerciseIndex: number, direction: 'up' | 'down') => {
+    if (!mesocycleId || !template) return
+    try {
+      await reorderExerciseMutation.mutateAsync({
+        mesocycle_id: mesocycleId,
+        week_index: template.week_index,
+        session_index: template.session_index,
+        exercise_index: exerciseIndex,
+        direction,
+        apply_to_future: true,
+      })
+      resetForReplace()
+      queryClient.removeQueries({ queryKey: ['workouts', 'template'] })
+      queryClient.invalidateQueries({ queryKey: queryKeys.workouts.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.mesocycles.all })
+    } catch {
+      toast.showError('Failed to reorder exercise')
+    }
+  }, [mesocycleId, template, reorderExerciseMutation, queryClient, toast, resetForReplace])
+
+  // Remove exercise handler (persisted to backend)
+  const handleRemoveExercise = useCallback(async (exerciseId: string) => {
+    if (!mesocycleId || !template) return
+    try {
+      await removeExerciseMutation.mutateAsync({
+        mesocycle_id: mesocycleId,
+        week_index: template.week_index,
+        session_index: template.session_index,
+        exercise_id: exerciseId,
+        apply_to_future: true,
+      })
+      resetForReplace()
+      queryClient.removeQueries({ queryKey: ['workouts', 'template'] })
+      queryClient.invalidateQueries({ queryKey: queryKeys.workouts.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.mesocycles.all })
+    } catch {
+      toast.showError('Failed to remove exercise')
+    }
+  }, [mesocycleId, template, removeExerciseMutation, queryClient, toast, resetForReplace])
 
   // Current workout info for "go to current" CTA
   const currentWorkoutInfo = useMemo(() => {
@@ -227,7 +293,7 @@ export default function Workout() {
 
       {/* Exercise Cards */}
       <div className="px-2.5 pt-4 flex flex-col gap-3" style={isFutureSession ? { opacity: 0.5, pointerEvents: 'none' } : undefined}>
-        {exerciseGroups.map((ex) => (
+        {exerciseGroups.map((ex, idx) => (
           <ExerciseCard
             key={ex.exercise_id}
             exercise={ex}
@@ -247,7 +313,9 @@ export default function Workout() {
             onAddSet={handleAddSet}
             onRemoveSet={handleRemoveSet}
             onToggleSkipSet={toggleSkipSet}
-            onRemoveExercise={() => removeExercise(ex.exercise_id)}
+            onRemoveExercise={() => handleRemoveExercise(ex.exercise_id)}
+            onMoveUp={idx > 0 ? () => handleReorderExercise(ex.exerciseIndex, 'up') : null}
+            onMoveDown={idx < exerciseGroups.length - 1 ? () => handleReorderExercise(ex.exerciseIndex, 'down') : null}
             skippedSets={skippedSets}
             animPhaseRef={animPhaseRef}
             onClearAnim={clearAnim}
@@ -255,6 +323,23 @@ export default function Workout() {
           />
         ))}
       </div>
+
+      {/* Add Exercise button */}
+      {!isFutureSession && (
+        <div className="px-2.5 pt-3">
+          <button
+            onClick={() => setAddExerciseOpen(true)}
+            className="w-full py-3 text-center text-sm font-medium rounded-xl active:bg-white/5"
+            style={{
+              color: 'var(--text-m)',
+              border: '1.5px dashed rgba(255,255,255,0.1)',
+              background: 'rgba(255,255,255,0.02)',
+            }}
+          >
+            + Add Exercise
+          </button>
+        </div>
+      )}
 
       {/* Context-aware sticky button */}
       {!keyboardOpen && !isFutureSession && completedSets === totalSets && totalSets > 0 && (
@@ -309,11 +394,22 @@ export default function Workout() {
       {/* Replace Exercise Picker */}
       {replaceModal && (
         <ExercisePicker
+          mode="replace"
           initialMuscleGroup={replaceModal.muscleGroup}
           initialEquipmentType={replaceModal.equipmentType}
           currentExerciseId={replaceModal.exerciseId}
           onSelect={handleReplace}
           onClose={() => setReplaceModal(null)}
+        />
+      )}
+
+      {/* Add Exercise Picker */}
+      {addExerciseOpen && (
+        <ExercisePicker
+          mode="add"
+          excludeExerciseIds={exerciseGroups.map(ex => ex.exercise_id)}
+          onSelect={(exerciseId) => handleAddExercise(exerciseId)}
+          onClose={() => setAddExerciseOpen(false)}
         />
       )}
     </div>
