@@ -283,3 +283,55 @@ export function useReplaceExercise() {
     },
   })
 }
+
+export function useAddExercise() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (data: {
+      mesocycle_id: string
+      week_index: number
+      session_index: number
+      exercise_id: string
+      apply_to_future: boolean
+    }) => api.post('/workouts/add-exercise', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.workouts.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.mesocycles.all })
+    },
+  })
+}
+
+export function useReorderExercise() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (data: {
+      mesocycle_id: string
+      week_index: number
+      session_index: number
+      exercise_index: number
+      direction: 'up' | 'down'
+      apply_to_future: boolean
+    }) => api.post('/workouts/reorder-exercise', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.workouts.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.mesocycles.all })
+    },
+  })
+}
+
+export function useRemoveExerciseFromSession() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (data: {
+      mesocycle_id: string
+      week_index: number
+      session_index: number
+      exercise_id: string
+      apply_to_future: boolean
+    }) => api.post('/workouts/remove-exercise', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.workouts.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.mesocycles.all })
+    },
+  })
+}

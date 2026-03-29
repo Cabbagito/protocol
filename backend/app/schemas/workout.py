@@ -79,3 +79,28 @@ class ReplaceExerciseRequest(BaseModel):
     old_exercise_id: str
     new_exercise_id: str
     apply_to_future: bool = True
+
+
+class AddExerciseRequest(BaseModel):
+    mesocycle_id: str
+    week_index: int = Field(ge=0)
+    session_index: int = Field(ge=0)
+    exercise_id: str
+    apply_to_future: bool = True
+
+
+class ReorderExerciseRequest(BaseModel):
+    mesocycle_id: str
+    week_index: int = Field(ge=0)
+    session_index: int = Field(ge=0)
+    exercise_index: int = Field(ge=0)
+    direction: str = Field(pattern=r"^(up|down)$")
+    apply_to_future: bool = True
+
+
+class RemoveExerciseRequest(BaseModel):
+    mesocycle_id: str
+    week_index: int = Field(ge=0)
+    session_index: int = Field(ge=0)
+    exercise_id: str
+    apply_to_future: bool = True

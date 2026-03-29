@@ -4,18 +4,20 @@ import { MuscleGroupChips, EquipmentTypeToggles } from '../../components/Exercis
 import { getMuscleColor } from '../../lib/muscleColors'
 
 interface ExercisePickerProps {
-  initialMuscleGroup: string
-  initialEquipmentType: string
-  currentExerciseId: string
+  mode?: 'replace' | 'add'
+  initialMuscleGroup?: string
+  initialEquipmentType?: string
+  currentExerciseId?: string
+  excludeExerciseIds?: string[]
   onSelect: (exerciseId: string, applyToFuture: boolean) => void
   onClose: () => void
 }
 
-export function ExercisePicker({ initialMuscleGroup, initialEquipmentType, currentExerciseId, onSelect, onClose }: ExercisePickerProps) {
+export function ExercisePicker({ mode = 'replace', initialMuscleGroup, initialEquipmentType, currentExerciseId, excludeExerciseIds, onSelect, onClose }: ExercisePickerProps) {
   const { data: exercises } = useExercises()
   const [search, setSearch] = useState('')
-  const [selectedMuscleGroups, setSelectedMuscleGroups] = useState<Set<string>>(() => new Set([initialMuscleGroup]))
-  const [selectedEquipmentTypes, setSelectedEquipmentTypes] = useState<Set<string>>(() => new Set([initialEquipmentType]))
+  const [selectedMuscleGroups, setSelectedMuscleGroups] = useState<Set<string>>(() => initialMuscleGroup ? new Set([initialMuscleGroup]) : new Set())
+  const [selectedEquipmentTypes, setSelectedEquipmentTypes] = useState<Set<string>>(() => initialEquipmentType ? new Set([initialEquipmentType]) : new Set())
   const [applyToFuture, setApplyToFuture] = useState(true)
   const [selectedId, setSelectedId] = useState<string | null>(null)
 
@@ -37,16 +39,22 @@ export function ExercisePicker({ initialMuscleGroup, initialEquipmentType, curre
     })
   }
 
+  const excludeIds = useMemo(() => {
+    const ids = new Set(excludeExerciseIds ?? [])
+    if (currentExerciseId) ids.add(currentExerciseId)
+    return ids
+  }, [currentExerciseId, excludeExerciseIds])
+
   const filtered = useMemo(() => {
     if (!exercises) return []
     return exercises.filter(ex => {
-      if (ex.id === currentExerciseId) return false
+      if (excludeIds.has(ex.id)) return false
       if (search && !ex.name.toLowerCase().includes(search.toLowerCase())) return false
       if (selectedMuscleGroups.size > 0 && !selectedMuscleGroups.has(ex.muscle_group)) return false
       if (selectedEquipmentTypes.size > 0 && !selectedEquipmentTypes.has(ex.equipment_type)) return false
       return true
     })
-  }, [exercises, currentExerciseId, search, selectedMuscleGroups, selectedEquipmentTypes])
+  }, [exercises, excludeIds, search, selectedMuscleGroups, selectedEquipmentTypes])
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col" style={{ background: 'var(--base)' }}>
@@ -57,7 +65,7 @@ export function ExercisePicker({ initialMuscleGroup, initialEquipmentType, curre
             <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
           </svg>
         </button>
-        <h2 className="text-lg font-semibold text-[var(--text-1)] flex-1">Replace Exercise</h2>
+        <h2 className="text-lg font-semibold text-[var(--text-1)] flex-1">{mode === 'add' ? 'Add Exercise' : 'Replace Exercise'}</h2>
       </div>
 
       {/* Search */}
@@ -131,29 +139,31 @@ export function ExercisePicker({ initialMuscleGroup, initialEquipmentType, curre
 
       {/* Footer */}
       <div className="px-4 pt-3 pb-safe" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-        <label className="flex items-center gap-2.5 mb-3 cursor-pointer">
-          <button
-            onClick={() => setApplyToFuture(!applyToFuture)}
-            className="w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0"
-            style={{
-              borderColor: applyToFuture ? 'var(--accent)' : 'var(--border)',
-              background: applyToFuture ? 'var(--accent)' : undefined,
-            }}
-          >
-            {applyToFuture && (
-              <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
-              </svg>
-            )}
-          </button>
-          <span className="text-sm text-[var(--text-2)]">Apply to rest of mesocycle</span>
-        </label>
+        {mode === 'replace' && (
+          <label className="flex items-center gap-2.5 mb-3 cursor-pointer">
+            <button
+              onClick={() => setApplyToFuture(!applyToFuture)}
+              className="w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0"
+              style={{
+                borderColor: applyToFuture ? 'var(--accent)' : 'var(--border)',
+                background: applyToFuture ? 'var(--accent)' : undefined,
+              }}
+            >
+              {applyToFuture && (
+                <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                </svg>
+              )}
+            </button>
+            <span className="text-sm text-[var(--text-2)]">Apply to rest of mesocycle</span>
+          </label>
+        )}
         <button
-          onClick={() => selectedId && onSelect(selectedId, applyToFuture)}
+          onClick={() => selectedId && onSelect(selectedId, mode === 'add' ? true : applyToFuture)}
           disabled={!selectedId}
           className="btn btn-primary w-full disabled:opacity-40"
         >
-          Replace
+          {mode === 'add' ? 'Add' : 'Replace'}
         </button>
       </div>
     </div>

@@ -4,7 +4,7 @@ import BottomSheet from '../../components/BottomSheet'
 import { getMuscleColor } from '../../lib/muscleColors'
 import { formatHistorySummary } from '../../lib/exerciseHistory'
 import type { ExerciseSessionHistory } from '../../lib/exerciseHistory'
-import { EllipsisIcon, ReplaceIcon, SkipIcon, UnskipIcon, NoteIcon, TrashIcon, HistoryIcon } from './icons'
+import { EllipsisIcon, ReplaceIcon, SkipIcon, UnskipIcon, NoteIcon, TrashIcon, HistoryIcon, MoveUpIcon, MoveDownIcon } from './icons'
 import { ExerciseHistoryPopup } from './ExerciseHistoryPopup'
 import { SetRow } from './SetRow'
 import type { WorkingSet, MesoExercise } from '../../types'
@@ -28,13 +28,15 @@ export interface ExerciseCardProps {
   onRemoveSet: (exerciseId: string, setNum: number) => void
   onToggleSkipSet: (exerciseId: string, setNum: number) => void
   onRemoveExercise: () => void
+  onMoveUp: (() => void) | null
+  onMoveDown: (() => void) | null
   skippedSets: Set<string>
   animPhaseRef: React.MutableRefObject<Map<string, 'saving' | 'success'>>
   onClearAnim: (exerciseId: string, setNum: number) => void
   history: ExerciseSessionHistory[]
 }
 
-export function ExerciseCard({ exercise, sets, allSets, targetRir, onUpdateSet, onCompleteSet, onUncompleteSet, locked, skipped, onToggleSkip, note, onEditNote, onReplace, onAddSet, onRemoveSet, onToggleSkipSet, onRemoveExercise, skippedSets, animPhaseRef, onClearAnim, history }: ExerciseCardProps) {
+export function ExerciseCard({ exercise, sets, allSets, targetRir, onUpdateSet, onCompleteSet, onUncompleteSet, locked, skipped, onToggleSkip, note, onEditNote, onReplace, onAddSet, onRemoveSet, onToggleSkipSet, onRemoveExercise, onMoveUp, onMoveDown, skippedSets, animPhaseRef, onClearAnim, history }: ExerciseCardProps) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
   const color = getMuscleColor(exercise.muscle_group)
@@ -186,6 +188,16 @@ export function ExerciseCard({ exercise, sets, allSets, targetRir, onUpdateSet, 
           icon: <ReplaceIcon />,
           onClick: onReplace,
         },
+        ...(onMoveUp ? [{
+          label: 'Move Up',
+          icon: <MoveUpIcon />,
+          onClick: onMoveUp,
+        }] : []),
+        ...(onMoveDown ? [{
+          label: 'Move Down',
+          icon: <MoveDownIcon />,
+          onClick: onMoveDown,
+        }] : []),
         {
           label: skipped ? 'Unskip Exercise' : 'Skip Exercise',
           icon: skipped ? <UnskipIcon /> : <SkipIcon />,

@@ -5,9 +5,12 @@ from app.core.database import get_db
 from app.core.security import get_current_user
 from app.models.user import User
 from app.schemas.workout import (
+    AddExerciseRequest,
     ExerciseNoteRequest,
     LogSetsRequest,
     ModifySetsRequest,
+    RemoveExerciseRequest,
+    ReorderExerciseRequest,
     ReplaceExerciseRequest,
 )
 from app.services import workout_service
@@ -96,6 +99,58 @@ async def replace_exercise(
         exercise_index=data.exercise_index,
         old_exercise_id=data.old_exercise_id,
         new_exercise_id=data.new_exercise_id,
+        apply_to_future=data.apply_to_future,
+    )
+
+
+@router.post("/add-exercise")
+async def add_exercise(
+    data: AddExerciseRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return await workout_service.add_exercise(
+        db,
+        current_user.id,
+        mesocycle_id=data.mesocycle_id,
+        week_index=data.week_index,
+        session_index=data.session_index,
+        exercise_id=data.exercise_id,
+        apply_to_future=data.apply_to_future,
+    )
+
+
+@router.post("/reorder-exercise")
+async def reorder_exercise(
+    data: ReorderExerciseRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return await workout_service.reorder_exercise(
+        db,
+        current_user.id,
+        mesocycle_id=data.mesocycle_id,
+        week_index=data.week_index,
+        session_index=data.session_index,
+        exercise_index=data.exercise_index,
+        direction=data.direction,
+        apply_to_future=data.apply_to_future,
+    )
+
+
+@router.post("/remove-exercise")
+async def remove_exercise(
+    data: RemoveExerciseRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return await workout_service.remove_exercise(
+        db,
+        current_user.id,
+        mesocycle_id=data.mesocycle_id,
+        week_index=data.week_index,
+        session_index=data.session_index,
+        exercise_id=data.exercise_id,
         apply_to_future=data.apply_to_future,
     )
 
