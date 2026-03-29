@@ -105,7 +105,7 @@ export function useWorkoutAutoSave({
                   const logged = completed.find(
                     c => c.exercise_id === ex.exercise_id && c.set_num === s.set_num
                   )!
-                  return { ...s, weight: logged.weight, reps: logged.reps, rir: logged.rir, logged: true, set_type: logged.set_type ?? s.set_type }
+                  return { ...s, weight: logged.weight, reps: logged.reps, rir: logged.rir, logged: true, set_type: logged.set_type ?? s.set_type, suggested_weight: null }
                 }
                 return { ...s, logged: false }
               }),
