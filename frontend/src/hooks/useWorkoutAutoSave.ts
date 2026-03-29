@@ -147,19 +147,48 @@ export function useWorkoutAutoSave({
     })
   }, [mesocycleId, template, logSets, toast, isFutureSession, skippedExercises, skippedSets, bumpAnim, queryClient, animPhaseRef, modifyingRef])
 
-  // Trigger auto-save when completed count or skipped state changes
+  // Fingerprint of completed sets' data (weight, reps, rir, set_type)
+  const prevFingerprintRef = useRef<string>('')
+  const debouncedSaveRef = useRef<ReturnType<typeof setTimeout>>()
+
+  // Trigger auto-save when completed count or skipped state changes (immediate)
   useEffect(() => {
     if (!initialized) return
     const count = sets.filter(s => s.completed).length
     const skippedKey = [...skippedExercises].sort().join(',')
     const skippedSetsKey = [...skippedSets].sort().join(',')
     if (count !== prevCompletedRef.current || skippedKey !== prevSkippedRef.current || skippedSetsKey !== prevSkippedSetsRef.current) {
+      // Cancel any pending debounced save — this immediate save supersedes it
+      if (debouncedSaveRef.current) clearTimeout(debouncedSaveRef.current)
       triggerAutoSave(sets, skippedExercises, skippedSets)
+      // Update fingerprint to match current state so debounce doesn't re-fire
+      const completed = sets.filter(s => s.completed)
+      prevFingerprintRef.current = completed.map(s => `${s.exercise_id}:${s.set_num}:${s.weight}:${s.reps}:${s.rir}:${s.set_type}`).join('|')
     }
     prevCompletedRef.current = count
     prevSkippedRef.current = skippedKey
     prevSkippedSetsRef.current = skippedSetsKey
   }, [sets, initialized, triggerAutoSave, skippedExercises, skippedSets, prevCompletedRef, prevSkippedRef])
+
+  // Debounced auto-save for weight/reps/rir edits on already-completed sets
+  useEffect(() => {
+    if (!initialized) return
+    const completed = sets.filter(s => s.completed)
+    if (completed.length === 0) return
+    const fingerprint = completed.map(s => `${s.exercise_id}:${s.set_num}:${s.weight}:${s.reps}:${s.rir}:${s.set_type}`).join('|')
+    if (fingerprint === prevFingerprintRef.current) return
+    prevFingerprintRef.current = fingerprint
+
+    // Debounce: save 2s after the last edit
+    if (debouncedSaveRef.current) clearTimeout(debouncedSaveRef.current)
+    debouncedSaveRef.current = setTimeout(() => {
+      triggerAutoSave(sets, skippedExercises, skippedSets)
+    }, 2000)
+
+    return () => {
+      if (debouncedSaveRef.current) clearTimeout(debouncedSaveRef.current)
+    }
+  }, [sets, initialized, triggerAutoSave, skippedExercises, skippedSets])
 
   return { isSaving, setIsSaving, pendingSavesRef, logSets }
 }
