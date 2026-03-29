@@ -143,6 +143,7 @@ export default function WorkoutDetail() {
     <div>
       <AppHeader
         title={workout.session_name}
+        subtitle={`Week ${workout.week_number}${workout.date ? ` · ${new Date(workout.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}` : ''}`}
         breadcrumb={{ label: 'Mesocycle', to: `/mesocycles/${mesocycleId}` }}
         rightContent={rir !== null ? <RirBadge rir={rir} /> : undefined}
       />

@@ -71,7 +71,7 @@ export default function AppHeader({
             <h1 className="text-[15px] font-semibold truncate text-[var(--text-1)]">
               {title}
             </h1>
-            {breadcrumb ? (
+            {breadcrumb && (
               <Link
                 to={breadcrumb.to}
                 className="text-[11px] text-[var(--text-m)] hover:text-[var(--text-2)] transition-colors"
@@ -79,9 +79,10 @@ export default function AppHeader({
               >
                 &#8249; {breadcrumb.label}
               </Link>
-            ) : subtitle ? (
+            )}
+            {subtitle && (
               <p className="text-[11px] text-[var(--text-m)]">{subtitle}</p>
-            ) : null}
+            )}
           </div>
 
           {rightContent && (
