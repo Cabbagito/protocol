@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.attributes import flag_modified
 
 from app.domain.progression import compute_progression, get_current_position, handle_weight_bump
+from app.domain.propagation import find_exercise_in_session, iter_future_sessions
 from app.models.base import generate_uuid
 from app.models.exercise import Exercise
 from app.models.exercise_performance import ExercisePerformance
@@ -368,17 +369,12 @@ async def replace_exercise(
 
     # If apply_to_future, replace in all subsequent weeks
     if apply_to_future:
-        weeks = structure.get("weeks", [])
-        for wi in range(week_index + 1, len(weeks)):
-            future_week = weeks[wi]
-            for future_session in future_week.get("sessions", []):
-                if (
-                    future_session["session_name"] == session_name
-                    and future_session["day_order"] == day_order
-                ):
-                    for fe in future_session.get("exercises", []):
-                        if fe["exercise_id"] == old_exercise_id:
-                            replace_in_exercise(fe)
+        for _wi, future_session in iter_future_sessions(
+            structure, week_index, session_name, day_order
+        ):
+            fe = find_exercise_in_session(future_session, old_exercise_id)
+            if fe:
+                replace_in_exercise(fe)
 
     flag_modified(mesocycle, "structure")
     await db.commit()
@@ -417,7 +413,6 @@ async def modify_sets(
         raise HTTPException(status_code=404, detail="Exercise not found in session")
 
     sets_list = target_exercise.get("sets", [])
-    weeks = structure.get("weeks", [])
 
     if action == "add":
         # Clone from last set
@@ -437,32 +432,29 @@ async def modify_sets(
         new_set_count = len(sets_list)
 
         # Propagate to future weeks
-        for wi in range(week_index + 1, len(weeks)):
-            future_week = weeks[wi]
-            for future_session in future_week.get("sessions", []):
-                if (
-                    future_session["session_name"] == session_name
-                    and future_session["day_order"] == day_order
-                ):
-                    for fe in future_session.get("exercises", []):
-                        if fe["exercise_id"] == exercise_id:
-                            future_sets = fe.get("sets", [])
-                            has_logged = any(s.get("logged") for s in future_sets)
-                            if not has_logged and len(future_sets) < new_set_count:
-                                last_fs = future_sets[-1] if future_sets else {}
-                                future_sets.append(
-                                    {
-                                        "set_num": len(future_sets) + 1,
-                                        "weight": None,
-                                        "reps": None,
-                                        "target_reps": last_fs.get("target_reps"),
-                                        "suggested_weight": last_fs.get("suggested_weight"),
-                                        "rir": None,
-                                        "logged": False,
-                                        "set_type": None,
-                                    }
-                                )
-                                fe["sets"] = future_sets
+        for _wi, future_session in iter_future_sessions(
+            structure, week_index, session_name, day_order
+        ):
+            fe = find_exercise_in_session(future_session, exercise_id)
+            if not fe:
+                continue
+            future_sets = fe.get("sets", [])
+            has_logged = any(s.get("logged") for s in future_sets)
+            if not has_logged and len(future_sets) < new_set_count:
+                last_fs = future_sets[-1] if future_sets else {}
+                future_sets.append(
+                    {
+                        "set_num": len(future_sets) + 1,
+                        "weight": None,
+                        "reps": None,
+                        "target_reps": last_fs.get("target_reps"),
+                        "suggested_weight": last_fs.get("suggested_weight"),
+                        "rir": None,
+                        "logged": False,
+                        "set_type": None,
+                    }
+                )
+                fe["sets"] = future_sets
 
     elif action == "remove":
         if set_num is None:
@@ -491,23 +483,20 @@ async def modify_sets(
         new_set_count = len(sets_list)
 
         # Propagate to future weeks
-        for wi in range(week_index + 1, len(weeks)):
-            future_week = weeks[wi]
-            for future_session in future_week.get("sessions", []):
-                if (
-                    future_session["session_name"] == session_name
-                    and future_session["day_order"] == day_order
-                ):
-                    for fe in future_session.get("exercises", []):
-                        if fe["exercise_id"] == exercise_id:
-                            future_sets = fe.get("sets", [])
-                            has_logged = any(s.get("logged") for s in future_sets)
-                            if not has_logged and len(future_sets) > new_set_count:
-                                # Remove last unlogged set
-                                future_sets.pop()
-                                for i, s in enumerate(future_sets):
-                                    s["set_num"] = i + 1
-                                fe["sets"] = future_sets
+        for _wi, future_session in iter_future_sessions(
+            structure, week_index, session_name, day_order
+        ):
+            fe = find_exercise_in_session(future_session, exercise_id)
+            if not fe:
+                continue
+            future_sets = fe.get("sets", [])
+            has_logged = any(s.get("logged") for s in future_sets)
+            if not has_logged and len(future_sets) > new_set_count:
+                # Remove last unlogged set
+                future_sets.pop()
+                for i, s in enumerate(future_sets):
+                    s["set_num"] = i + 1
+                fe["sets"] = future_sets
 
     flag_modified(mesocycle, "structure")
     await db.commit()
@@ -588,22 +577,12 @@ async def add_exercise(
     session.setdefault("exercises", []).append(new_entry)
 
     if apply_to_future:
-        weeks = structure.get("weeks", [])
-        for wi in range(week_index + 1, len(weeks)):
-            future_week = weeks[wi]
-            for future_session in future_week.get("sessions", []):
-                if (
-                    future_session["session_name"] == session_name
-                    and future_session["day_order"] == day_order
-                ):
-                    # Don't add if exercise already exists in this session
-                    existing_ids = {
-                        e["exercise_id"] for e in future_session.get("exercises", [])
-                    }
-                    if exercise_id not in existing_ids:
-                        future_session.setdefault("exercises", []).append(
-                            build_exercise_entry()
-                        )
+        for _wi, future_session in iter_future_sessions(
+            structure, week_index, session_name, day_order
+        ):
+            existing_ids = {e["exercise_id"] for e in future_session.get("exercises", [])}
+            if exercise_id not in existing_ids:
+                future_session.setdefault("exercises", []).append(build_exercise_entry())
 
     flag_modified(mesocycle, "structure")
     await db.commit()
@@ -649,25 +628,19 @@ async def reorder_exercise(
     if apply_to_future:
         session_name = session["session_name"]
         day_order = session["day_order"]
-        weeks = structure.get("weeks", [])
-        for wi in range(week_index + 1, len(weeks)):
-            future_week = weeks[wi]
-            for future_session in future_week.get("sessions", []):
-                if (
-                    future_session["session_name"] == session_name
-                    and future_session["day_order"] == day_order
-                ):
-                    fex = future_session.get("exercises", [])
-                    # Find the two exercises by ID and swap them
-                    idx_a = None
-                    idx_b = None
-                    for i, e in enumerate(fex):
-                        if e["exercise_id"] == moving_id:
-                            idx_a = i
-                        elif e["exercise_id"] == swapping_id:
-                            idx_b = i
-                    if idx_a is not None and idx_b is not None:
-                        fex[idx_a], fex[idx_b] = fex[idx_b], fex[idx_a]
+        for _wi, future_session in iter_future_sessions(
+            structure, week_index, session_name, day_order
+        ):
+            fex = future_session.get("exercises", [])
+            idx_a = None
+            idx_b = None
+            for i, e in enumerate(fex):
+                if e["exercise_id"] == moving_id:
+                    idx_a = i
+                elif e["exercise_id"] == swapping_id:
+                    idx_b = i
+            if idx_a is not None and idx_b is not None:
+                fex[idx_a], fex[idx_b] = fex[idx_b], fex[idx_a]
 
     flag_modified(mesocycle, "structure")
     await db.commit()
@@ -700,27 +673,18 @@ async def remove_exercise(
     if apply_to_future:
         session_name = session["session_name"]
         day_order = session["day_order"]
-        weeks = structure.get("weeks", [])
-        for wi in range(week_index + 1, len(weeks)):
-            future_week = weeks[wi]
-            for future_session in future_week.get("sessions", []):
-                if (
-                    future_session["session_name"] == session_name
-                    and future_session["day_order"] == day_order
-                ):
-                    fex = future_session.get("exercises", [])
-                    # Only remove if the exercise has no logged sets
-                    target = next(
-                        (e for e in fex if e["exercise_id"] == exercise_id), None
-                    )
-                    if target:
-                        has_logged = any(
-                            s.get("logged") for s in target.get("sets", [])
-                        )
-                        if not has_logged:
-                            future_session["exercises"] = [
-                                e for e in fex if e["exercise_id"] != exercise_id
-                            ]
+        for _wi, future_session in iter_future_sessions(
+            structure, week_index, session_name, day_order
+        ):
+            target = find_exercise_in_session(future_session, exercise_id)
+            if target:
+                has_logged = any(s.get("logged") for s in target.get("sets", []))
+                if not has_logged:
+                    future_session["exercises"] = [
+                        e
+                        for e in future_session.get("exercises", [])
+                        if e["exercise_id"] != exercise_id
+                    ]
 
     flag_modified(mesocycle, "structure")
     await db.commit()

@@ -7,6 +7,7 @@ and SQLAlchemy model instances used as attribute bags.
 import math
 
 from app.domain.constants import RIR_SCHEMES
+from app.domain.propagation import find_exercise_in_session, iter_future_sessions
 
 
 def calculate_rir_scheme(total_weeks: int) -> list[int]:
@@ -159,26 +160,21 @@ def handle_weight_bump(structure: dict, week_index: int, session_index: int) -> 
         if not logged_sets:
             continue
 
-        for wi in range(week_index + 1, len(weeks)):
-            for future_session in weeks[wi].get("sessions", []):
-                if (
-                    future_session["session_name"] != session_name
-                    or future_session["day_order"] != day_order
-                ):
+        for _wi, future_session in iter_future_sessions(
+            structure, week_index, session_name, day_order
+        ):
+            fe = find_exercise_in_session(future_session, exercise_id)
+            if not fe:
+                continue
+            for fs in fe.get("sets", []):
+                if fs.get("logged"):
                     continue
-                for fe in future_session.get("exercises", []):
-                    if fe["exercise_id"] != exercise_id:
-                        continue
-                    for fs in fe.get("sets", []):
-                        if fs.get("logged"):
-                            continue
-                        # Find matching logged set by set_num
-                        matching = next(
-                            (ls for ls in logged_sets if ls["set_num"] == fs["set_num"]),
-                            None,
-                        )
-                        if matching and matching.get("weight"):
-                            fs["suggested_weight"] = matching["weight"]
+                matching = next(
+                    (ls for ls in logged_sets if ls["set_num"] == fs["set_num"]),
+                    None,
+                )
+                if matching and matching.get("weight"):
+                    fs["suggested_weight"] = matching["weight"]
 
 
 def compute_progression(structure: dict, week_index: int, session_index: int) -> None:
@@ -222,12 +218,7 @@ def compute_progression(structure: dict, week_index: int, session_index: int) ->
 
         exercise_id = exercise["exercise_id"]
 
-        # Find matching exercise in next week
-        next_exercise = None
-        for ne in next_session.get("exercises", []):
-            if ne["exercise_id"] == exercise_id:
-                next_exercise = ne
-                break
+        next_exercise = find_exercise_in_session(next_session, exercise_id)
         if not next_exercise:
             continue
 
