@@ -1,6 +1,7 @@
 import { useCallback } from 'react'
 import { useToast } from '../components/Toast'
 import { useModifySets } from '../api/hooks'
+import { buildWorkingSet } from '../lib/setDefaults'
 import type { WorkingSet, WorkoutTemplate } from '../types'
 
 interface UseSetModificationParams {
@@ -46,16 +47,7 @@ export function useSetModification({
           .forEach(s => localValues.set(s.set_num, s))
         const newSets: WorkingSet[] = result.sets.map(s => {
           const local = !s.logged ? localValues.get(s.set_num) : undefined
-          return {
-            ...s,
-            exercise_id: exerciseId,
-            exercise_name: exerciseName,
-            weight: s.logged ? (s.weight ?? 0) : (local?.weight ?? s.suggested_weight ?? s.weight ?? 0),
-            reps: s.logged ? (s.reps ?? 0) : (local?.reps ?? s.reps ?? 0),
-            rir: s.logged ? s.rir : (local?.rir ?? (template.target_rir >= 0 ? template.target_rir : null)),
-            set_type: s.logged ? s.set_type : (local?.set_type ?? s.set_type),
-            completed: s.logged,
-          }
+          return buildWorkingSet(s, exerciseId, exerciseName, template.target_rir, local)
         })
         // Maintain exercise ordering from template
         const orderedSets: WorkingSet[] = []
@@ -109,16 +101,7 @@ export function useSetModification({
           })
         const newSets: WorkingSet[] = result.sets.map(s => {
           const local = !s.logged ? localValues.get(s.set_num) : undefined
-          return {
-            ...s,
-            exercise_id: exerciseId,
-            exercise_name: exerciseName,
-            weight: s.logged ? (s.weight ?? 0) : (local?.weight ?? s.suggested_weight ?? s.weight ?? 0),
-            reps: s.logged ? (s.reps ?? 0) : (local?.reps ?? s.reps ?? 0),
-            rir: s.logged ? s.rir : (local?.rir ?? (template.target_rir >= 0 ? template.target_rir : null)),
-            set_type: s.logged ? s.set_type : (local?.set_type ?? s.set_type),
-            completed: s.logged,
-          }
+          return buildWorkingSet(s, exerciseId, exerciseName, template.target_rir, local)
         })
         const orderedSets: WorkingSet[] = []
         for (const ex of template.exercises) {

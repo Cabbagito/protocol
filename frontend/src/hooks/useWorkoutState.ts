@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { resolveSetWeight } from '../lib/setDefaults'
 import type { WorkingSet, WorkoutTemplate } from '../types'
 
 interface UseWorkoutStateParams {
@@ -58,7 +59,7 @@ export function useWorkoutState({
             ...s,
             exercise_id: ex.exercise_id,
             exercise_name: ex.exercise_name,
-            weight: s.logged ? (s.weight ?? 0) : (s.suggested_weight ?? s.weight ?? 0),
+            weight: resolveSetWeight(s),
             reps: s.reps ?? 0,
             rir: template.target_rir >= 0 ? template.target_rir : null,
             completed: s.logged,
