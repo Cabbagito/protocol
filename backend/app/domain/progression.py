@@ -20,7 +20,7 @@ def build_mesocycle_structure(
     days,
     exercises_by_id: dict,
     total_weeks: int,
-    target_reps: int = 10,
+    target_reps: int | None = None,
     sets_per_exercise: int = 3,
     exercise_performances: dict | None = None,
 ) -> dict:
@@ -144,7 +144,9 @@ def handle_weight_bump(structure: dict, week_index: int, session_index: int) -> 
                 continue
 
             # Weight was changed — recalculate target_reps via e1RM
-            target = s.get("target_reps", 10)
+            target = s.get("target_reps")
+            if target is None:
+                continue
             e1rm = suggested * (1 + target / 30)
             new_reps = math.floor(30 * (e1rm / actual_weight - 1))
             new_reps = max(new_reps, 5)
@@ -256,10 +258,19 @@ def compute_progression(structure: dict, week_index: int, session_index: int) ->
 
             # Per-set rep progression
             prev_reps = prev_set.get("reps") or 0
-            prev_target = prev_set.get("target_reps", 10)
-            if prev_reps >= prev_target:
-                next_set["target_reps"] = prev_target + 1
+            prev_target = prev_set.get("target_reps")
+
+            if prev_target is None:
+                # First workout — actual reps become the baseline
+                if prev_reps > 0:
+                    next_set["target_reps"] = prev_reps
+            elif prev_reps >= prev_target:
+                # Met/exceeded — average for faster catch-up, minimum +1
+                next_set["target_reps"] = max(
+                    prev_target + 1, math.ceil((prev_target + prev_reps) / 2)
+                )
             else:
+                # Didn't meet — hold target
                 next_set["target_reps"] = prev_target
 
 
