@@ -25,6 +25,7 @@ interface SetRowProps {
 export const SetRow = memo(function SetRow({ set, exercise, allSets, onUpdate, onComplete, onUncomplete, locked, isSkipped, onSkipSet, onRemoveSet, canRemove, animPhase, onClearAnim, strikethrough }: SetRowProps) {
   const [typePopoverOpen, setTypePopoverOpen] = useState(false)
   const [jiggleTarget, setJiggleTarget] = useState<'weight' | 'reps' | null>(null)
+  const [localWeight, setLocalWeight] = useState<string | null>(null)
   const jiggleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const state = getSetState(set)
   const styles = SET_STYLES[state]
@@ -125,8 +126,31 @@ export const SetRow = memo(function SetRow({ set, exercise, allSets, onUpdate, o
           type="text"
           inputMode="decimal"
           pattern="[0-9]*[.,]?[0-9]*"
-          value={isMatchLocked ? (resolvedWeight != null ? formatWeight(resolvedWeight) : set.weight != null ? formatWeight(set.weight) : '') : (set.weight ? formatWeight(set.weight) : '')}
-          onChange={(e) => onUpdate(exercise.exercise_id, set.set_num, 'weight', parseWeight(e.target.value))}
+          value={
+            localWeight != null
+              ? localWeight
+              : isMatchLocked
+                ? (resolvedWeight != null ? formatWeight(resolvedWeight) : set.weight != null ? formatWeight(set.weight) : '')
+                : (set.weight ? formatWeight(set.weight) : '')
+          }
+          onChange={(e) => {
+            const raw = e.target.value
+            if (/^[0-9]*[.,]?[0-9]*$/.test(raw)) {
+              setLocalWeight(raw)
+            }
+          }}
+          onFocus={() => {
+            const current = isMatchLocked
+              ? (resolvedWeight != null ? formatWeight(resolvedWeight) : set.weight != null ? formatWeight(set.weight) : '')
+              : (set.weight ? formatWeight(set.weight) : '')
+            setLocalWeight(current)
+          }}
+          onBlur={() => {
+            if (localWeight != null) {
+              onUpdate(exercise.exercise_id, set.set_num, 'weight', parseWeight(localWeight))
+            }
+            setLocalWeight(null)
+          }}
           readOnly={set.completed || locked || isMatchLocked || isSkipped}
           className="set-input"
           style={{
@@ -213,16 +237,18 @@ export const SetRow = memo(function SetRow({ set, exercise, allSets, onUpdate, o
             <button
               onClick={() => {
                 const effectiveWeight = isMatchLocked ? (resolvedWeight ?? set.weight ?? 0) : (set.weight ?? 0)
-                const effectiveReps = set.reps ?? 0
+                const effectiveReps = set.reps ?? resolvedTargetReps ?? 0
                 if (effectiveWeight > 0 && (isMatchLocked || effectiveReps > 0)) {
                   if (isMatchLocked) {
                     onUpdate(exercise.exercise_id, set.set_num, 'weight', effectiveWeight)
                     onUpdate(exercise.exercise_id, set.set_num, 'reps', resolvedTargetReps ?? 0)
+                  } else if (!set.reps && resolvedTargetReps) {
+                    onUpdate(exercise.exercise_id, set.set_num, 'reps', resolvedTargetReps)
                   }
                   onComplete(exercise.exercise_id, set.set_num)
                 }
               }}
-              disabled={isMatchLocked ? !mmRefLogged : (!(set.weight ?? 0) || !(set.reps ?? 0))}
+              disabled={isMatchLocked ? !mmRefLogged : (!(set.weight ?? 0) || !(set.reps ?? resolvedTargetReps ?? 0))}
               className="w-9 h-9 rounded-lg border-2 flex items-center justify-center check-pop disabled:opacity-30 disabled:cursor-not-allowed"
               style={{ borderColor: isMatchLocked ? 'rgba(251,191,36,0.3)' : 'var(--border)' }}
             />
