@@ -30,39 +30,43 @@ export default function BottomSheet({ open, onClose, title, actions }: BottomShe
   if (!open) return null
 
   return (
-    <div className="fixed inset-0 z-50" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center px-4" onClick={onClose}>
       {/* Backdrop */}
       <div
         className="absolute inset-0"
-        style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(2px)' }}
+        style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(2px)' }}
       />
 
-      {/* Sheet */}
+      {/* Popup */}
       <div
         ref={sheetRef}
-        className="absolute bottom-0 left-0 right-0 rounded-t-2xl pb-safe slide-up"
+        className="relative w-full max-w-sm rounded-2xl flex flex-col slide-up"
         style={{
           background: 'var(--card)',
           border: '1px solid rgba(255,255,255,0.06)',
-          borderBottom: 'none',
+          boxShadow: '0 24px 48px rgba(0,0,0,0.6)',
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Handle */}
-        <div className="flex justify-center pt-3 pb-2">
-          <div
-            className="w-9 h-1 rounded-full"
-            style={{ background: 'rgba(255,255,255,0.15)' }}
-          />
-        </div>
-
-        {title && (
-          <div className="px-5 pb-2">
+        {/* Header */}
+        <div className="px-5 pt-4 pb-2 flex items-center justify-between">
+          {title && (
             <span className="text-xs font-medium uppercase tracking-wider text-[var(--text-m)]">
               {title}
             </span>
-          </div>
-        )}
+          )}
+          {!title && <span />}
+          <button
+            onClick={onClose}
+            className="w-7 h-7 flex items-center justify-center rounded-full"
+            style={{ background: 'rgba(255,255,255,0.08)' }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
 
         {/* Actions */}
         <div className="px-3 pb-4">
