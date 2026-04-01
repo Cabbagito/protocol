@@ -20,6 +20,13 @@ class SkippedSetInfo(BaseModel):
     set_num: int
 
 
+class DraftSetData(BaseModel):
+    exercise_id: str
+    set_num: int = Field(ge=1)
+    weight: float | None = None
+    reps: int | None = None
+
+
 class LogSetsRequest(BaseModel):
     mesocycle_id: str
     week_index: int = Field(ge=0)
@@ -28,6 +35,7 @@ class LogSetsRequest(BaseModel):
     notes: str | None = None
     exercise_updates: list[ExerciseUpdate] | None = None
     skipped_sets: list[SkippedSetInfo] | None = None
+    draft_sets: list[DraftSetData] | None = None
     complete: bool = False
 
 

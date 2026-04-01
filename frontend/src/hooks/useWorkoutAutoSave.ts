@@ -45,6 +45,7 @@ export function useWorkoutAutoSave({
     const skipped = currentSkipped ?? skippedExercises
     const skipSets = currentSkippedSets ?? skippedSets
     const completed = currentSets.filter(s => s.completed && !skipped.has(s.exercise_id))
+    const uncompleted = currentSets.filter(s => !s.completed && !skipped.has(s.exercise_id) && !skipSets.has(`${s.exercise_id}:${s.set_num}`))
 
     // Build exercise updates for skipped state
     const exerciseUpdates = template.exercises.map(ex => ({
@@ -81,10 +82,19 @@ export function useWorkoutAutoSave({
       notes: null,
       exercise_updates: exerciseUpdates,
       skipped_sets: skippedSetsPayload.length > 0 ? skippedSetsPayload : null,
+      draft_sets: uncompleted.length > 0 ? uncompleted.map(s => ({
+        exercise_id: s.exercise_id,
+        set_num: s.set_num,
+        weight: s.weight,
+        reps: s.reps,
+      })) : null,
     }).then(() => {
       // Update cached templates so navigating away and back shows correct logged state
       const loggedKeys = new Set(
         completed.map(s => `${s.exercise_id}:${s.set_num}`)
+      )
+      const draftMap = new Map(
+        uncompleted.map(s => [`${s.exercise_id}:${s.set_num}`, s])
       )
       const skippedIds = new Set(
         exerciseUpdates.filter(eu => eu.skipped).map(eu => eu.exercise_id)
@@ -106,6 +116,10 @@ export function useWorkoutAutoSave({
                     c => c.exercise_id === ex.exercise_id && c.set_num === s.set_num
                   )!
                   return { ...s, weight: logged.weight, reps: logged.reps, rir: logged.rir, logged: true, set_type: logged.set_type ?? s.set_type }
+                }
+                const draft = draftMap.get(key)
+                if (draft) {
+                  return { ...s, weight: draft.weight, reps: draft.reps, logged: false }
                 }
                 return { ...s, logged: false }
               }),
@@ -162,20 +176,17 @@ export function useWorkoutAutoSave({
       if (debouncedSaveRef.current) clearTimeout(debouncedSaveRef.current)
       triggerAutoSave(sets, skippedExercises, skippedSets)
       // Update fingerprint to match current state so debounce doesn't re-fire
-      const completed = sets.filter(s => s.completed)
-      prevFingerprintRef.current = completed.map(s => `${s.exercise_id}:${s.set_num}:${s.weight}:${s.reps}:${s.rir}:${s.set_type}`).join('|')
+      prevFingerprintRef.current = sets.map(s => `${s.exercise_id}:${s.set_num}:${s.weight}:${s.reps}:${s.rir}:${s.set_type}:${s.completed}`).join('|')
     }
     prevCompletedRef.current = count
     prevSkippedRef.current = skippedKey
     prevSkippedSetsRef.current = skippedSetsKey
   }, [sets, initialized, triggerAutoSave, skippedExercises, skippedSets, prevCompletedRef, prevSkippedRef])
 
-  // Debounced auto-save for weight/reps/rir edits on already-completed sets
+  // Debounced auto-save for weight/reps/rir edits on any sets
   useEffect(() => {
     if (!initialized) return
-    const completed = sets.filter(s => s.completed)
-    if (completed.length === 0) return
-    const fingerprint = completed.map(s => `${s.exercise_id}:${s.set_num}:${s.weight}:${s.reps}:${s.rir}:${s.set_type}`).join('|')
+    const fingerprint = sets.map(s => `${s.exercise_id}:${s.set_num}:${s.weight}:${s.reps}:${s.rir}:${s.set_type}:${s.completed}`).join('|')
     if (fingerprint === prevFingerprintRef.current) return
     prevFingerprintRef.current = fingerprint
 
