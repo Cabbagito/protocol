@@ -69,6 +69,7 @@ async def log_sets(
     notes: str | None,
     exercise_updates: list | None,
     skipped_sets: list | None,
+    draft_sets: list | None,
     complete: bool,
 ) -> dict:
     """Log sets into the mesocycle structure."""
@@ -100,6 +101,12 @@ async def log_sets(
     if skipped_sets:
         skipped_set_keys = {(s.exercise_id, s.set_num) for s in skipped_sets}
 
+    # Build draft sets lookup (unlogged sets with edited reps/weight)
+    draft_map: dict[tuple[str, int], object] = {}
+    if draft_sets:
+        for d in draft_sets:
+            draft_map[(d.exercise_id, d.set_num)] = d
+
     # Apply logged data to the structure (and un-log sets not in payload)
     for exercise in session.get("exercises", []):
         for set_data in exercise.get("sets", []):
@@ -114,6 +121,12 @@ async def log_sets(
                     set_data["set_type"] = log.set_type
             else:
                 set_data["logged"] = False
+                draft = draft_map.get(key)
+                if draft:
+                    if draft.weight is not None:
+                        set_data["weight"] = draft.weight
+                    if draft.reps is not None:
+                        set_data["reps"] = draft.reps
             set_data["skipped"] = key in skipped_set_keys
 
     # Only compute progression on explicit end-of-workout

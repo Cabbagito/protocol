@@ -56,6 +56,7 @@ async def log_sets(
         notes=data.notes,
         exercise_updates=data.exercise_updates,
         skipped_sets=data.skipped_sets,
+        draft_sets=data.draft_sets,
         complete=data.complete,
     )
 
