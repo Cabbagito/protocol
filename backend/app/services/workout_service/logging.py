@@ -29,7 +29,7 @@ async def update_exercise_performances(db: AsyncSession, user_id: str, session: 
         # Use reps from the heaviest set so weight and reps stay paired
         best_set = max(logged_sets, key=lambda s: s.get("weight") or 0)
         working_weight = best_set.get("weight") or 0
-        working_reps = best_set.get("reps") or best_set.get("target_reps") or None
+        working_reps = best_set.get("reps") or None
         num_sets = len(logged_sets)
 
         if working_weight == 0:

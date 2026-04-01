@@ -57,9 +57,15 @@ export const SetRow = memo(function SetRow({ set, exercise, allSets, onUpdate, o
   }, [setType, allSets, set.set_num, exercise.exercise_id])
 
   const resolvedTargetReps = useMemo(() => {
-    if (!mmRef) return set.target_reps
-    return mmRef.completed ? (mmRef.reps ?? set.target_reps) : set.target_reps
-  }, [mmRef, set.target_reps])
+    let baseTarget = set.target_reps
+    // Recalculate target_reps when weight differs from suggested (e1RM equivalence)
+    if (baseTarget && set.suggested_weight && set.weight && set.weight > 0 && set.weight !== set.suggested_weight) {
+      const e1rm = set.suggested_weight * (1 + baseTarget / 30)
+      baseTarget = Math.max(Math.floor(30 * (e1rm / set.weight - 1)), 5)
+    }
+    if (!mmRef) return baseTarget
+    return mmRef.completed ? (mmRef.reps ?? baseTarget) : baseTarget
+  }, [mmRef, set.target_reps, set.suggested_weight, set.weight])
 
   const resolvedWeight = useMemo(() => {
     if (!mmRef) return null
@@ -237,7 +243,7 @@ export const SetRow = memo(function SetRow({ set, exercise, allSets, onUpdate, o
             <button
               onClick={() => {
                 const effectiveWeight = isMatchLocked ? (resolvedWeight ?? set.weight ?? 0) : (set.weight ?? 0)
-                const effectiveReps = set.reps ?? resolvedTargetReps ?? 0
+                const effectiveReps = set.reps || resolvedTargetReps || 0
                 if (effectiveWeight > 0 && (isMatchLocked || effectiveReps > 0)) {
                   if (isMatchLocked) {
                     onUpdate(exercise.exercise_id, set.set_num, 'weight', effectiveWeight)
@@ -248,7 +254,7 @@ export const SetRow = memo(function SetRow({ set, exercise, allSets, onUpdate, o
                   onComplete(exercise.exercise_id, set.set_num)
                 }
               }}
-              disabled={isMatchLocked ? !mmRefLogged : (!(set.weight ?? 0) || !(set.reps ?? resolvedTargetReps ?? 0))}
+              disabled={isMatchLocked ? !mmRefLogged : (!(set.weight ?? 0) || !(set.reps || resolvedTargetReps || 0))}
               className="w-9 h-9 rounded-lg border-2 flex items-center justify-center check-pop disabled:opacity-30 disabled:cursor-not-allowed"
               style={{ borderColor: isMatchLocked ? 'rgba(251,191,36,0.3)' : 'var(--border)' }}
             />
