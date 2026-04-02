@@ -329,7 +329,7 @@ export default function Workout() {
 
       {/* Add Exercise button */}
       {!isFutureSession && (
-        <div className="px-2.5 pt-3">
+        <div className="px-2.5 pt-3 pb-3">
           <button
             onClick={() => setAddExerciseOpen(true)}
             className="w-full py-3 text-center text-sm font-medium rounded-xl active:bg-white/5"
