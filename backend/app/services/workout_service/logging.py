@@ -125,6 +125,10 @@ async def log_sets(
                 if draft:
                     if draft.weight is not None:
                         set_data["weight"] = draft.weight
+                        # Also update suggested_weight so the draft value
+                        # takes priority when the frontend re-fetches
+                        # (resolveSetWeight checks suggested_weight before weight)
+                        set_data["suggested_weight"] = draft.weight
                     if draft.reps is not None:
                         set_data["reps"] = draft.reps
             set_data["skipped"] = key in skipped_set_keys
