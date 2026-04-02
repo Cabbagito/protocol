@@ -123,7 +123,7 @@ export default function MesoGrid({ mesocycle, compact = false, viewingWeek, view
   const gridContent = (
     <div
       className="overflow-x-auto"
-      style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+      style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', paddingBottom: 4 }}
     >
       <div
         className="meso-grid-scroll"
