@@ -35,7 +35,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
       {!keyboardOpen && (
       <nav
-        className="fixed bottom-0 left-0 right-0 pb-[env(safe-area-inset-bottom)]"
+        className="fixed bottom-0 left-0 right-0 z-[101] pb-[env(safe-area-inset-bottom)]"
         style={{
           background: 'var(--nav-bg)',
           backdropFilter: 'blur(12px)',
