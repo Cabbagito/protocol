@@ -39,7 +39,7 @@ function formatDate(date: string | null): string | null {
 
 export function ExerciseHistoryPopup({ exerciseName, muscleGroup, equipmentType, history, onClose }: ExerciseHistoryPopupProps) {
   return (
-    <div className="fixed inset-0 z-[101] flex items-center justify-center px-4" onClick={onClose}>
+    <div className="fixed inset-0 z-[102] flex items-center justify-center px-4" onClick={onClose}>
       <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(2px)' }} />
       <div
         className="relative w-full max-w-sm rounded-2xl flex flex-col slide-up"
