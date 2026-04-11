@@ -16,7 +16,7 @@ export function NoteModal({ exerciseName, initialNote, onSave, onClose }: NoteMo
   }, [])
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center" onClick={onClose}>
+    <div className="fixed inset-0 z-[101] flex items-end justify-center" onClick={onClose}>
       <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(2px)' }} />
       <div
         className="relative w-full rounded-t-2xl pb-safe slide-up"

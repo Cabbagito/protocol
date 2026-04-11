@@ -57,7 +57,7 @@ export function ExercisePicker({ mode = 'replace', initialMuscleGroup, initialEq
   }, [exercises, excludeIds, search, selectedMuscleGroups, selectedEquipmentTypes])
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col" style={{ background: 'var(--base)' }}>
+    <div className="fixed inset-0 z-[101] flex flex-col" style={{ background: 'var(--base)' }}>
       {/* Header */}
       <div className="flex items-center gap-3 px-4 pt-4 pb-3">
         <button onClick={onClose} className="text-[var(--text-2)] p-1">
