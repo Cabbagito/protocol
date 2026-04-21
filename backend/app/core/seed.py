@@ -9,6 +9,8 @@ from sqlalchemy.orm import selectinload
 
 from app.domain.progression import build_mesocycle_structure, compute_progression
 from app.models.exercise import Exercise
+from app.models.food_item import FoodItem
+from app.models.food_log import FoodLog
 from app.models.mesocycle import Mesocycle
 from app.models.split import Split, SplitDay, SplitDayExercise
 from app.models.user import User
@@ -24,6 +26,7 @@ def _load_json(filename: str) -> list | dict:
 
 COMMON_EXERCISES: list[dict] = _load_json("exercises.json")
 DEFAULT_SPLITS: list[dict] = _load_json("splits.json")
+COMMON_FOODS: list[dict] = _load_json("foods.json")
 _DEMO_WEIGHTS: dict[str, float] = _load_json("demo_weights.json")
 
 # Alias used by seed_demo_mesocycle to look up the Hero Split
@@ -75,6 +78,53 @@ async def seed_exercises(session: AsyncSession) -> int:
             logger.info("Seeded %d new exercises", added)
         if updated:
             logger.info("Updated %d existing exercises", updated)
+
+    return added + updated
+
+
+_FOOD_FIELDS = (
+    "name",
+    "brand",
+    "kcal_per_100g",
+    "protein_per_100g",
+    "carbs_per_100g",
+    "fat_per_100g",
+    "default_serving_g",
+)
+
+
+async def seed_foods(session: AsyncSession) -> int:
+    """Seed food items using upsert-by-seed_key. Returns count added/updated."""
+    result = await session.execute(select(FoodItem))
+    existing = result.scalars().all()
+    by_seed_key = {f.seed_key: f for f in existing if f.seed_key}
+
+    added = 0
+    updated = 0
+
+    for row in COMMON_FOODS:
+        sk = row["seed_key"]
+        values = {field: row.get(field) for field in _FOOD_FIELDS}
+
+        if sk in by_seed_key:
+            existing_food = by_seed_key[sk]
+            changed = False
+            for field, value in values.items():
+                if getattr(existing_food, field) != value:
+                    setattr(existing_food, field, value)
+                    changed = True
+            if changed:
+                updated += 1
+        else:
+            session.add(FoodItem(seed_key=sk, **values))
+            added += 1
+
+    if added > 0 or updated > 0:
+        await session.commit()
+        if added:
+            logger.info("Seeded %d new foods", added)
+        if updated:
+            logger.info("Updated %d existing foods", updated)
 
     return added + updated
 
@@ -252,6 +302,18 @@ async def ensure_admin_user(session: AsyncSession) -> None:
     # Assign all orphan mesocycles to admin
     await session.execute(
         update(Mesocycle).where(Mesocycle.user_id.is_(None)).values(user_id=admin.id)
+    )
+
+    # Assign orphan non-seed food items to admin
+    await session.execute(
+        update(FoodItem)
+        .where(FoodItem.seed_key.is_(None), FoodItem.user_id.is_(None))
+        .values(user_id=admin.id)
+    )
+
+    # Assign orphan food logs to admin (user_id is NOT NULL, but kept for parity)
+    await session.execute(
+        update(FoodLog).where(FoodLog.user_id.is_(None)).values(user_id=admin.id)
     )
 
     await session.commit()

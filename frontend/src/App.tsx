@@ -39,6 +39,7 @@ sessionStorage.removeItem('chunk_reload')
 
 const Login = lazyWithRetry(() => import('./pages/Login'))
 const Dashboard = lazyWithRetry(() => import('./pages/Dashboard'))
+const Diet = lazyWithRetry(() => import('./pages/Diet'))
 const Exercises = lazyWithRetry(() => import('./pages/Exercises'))
 const Splits = lazyWithRetry(() => import('./pages/Splits'))
 const SplitEditor = lazyWithRetry(() => import('./pages/SplitEditor'))
@@ -120,6 +121,7 @@ export default function App() {
                     <Suspense fallback={<PageLoader className="min-h-[60vh]" />}>
                       <Routes>
                         <Route path="/" element={<Dashboard />} />
+                        <Route path="/diet" element={<Diet />} />
                         <Route path="/exercises" element={<Exercises />} />
                         <Route path="/splits" element={<Splits />} />
                         <Route path="/splits/new" element={<SplitEditor />} />

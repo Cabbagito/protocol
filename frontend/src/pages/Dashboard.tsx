@@ -9,6 +9,7 @@ import {
   TrendingUpIcon,
   GearIcon,
   ChevronRightIcon,
+  AppleIcon,
 } from '../components/Icons'
 import AppHeader from '../components/AppHeader'
 import PageLoader from '../components/PageLoader'
@@ -26,6 +27,7 @@ const quickAccessItems = [
   { path: '/mesocycles', label: 'Mesocycles', icon: ChartIcon, color: 'var(--accent-l)', bgColor: 'rgba(var(--accent-rgb), 0.1)' },
   { path: '/splits', label: 'Splits', icon: CalendarIcon, color: '#a855f7', bgColor: 'rgba(168,85,247,0.1)' },
   { path: '/exercises', label: 'Exercises', icon: DumbbellIcon, color: '#22c55e', bgColor: 'rgba(34,197,94,0.1)' },
+  { path: '/diet', label: 'Diet', icon: AppleIcon, color: '#ef4444', bgColor: 'rgba(239,68,68,0.1)' },
   { path: '/progress', label: 'Progress', icon: TrendingUpIcon, color: '#f97316', bgColor: 'rgba(249,115,22,0.1)' },
 ]
 

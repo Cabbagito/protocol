@@ -1,11 +1,12 @@
 import { Link, useLocation } from 'react-router-dom'
 import { useEffect, useRef } from 'react'
 import { clsx } from 'clsx'
-import { HomeIcon, DumbbellIcon } from './Icons'
+import { HomeIcon, DumbbellIcon, AppleIcon } from './Icons'
 import { useKeyboardVisible } from '../lib/useKeyboardVisible'
 
 const navItems = [
   { path: '/', label: 'Home', icon: HomeIcon },
+  { path: '/diet', label: 'Diet', icon: AppleIcon },
   { path: '/workout', label: 'Workout', icon: DumbbellIcon },
 ]
 

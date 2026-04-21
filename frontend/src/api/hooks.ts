@@ -11,6 +11,10 @@ import type {
   WorkoutHistoryItem,
   WorkoutDetailResponse,
   ProgressEntry,
+  FoodItem,
+  FoodLog,
+  FoodLogCreate,
+  DailyLog,
 } from '../types'
 
 // --- Query Keys ---
@@ -37,6 +41,14 @@ export const queryKeys = {
     detail: (mesocycleId: string, weekIndex: number, sessionIndex: number) =>
       ['workouts', 'detail', mesocycleId, weekIndex, sessionIndex] as const,
     progress: (exerciseId: string) => ['workouts', 'progress', exerciseId] as const,
+  },
+  foods: {
+    all: ['foods'] as const,
+    search: (q: string) => ['foods', 'search', q] as const,
+  },
+  foodLogs: {
+    all: ['food-logs'] as const,
+    day: (date: string) => ['food-logs', date] as const,
   },
 }
 
@@ -333,6 +345,64 @@ export function useRemoveExerciseFromSession() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.workouts.all })
       queryClient.invalidateQueries({ queryKey: queryKeys.mesocycles.all })
+    },
+  })
+}
+
+// --- Diet Hooks ---
+
+export function useFoods(q: string) {
+  return useQuery({
+    queryKey: queryKeys.foods.search(q),
+    queryFn: () =>
+      api.get<FoodItem[]>(`/foods${q ? `?q=${encodeURIComponent(q)}` : ''}`),
+    staleTime: 1000 * 60 * 5,
+  })
+}
+
+export function useCreateFood() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (data: {
+      name: string
+      brand?: string | null
+      kcal_per_100g: number
+      protein_per_100g: number
+      carbs_per_100g: number
+      fat_per_100g: number
+      default_serving_g?: number | null
+    }) => api.post<FoodItem>('/foods', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.foods.all })
+    },
+  })
+}
+
+export function useDailyLog(date: string) {
+  return useQuery({
+    queryKey: queryKeys.foodLogs.day(date),
+    queryFn: () => api.get<DailyLog>(`/food-logs?date=${date}`),
+    staleTime: 0,
+  })
+}
+
+export function useCreateLog() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (data: FoodLogCreate) => api.post<FoodLog>('/food-logs', data),
+    onSuccess: (_result, variables) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.foodLogs.day(variables.logged_on) })
+    },
+  })
+}
+
+export function useDeleteLog() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id }: { id: string; date: string }) =>
+      api.delete(`/food-logs/${id}`),
+    onSuccess: (_result, variables) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.foodLogs.day(variables.date) })
     },
   })
 }

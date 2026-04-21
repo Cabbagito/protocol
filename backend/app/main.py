@@ -7,9 +7,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.core.database import async_session, engine
 from app.core.migrations import check_needs_stamp, run_stamp, run_upgrade
-from app.core.seed import ensure_admin_user, seed_default_splits, seed_exercises
+from app.core.seed import ensure_admin_user, seed_default_splits, seed_exercises, seed_foods
 from app.models import base  # noqa: F401 - Import to register models
-from app.routers import auth, exercises, health, mesocycles, splits, workouts
+from app.routers import auth, exercises, food, health, mesocycles, splits, workouts
 
 
 @asynccontextmanager
@@ -25,6 +25,10 @@ async def lifespan(app: FastAPI):
         count = await seed_exercises(session)
         if count > 0:
             print(f"Seeded/updated {count} exercises")
+
+        food_count = await seed_foods(session)
+        if food_count > 0:
+            print(f"Seeded/updated {food_count} foods")
 
         added = await seed_default_splits(session)
         if added > 0:
@@ -59,3 +63,4 @@ app.include_router(exercises.router, prefix="/api/exercises", tags=["exercises"]
 app.include_router(splits.router, prefix="/api/splits", tags=["splits"])
 app.include_router(mesocycles.router, prefix="/api/mesocycles", tags=["mesocycles"])
 app.include_router(workouts.router, prefix="/api/workouts", tags=["workouts"])
+app.include_router(food.router, prefix="/api", tags=["diet"])

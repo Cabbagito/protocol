@@ -123,6 +123,15 @@ export function TrendingUpIcon({ className }: IconProps) {
   )
 }
 
+export function AppleIcon({ className }: IconProps) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 7.5c-1.5-2-4-3-6-1.5-2.3 1.7-2.3 5.4-0.7 8.4 1.2 2.3 3.2 4.8 5.1 5.6.8.3 1.6.3 2.4 0 1.9-.8 3.9-3.3 5.1-5.6 1.6-3 1.6-6.7-.7-8.4-2-1.5-4.5-.5-5.2 1.5Z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 7.5V5.5c0-1.1.9-2 2-2h1" />
+    </svg>
+  )
+}
+
 export function TrashIcon({ className }: IconProps) {
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">

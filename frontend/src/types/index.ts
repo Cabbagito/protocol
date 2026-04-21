@@ -175,3 +175,53 @@ export interface ProgressEntry {
   total_sets: number
   volume: number
 }
+
+// Diet
+
+export interface FoodItem {
+  id: string
+  name: string
+  brand: string | null
+  kcal_per_100g: number
+  protein_per_100g: number
+  carbs_per_100g: number
+  fat_per_100g: number
+  default_serving_g: number | null
+}
+
+export interface FoodLog {
+  id: string
+  logged_on: string
+  food_item_id: string | null
+  name: string
+  quantity_g: number | null
+  kcal: number
+  protein_g: number
+  carbs_g: number
+  fat_g: number
+  created_at: string
+}
+
+export interface FoodLogCreate {
+  logged_on: string
+  food_item_id?: string | null
+  quantity_g?: number | null
+  name: string
+  kcal: number
+  protein_g: number
+  carbs_g: number
+  fat_g: number
+}
+
+export interface DailyTotals {
+  kcal: number
+  protein_g: number
+  carbs_g: number
+  fat_g: number
+}
+
+export interface DailyLog {
+  date: string
+  totals: DailyTotals
+  entries: FoodLog[]
+}
