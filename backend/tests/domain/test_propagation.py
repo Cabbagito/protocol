@@ -1,22 +1,29 @@
 """Tests for domain propagation helpers."""
 
-from app.domain.propagation import find_exercise_in_session, iter_future_sessions
+from app.domain.propagation import (
+    find_exercise_in_session,
+    iter_future_exercise_instances,
+    iter_future_sessions,
+)
 
 
 def _make_structure(weeks):
     return {"weeks": weeks}
 
 
-def _make_week(sessions):
-    return {"sessions": sessions}
+def _make_week(sessions, rir=3):
+    return {"sessions": sessions, "rir": rir}
 
 
 def _make_session(name="Push", day_order=0, exercises=None):
     return {"session_name": name, "day_order": day_order, "exercises": exercises or []}
 
 
-def _make_exercise(exercise_id="ex1"):
-    return {"exercise_id": exercise_id, "sets": []}
+def _make_exercise(exercise_id="ex1", skipped=False):
+    e = {"exercise_id": exercise_id, "sets": []}
+    if skipped:
+        e["skipped"] = True
+    return e
 
 
 class TestIterFutureSessions:
@@ -77,3 +84,83 @@ class TestFindExerciseInSession:
     def test_empty_session(self):
         session = _make_session(exercises=[])
         assert find_exercise_in_session(session, "ex1") is None
+
+
+class TestIterFutureExerciseInstances:
+    def test_yields_later_sessions_same_week(self):
+        structure = _make_structure(
+            [
+                _make_week(
+                    [
+                        _make_session("Push", 0, [_make_exercise("ex1")]),
+                        _make_session("Pull", 1, [_make_exercise("ex1")]),
+                    ]
+                )
+            ]
+        )
+        results = list(iter_future_exercise_instances(structure, 0, 0, "ex1"))
+        assert len(results) == 1
+        assert results[0][:2] == (0, 1)
+
+    def test_yields_across_weeks(self):
+        structure = _make_structure(
+            [
+                _make_week([_make_session("Push", 0, [_make_exercise("ex1")])]),
+                _make_week([_make_session("Pull", 0, [_make_exercise("ex1")])]),
+                _make_week([_make_session("Push", 0, [_make_exercise("ex1")])]),
+            ]
+        )
+        results = list(iter_future_exercise_instances(structure, 0, 0, "ex1"))
+        # Differently named session in week 1 still matches by exercise_id
+        assert len(results) == 2
+        assert [(wi, si) for wi, si, _ in results] == [(1, 0), (2, 0)]
+
+    def test_skips_skipped_exercise(self):
+        structure = _make_structure(
+            [
+                _make_week([_make_session("Push", 0, [_make_exercise("ex1")])]),
+                _make_week([_make_session("Push", 0, [_make_exercise("ex1", skipped=True)])]),
+                _make_week([_make_session("Push", 0, [_make_exercise("ex1")])]),
+            ]
+        )
+        results = list(iter_future_exercise_instances(structure, 0, 0, "ex1"))
+        assert [(wi, si) for wi, si, _ in results] == [(2, 0)]
+
+    def test_skip_deloads(self):
+        structure = _make_structure(
+            [
+                _make_week([_make_session("Push", 0, [_make_exercise("ex1")])], rir=3),
+                _make_week([_make_session("Push", 0, [_make_exercise("ex1")])], rir=-1),
+                _make_week([_make_session("Push", 0, [_make_exercise("ex1")])], rir=2),
+            ]
+        )
+        results = list(
+            iter_future_exercise_instances(structure, 0, 0, "ex1", skip_deloads=True)
+        )
+        assert [(wi, si) for wi, si, _ in results] == [(2, 0)]
+
+    def test_excludes_current_session(self):
+        structure = _make_structure(
+            [
+                _make_week(
+                    [
+                        _make_session("Push", 0, [_make_exercise("ex1")]),
+                        _make_session("Pull", 1, [_make_exercise("ex1")]),
+                    ]
+                )
+            ]
+        )
+        # Starting at (0, 1) — nothing after it
+        results = list(iter_future_exercise_instances(structure, 0, 1, "ex1"))
+        assert results == []
+
+    def test_exercise_missing_from_session_is_skipped(self):
+        structure = _make_structure(
+            [
+                _make_week([_make_session("Push", 0, [_make_exercise("ex1")])]),
+                _make_week([_make_session("Pull", 0, [_make_exercise("ex2")])]),
+                _make_week([_make_session("Push", 0, [_make_exercise("ex1")])]),
+            ]
+        )
+        results = list(iter_future_exercise_instances(structure, 0, 0, "ex1"))
+        assert [(wi, si) for wi, si, _ in results] == [(2, 0)]

@@ -299,8 +299,8 @@ class TestComputeProgression:
         assert next_set["suggested_weight"] is None
         assert next_set["target_reps"] == 10  # unchanged
 
-    def test_session_name_mismatch_no_progression(self):
-        """Progression should not cross between differently named sessions."""
+    def test_progression_crosses_session_names(self):
+        """Progression follows exercise_id across differently named sessions."""
         w1_sets = [_make_set(1, weight=100, reps=10, target_reps=10, logged=True)]
         w2_sets = [_make_set(1)]
 
@@ -319,7 +319,69 @@ class TestComputeProgression:
         compute_progression(structure, 0, 0)
 
         next_set = structure["weeks"][1]["sessions"][0]["exercises"][0]["sets"][0]
-        assert next_set["suggested_weight"] is None
+        assert next_set["suggested_weight"] == 100
+        assert next_set["target_reps"] == 11
+
+    def test_progression_targets_next_unlogged_instance_same_week(self):
+        """When the same exercise appears later in the same week, that's the next target."""
+        w1_push_sets = [_make_set(1, weight=100, reps=10, target_reps=10, logged=True)]
+        w1_pull_sets = [_make_set(1)]  # same exercise id, different day
+        w2_push_sets = [_make_set(1)]
+        w2_pull_sets = [_make_set(1)]
+
+        w1 = _make_week(
+            1,
+            3,
+            [
+                _make_session("Push", 0, [_make_exercise(sets=w1_push_sets)]),
+                _make_session("Pull", 1, [_make_exercise(sets=w1_pull_sets)]),
+            ],
+        )
+        w2 = _make_week(
+            2,
+            2,
+            [
+                _make_session("Push", 0, [_make_exercise(sets=w2_push_sets)]),
+                _make_session("Pull", 1, [_make_exercise(sets=w2_pull_sets)]),
+            ],
+        )
+        structure = _make_structure([w1, w2])
+
+        compute_progression(structure, 0, 0)
+
+        # Next unlogged instance is w1/Pull (same week, later session)
+        w1_pull_set = structure["weeks"][0]["sessions"][1]["exercises"][0]["sets"][0]
+        assert w1_pull_set["suggested_weight"] == 100
+        assert w1_pull_set["target_reps"] == 11
+
+        # w2 instances should be untouched — only the NEXT instance gets updated
+        w2_push_set = structure["weeks"][1]["sessions"][0]["exercises"][0]["sets"][0]
+        w2_pull_set = structure["weeks"][1]["sessions"][1]["exercises"][0]["sets"][0]
+        assert w2_push_set["suggested_weight"] is None
+        assert w2_pull_set["suggested_weight"] is None
+
+    def test_progression_skips_deload_week_for_next_instance(self):
+        """If the immediate next instance lives in a deload week, skip it."""
+        w1_sets = [_make_set(1, weight=100, reps=10, target_reps=10, logged=True)]
+        w2_sets = [_make_set(1)]  # deload
+        w3_sets = [_make_set(1)]
+
+        w1 = _make_week(1, 3, [_make_session("Push", 0, [_make_exercise(sets=w1_sets)])])
+        w2 = _make_week(2, -1, [_make_session("Push", 0, [_make_exercise(sets=w2_sets)])])
+        w3 = _make_week(3, 2, [_make_session("Push", 0, [_make_exercise(sets=w3_sets)])])
+        structure = _make_structure([w1, w2, w3])
+
+        compute_progression(structure, 0, 0)
+
+        # Deload untouched
+        w2_set = structure["weeks"][1]["sessions"][0]["exercises"][0]["sets"][0]
+        assert w2_set["suggested_weight"] is None
+        assert w2_set["target_reps"] == 10
+
+        # Week 3 is the next non-deload instance — progression lands there
+        w3_set = structure["weeks"][2]["sessions"][0]["exercises"][0]["sets"][0]
+        assert w3_set["suggested_weight"] == 100
+        assert w3_set["target_reps"] == 11
 
     def test_multiple_sets_progress_independently(self):
         """Each set progresses based on its own reps vs target."""

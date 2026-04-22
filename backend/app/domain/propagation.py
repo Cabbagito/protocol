@@ -24,3 +24,32 @@ def find_exercise_in_session(session: dict, exercise_id: str) -> dict | None:
         (e for e in session.get("exercises", []) if e["exercise_id"] == exercise_id),
         None,
     )
+
+
+def iter_future_exercise_instances(
+    structure: dict,
+    week_index: int,
+    session_index: int,
+    exercise_id: str,
+    *,
+    skip_deloads: bool = False,
+) -> Iterator[tuple[int, int, dict]]:
+    """Yield (week_index, session_index, exercise) for every non-skipped instance
+    of ``exercise_id`` in sessions strictly after ``(week_index, session_index)``,
+    in natural structure order.
+
+    If ``skip_deloads`` is True, sessions in weeks with RiR == -1 are skipped.
+    """
+    weeks = structure.get("weeks", [])
+    for wi in range(week_index, len(weeks)):
+        week = weeks[wi]
+        if skip_deloads and week.get("rir") == -1:
+            continue
+        sessions = week.get("sessions", [])
+        start_si = session_index + 1 if wi == week_index else 0
+        for si in range(start_si, len(sessions)):
+            session = sessions[si]
+            exercise = find_exercise_in_session(session, exercise_id)
+            if exercise is None or exercise.get("skipped", False):
+                continue
+            yield wi, si, exercise
