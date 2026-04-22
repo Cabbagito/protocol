@@ -60,6 +60,18 @@
     "equipment_type": "machine"
   },
   {
+    "seed_key": "machine_chest_press",
+    "name": "Machine Chest Press",
+    "muscle_group": "chest",
+    "equipment_type": "machine"
+  },
+  {
+    "seed_key": "incline_machine_chest_press",
+    "name": "Incline Machine Chest Press",
+    "muscle_group": "chest",
+    "equipment_type": "machine"
+  },
+  {
     "seed_key": "push_up",
     "name": "Push Up",
     "muscle_group": "chest",
@@ -78,6 +90,12 @@
     "equipment_type": "barbell"
   },
   {
+    "seed_key": "pendlay_row",
+    "name": "Pendlay Row",
+    "muscle_group": "back",
+    "equipment_type": "barbell"
+  },
+  {
     "seed_key": "dumbbell_row",
     "name": "Dumbbell Row",
     "muscle_group": "back",
@@ -92,6 +110,12 @@
   {
     "seed_key": "chin_up",
     "name": "Chin Up",
+    "muscle_group": "back",
+    "equipment_type": "bodyweight"
+  },
+  {
+    "seed_key": "inverted_row",
+    "name": "Inverted Row",
     "muscle_group": "back",
     "equipment_type": "bodyweight"
   },
@@ -132,6 +156,12 @@
     "equipment_type": "cable"
   },
   {
+    "seed_key": "straight_arm_pulldown",
+    "name": "Straight-Arm Pulldown",
+    "muscle_group": "back",
+    "equipment_type": "cable"
+  },
+  {
     "seed_key": "machine_chest_supported_row",
     "name": "Machine Chest Supported Row",
     "muscle_group": "back",
@@ -168,10 +198,28 @@
     "equipment_type": "dumbbell"
   },
   {
+    "seed_key": "machine_shoulder_press",
+    "name": "Machine Shoulder Press",
+    "muscle_group": "front delt",
+    "equipment_type": "machine"
+  },
+  {
+    "seed_key": "arnold_press",
+    "name": "Arnold Press",
+    "muscle_group": "front delt",
+    "equipment_type": "dumbbell"
+  },
+  {
     "seed_key": "dumbbell_front_raise",
     "name": "Dumbbell Front Raise",
     "muscle_group": "front delt",
     "equipment_type": "dumbbell"
+  },
+  {
+    "seed_key": "cable_front_raise",
+    "name": "Cable Front Raise",
+    "muscle_group": "front delt",
+    "equipment_type": "cable"
   },
   {
     "seed_key": "lateral_raise",
@@ -198,6 +246,12 @@
     "equipment_type": "cable"
   },
   {
+    "seed_key": "machine_lateral_raise",
+    "name": "Machine Lateral Raise",
+    "muscle_group": "side delt",
+    "equipment_type": "machine"
+  },
+  {
     "seed_key": "upright_row",
     "name": "Upright Row",
     "muscle_group": "side delt",
@@ -216,6 +270,18 @@
     "equipment_type": "machine"
   },
   {
+    "seed_key": "reverse_pec_deck",
+    "name": "Reverse Pec Deck",
+    "muscle_group": "rear delt",
+    "equipment_type": "machine"
+  },
+  {
+    "seed_key": "cable_rear_delt_fly",
+    "name": "Cable Rear Delt Fly",
+    "muscle_group": "rear delt",
+    "equipment_type": "cable"
+  },
+  {
     "seed_key": "face_pull",
     "name": "Face Pull",
     "muscle_group": "rear delt",
@@ -230,6 +296,18 @@
   {
     "seed_key": "barbell_shrug",
     "name": "Barbell Shrug",
+    "muscle_group": "traps",
+    "equipment_type": "barbell"
+  },
+  {
+    "seed_key": "cable_shrug",
+    "name": "Cable Shrug",
+    "muscle_group": "traps",
+    "equipment_type": "cable"
+  },
+  {
+    "seed_key": "trap_bar_shrug",
+    "name": "Trap Bar Shrug",
     "muscle_group": "traps",
     "equipment_type": "barbell"
   },
@@ -258,6 +336,12 @@
     "equipment_type": "machine"
   },
   {
+    "seed_key": "machine_curl",
+    "name": "Machine Curl",
+    "muscle_group": "biceps",
+    "equipment_type": "machine"
+  },
+  {
     "seed_key": "cable_curl",
     "name": "Cable Curl",
     "muscle_group": "biceps",
@@ -272,6 +356,18 @@
   {
     "seed_key": "incline_dumbbell_curl",
     "name": "Incline Dumbbell Curl",
+    "muscle_group": "biceps",
+    "equipment_type": "dumbbell"
+  },
+  {
+    "seed_key": "concentration_curl",
+    "name": "Concentration Curl",
+    "muscle_group": "biceps",
+    "equipment_type": "dumbbell"
+  },
+  {
+    "seed_key": "spider_curl",
+    "name": "Spider Curl",
     "muscle_group": "biceps",
     "equipment_type": "dumbbell"
   },
@@ -300,10 +396,22 @@
     "equipment_type": "cable"
   },
   {
+    "seed_key": "rope_triceps_pushdown",
+    "name": "Rope Triceps Pushdown",
+    "muscle_group": "triceps",
+    "equipment_type": "cable"
+  },
+  {
     "seed_key": "overhead_tricep_extension",
     "name": "Cable Overhead Triceps Extension",
     "muscle_group": "triceps",
     "equipment_type": "cable"
+  },
+  {
+    "seed_key": "overhead_dumbbell_triceps_extension",
+    "name": "Overhead Dumbbell Triceps Extension",
+    "muscle_group": "triceps",
+    "equipment_type": "dumbbell"
   },
   {
     "seed_key": "single_arm_cable_pushdown",
@@ -330,6 +438,18 @@
     "equipment_type": "barbell"
   },
   {
+    "seed_key": "tricep_kickback",
+    "name": "Tricep Kickback",
+    "muscle_group": "triceps",
+    "equipment_type": "dumbbell"
+  },
+  {
+    "seed_key": "machine_triceps_extension",
+    "name": "Machine Triceps Extension",
+    "muscle_group": "triceps",
+    "equipment_type": "machine"
+  },
+  {
     "seed_key": "cable_wrist_curl",
     "name": "Cable Wrist Curl",
     "muscle_group": "forearms",
@@ -348,6 +468,18 @@
     "equipment_type": "machine"
   },
   {
+    "seed_key": "reverse_wrist_curl",
+    "name": "Reverse Wrist Curl",
+    "muscle_group": "forearms",
+    "equipment_type": "dumbbell"
+  },
+  {
+    "seed_key": "farmers_carry",
+    "name": "Farmer's Carry",
+    "muscle_group": "forearms",
+    "equipment_type": "dumbbell"
+  },
+  {
     "seed_key": "barbell_squat",
     "name": "Barbell Squat",
     "muscle_group": "quads",
@@ -358,6 +490,18 @@
     "name": "Front Squat",
     "muscle_group": "quads",
     "equipment_type": "barbell"
+  },
+  {
+    "seed_key": "smith_machine_squat",
+    "name": "Smith Machine Squat",
+    "muscle_group": "quads",
+    "equipment_type": "machine"
+  },
+  {
+    "seed_key": "goblet_squat",
+    "name": "Goblet Squat",
+    "muscle_group": "quads",
+    "equipment_type": "dumbbell"
   },
   {
     "seed_key": "leg_press",
@@ -408,6 +552,18 @@
     "equipment_type": "machine"
   },
   {
+    "seed_key": "good_morning",
+    "name": "Good Morning",
+    "muscle_group": "hamstrings",
+    "equipment_type": "barbell"
+  },
+  {
+    "seed_key": "nordic_curl",
+    "name": "Nordic Curl",
+    "muscle_group": "hamstrings",
+    "equipment_type": "bodyweight"
+  },
+  {
     "seed_key": "calf_raise",
     "name": "Standing Calf Raise",
     "muscle_group": "calves",
@@ -420,22 +576,46 @@
     "equipment_type": "machine"
   },
   {
+    "seed_key": "leg_press_calf_raise",
+    "name": "Leg Press Calf Raise",
+    "muscle_group": "calves",
+    "equipment_type": "machine"
+  },
+  {
+    "seed_key": "donkey_calf_raise",
+    "name": "Donkey Calf Raise",
+    "muscle_group": "calves",
+    "equipment_type": "machine"
+  },
+  {
     "seed_key": "hip_thrust",
     "name": "Hip Thrust",
     "muscle_group": "glutes",
     "equipment_type": "barbell"
   },
   {
-    "seed_key": "bulgarian_split_squat_glutes",
-    "name": "Bulgarian Split Squat (Glutes)",
-    "muscle_group": "glutes",
-    "equipment_type": "dumbbell"
-  },
-  {
     "seed_key": "walking_lunges",
     "name": "Walking Lunges",
     "muscle_group": "glutes",
     "equipment_type": "barbell"
+  },
+  {
+    "seed_key": "hip_abduction_machine",
+    "name": "Hip Abduction Machine",
+    "muscle_group": "glutes",
+    "equipment_type": "machine"
+  },
+  {
+    "seed_key": "cable_glute_kickback",
+    "name": "Cable Glute Kickback",
+    "muscle_group": "glutes",
+    "equipment_type": "cable"
+  },
+  {
+    "seed_key": "glute_bridge",
+    "name": "Glute Bridge",
+    "muscle_group": "glutes",
+    "equipment_type": "bodyweight"
   },
   {
     "seed_key": "plank",
@@ -465,6 +645,48 @@
     "seed_key": "ab_wheel_rollout",
     "name": "Ab Wheel Rollout",
     "muscle_group": "abs",
+    "equipment_type": "bodyweight"
+  },
+  {
+    "seed_key": "machine_crunch",
+    "name": "Machine Crunch",
+    "muscle_group": "abs",
+    "equipment_type": "machine"
+  },
+  {
+    "seed_key": "captains_chair_knee_raise",
+    "name": "Captain's Chair Knee Raise",
+    "muscle_group": "abs",
+    "equipment_type": "bodyweight"
+  },
+  {
+    "seed_key": "decline_sit_up",
+    "name": "Decline Sit-Up",
+    "muscle_group": "abs",
+    "equipment_type": "bodyweight"
+  },
+  {
+    "seed_key": "pallof_press",
+    "name": "Pallof Press",
+    "muscle_group": "obliques",
+    "equipment_type": "cable"
+  },
+  {
+    "seed_key": "cable_wood_chop",
+    "name": "Cable Wood Chop",
+    "muscle_group": "obliques",
+    "equipment_type": "cable"
+  },
+  {
+    "seed_key": "russian_twist",
+    "name": "Russian Twist",
+    "muscle_group": "obliques",
+    "equipment_type": "dumbbell"
+  },
+  {
+    "seed_key": "side_plank",
+    "name": "Side Plank",
+    "muscle_group": "obliques",
     "equipment_type": "bodyweight"
   }
 ]

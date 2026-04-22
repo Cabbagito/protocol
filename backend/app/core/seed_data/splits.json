@@ -72,10 +72,10 @@
             "seed_key": "calf_raise"
           },
           {
-            "seed_key": "lateral_raise"
+            "seed_key": "cable_lateral_raise"
           },
           {
-            "seed_key": "tricep_pushdown"
+            "seed_key": "single_arm_cable_pushdown"
           }
         ]
       },
@@ -84,19 +84,19 @@
         "day_order": 3,
         "exercises": [
           {
-            "seed_key": "lat_pulldown"
+            "seed_key": "parallel_grip_lat_pulldown"
           },
           {
-            "seed_key": "seated_cable_row"
+            "seed_key": "dumbbell_row"
           },
           {
             "seed_key": "lying_dumbbell_curl"
           },
           {
-            "seed_key": "freemotion_rear_delt_fly"
+            "seed_key": "cable_rear_delt_fly"
           },
           {
-            "seed_key": "cable_wrist_curl"
+            "seed_key": "barbell_wrist_curl"
           },
           {
             "seed_key": "reverse_curl"
@@ -108,22 +108,22 @@
         "day_order": 4,
         "exercises": [
           {
-            "seed_key": "incline_dumbbell_press"
+            "seed_key": "incline_machine_chest_press"
           },
           {
             "seed_key": "dumbbell_flye"
           },
           {
-            "seed_key": "tricep_pushdown"
+            "seed_key": "rope_triceps_pushdown"
           },
           {
-            "seed_key": "overhead_tricep_extension"
+            "seed_key": "overhead_dumbbell_triceps_extension"
           },
           {
-            "seed_key": "lateral_raise"
+            "seed_key": "machine_lateral_raise"
           },
           {
-            "seed_key": "preacher_curl"
+            "seed_key": "machine_curl"
           }
         ]
       }
