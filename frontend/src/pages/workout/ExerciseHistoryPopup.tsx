@@ -85,6 +85,8 @@ export function ExerciseHistoryPopup({ exerciseName, muscleGroup, equipmentType,
                   <span className="text-[11px] font-medium uppercase tracking-wider" style={{ color: 'var(--accent-l)' }}>
                     Week {session.weekNumber}
                   </span>
+                  <span className="text-[11px] text-[var(--text-m)]">·</span>
+                  <span className="text-[12px] font-medium text-[var(--text-2)]">{session.sessionName}</span>
                   {session.date && (
                     <>
                       <span className="text-[11px] text-[var(--text-m)]">·</span>

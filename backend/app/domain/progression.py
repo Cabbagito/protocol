@@ -7,7 +7,7 @@ and SQLAlchemy model instances used as attribute bags.
 import math
 
 from app.domain.constants import RIR_SCHEMES
-from app.domain.propagation import find_exercise_in_session, iter_future_sessions
+from app.domain.propagation import iter_future_exercise_instances
 
 
 def calculate_rir_scheme(total_weeks: int) -> list[int]:
@@ -115,7 +115,7 @@ def handle_weight_bump(structure: dict, week_index: int, session_index: int) -> 
     Called before compute_progression. For each logged set where the user changed
     the weight from suggested, recalculates target_reps using e1RM equivalence
     and propagates the new weight to all future unlogged instances of the same
-    exercise in the same session slot.
+    exercise anywhere in the structure (not just the same session slot).
 
     Mutates the structure in place.
     """
@@ -124,8 +124,6 @@ def handle_weight_bump(structure: dict, week_index: int, session_index: int) -> 
         return
 
     session = weeks[week_index]["sessions"][session_index]
-    session_name = session["session_name"]
-    day_order = session["day_order"]
 
     for exercise in session.get("exercises", []):
         if exercise.get("skipped", False):
@@ -153,19 +151,16 @@ def handle_weight_bump(structure: dict, week_index: int, session_index: int) -> 
             new_reps = max(new_reps, 5)
             s["target_reps"] = new_reps
 
-        # Propagate actual weights to future unlogged instances in same session slot
+        # Propagate actual weights to all future unlogged instances of the exercise
         logged_sets = [
             s for s in exercise.get("sets", []) if s.get("logged") and not s.get("skipped")
         ]
         if not logged_sets:
             continue
 
-        for _wi, future_session in iter_future_sessions(
-            structure, week_index, session_name, day_order
+        for _wi, _si, fe in iter_future_exercise_instances(
+            structure, week_index, session_index, exercise_id
         ):
-            fe = find_exercise_in_session(future_session, exercise_id)
-            if not fe:
-                continue
             for fs in fe.get("sets", []):
                 if fs.get("logged"):
                     continue
@@ -178,11 +173,12 @@ def handle_weight_bump(structure: dict, week_index: int, session_index: int) -> 
 
 
 def compute_progression(structure: dict, week_index: int, session_index: int) -> None:
-    """Compute per-set rep progression from a completed session to the next week's same session.
+    """Compute per-set rep progression from a completed session to the next unlogged
+    instance of each exercise anywhere in the structure (deload weeks excluded).
 
-    New algorithm: for each logged set, if reps >= target_reps, next week's
-    matching set gets target_reps + 1. Weight carries forward as suggested_weight.
-    Only modifies unlogged sets in the next week.
+    Algorithm: for each logged set, if reps >= target_reps, the next unlogged
+    instance's matching set gets target_reps + 1 (or averaged-up). Weight carries
+    forward as suggested_weight.
 
     Mutates the structure in place.
     """
@@ -190,40 +186,13 @@ def compute_progression(structure: dict, week_index: int, session_index: int) ->
     if week_index >= len(weeks):
         return
 
-    next_week_index = week_index + 1
-    if next_week_index >= len(weeks):
-        return
-
-    # Skip progression into deload weeks (RIR = -1)
-    next_week = weeks[next_week_index]
-    if next_week.get("rir") == -1:
-        return
-
     completed_session = weeks[week_index]["sessions"][session_index]
-    session_name = completed_session["session_name"]
-    day_order = completed_session["day_order"]
-
-    # Find matching session in next week
-    next_session = None
-    for ns in next_week.get("sessions", []):
-        if ns["session_name"] == session_name and ns["day_order"] == day_order:
-            next_session = ns
-            break
-    if not next_session:
-        return
 
     for exercise in completed_session.get("exercises", []):
         if exercise.get("skipped", False):
             continue
 
         exercise_id = exercise["exercise_id"]
-
-        next_exercise = find_exercise_in_session(next_session, exercise_id)
-        if not next_exercise:
-            continue
-
-        if next_exercise.get("skipped", False):
-            continue
 
         # Build set lookup from completed session (exclude skipped sets)
         logged_sets = {
@@ -232,6 +201,22 @@ def compute_progression(structure: dict, week_index: int, session_index: int) ->
             if s.get("logged") and not s.get("skipped")
         }
         if not logged_sets:
+            continue
+
+        next_exercise = next(
+            (
+                fe
+                for _wi, _si, fe in iter_future_exercise_instances(
+                    structure,
+                    week_index,
+                    session_index,
+                    exercise_id,
+                    skip_deloads=True,
+                )
+            ),
+            None,
+        )
+        if next_exercise is None:
             continue
 
         for next_set in next_exercise.get("sets", []):
