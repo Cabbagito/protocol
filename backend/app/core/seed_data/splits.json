@@ -130,6 +130,148 @@
     ]
   },
   {
+    "seed_key": "arm_blast_split",
+    "name": "Arm Blast",
+    "color": "#f43f5e",
+    "days": [
+      {
+        "name": "Pull",
+        "day_order": 0,
+        "exercises": [
+          {
+            "seed_key": "lat_pulldown"
+          },
+          {
+            "seed_key": "preacher_curl"
+          },
+          {
+            "seed_key": "incline_dumbbell_curl"
+          },
+          {
+            "seed_key": "cable_rear_delt_fly"
+          },
+          {
+            "seed_key": "dumbbell_shrug"
+          },
+          {
+            "seed_key": "cable_wrist_curl"
+          },
+          {
+            "seed_key": "cable_lateral_raise"
+          }
+        ]
+      },
+      {
+        "name": "Push",
+        "day_order": 1,
+        "exercises": [
+          {
+            "seed_key": "incline_dumbbell_press"
+          },
+          {
+            "seed_key": "dumbbell_skull_crusher"
+          },
+          {
+            "seed_key": "rope_triceps_pushdown"
+          },
+          {
+            "seed_key": "overhead_tricep_extension"
+          },
+          {
+            "seed_key": "lateral_raise"
+          },
+          {
+            "seed_key": "machine_lateral_raise"
+          },
+          {
+            "seed_key": "dumbbell_front_raise"
+          }
+        ]
+      },
+      {
+        "name": "Legs + Arms",
+        "day_order": 2,
+        "exercises": [
+          {
+            "seed_key": "leg_press"
+          },
+          {
+            "seed_key": "leg_curl"
+          },
+          {
+            "seed_key": "calf_raise"
+          },
+          {
+            "seed_key": "cable_curl"
+          },
+          {
+            "seed_key": "single_arm_cable_pushdown"
+          },
+          {
+            "seed_key": "cable_lateral_raise"
+          },
+          {
+            "seed_key": "face_pull"
+          }
+        ]
+      },
+      {
+        "name": "Pull",
+        "day_order": 3,
+        "exercises": [
+          {
+            "seed_key": "seated_cable_row"
+          },
+          {
+            "seed_key": "hammer_curl"
+          },
+          {
+            "seed_key": "bayesian_curl"
+          },
+          {
+            "seed_key": "freemotion_rear_delt_fly"
+          },
+          {
+            "seed_key": "barbell_wrist_curl"
+          },
+          {
+            "seed_key": "barbell_shrug"
+          },
+          {
+            "seed_key": "lateral_raise"
+          }
+        ]
+      },
+      {
+        "name": "Push",
+        "day_order": 4,
+        "exercises": [
+          {
+            "seed_key": "dumbbell_bench_press"
+          },
+          {
+            "seed_key": "overhead_dumbbell_triceps_extension"
+          },
+          {
+            "seed_key": "tricep_pushdown"
+          },
+          {
+            "seed_key": "close_grip_bench_press"
+          },
+          {
+            "seed_key": "cable_lateral_raise"
+          },
+          {
+            "seed_key": "cable_cross_body_lateral_raise"
+          },
+          {
+            "seed_key": "cable_front_raise"
+          }
+        ]
+      }
+    ]
+  },
+  {
     "seed_key": "ppl_3day",
     "name": "Push/Pull/Legs",
     "color": "#8b5cf6",
