@@ -34,14 +34,14 @@ export default function ProgressRail({ exercises, currentIndex }: ProgressRailPr
 
   return (
     <div>
-      <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+      <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
         {items.map((e, i) => {
           const c = getMuscleColor(e.group)
           const isCur = i === currentIndex
           return (
             <div
               key={i}
-              style={{ flex: e.sets.length, display: 'flex', gap: 2 }}
+              style={{ flex: e.sets.length, display: 'flex', gap: 3 }}
             >
               {e.sets.map((s: { logged: boolean }, si: number) => (
                 <div

@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import { getMuscleColor } from '../lib/muscleColors'
 
 interface NumeralsCardProps {
@@ -8,20 +9,19 @@ interface NumeralsCardProps {
   totalSets: number
   /** Previous-session reference, e.g. "22.5×10". Optional. */
   lastSummary?: string | null
-  /** Target rep count, e.g. 10. Renders as "OF 10" under reps. */
-  targetReps?: number | null
   onWeightChange: (next: number) => void
   onRepsChange: (next: number) => void
   onLog: () => void
-  weightStep?: number
   /** Disable the LOG button (e.g. while saving). */
   disabled?: boolean
 }
 
 /**
- * Hero numerals card on the v5 workout screen. Weight + reps in 56px mono,
- * tinted muscle-color background, glass-blurred. The LOG button uses the
- * muscle gradient and a breathing border keyframe (p-btn-breathe-<group>).
+ * Hero weight/reps card on the v5 workout screen. The 56px mono numerals
+ * are tap-editable native number inputs. -/+ nudges step by 0.5kg for
+ * weight and 1 for reps (whole-number coverage with the 0.5 in between).
+ * The LOG button uses the muscle gradient and a per-muscle breathing
+ * keyframe.
  */
 export default function NumeralsCard({
   group,
@@ -30,11 +30,9 @@ export default function NumeralsCard({
   setNum,
   totalSets,
   lastSummary,
-  targetReps,
   onWeightChange,
   onRepsChange,
   onLog,
-  weightStep = 1.25,
   disabled = false,
 }: NumeralsCardProps) {
   const c = getMuscleColor(group)
@@ -102,10 +100,8 @@ export default function NumeralsCard({
       >
         <Column
           label="WEIGHT"
-          accent={c.light}
           value={weight}
-          unit="KG"
-          step={weightStep}
+          step={0.5}
           minValue={0}
           onChange={onWeightChange}
           color={c}
@@ -118,13 +114,12 @@ export default function NumeralsCard({
         />
         <Column
           label="REPS"
-          accent={c.light}
           value={reps}
-          unit={targetReps != null ? `OF ${targetReps}` : ''}
           step={1}
           minValue={0}
           onChange={onRepsChange}
           color={c}
+          integerOnly
         />
       </div>
 
@@ -174,22 +169,47 @@ export default function NumeralsCard({
 
 interface ColumnProps {
   label: string
-  accent: string
   value: number
-  unit: string
   step: number
   minValue: number
   onChange: (n: number) => void
   color: { primary: string; light: string }
+  /** Block decimals (used for reps). */
+  integerOnly?: boolean
 }
 
 function Column({
-  label, accent, value, unit, step, minValue, onChange, color,
+  label, value, step, minValue, onChange, color, integerOnly,
 }: ColumnProps) {
+  // Local text state lets the input go through transient invalid states
+  // (e.g. trailing "." while typing 22.5) without snapping back.
+  const [text, setText] = useState<string>(() => fmt(value))
+  useEffect(() => {
+    // Sync from parent when value changes externally (nudge buttons / set switch).
+    setText(fmt(value))
+  }, [value])
+
   function fmt(n: number): string {
-    // 56px display: drop trailing .0 on integers, keep one decimal otherwise.
     return Number.isInteger(n) ? String(n) : String(+n.toFixed(2))
   }
+
+  function commit(raw: string) {
+    if (raw === '' || raw === '.' || raw === '-') {
+      onChange(minValue)
+      setText(fmt(minValue))
+      return
+    }
+    let n = Number(raw)
+    if (!Number.isFinite(n)) {
+      setText(fmt(value))
+      return
+    }
+    if (integerOnly) n = Math.round(n)
+    if (n < minValue) n = minValue
+    onChange(n)
+    setText(fmt(n))
+  }
+
   return (
     <div style={{ textAlign: 'center' }}>
       <div
@@ -198,14 +218,27 @@ function Column({
           fontWeight: 600,
           letterSpacing: '0.14em',
           textTransform: 'uppercase',
-          color: accent,
+          color: color.light,
           fontFamily: 'JetBrains Mono, ui-monospace, monospace',
         }}
       >
         {label}
       </div>
-      <div
+      <input
+        type="text"
+        inputMode={integerOnly ? 'numeric' : 'decimal'}
+        value={text}
+        onChange={(e) => setText(e.target.value.replace(/[^\d.]/g, ''))}
+        onBlur={(e) => commit(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+        }}
+        onFocus={(e) => e.target.select()}
         style={{
+          width: '100%',
+          background: 'transparent',
+          border: 'none',
+          outline: 'none',
           fontSize: 56,
           fontWeight: 700,
           lineHeight: 1,
@@ -214,10 +247,10 @@ function Column({
           textShadow: `0 0 30px color-mix(in oklab, ${color.primary} 50%, transparent)`,
           letterSpacing: '-0.03em',
           fontFamily: 'JetBrains Mono, ui-monospace, monospace',
+          textAlign: 'center',
+          padding: 0,
         }}
-      >
-        {fmt(value)}
-      </div>
+      />
       <div
         style={{
           display: 'flex',
@@ -226,22 +259,9 @@ function Column({
           marginTop: 10,
         }}
       >
-        <NudgeButton color={color} onClick={() => onChange(Math.max(minValue, +(value - step).toFixed(2)))}>−</NudgeButton>
-        <NudgeButton color={color} onClick={() => onChange(+(value + step).toFixed(2))}>+</NudgeButton>
+        <NudgeButton color={color} onClick={() => commit(String(Math.max(minValue, +(value - step).toFixed(2))))}>−</NudgeButton>
+        <NudgeButton color={color} onClick={() => commit(String(+(value + step).toFixed(2)))}>+</NudgeButton>
       </div>
-      {unit && (
-        <div
-          style={{
-            fontSize: 9,
-            color: 'var(--text-m)',
-            marginTop: 6,
-            letterSpacing: '0.15em',
-            fontFamily: 'JetBrains Mono, ui-monospace, monospace',
-          }}
-        >
-          {unit}
-        </div>
-      )}
     </div>
   )
 }

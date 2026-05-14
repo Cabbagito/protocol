@@ -123,7 +123,7 @@ export default function Workout() {
     modifyingRef, prevCompletedRef, prevSkippedRef,
   })
 
-  const { handleAddSet } = useSetModification({
+  const { handleAddSet, handleRemoveSet } = useSetModification({
     mesocycleId, template, sets, setSets, setSkippedSets, modifyingRef,
   })
 
@@ -265,24 +265,23 @@ export default function Workout() {
   )
 
   // ─── DERIVED STATE ──────────────────────────────────────────────────
-  // Active "current" exercise: override > first-with-unlogged > last
+  // Active "current" exercise: override > first-with-unlogged > last.
+  // If the override points to an exercise that's now fully done but
+  // other exercises remain, fall back to the first unfinished one.
   const firstUnfinished = exerciseList.findIndex(ex => !ex.allDone)
   const fallbackIdx = firstUnfinished === -1 ? Math.max(0, exerciseList.length - 1) : firstUnfinished
-  const curIdx = Math.min(
+  let curIdx = Math.min(
     curIdxOverride ?? fallbackIdx,
     Math.max(0, exerciseList.length - 1),
   )
+  if (exerciseList[curIdx]?.allDone && firstUnfinished !== -1) {
+    curIdx = firstUnfinished
+  }
   const currentEx = exerciseList[curIdx]
-  const nextEx = exerciseList[curIdx + 1]
 
   const allLogged = exerciseList.length > 0 && exerciseList.every(ex => ex.allDone)
-  const currentExLogged = !!currentEx && currentEx.allDone
-  type ScreenState = 'logging' | 'exercise-done' | 'session-done'
-  const screenState: ScreenState = allLogged
-    ? 'session-done'
-    : currentExLogged
-    ? 'exercise-done'
-    : 'logging'
+  type ScreenState = 'logging' | 'session-done'
+  const screenState: ScreenState = allLogged ? 'session-done' : 'logging'
 
   // Active set within current exercise: override (chip tap) > first unlogged > last
   let activeSetIdx = 0
@@ -421,19 +420,8 @@ export default function Workout() {
           />
         )}
 
-        {/* ── State B: exercise complete ── */}
-        {!isFutureSession && screenState === 'exercise-done' && currentEx && (
-          <ExerciseCompleteHero
-            currentEx={currentEx}
-            nextEx={nextEx}
-            onStartNext={() => {
-              if (nextEx) setCurIdxOverride(curIdx + 1)
-            }}
-          />
-        )}
-
-        {/* ── Up next list (states A + B) ── */}
-        {!isFutureSession && screenState !== 'session-done' && exerciseList.length > 1 && (
+        {/* ── Workout list (always visible during logging) ── */}
+        {!isFutureSession && screenState === 'logging' && exerciseList.length > 0 && (
           <div style={{ marginTop: 28 }}>
             <div
               style={{
@@ -442,25 +430,21 @@ export default function Workout() {
                 fontFamily: 'JetBrains Mono, ui-monospace, monospace', marginBottom: 10,
               }}
             >
-              {screenState === 'exercise-done' ? 'Workout' : 'Up next'}
+              Workout
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {exerciseList.map((ex, i) => {
-                if (screenState === 'logging' && i === curIdx) return null // hide self in state A
-                const status =
-                  ex.allDone
-                    ? 'done'
-                    : i === curIdx
-                    ? 'current'
-                    : i === curIdx + 1
-                    ? 'next'
-                    : 'queued'
+                const status: 'done' | 'current' | 'queued' = ex.allDone
+                  ? 'done'
+                  : i === curIdx
+                  ? 'current'
+                  : 'queued'
                 return (
                   <ExercisePeekCard
                     key={ex.exercise_id}
                     exercise={ex}
                     index={i}
-                    status={status as 'next' | 'queued' | 'done' | 'current'}
+                    status={status}
                     onClick={() => setCurIdxOverride(i)}
                   />
                 )
@@ -542,22 +526,36 @@ export default function Workout() {
       )}
 
       {/* ── Per-exercise actions menu ── */}
-      {currentEx && (
-        <BottomSheet
-          open={menuOpen}
-          onClose={() => setMenuOpen(false)}
-          title={currentEx.exercise_name}
-          actions={[
-            { label: 'Add note', onClick: () => { setMenuOpen(false); setNoteModal({ exerciseId: currentEx.exercise_id, exerciseName: currentEx.exercise_name }) } },
-            { label: 'Replace exercise', onClick: () => { setMenuOpen(false); setReplaceModal({ exerciseId: currentEx.exercise_id, exerciseIndex: currentEx.exerciseIndex, muscleGroup: currentEx.muscle_group, equipmentType: currentEx.equipment_type }) } },
-            { label: 'Add a set', onClick: () => { setMenuOpen(false); handleAddSet(currentEx.exercise_id) } },
-            ...(curIdx > 0 ? [{ label: 'Move up', onClick: () => { setMenuOpen(false); handleReorderExercise(currentEx.exerciseIndex, 'up') } }] : []),
-            ...(curIdx < exerciseList.length - 1 ? [{ label: 'Move down', onClick: () => { setMenuOpen(false); handleReorderExercise(currentEx.exerciseIndex, 'down') } }] : []),
-            { label: 'Skip exercise', onClick: () => { setMenuOpen(false); toggleSkip(currentEx.exercise_id) } },
-            { label: 'Remove from workout', variant: 'danger', onClick: () => { setMenuOpen(false); handleRemoveExercise(currentEx.exercise_id) } },
-          ]}
-        />
-      )}
+      {currentEx && (() => {
+        const activeSetForMenu = currentEx.workingSets[activeSetIdx]
+        const currentSetType = activeSetForMenu?.set_type ?? 'straight'
+        const canRemoveSet = currentEx.workingSets.length > 1 && activeSetForMenu && !activeSetForMenu.completed
+        const close = () => setMenuOpen(false)
+        return (
+          <BottomSheet
+            open={menuOpen}
+            onClose={close}
+            title={`${currentEx.exercise_name} · Set ${activeSetIdx + 1}`}
+            actions={[
+              // Set type toggles (per-set; act on the active set)
+              ...(activeSetForMenu ? [
+                { label: currentSetType === 'straight' ? '✓ Straight set' : 'Mark as straight', onClick: () => { close(); updateSet(currentEx.exercise_id, activeSetForMenu.set_num, 'set_type', 'straight') } },
+                { label: currentSetType === 'myorep' ? '✓ Myorep' : 'Mark as myorep', onClick: () => { close(); updateSet(currentEx.exercise_id, activeSetForMenu.set_num, 'set_type', 'myorep') } },
+                { label: currentSetType === 'myorep_match' ? '✓ Myorep match' : 'Mark as myorep match', onClick: () => { close(); updateSet(currentEx.exercise_id, activeSetForMenu.set_num, 'set_type', 'myorep_match') } },
+              ] : []),
+              { label: 'Add a set', onClick: () => { close(); handleAddSet(currentEx.exercise_id) } },
+              ...(canRemoveSet ? [{ label: `Remove set ${activeSetIdx + 1}`, variant: 'danger' as const, onClick: () => { close(); handleRemoveSet(currentEx.exercise_id, activeSetForMenu!.set_num) } }] : []),
+              // Exercise-level
+              { label: 'Add note', onClick: () => { close(); setNoteModal({ exerciseId: currentEx.exercise_id, exerciseName: currentEx.exercise_name }) } },
+              { label: 'Replace exercise', onClick: () => { close(); setReplaceModal({ exerciseId: currentEx.exercise_id, exerciseIndex: currentEx.exerciseIndex, muscleGroup: currentEx.muscle_group, equipmentType: currentEx.equipment_type }) } },
+              ...(curIdx > 0 ? [{ label: 'Move up', onClick: () => { close(); handleReorderExercise(currentEx.exerciseIndex, 'up') } }] : []),
+              ...(curIdx < exerciseList.length - 1 ? [{ label: 'Move down', onClick: () => { close(); handleReorderExercise(currentEx.exerciseIndex, 'down') } }] : []),
+              { label: 'Skip exercise', onClick: () => { close(); toggleSkip(currentEx.exercise_id) } },
+              { label: 'Remove from workout', variant: 'danger', onClick: () => { close(); handleRemoveExercise(currentEx.exercise_id) } },
+            ]}
+          />
+        )
+      })()}
     </div>
   )
 }
@@ -589,11 +587,6 @@ function LoggingState({
   const previousSession = history?.find(h => h.sets.length > 0) ?? null
   const lastSummary = previousSession ? formatHistorySummary(previousSession.sets) : null
 
-  const targetReps = activeSet.target_reps ?? null
-  const targetSummary = targetReps
-    ? `target ${currentEx.workingSets.length} × ${targetReps}`
-    : `target ${currentEx.workingSets.length} sets`
-
   return (
     <div style={{ marginTop: 28, textAlign: 'center' }}>
       <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 14 }}>
@@ -610,14 +603,6 @@ function LoggingState({
       >
         {currentEx.exercise_name}
       </div>
-      <div
-        style={{
-          fontFamily: "'Fraunces', 'Instrument Serif', Georgia, serif",
-          fontStyle: 'italic', fontSize: 14, color: 'var(--text-m)', marginTop: 8,
-        }}
-      >
-        {targetSummary}
-      </div>
 
       <div style={{ marginTop: 24 }}>
         <NumeralsCard
@@ -627,7 +612,6 @@ function LoggingState({
           setNum={activeSetIdx + 1}
           totalSets={currentEx.workingSets.length}
           lastSummary={lastSummary}
-          targetReps={targetReps}
           onWeightChange={(n) => onUpdateSet(currentEx.exercise_id, activeSet.set_num, 'weight', n)}
           onRepsChange={(n) => onUpdateSet(currentEx.exercise_id, activeSet.set_num, 'reps', n)}
           onLog={() => onCompleteSet(currentEx.exercise_id, activeSet.set_num)}
@@ -704,123 +688,6 @@ function LoggingState({
           +
         </button>
       </div>
-    </div>
-  )
-}
-
-/* ─────────────────────────────────────────────────────────────────── */
-/*  STATE B — exercise complete                                        */
-/* ─────────────────────────────────────────────────────────────────── */
-
-interface ExerciseCompleteHeroProps {
-  currentEx: MesoExercise & { workingSets: WorkingSet[] }
-  nextEx: (MesoExercise & { workingSets: WorkingSet[] }) | undefined
-  onStartNext: () => void
-}
-
-function ExerciseCompleteHero({ currentEx, nextEx, onStartNext }: ExerciseCompleteHeroProps) {
-  const c = getMuscleColor(currentEx.muscle_group)
-  const nc = nextEx ? getMuscleColor(nextEx.muscle_group) : c
-
-  // Done summary text — "3 × 10 @ 22.5"
-  const sets = currentEx.workingSets.filter(s => s.completed)
-  const allSameReps = sets.length > 0 && sets.every(s => s.reps === sets[0]!.reps)
-  const allSameWeight = sets.length > 0 && sets.every(s => s.weight === sets[0]!.weight)
-  const summary = sets.length === 0
-    ? null
-    : allSameReps && allSameWeight
-    ? `${sets.length} × ${sets[0]!.reps} @ ${sets[0]!.weight}`
-    : `${sets.length} sets logged`
-
-  return (
-    <div style={{ marginTop: 28 }}>
-      <div style={{ textAlign: 'center' }}>
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 14 }}>
-          <MuscleAccent group={currentEx.muscle_group} variant="dot" />
-        </div>
-        <div
-          style={{
-            fontSize: 36, fontWeight: 700, color: 'var(--text-1)',
-            lineHeight: 1.05, letterSpacing: '-0.025em', padding: '0 12px',
-            filter: `drop-shadow(0 0 28px color-mix(in oklab, ${c.primary} 45%, transparent))`,
-          }}
-        >
-          {currentEx.exercise_name}
-        </div>
-        {summary && (
-          <div
-            style={{
-              fontSize: 11, color: c.light, marginTop: 8, letterSpacing: '0.2em',
-              fontFamily: 'JetBrains Mono, ui-monospace, monospace',
-              textTransform: 'uppercase',
-            }}
-          >
-            COMPLETE · {summary}
-          </div>
-        )}
-      </div>
-
-      {/* UP NEXT card — tinted in NEXT muscle color (or muted if no next) */}
-      {nextEx ? (
-        <div
-          style={{
-            marginTop: 22, padding: 18, borderRadius: 18,
-            background: `linear-gradient(180deg, color-mix(in oklab, ${nc.primary} 10%, color-mix(in oklab, var(--card) 60%, transparent)) 0%, color-mix(in oklab, var(--card) 70%, transparent) 100%)`,
-            border: `1px solid color-mix(in oklab, ${nc.primary} 35%, var(--border))`,
-            backdropFilter: 'blur(24px) saturate(180%)',
-            WebkitBackdropFilter: 'blur(24px) saturate(180%)',
-            boxShadow: `0 20px 60px -20px color-mix(in oklab, ${nc.primary} 35%, transparent), inset 0 1px 0 rgba(255,255,255,0.06)`,
-            display: 'flex', gap: 14,
-          }}
-        >
-          <div
-            style={{
-              width: 3, alignSelf: 'stretch', borderRadius: 2,
-              background: `linear-gradient(180deg, ${nc.primary}, ${nc.light})`,
-            }}
-          />
-          <div style={{ flex: 1 }}>
-            <div
-              style={{
-                fontSize: 10, fontWeight: 600, letterSpacing: '0.22em',
-                textTransform: 'uppercase', color: nc.light,
-                fontFamily: 'JetBrains Mono, ui-monospace, monospace',
-              }}
-            >
-              UP NEXT
-            </div>
-            <div
-              style={{
-                fontSize: 20, fontWeight: 600, color: 'var(--text-1)', marginTop: 4,
-              }}
-            >
-              {nextEx.exercise_name}
-            </div>
-            <div
-              style={{
-                fontSize: 11, color: 'var(--text-m)', marginTop: 4,
-                fontFamily: 'JetBrains Mono, ui-monospace, monospace',
-                letterSpacing: '0.1em',
-              }}
-            >
-              {nextEx.workingSets.length} × {nextEx.workingSets[0]?.target_reps ?? '—'}
-            </div>
-            <button
-              type="button"
-              onClick={onStartNext}
-              style={{
-                marginTop: 12, padding: '10px 24px', borderRadius: 12,
-                background: `linear-gradient(135deg, ${nc.primary}, ${nc.light})`,
-                color: 'white', fontWeight: 700, fontSize: 13, letterSpacing: '0.2em',
-                border: 'none', cursor: 'pointer',
-                boxShadow: `0 8px 24px -8px color-mix(in oklab, ${nc.primary} 65%, transparent)`,
-              }}
-            >
-              START
-            </button>
-          </div>
-        </div>
-      ) : null}
     </div>
   )
 }
