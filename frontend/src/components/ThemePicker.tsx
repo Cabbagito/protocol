@@ -9,6 +9,10 @@ const THEME_LABELS: Record<ThemeId, string> = {
   cyan: 'Cyan',
   violet: 'Violet',
   gradient: 'Gradient',
+  midnight: 'Midnight',
+  forest: 'Forest',
+  crimson: 'Crimson',
+  mono: 'Mono',
 }
 
 function MiniLogo({ theme, size = 44 }: { theme: ThemeId; size?: number }) {
