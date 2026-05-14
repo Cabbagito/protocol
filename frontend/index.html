@@ -44,7 +44,7 @@
          Keep in sync with src/lib/motion.ts -->
     <script>
       ;(function(){
-        var modes=['aurora','pulse','still','none'];
+        var modes=['aurora','pulse','still'];
         var m;try{m=localStorage.getItem('protocol_motion')}catch(e){}
         if(!m||modes.indexOf(m)===-1)m='aurora';
         if(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches)m='still';
