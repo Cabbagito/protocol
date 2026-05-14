@@ -25,7 +25,9 @@ import { useSetModification } from '../hooks/useSetModification'
 import { useWorkoutCompletion } from '../hooks/useWorkoutCompletion'
 import { NoteModal } from './workout/NoteModal'
 import { ExercisePicker } from './workout/ExercisePicker'
-import type { WorkoutTemplate, MesoExercise, WorkingSet } from '../types'
+import { ExerciseHistoryPopup } from './workout/ExerciseHistoryPopup'
+import { SET_TYPE_LABELS } from '../lib/setConstants'
+import type { WorkoutTemplate, MesoExercise, WorkingSet, SetType } from '../types'
 
 const ORDINAL_WORDS = [
   'one', 'two', 'three', 'four', 'five', 'six', 'seven',
@@ -82,6 +84,8 @@ export default function Workout() {
   const [replaceModal, setReplaceModal] = useState<{ exerciseId: string; exerciseIndex: number; muscleGroup: string; equipmentType: string } | null>(null)
   const [addExerciseOpen, setAddExerciseOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [perSetSheetOpen, setPerSetSheetOpen] = useState(false)
+  const [historyOpen, setHistoryOpen] = useState(false)
   // Local current-exercise cursor. Defaults to first un-finished exercise.
   // User can jump by tapping a peek card.
   const [curIdxOverride, setCurIdxOverride] = useState<number | null>(null)
@@ -265,18 +269,16 @@ export default function Workout() {
   )
 
   // ─── DERIVED STATE ──────────────────────────────────────────────────
-  // Active "current" exercise: override > first-with-unlogged > last.
-  // If the override points to an exercise that's now fully done but
-  // other exercises remain, fall back to the first unfinished one.
+  // Active "current" exercise: an explicit override (set on first LOG,
+  // chip taps, or NEXT EXERCISE) wins; otherwise we default to the first
+  // unfinished exercise. The cursor sticks even when an exercise becomes
+  // fully done, so the user can review/edit before advancing.
   const firstUnfinished = exerciseList.findIndex(ex => !ex.allDone)
   const fallbackIdx = firstUnfinished === -1 ? Math.max(0, exerciseList.length - 1) : firstUnfinished
-  let curIdx = Math.min(
+  const curIdx = Math.min(
     curIdxOverride ?? fallbackIdx,
     Math.max(0, exerciseList.length - 1),
   )
-  if (exerciseList[curIdx]?.allDone && firstUnfinished !== -1) {
-    curIdx = firstUnfinished
-  }
   const currentEx = exerciseList[curIdx]
 
   const allLogged = exerciseList.length > 0 && exerciseList.every(ex => ex.allDone)
@@ -402,7 +404,7 @@ export default function Workout() {
           />
         )}
 
-        {/* ── State A: logging ── */}
+        {/* ── State A: logging (and exercise-complete: same shell, "Next exercise" CTA) ── */}
         {!isFutureSession && screenState === 'logging' && currentEx && activeSet && (
           <LoggingState
             currentEx={currentEx}
@@ -410,12 +412,22 @@ export default function Workout() {
             activeSetIdx={activeSetIdx}
             skippedSets={skippedSets}
             onUpdateSet={updateSet}
-            onCompleteSet={completeSet}
+            onCompleteSet={(exId, setNum) => {
+              // Lock cursor to current exercise so we don't auto-jump off
+              // it when this becomes the last set — user must tap "Next
+              // exercise" explicitly.
+              setCurIdxOverride(curIdx)
+              completeSet(exId, setNum)
+            }}
             onAddSet={handleAddSet}
             onChipTap={(setIdx) => setActiveSetOverride(prev => ({
               ...prev,
               [currentEx.exercise_id]: setIdx,
             }))}
+            onChipMore={() => setPerSetSheetOpen(true)}
+            onOpenHistory={() => setHistoryOpen(true)}
+            onAdvanceExercise={() => setCurIdxOverride(curIdx + 1)}
+            hasNextExercise={curIdx < exerciseList.length - 1}
             isSaving={isSaving}
           />
         )}
@@ -525,29 +537,18 @@ export default function Workout() {
         />
       )}
 
-      {/* ── Per-exercise actions menu ── */}
+      {/* ── Header dots menu — exercise-level actions only ── */}
       {currentEx && (() => {
-        const activeSetForMenu = currentEx.workingSets[activeSetIdx]
-        const currentSetType = activeSetForMenu?.set_type ?? 'straight'
-        const canRemoveSet = currentEx.workingSets.length > 1 && activeSetForMenu && !activeSetForMenu.completed
         const close = () => setMenuOpen(false)
         return (
           <BottomSheet
             open={menuOpen}
             onClose={close}
-            title={`${currentEx.exercise_name} · Set ${activeSetIdx + 1}`}
+            title={currentEx.exercise_name}
             actions={[
-              // Set type toggles (per-set; act on the active set)
-              ...(activeSetForMenu ? [
-                { label: currentSetType === 'straight' ? '✓ Straight set' : 'Mark as straight', onClick: () => { close(); updateSet(currentEx.exercise_id, activeSetForMenu.set_num, 'set_type', 'straight') } },
-                { label: currentSetType === 'myorep' ? '✓ Myorep' : 'Mark as myorep', onClick: () => { close(); updateSet(currentEx.exercise_id, activeSetForMenu.set_num, 'set_type', 'myorep') } },
-                { label: currentSetType === 'myorep_match' ? '✓ Myorep match' : 'Mark as myorep match', onClick: () => { close(); updateSet(currentEx.exercise_id, activeSetForMenu.set_num, 'set_type', 'myorep_match') } },
-              ] : []),
-              { label: 'Add a set', onClick: () => { close(); handleAddSet(currentEx.exercise_id) } },
-              ...(canRemoveSet ? [{ label: `Remove set ${activeSetIdx + 1}`, variant: 'danger' as const, onClick: () => { close(); handleRemoveSet(currentEx.exercise_id, activeSetForMenu!.set_num) } }] : []),
-              // Exercise-level
               { label: 'Add note', onClick: () => { close(); setNoteModal({ exerciseId: currentEx.exercise_id, exerciseName: currentEx.exercise_name }) } },
               { label: 'Replace exercise', onClick: () => { close(); setReplaceModal({ exerciseId: currentEx.exercise_id, exerciseIndex: currentEx.exerciseIndex, muscleGroup: currentEx.muscle_group, equipmentType: currentEx.equipment_type }) } },
+              { label: 'Add a set', onClick: () => { close(); handleAddSet(currentEx.exercise_id) } },
               ...(curIdx > 0 ? [{ label: 'Move up', onClick: () => { close(); handleReorderExercise(currentEx.exerciseIndex, 'up') } }] : []),
               ...(curIdx < exerciseList.length - 1 ? [{ label: 'Move down', onClick: () => { close(); handleReorderExercise(currentEx.exerciseIndex, 'down') } }] : []),
               { label: 'Skip exercise', onClick: () => { close(); toggleSkip(currentEx.exercise_id) } },
@@ -556,6 +557,37 @@ export default function Workout() {
           />
         )
       })()}
+
+      {/* ── Per-set sheet — opens from the "..." button on the active chip ── */}
+      {currentEx && activeSet && (() => {
+        const close = () => setPerSetSheetOpen(false)
+        const currentSetType: SetType = (activeSet.set_type as SetType | undefined) ?? 'straight'
+        const canRemoveSet = currentEx.workingSets.length > 1
+        return (
+          <BottomSheet
+            open={perSetSheetOpen}
+            onClose={close}
+            title={`Set ${activeSetIdx + 1} · ${currentEx.exercise_name}`}
+            actions={[
+              { label: currentSetType === 'straight' ? '✓ Straight set' : 'Straight set', onClick: () => { close(); updateSet(currentEx.exercise_id, activeSet.set_num, 'set_type', 'straight') } },
+              { label: currentSetType === 'myorep' ? '✓ Myorep' : 'Myorep', onClick: () => { close(); updateSet(currentEx.exercise_id, activeSet.set_num, 'set_type', 'myorep') } },
+              { label: currentSetType === 'myorep_match' ? '✓ Myorep match' : 'Myorep match', onClick: () => { close(); updateSet(currentEx.exercise_id, activeSet.set_num, 'set_type', 'myorep_match') } },
+              ...(canRemoveSet ? [{ label: `Remove this set`, variant: 'danger' as const, onClick: () => { close(); handleRemoveSet(currentEx.exercise_id, activeSet.set_num) } }] : []),
+            ]}
+          />
+        )
+      })()}
+
+      {/* ── Exercise history popup ── */}
+      {historyOpen && currentEx && (
+        <ExerciseHistoryWrap
+          exerciseId={currentEx.exercise_id}
+          exerciseName={currentEx.exercise_name}
+          muscleGroup={currentEx.muscle_group}
+          equipmentType={currentEx.equipment_type}
+          onClose={() => setHistoryOpen(false)}
+        />
+      )}
     </div>
   )
 }
@@ -573,12 +605,17 @@ interface LoggingStateProps {
   onCompleteSet: (exerciseId: string, setNum: number) => void
   onAddSet: (exerciseId: string) => void
   onChipTap: (setIdx: number) => void
+  onChipMore: () => void
+  onOpenHistory: () => void
+  onAdvanceExercise: () => void
+  hasNextExercise: boolean
   isSaving: boolean
 }
 
 function LoggingState({
   currentEx, activeSet, activeSetIdx, skippedSets,
-  onUpdateSet, onCompleteSet, onAddSet, onChipTap, isSaving,
+  onUpdateSet, onCompleteSet, onAddSet, onChipTap, onChipMore,
+  onOpenHistory, onAdvanceExercise, hasNextExercise, isSaving,
 }: LoggingStateProps) {
   const c = getMuscleColor(currentEx.muscle_group)
 
@@ -586,6 +623,17 @@ function LoggingState({
   const { data: history } = useExerciseHistory(currentEx.exercise_id)
   const previousSession = history?.find(h => h.sets.length > 0) ?? null
   const lastSummary = previousSession ? formatHistorySummary(previousSession.sets) : null
+
+  const weight = activeSet.weight ?? 0
+  const reps = activeSet.reps ?? 0
+  const isLogValid = weight > 0 && reps > 0
+  const isActiveLogged = !!activeSet.completed
+  const allDone = currentEx.workingSets.every(
+    s => s.completed || skippedSets.has(`${currentEx.exercise_id}:${s.set_num}`),
+  )
+
+  // LOG button label adapts to what the user is doing.
+  const logLabel = isActiveLogged ? 'UPDATE' : 'LOG'
 
   return (
     <div style={{ marginTop: 28, textAlign: 'center' }}>
@@ -603,23 +651,36 @@ function LoggingState({
       >
         {currentEx.exercise_name}
       </div>
+      {allDone && (
+        <div
+          style={{
+            fontSize: 11, color: c.light, marginTop: 8, letterSpacing: '0.22em',
+            fontFamily: 'JetBrains Mono, ui-monospace, monospace',
+            textTransform: 'uppercase', fontWeight: 600,
+          }}
+        >
+          Exercise complete
+        </div>
+      )}
 
       <div style={{ marginTop: 24 }}>
         <NumeralsCard
           group={currentEx.muscle_group}
-          weight={activeSet.weight ?? 0}
-          reps={activeSet.reps ?? 0}
+          weight={weight}
+          reps={reps}
           setNum={activeSetIdx + 1}
           totalSets={currentEx.workingSets.length}
           lastSummary={lastSummary}
+          onLastClick={onOpenHistory}
           onWeightChange={(n) => onUpdateSet(currentEx.exercise_id, activeSet.set_num, 'weight', n)}
           onRepsChange={(n) => onUpdateSet(currentEx.exercise_id, activeSet.set_num, 'reps', n)}
           onLog={() => onCompleteSet(currentEx.exercise_id, activeSet.set_num)}
-          disabled={isSaving}
+          disabled={isSaving || !isLogValid}
+          logLabel={logLabel}
         />
       </div>
 
-      {/* Set chips */}
+      {/* Set chips ─ persistent set_type badge + "..." on active chip ─── */}
       <div style={{ marginTop: 12, display: 'flex', gap: 6 }}>
         {currentEx.workingSets.map((s, i) => {
           const key = `${currentEx.exercise_id}:${s.set_num}`
@@ -627,49 +688,99 @@ function LoggingState({
           const isActive = i === activeSetIdx
           const done = s.completed
           const colorText = done ? c.light : isActive ? 'var(--text-1)' : 'var(--text-m)'
+          const setTypeInfo = s.set_type && s.set_type !== 'straight' ? SET_TYPE_LABELS[s.set_type] : null
           return (
-            <button
+            <div
               key={s.set_num}
-              type="button"
-              onClick={() => onChipTap(i)}
-              style={{
-                flex: 1, padding: '10px 4px', borderRadius: 10, textAlign: 'center',
-                background: isActive
-                  ? `color-mix(in oklab, ${c.primary} 18%, rgba(255,255,255,0.02))`
-                  : done
-                  ? `color-mix(in oklab, ${c.primary} 10%, transparent)`
-                  : 'rgba(255,255,255,0.03)',
-                border: `1px solid ${
-                  isActive
-                    ? `color-mix(in oklab, ${c.primary} 45%, transparent)`
-                    : done
-                    ? `color-mix(in oklab, ${c.primary} 20%, transparent)`
-                    : 'rgba(255,255,255,0.06)'
-                }`,
-                backdropFilter: 'blur(20px)',
-                cursor: 'pointer',
-                opacity: isSkipped ? 0.4 : 1,
-              }}
+              style={{ flex: 1, position: 'relative' }}
             >
-              <div
+              <button
+                type="button"
+                onClick={() => onChipTap(i)}
                 style={{
-                  fontSize: 8, color: 'var(--text-m)', letterSpacing: '0.15em',
-                  fontFamily: 'JetBrains Mono, ui-monospace, monospace',
+                  width: '100%',
+                  padding: '10px 4px',
+                  borderRadius: 10,
+                  textAlign: 'center',
+                  background: isActive
+                    ? `color-mix(in oklab, ${c.primary} 18%, rgba(255,255,255,0.02))`
+                    : done
+                    ? `color-mix(in oklab, ${c.primary} 10%, transparent)`
+                    : 'rgba(255,255,255,0.03)',
+                  border: `1px solid ${
+                    isActive
+                      ? `color-mix(in oklab, ${c.primary} 45%, transparent)`
+                      : done
+                      ? `color-mix(in oklab, ${c.primary} 20%, transparent)`
+                      : 'rgba(255,255,255,0.06)'
+                  }`,
+                  backdropFilter: 'blur(20px)',
+                  cursor: 'pointer',
+                  opacity: isSkipped ? 0.4 : 1,
                 }}
               >
-                SET {i + 1}
-              </div>
-              <div
-                style={{
-                  fontSize: 13, fontWeight: 600, marginTop: 3, color: colorText,
-                  fontFamily: 'JetBrains Mono, ui-monospace, monospace',
-                }}
-              >
-                {done && s.weight != null && s.reps != null
-                  ? `${s.weight}×${s.reps}`
-                  : '—'}
-              </div>
-            </button>
+                <div
+                  style={{
+                    fontSize: 8, color: 'var(--text-m)', letterSpacing: '0.15em',
+                    fontFamily: 'JetBrains Mono, ui-monospace, monospace',
+                  }}
+                >
+                  SET {i + 1}
+                </div>
+                <div
+                  style={{
+                    fontSize: 13, fontWeight: 600, marginTop: 3, color: colorText,
+                    fontFamily: 'JetBrains Mono, ui-monospace, monospace',
+                  }}
+                >
+                  {done && s.weight != null && s.reps != null
+                    ? `${s.weight}×${s.reps}`
+                    : '—'}
+                </div>
+              </button>
+
+              {/* Set-type badge (top-left of chip, always visible if set) */}
+              {setTypeInfo && (
+                <span
+                  style={{
+                    position: 'absolute',
+                    top: 3, left: 3,
+                    fontSize: 8, fontWeight: 700,
+                    padding: '1px 4px',
+                    borderRadius: 4,
+                    background: setTypeInfo.bg,
+                    border: `1px solid ${setTypeInfo.border}`,
+                    color: setTypeInfo.color,
+                    fontFamily: 'JetBrains Mono, ui-monospace, monospace',
+                    pointerEvents: 'none',
+                  }}
+                >
+                  {setTypeInfo.label}
+                </span>
+              )}
+
+              {/* "..." button on the active chip → opens per-set sheet */}
+              {isActive && (
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); onChipMore() }}
+                  aria-label="Set options"
+                  style={{
+                    position: 'absolute',
+                    top: 1, right: 1,
+                    width: 22, height: 22,
+                    background: 'transparent',
+                    border: 'none',
+                    color: c.light,
+                    display: 'grid', placeItems: 'center',
+                    cursor: 'pointer',
+                    fontSize: 14,
+                  }}
+                >
+                  ⋯
+                </button>
+              )}
+            </div>
           )
         })}
         <button
@@ -688,7 +799,49 @@ function LoggingState({
           +
         </button>
       </div>
+
+      {/* "Next exercise" CTA — only when the exercise is fully done AND there's a next one. */}
+      {allDone && hasNextExercise && (
+        <button
+          type="button"
+          onClick={onAdvanceExercise}
+          style={{
+            marginTop: 16, width: '100%', height: 50, borderRadius: 14,
+            background: `linear-gradient(135deg, ${c.primary}, ${c.light})`,
+            color: 'white', fontWeight: 700, fontSize: 14, letterSpacing: '0.2em',
+            border: 'none', cursor: 'pointer',
+            boxShadow: `0 12px 30px -8px color-mix(in oklab, ${c.primary} 60%, transparent)`,
+          }}
+        >
+          NEXT EXERCISE →
+        </button>
+      )}
     </div>
+  )
+}
+
+/* ─────────────────────────────────────────────────────────────────── */
+/*  Exercise history popup wrapper — fetches history then renders     */
+/* ─────────────────────────────────────────────────────────────────── */
+
+interface ExerciseHistoryWrapProps {
+  exerciseId: string
+  exerciseName: string
+  muscleGroup: string
+  equipmentType: string
+  onClose: () => void
+}
+
+function ExerciseHistoryWrap({ exerciseId, exerciseName, muscleGroup, equipmentType, onClose }: ExerciseHistoryWrapProps) {
+  const { data: history = [] } = useExerciseHistory(exerciseId)
+  return (
+    <ExerciseHistoryPopup
+      exerciseName={exerciseName}
+      muscleGroup={muscleGroup}
+      equipmentType={equipmentType}
+      history={history}
+      onClose={onClose}
+    />
   )
 }
 

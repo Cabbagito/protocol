@@ -9,11 +9,15 @@ interface NumeralsCardProps {
   totalSets: number
   /** Previous-session reference, e.g. "22.5×10". Optional. */
   lastSummary?: string | null
+  /** If supplied, the LAST · ... line becomes a button that opens history. */
+  onLastClick?: () => void
   onWeightChange: (next: number) => void
   onRepsChange: (next: number) => void
   onLog: () => void
   /** Disable the LOG button (e.g. while saving). */
   disabled?: boolean
+  /** Override the LOG label (e.g. "UPDATE" for a re-log). */
+  logLabel?: string
 }
 
 /**
@@ -30,10 +34,12 @@ export default function NumeralsCard({
   setNum,
   totalSets,
   lastSummary,
+  onLastClick,
   onWeightChange,
   onRepsChange,
   onLog,
   disabled = false,
+  logLabel = 'LOG',
 }: NumeralsCardProps) {
   const c = getMuscleColor(group)
   // CSS keyframe names use lowercase + hyphens; muscle groups in the data
@@ -74,17 +80,60 @@ export default function NumeralsCard({
           SET {setNum} OF {totalSets}
         </div>
         {lastSummary && (
-          <div
+          onLastClick ? (
+            <button
+              type="button"
+              onClick={onLastClick}
+              style={{
+                fontSize: 10,
+                color: c.light,
+                letterSpacing: '0.2em',
+                fontFamily: 'JetBrains Mono, ui-monospace, monospace',
+                fontWeight: 500,
+                background: 'transparent',
+                border: 'none',
+                borderBottom: `1px dotted color-mix(in oklab, ${c.primary} 40%, transparent)`,
+                paddingBottom: 1,
+                cursor: 'pointer',
+              }}
+              aria-label="Open exercise history"
+            >
+              LAST · {lastSummary}
+            </button>
+          ) : (
+            <div
+              style={{
+                fontSize: 10,
+                color: c.light,
+                letterSpacing: '0.2em',
+                fontFamily: 'JetBrains Mono, ui-monospace, monospace',
+                fontWeight: 500,
+              }}
+            >
+              LAST · {lastSummary}
+            </div>
+          )
+        )}
+        {!lastSummary && onLastClick && (
+          <button
+            type="button"
+            onClick={onLastClick}
             style={{
               fontSize: 10,
-              color: c.light,
+              color: 'var(--text-m)',
               letterSpacing: '0.2em',
               fontFamily: 'JetBrains Mono, ui-monospace, monospace',
               fontWeight: 500,
+              background: 'transparent',
+              border: 'none',
+              borderBottom: '1px dotted rgba(255,255,255,0.15)',
+              paddingBottom: 1,
+              cursor: 'pointer',
             }}
+            aria-label="Open exercise history"
           >
-            LAST · {lastSummary}
-          </div>
+            HISTORY
+          </button>
         )}
       </div>
 
@@ -161,7 +210,7 @@ export default function NumeralsCard({
             pointerEvents: 'none',
           }}
         />
-        LOG
+        {logLabel}
       </button>
     </div>
   )
