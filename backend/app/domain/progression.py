@@ -162,7 +162,7 @@ def handle_weight_bump(structure: dict, week_index: int, session_index: int) -> 
 
 def compute_progression(structure: dict, week_index: int, session_index: int) -> None:
     """Compute per-set rep progression from a completed session to the next unlogged
-    instance of each exercise anywhere in the structure (deload weeks excluded).
+    instance of each exercise anywhere in the structure.
 
     Algorithm: for each logged set, if reps >= target_reps, the next unlogged
     instance's matching set gets target_reps + 1 (or averaged-up). Weight carries

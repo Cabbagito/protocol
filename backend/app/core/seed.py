@@ -226,7 +226,7 @@ async def seed_demo_mesocycle(session: AsyncSession) -> None:
     total_weeks = 4
     structure = build_mesocycle_structure(days, exercises_by_id, total_weeks)
 
-    # Week 1: all 5 sessions logged (RiR 3)
+    # Week 1: all 5 sessions logged
     start_date = date.today() - timedelta(days=16)
     week1 = structure["weeks"][0]
     for si, meso_session in enumerate(week1["sessions"]):
@@ -234,7 +234,7 @@ async def seed_demo_mesocycle(session: AsyncSession) -> None:
         _log_session(meso_session, exercises_by_id, day)
         compute_progression(structure, 0, si)
 
-    # Week 2: all 5 sessions logged (RiR 2), using suggested weights
+    # Week 2: all 5 sessions logged, using suggested weights
     week2_start = date.today() - timedelta(days=9)
     week2 = structure["weeks"][1]
     for si, meso_session in enumerate(week2["sessions"]):

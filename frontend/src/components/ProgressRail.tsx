@@ -1,14 +1,9 @@
 import { getMuscleColor } from '../lib/muscleColors'
-import type { MesoExercise, MesoSet } from '../types'
+import type { MesoExercise } from '../types'
 
 interface ProgressRailProps {
   exercises: MesoExercise[]
   currentIndex: number
-}
-
-interface ProgressRailEx {
-  group: string
-  sets: { logged: boolean }[]
 }
 
 /**
@@ -27,25 +22,20 @@ export default function ProgressRail({ exercises, currentIndex }: ProgressRailPr
   const current = exercises[currentIndex]
   const currentColor = current ? getMuscleColor(current.muscle_group) : null
 
-  const items: ProgressRailEx[] = exercises.map(e => ({
-    group: e.muscle_group,
-    sets: e.sets.map(s => ({ logged: !!s.logged })),
-  }))
-
   return (
     <div>
       <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-        {items.map((e, i) => {
-          const c = getMuscleColor(e.group)
+        {exercises.map((e, i) => {
+          const c = getMuscleColor(e.muscle_group)
           const isCur = i === currentIndex
           return (
             <div
-              key={i}
+              key={`${e.exercise_id}-${i}`}
               style={{ flex: e.sets.length, display: 'flex', gap: 3 }}
             >
-              {e.sets.map((s: { logged: boolean }, si: number) => (
+              {e.sets.map((s) => (
                 <div
-                  key={si}
+                  key={s.set_num}
                   style={{
                     flex: 1,
                     height: isCur ? 4 : 3,
@@ -101,7 +91,3 @@ export default function ProgressRail({ exercises, currentIndex }: ProgressRailPr
     </div>
   )
 }
-
-// Silence: ProgressRail uses MesoSet shape implicitly through MesoExercise.sets;
-// keep the type imported so future readers can find it.
-export type { MesoSet }

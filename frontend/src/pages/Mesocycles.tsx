@@ -275,7 +275,7 @@ function MesocycleForm({ onSave, onCancel }: MesocycleFormProps) {
         )}
       </div>
 
-      {/* Weeks Stepper + RIR Heatmap */}
+      {/* Weeks Stepper */}
       <div>
         <div className="text-[10px] font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--text-m)' }}>
           Duration & Intensity

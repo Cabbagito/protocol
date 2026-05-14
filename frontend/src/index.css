@@ -919,6 +919,15 @@
 @keyframes p-btn-breathe-traps      { 0%,100% { border-color: color-mix(in oklab, var(--m-traps)     30%, transparent); } 50% { border-color: color-mix(in oklab, var(--m-traps)     70%, transparent); box-shadow: 0 0 14px -2px color-mix(in oklab, var(--m-traps)     50%, transparent); } }
 @keyframes p-btn-breathe-abs        { 0%,100% { border-color: color-mix(in oklab, var(--m-abs)       30%, transparent); } 50% { border-color: color-mix(in oklab, var(--m-abs)       70%, transparent); box-shadow: 0 0 14px -2px color-mix(in oklab, var(--m-abs)       50%, transparent); } }
 @keyframes p-btn-breathe-forearms   { 0%,100% { border-color: color-mix(in oklab, var(--m-forearms)  30%, transparent); } 50% { border-color: color-mix(in oklab, var(--m-forearms)  70%, transparent); box-shadow: 0 0 14px -2px color-mix(in oklab, var(--m-forearms)  50%, transparent); } }
+@keyframes p-btn-breathe-front-delt { 0%,100% { border-color: color-mix(in oklab, var(--m-front-delt) 30%, transparent); } 50% { border-color: color-mix(in oklab, var(--m-front-delt) 70%, transparent); box-shadow: 0 0 14px -2px color-mix(in oklab, var(--m-front-delt) 50%, transparent); } }
+@keyframes p-btn-breathe-side-delt  { 0%,100% { border-color: color-mix(in oklab, var(--m-side-delt)  30%, transparent); } 50% { border-color: color-mix(in oklab, var(--m-side-delt)  70%, transparent); box-shadow: 0 0 14px -2px color-mix(in oklab, var(--m-side-delt)  50%, transparent); } }
+@keyframes p-btn-breathe-rear-delt  { 0%,100% { border-color: color-mix(in oklab, var(--m-rear-delt)  30%, transparent); } 50% { border-color: color-mix(in oklab, var(--m-rear-delt)  70%, transparent); box-shadow: 0 0 14px -2px color-mix(in oklab, var(--m-rear-delt)  50%, transparent); } }
+
+/* Focus ring for numeric inputs in NumeralsCard (since they use outline:none). */
+.p-num-input:focus-visible {
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.45);
+  border-radius: 6px;
+}
 
 /* Pulsing accent dot used by MuscleAccent (variant="dot") */
 @keyframes p-pulse-dot {

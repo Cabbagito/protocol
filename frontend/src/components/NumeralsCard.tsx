@@ -275,6 +275,7 @@ function Column({
       </div>
       <input
         type="text"
+        className="p-num-input"
         inputMode={integerOnly ? 'numeric' : 'decimal'}
         value={text}
         onChange={(e) => setText(e.target.value.replace(/[^\d.]/g, ''))}
