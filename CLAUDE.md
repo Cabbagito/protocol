@@ -80,3 +80,7 @@ bun run lint
 **Workflow:** Work on feature/fix branches, merge to `main`.
 
 Server access (SSH, hcloud, DB queries, authenticated API calls) requires operator keys — see `CLAUDE.local.md`.
+
+## No backwards compatibility
+
+When changing data models, schemas, or APIs in this codebase, **do not** preserve the old shape. No `_legacy` fields, no dual-write, no deprecated routes kept around, no fallback parsing, no `// removed` comments. Change the code in one pass; let migrations handle the data. If a field/route/type is being removed, delete every reference to it. Only keep an old shape if explicitly asked.
