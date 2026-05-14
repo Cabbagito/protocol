@@ -571,7 +571,8 @@ export default function Workout() {
             actions={[
               { label: currentSetType === 'straight' ? '✓ Straight set' : 'Straight set', onClick: () => { close(); updateSet(currentEx.exercise_id, activeSet.set_num, 'set_type', 'straight') } },
               { label: currentSetType === 'myorep' ? '✓ Myorep' : 'Myorep', onClick: () => { close(); updateSet(currentEx.exercise_id, activeSet.set_num, 'set_type', 'myorep') } },
-              { label: currentSetType === 'myorep_match' ? '✓ Myorep match' : 'Myorep match', onClick: () => { close(); updateSet(currentEx.exercise_id, activeSet.set_num, 'set_type', 'myorep_match') } },
+              // myorep_match is meaningless on the first set — it must reference a prior set.
+              ...(activeSet.set_num > 1 ? [{ label: currentSetType === 'myorep_match' ? '✓ Myorep match' : 'Myorep match', onClick: () => { close(); updateSet(currentEx.exercise_id, activeSet.set_num, 'set_type', 'myorep_match') } }] : []),
               ...(canRemoveSet ? [{ label: `Remove this set`, variant: 'danger' as const, onClick: () => { close(); handleRemoveSet(currentEx.exercise_id, activeSet.set_num) } }] : []),
             ]}
           />
