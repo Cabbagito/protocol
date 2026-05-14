@@ -3,7 +3,7 @@
 // sync with the blocking <script> in index.html.
 // ──────────────────────────────────────────────────────────────────
 
-export const MOTION_IDS = ['aurora', 'pulse', 'still', 'none'] as const
+export const MOTION_IDS = ['aurora', 'pulse', 'still'] as const
 export type MotionId = (typeof MOTION_IDS)[number]
 export const DEFAULT_MOTION: MotionId = 'aurora'
 

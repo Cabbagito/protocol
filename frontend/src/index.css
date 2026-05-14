@@ -741,14 +741,16 @@
   inset: 0;
   overflow: hidden;
   pointer-events: none;
+  contain: strict;
 }
 .wave-bg .blob {
   position: absolute;
   border-radius: 50%;
-  filter: blur(60px);
+  filter: blur(40px);
   mix-blend-mode: screen;
   opacity: 0.85;
   will-change: transform;
+  transform: translate3d(0, 0, 0);
 }
 .wave-bg .b1 {
   width: 420px; height: 420px;
@@ -777,34 +779,36 @@
   opacity: 0.45;
 }
 
-/* Two slow-panning aurora stripe sheets */
+/* Two slow-drifting aurora stripe sheets.
+   Animated via transform only (GPU-compositable) — no background-position
+   or blend-mode, so the layer paints once and just composites each frame. */
 .wave-bg .aurora {
-  position: absolute; inset: -20%;
+  position: absolute; inset: -25%;
   background: linear-gradient(115deg,
     transparent 0%,
-    color-mix(in oklab, var(--accent) 35%, transparent) 35%,
+    color-mix(in oklab, var(--accent) 45%, transparent) 35%,
     transparent 50%,
-    color-mix(in oklab, var(--wave-c2, var(--accent-d)) 40%, transparent) 70%,
+    color-mix(in oklab, var(--wave-c2, var(--accent-d)) 50%, transparent) 70%,
     transparent 90%);
-  filter: blur(60px);
-  opacity: 0.55;
-  mix-blend-mode: screen;
-  animation: p-aurora-pan 24s linear infinite;
-  background-size: 200% 200%;
+  filter: blur(40px);
+  opacity: 0.7;
+  will-change: transform;
+  transform: translate3d(0, 0, 0);
+  animation: p-aurora-pan 24s ease-in-out infinite;
 }
 .wave-bg .aurora-2 {
-  position: absolute; inset: -20%;
+  position: absolute; inset: -25%;
   background: linear-gradient(75deg,
     transparent 10%,
-    color-mix(in oklab, var(--wave-c3, #22d3ee) 30%, transparent) 30%,
+    color-mix(in oklab, var(--wave-c3, #22d3ee) 40%, transparent) 30%,
     transparent 55%,
-    color-mix(in oklab, var(--wave-c4, #ec4899) 35%, transparent) 75%,
+    color-mix(in oklab, var(--wave-c4, #ec4899) 45%, transparent) 75%,
     transparent 95%);
-  filter: blur(70px);
-  opacity: 0.4;
-  mix-blend-mode: screen;
-  animation: p-aurora-pan-r 32s linear infinite;
-  background-size: 220% 220%;
+  filter: blur(45px);
+  opacity: 0.55;
+  will-change: transform;
+  transform: translate3d(0, 0, 0);
+  animation: p-aurora-pan-r 32s ease-in-out infinite;
 }
 
 /* Muscle-color variant: recolors blobs from --mc / --mc-l set on the wrapper */
@@ -814,32 +818,30 @@
 .wave-bg.wave-muscle .b4 { background: radial-gradient(circle, var(--mc, var(--accent)) 0%, transparent 60%); opacity: 0.4; }
 
 @keyframes p-wave1 {
-  0%,100% { transform: translate(0,0) scale(1); }
-  33%     { transform: translate(60px, 40px) scale(1.15); }
-  66%     { transform: translate(-30px, 80px) scale(0.9); }
+  0%,100% { transform: translate3d(0, 0, 0) scale(1); }
+  33%     { transform: translate3d(60px, 40px, 0) scale(1.15); }
+  66%     { transform: translate3d(-30px, 80px, 0) scale(0.9); }
 }
 @keyframes p-wave2 {
-  0%,100% { transform: translate(0,0) scale(1); }
-  33%     { transform: translate(-50px, 60px) scale(1.1); }
-  66%     { transform: translate(40px, -40px) scale(0.95); }
+  0%,100% { transform: translate3d(0, 0, 0) scale(1); }
+  33%     { transform: translate3d(-50px, 60px, 0) scale(1.1); }
+  66%     { transform: translate3d(40px, -40px, 0) scale(0.95); }
 }
 @keyframes p-wave3 {
-  0%,100% { transform: translate(0,0) scale(1); }
-  50%     { transform: translate(80px, -60px) scale(1.2); }
+  0%,100% { transform: translate3d(0, 0, 0) scale(1); }
+  50%     { transform: translate3d(80px, -60px, 0) scale(1.2); }
 }
 @keyframes p-wave4 {
-  0%,100% { transform: translate(0,0) scale(1); }
-  50%     { transform: translate(-70px, 40px) scale(1.1); }
+  0%,100% { transform: translate3d(0, 0, 0) scale(1); }
+  50%     { transform: translate3d(-70px, 40px, 0) scale(1.1); }
 }
 @keyframes p-aurora-pan {
-  0%   { background-position: 0% 0%; transform: translateY(0); }
-  50%  { background-position: 100% 100%; transform: translateY(-30px); }
-  100% { background-position: 0% 0%; transform: translateY(0); }
+  0%,100% { transform: translate3d(-6%, -3%, 0); }
+  50%     { transform: translate3d(6%, 3%, 0); }
 }
 @keyframes p-aurora-pan-r {
-  0%   { background-position: 100% 0%; transform: translateY(0); }
-  50%  { background-position: 0% 100%; transform: translateY(30px); }
-  100% { background-position: 100% 0%; transform: translateY(0); }
+  0%,100% { transform: translate3d(6%, 3%, 0); }
+  50%     { transform: translate3d(-6%, -3%, 0); }
 }
 
 /* Light-theme: tone down the waves so the bg stays light */
@@ -851,7 +853,7 @@
 [data-theme="gradient"] .wave-bg .blob { opacity: 1 !important; }
 [data-theme="gradient"] .wave-bg .aurora { opacity: 0.75 !important; }
 
-/* ── Film grain ───────────────────────────────────────────── */
+/* ── Film grain (static — no per-frame paint cost) ──────────── */
 .grain {
   position: absolute; inset: 0;
   pointer-events: none;
@@ -859,18 +861,8 @@
   mix-blend-mode: overlay;
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.5 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
   background-size: 200px 200px;
-  animation: p-grain-shift 1.2s steps(6) infinite;
 }
 [data-theme="white"] .grain { mix-blend-mode: multiply; opacity: 0.06; }
-@keyframes p-grain-shift {
-  0%   { transform: translate(0, 0); }
-  16%  { transform: translate(-4%, 3%); }
-  33%  { transform: translate(3%, -5%); }
-  50%  { transform: translate(-3%, 4%); }
-  66%  { transform: translate(5%, 2%); }
-  83%  { transform: translate(-2%, -3%); }
-  100% { transform: translate(0, 0); }
-}
 
 /* ── Motion modes (data-motion on <html>) ─────────────────── */
 
@@ -891,12 +883,9 @@
 [data-motion="pulse"] .wave-bg .b3 { animation: p-pulse-blob 6s ease-in-out infinite 3s; }
 [data-motion="pulse"] .wave-bg .b4 { animation: p-pulse-blob 6s ease-in-out infinite 4.5s; }
 @keyframes p-pulse-blob {
-  0%,100% { transform: scale(1); opacity: var(--blob-op, 0.85); }
-  50%     { transform: scale(1.1); opacity: calc(var(--blob-op, 0.85) * 1.2); }
+  0%,100% { transform: translate3d(0, 0, 0) scale(1); opacity: var(--blob-op, 0.85); }
+  50%     { transform: translate3d(0, 0, 0) scale(1.1); opacity: calc(var(--blob-op, 0.85) * 1.2); }
 }
-
-[data-motion="none"] .wave-bg,
-[data-motion="none"] .grain { display: none !important; }
 
 /* Respect OS reduced-motion: forced-still (blocking script also handles this). */
 @media (prefers-reduced-motion: reduce) {

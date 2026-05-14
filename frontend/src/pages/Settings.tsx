@@ -11,9 +11,8 @@ import {
 
 const MOTION_LABELS: Record<MotionId, string> = {
   aurora: 'Aurora · full motion',
-  pulse: 'Pulse · blobs only',
+  pulse: 'Pulse · subtle motion',
   still: 'Still · no motion',
-  none: 'Off · solid background',
 }
 
 export default function Settings() {
