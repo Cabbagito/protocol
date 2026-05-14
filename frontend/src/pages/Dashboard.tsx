@@ -2,268 +2,471 @@ import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { useActiveMesocycle } from '../api/hooks'
 import { getCurrentPosition } from '../lib/mesoUtils'
-import {
-  ChartIcon,
-  CalendarIcon,
-  DumbbellIcon,
-  TrendingUpIcon,
-  GearIcon,
-  ChevronRightIcon,
-  AppleIcon,
-} from '../components/Icons'
-import AppHeader from '../components/AppHeader'
+import { GearIcon } from '../components/Icons'
 import PageLoader from '../components/PageLoader'
-import MesoGrid from '../components/MesoGrid'
+import ProtocolMark from '../components/ProtocolMark'
+import AuroraBackground from '../components/AuroraBackground'
 
-function ArrowIcon({ className }: { className?: string }) {
+function ArrowIcon({ size = 18 }: { size?: number }) {
   return (
-    <svg className={className} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
       <path d="M5 12h14M12 5l7 7-7 7" />
     </svg>
   )
 }
 
-const quickAccessItems = [
-  { path: '/mesocycles', label: 'Mesocycles', icon: ChartIcon, color: 'var(--accent-l)', bgColor: 'rgba(var(--accent-rgb), 0.1)' },
-  { path: '/splits', label: 'Splits', icon: CalendarIcon, color: '#a855f7', bgColor: 'rgba(168,85,247,0.1)' },
-  { path: '/exercises', label: 'Exercises', icon: DumbbellIcon, color: '#22c55e', bgColor: 'rgba(34,197,94,0.1)' },
-  { path: '/diet', label: 'Diet', icon: AppleIcon, color: '#ef4444', bgColor: 'rgba(239,68,68,0.1)' },
-  { path: '/progress', label: 'Progress', icon: TrendingUpIcon, color: '#f97316', bgColor: 'rgba(249,115,22,0.1)' },
-]
+const DAY_LETTERS = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
+const ORDINAL_WORDS = [
+  'one', 'two', 'three', 'four', 'five', 'six', 'seven',
+  'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen',
+] as const
+
+/** Monday-start day-of-week index (0..6) for a given Date. */
+function mondayIndex(d: Date): number {
+  // JS getDay: 0=Sun..6=Sat → shift so Monday is 0.
+  return (d.getDay() + 6) % 7
+}
+
+/** Local YYYY-MM-DD (no tz drift from toISOString). */
+function localDateKey(d: Date): string {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
 
 export default function Dashboard() {
-  const { data: mesocycle, isLoading: mesoLoading } = useActiveMesocycle()
+  const { data: mesocycle, isLoading } = useActiveMesocycle()
 
   const currentPos = useMemo(
     () => (mesocycle ? getCurrentPosition(mesocycle.structure) : null),
     [mesocycle],
   )
 
-  if (mesoLoading) {
+  const trainedKeys = useMemo(() => {
+    const out = new Set<string>()
+    if (!mesocycle) return out
+    for (const w of mesocycle.structure.weeks) {
+      for (const s of w.sessions) {
+        if (!s.date) continue
+        const nonSkipped = s.exercises.filter(e => !e.skipped)
+        const allLogged =
+          nonSkipped.length > 0 &&
+          nonSkipped.every(e => e.sets.every(st => st.logged))
+        if (allLogged) out.add(s.date)
+      }
+    }
+    return out
+  }, [mesocycle])
+
+  if (isLoading) {
     return <PageLoader className="min-h-[60vh]" />
   }
 
-  const formattedDate = new Date().toLocaleDateString('en-US', {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
+  // ── Compose this Monday→Sunday strip from the user's local week.
+  const today = new Date()
+  const todayMon = mondayIndex(today)
+  const weekStart = new Date(today)
+  weekStart.setDate(today.getDate() - todayMon)
+  const weekCells = DAY_LETTERS.map((letter, i) => {
+    const d = new Date(weekStart)
+    d.setDate(weekStart.getDate() + i)
+    const key = localDateKey(d)
+    return {
+      letter,
+      key,
+      trained: trainedKeys.has(key),
+      isToday: i === todayMon,
+      isPast: i < todayMon,
+    }
   })
 
-  // Compute stats when mesocycle exists
-  const currentWi = currentPos?.weekIndex ?? 0
-  const currentSi = currentPos?.sessionIndex ?? 0
+  const dateLabel = today
+    .toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+    .toUpperCase()
+    .replace(',', ' ·')
 
-  const nextSessionName = mesocycle
-    ? (mesocycle.structure.weeks[currentWi]?.sessions[currentSi]?.session_name ?? 'Workout')
-    : ''
+  // ── Active session details (when a mesocycle exists)
+  const wi = currentPos?.weekIndex ?? 0
+  const si = currentPos?.sessionIndex ?? 0
+  const week = mesocycle?.structure.weeks[wi]
+  const session = week?.sessions[si]
+  const sessionExercises = (session?.exercises ?? []).filter(e => !e.skipped)
+  const uniqueGroups = Array.from(
+    new Set(sessionExercises.map(e => e.muscle_group)),
+  )
+  const heroGroups = uniqueGroups.slice(0, 3)
 
-  const currentWeek = mesocycle?.structure.weeks[currentWi]
-  const totalSessionsThisWeek = currentWeek?.sessions.length ?? 0
-  const completedThisWeek = currentWeek?.sessions.filter(s => {
-    const nonSkipped = s.exercises.filter(ex => !ex.skipped)
-    return nonSkipped.length > 0 && nonSkipped.every(ex => ex.sets.every(set => set.logged))
-  }).length ?? 0
+  const dayTitle = session?.session_name ?? 'Workout'
+  const dayOrdinal = ORDINAL_WORDS[si] ?? String(si + 1)
 
+  // Continue CTA destination
+  const continueHref = mesocycle && currentPos
+    ? `/workout/${mesocycle.id}?week=${wi}&session=${si}`
+    : null
+
+  // Meso hairline
   const totalWorkouts = mesocycle
     ? mesocycle.structure.weeks.reduce(
-        (count, week) => count + week.sessions.filter(s => s.exercises.some(ex => !ex.skipped)).length,
+        (n, w) =>
+          n + w.sessions.filter(s => s.exercises.some(e => !e.skipped)).length,
         0,
       )
     : 0
-  const progressPercent = totalWorkouts > 0
-    ? Math.round((mesocycle!.workouts_completed / totalWorkouts) * 100)
-    : 0
-
-  const weekPercent = totalSessionsThisWeek > 0
-    ? Math.round((completedThisWeek / totalSessionsThisWeek) * 100)
-    : 0
+  const progressPct =
+    mesocycle && totalWorkouts > 0
+      ? Math.round((mesocycle.workouts_completed / totalWorkouts) * 100)
+      : 0
 
   return (
-    <div>
-      <AppHeader title="Protocol" subtitle={formattedDate} />
+    <div
+      style={{
+        position: 'relative',
+        minHeight: '100vh',
+        background: 'var(--deep)',
+        overflow: 'hidden',
+      }}
+    >
+      <AuroraBackground />
 
-      <div className="px-4 space-y-3">
-        {mesocycle ? (
-          <>
-            {/* HERO MESO CARD */}
-            <div className="relative stagger" style={{ animationDelay: '0.10s' }}>
-              <div className="dash-hero-glow" />
-
-              <div
-                className="card relative z-[1]"
-                style={{ animation: 'dash-breathe-border 4s ease-in-out infinite' }}
-              >
-                {/* Header */}
-                <div className="flex items-start justify-between mb-3.5">
-                  <div>
-                    <div className="text-[15px] font-semibold text-[var(--text-1)]">
-                      {mesocycle.name}
-                    </div>
-                    <div className="mono text-[11px] text-[var(--text-m)] mt-0.5">
-                      Week {currentWi + 1} of {mesocycle.total_weeks}
-                    </div>
-                  </div>
-                  <Link
-                    to={`/mesocycles/${mesocycle.id}`}
-                    className="text-[12px] text-[var(--accent-l)] font-medium"
-                  >
-                    View
-                  </Link>
-                </div>
-
-                {/* Meso Grid */}
-                <div className="mb-4">
-                  <MesoGrid mesocycle={mesocycle} compact />
-                </div>
-
-                {/* Up next + Continue CTA */}
-                <div className="flex items-center gap-2.5">
-                  <div className="flex-1">
-                    <div className="text-[11px] text-[var(--text-m)] mb-0.5">Up next</div>
-                    <div className="text-[13px] font-semibold text-[var(--text-1)]">
-                      {nextSessionName}
-                    </div>
-                  </div>
-                  <Link
-                    to={`/workout/${mesocycle.id}?week=${currentWi}&session=${currentSi}`}
-                    className="dash-cta-btn inline-flex items-center gap-1 text-white text-[13px] font-semibold rounded-[10px] px-5 py-[11px]"
-                    style={{
-                      background: 'var(--accent)',
-                      animation: 'dash-cta-pulse 2.5s ease-in-out infinite',
-                    }}
-                  >
-                    <span className="dash-shimmer" />
-                    Continue
-                    <ArrowIcon className="inline-block ml-0.5 -mb-px" />
-                  </Link>
-                </div>
-              </div>
+      <div
+        style={{
+          position: 'relative',
+          zIndex: 1,
+          padding: '12px 22px 130px',
+          minHeight: '100vh',
+          display: 'flex',
+          flexDirection: 'column',
+        }}
+      >
+        {/* Top bar */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ position: 'relative' }}>
+            <div
+              aria-hidden="true"
+              style={{
+                position: 'absolute',
+                inset: '-40%',
+                background: 'radial-gradient(circle, rgba(var(--accent-rgb),0.35), transparent 65%)',
+                filter: 'blur(14px)',
+                pointerEvents: 'none',
+              }}
+            />
+            <div
+              style={{
+                width: 38,
+                height: 38,
+                borderRadius: 12,
+                background: 'var(--logo-bg)',
+                border: '1px solid var(--border)',
+                position: 'relative',
+                overflow: 'hidden',
+                display: 'grid',
+                placeItems: 'center',
+              }}
+            >
+              <ProtocolMark className="w-9 h-9" />
             </div>
-
-            {/* STAT CARDS */}
-            <div className="flex gap-2 stagger" style={{ animationDelay: '0.18s' }}>
-              {/* This Week */}
-              <div className="card dash-stat-card flex-1" style={{ padding: 14 }}>
-                <div className="text-[10px] font-semibold uppercase tracking-wide text-[var(--text-m)] mb-1.5">
-                  This Week
-                </div>
-                <div className="flex items-baseline gap-[3px]">
-                  <span className="mono text-2xl font-bold text-[var(--text-1)]">
-                    {completedThisWeek}
-                  </span>
-                  <span className="mono text-[13px] text-[var(--text-m)]">
-                    /{totalSessionsThisWeek}
-                  </span>
-                </div>
-                <div
-                  className="h-[3px] rounded-sm mt-2 overflow-hidden"
-                  style={{ background: 'var(--input)' }}
-                >
-                  <div
-                    className="h-full rounded-sm"
-                    style={{
-                      width: `${weekPercent}%`,
-                      background: '#4ade80',
-                      animation: weekPercent > 0 ? 'dash-bar-glow-green 2.5s ease-in-out infinite' : undefined,
-                    }}
-                  />
-                </div>
-              </div>
-
-              {/* Meso Progress */}
-              <div className="card dash-stat-card flex-1" style={{ padding: 14 }}>
-                <div className="text-[10px] font-semibold uppercase tracking-wide text-[var(--text-m)] mb-1.5">
-                  Meso Progress
-                </div>
-                <div className="flex items-baseline gap-[3px]">
-                  <span className="mono text-2xl font-bold text-[var(--text-1)]">
-                    {progressPercent}
-                  </span>
-                  <span className="mono text-[13px] text-[var(--text-m)]">%</span>
-                </div>
-                <div
-                  className="h-[3px] rounded-sm mt-2 overflow-hidden"
-                  style={{ background: 'var(--input)' }}
-                >
-                  <div
-                    className="h-full rounded-sm"
-                    style={{
-                      width: `${progressPercent}%`,
-                      background: 'var(--accent)',
-                      animation: progressPercent > 0 ? 'dash-bar-glow-blue 2.5s ease-in-out infinite 0.5s' : undefined,
-                    }}
-                  />
-                </div>
-              </div>
-            </div>
-          </>
-        ) : (
-          <div className="card stagger" style={{ animationDelay: '0.10s' }}>
-            <h2 className="font-semibold mb-2 text-[var(--text-1)]">Get Started</h2>
-            <p className="text-[var(--text-m)] text-sm mb-4">
-              Create a mesocycle to start tracking your workouts.
-            </p>
-            <Link to="/mesocycles" className="btn btn-primary inline-block">
-              Create Mesocycle
-            </Link>
           </div>
-        )}
+          <Link
+            to="/settings"
+            aria-label="Settings"
+            style={{
+              width: 38,
+              height: 38,
+              borderRadius: 12,
+              background: 'rgba(255,255,255,0.04)',
+              border: '1px solid rgba(255,255,255,0.05)',
+              backdropFilter: 'blur(20px)',
+              WebkitBackdropFilter: 'blur(20px)',
+              color: 'var(--text-2)',
+              display: 'grid',
+              placeItems: 'center',
+            }}
+          >
+            <GearIcon className="w-4 h-4" />
+          </Link>
+        </div>
 
-        {/* QUICK ACCESS */}
-        <div className="stagger" style={{ animationDelay: '0.26s' }}>
-          <div className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-m)] mb-2.5">
-            Quick Access
+        {/* Date + week strip */}
+        <div style={{ marginTop: 28, textAlign: 'center' }}>
+          <div
+            style={{
+              fontSize: 11,
+              color: 'var(--text-2)',
+              letterSpacing: '0.22em',
+              fontFamily: 'JetBrains Mono, ui-monospace, monospace',
+              fontWeight: 500,
+            }}
+          >
+            {dateLabel}
           </div>
-          <div className="grid grid-cols-2 gap-2">
-            {quickAccessItems.map((item, i) => (
-              <Link
-                key={item.path}
-                to={item.path}
-                className="dash-qa-card card flex flex-col gap-2.5"
-                style={{
-                  padding: '16px 14px',
-                  animation: `dash-card-glow 4s ease-in-out infinite ${i}s`,
-                }}
-              >
+          <div style={{ marginTop: 14, display: 'flex', gap: 6, justifyContent: 'center' }}>
+            {weekCells.map((cell, i) => {
+              const { letter, trained, isToday, isPast } = cell
+              const bg = isToday
+                ? 'var(--p-grad)'
+                : trained
+                ? 'rgba(var(--accent-rgb),0.18)'
+                : 'rgba(255,255,255,0.04)'
+              const border = isToday
+                ? 'none'
+                : trained
+                ? '1px solid rgba(var(--accent-rgb),0.35)'
+                : `1px ${isPast ? 'solid' : 'dashed'} rgba(255,255,255,0.08)`
+              const color = isToday
+                ? 'var(--btn-text)'
+                : trained
+                ? 'var(--accent-l)'
+                : 'var(--text-2)'
+              return (
                 <div
-                  className="flex items-center justify-center rounded-lg"
+                  key={i}
                   style={{
-                    width: 32,
-                    height: 32,
-                    background: item.bgColor,
-                    color: item.color,
+                    width: 28,
+                    height: 28,
+                    borderRadius: 8,
+                    background: bg,
+                    border,
+                    display: 'grid',
+                    placeItems: 'center',
+                    fontSize: 11,
+                    fontWeight: 600,
+                    color,
+                    fontFamily: 'JetBrains Mono, ui-monospace, monospace',
+                    boxShadow: isToday
+                      ? '0 0 18px rgba(var(--accent-rgb),0.55)'
+                      : 'none',
                   }}
                 >
-                  <item.icon className="w-[18px] h-[18px]" />
+                  {letter}
                 </div>
-                <span className="text-[13px] font-medium text-[var(--text-1)]">
-                  {item.label}
-                </span>
-              </Link>
-            ))}
-
-            {/* Settings — full width row */}
-            <Link
-              to="/settings"
-              className="dash-qa-card card flex items-center gap-3 col-span-2"
-              style={{ padding: 14 }}
-            >
-              <div
-                className="flex items-center justify-center rounded-lg"
-                style={{
-                  width: 32,
-                  height: 32,
-                  background: 'rgba(100,116,139,0.1)',
-                  color: '#64748b',
-                }}
-              >
-                <GearIcon className="w-[18px] h-[18px]" />
-              </div>
-              <span className="text-[13px] font-medium text-[var(--text-1)]">Settings</span>
-              <ChevronRightIcon className="w-4 h-4 text-[var(--text-m)] ml-auto" />
-            </Link>
+              )
+            })}
           </div>
         </div>
+
+        {/* Hero — vertically centered */}
+        <div
+          style={{
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '24px 0',
+            minHeight: 280,
+          }}
+        >
+          {mesocycle && heroGroups.length > 0 && (
+            <div style={{ display: 'flex', gap: 16, marginBottom: 22 }}>
+              {heroGroups.map((g, i) => (
+                <div key={g} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                  <span
+                    style={{
+                      width: 9,
+                      height: 9,
+                      borderRadius: '50%',
+                      background: `var(--m-${g.replace(/\s+/g, '-')}, var(--accent))`,
+                      boxShadow: `0 0 14px var(--m-${g.replace(/\s+/g, '-')}, var(--accent)), 0 0 4px var(--m-${g.replace(/\s+/g, '-')}, var(--accent))`,
+                      animation: `p-pulse-dot 2.6s ease-in-out infinite ${i * 0.4}s`,
+                    }}
+                  />
+                  <span
+                    style={{
+                      fontSize: 9,
+                      fontWeight: 600,
+                      letterSpacing: '0.18em',
+                      color: 'var(--text-2)',
+                      textTransform: 'uppercase',
+                      fontFamily: 'JetBrains Mono, ui-monospace, monospace',
+                    }}
+                  >
+                    {g}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {mesocycle ? (
+            <>
+              <div
+                className="p-grad-text"
+                style={{
+                  fontSize: 130,
+                  fontWeight: 700,
+                  letterSpacing: '-0.06em',
+                  lineHeight: 0.9,
+                  textAlign: 'center',
+                  filter: 'drop-shadow(0 0 40px rgba(var(--accent-rgb),0.35))',
+                }}
+              >
+                {dayTitle}
+              </div>
+              <div
+                style={{
+                  fontFamily: "'Fraunces', 'Instrument Serif', Georgia, serif",
+                  fontStyle: 'italic',
+                  fontSize: 17,
+                  color: 'var(--text-2)',
+                  marginTop: 12,
+                  letterSpacing: '0.01em',
+                }}
+              >
+                day {dayOrdinal}
+              </div>
+            </>
+          ) : (
+            <>
+              <div
+                className="p-grad-text"
+                style={{
+                  fontSize: 90,
+                  fontWeight: 700,
+                  letterSpacing: '-0.05em',
+                  lineHeight: 0.9,
+                  textAlign: 'center',
+                  filter: 'drop-shadow(0 0 40px rgba(var(--accent-rgb),0.35))',
+                }}
+              >
+                Begin.
+              </div>
+              <div
+                style={{
+                  fontFamily: "'Fraunces', 'Instrument Serif', Georgia, serif",
+                  fontStyle: 'italic',
+                  fontSize: 17,
+                  color: 'var(--text-2)',
+                  marginTop: 12,
+                }}
+              >
+                no active mesocycle
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Meso hairline */}
+        {mesocycle && (
+          <Link
+            to={`/mesocycles/${mesocycle.id}`}
+            style={{ display: 'block', marginBottom: 14, textDecoration: 'none' }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'baseline',
+                justifyContent: 'space-between',
+                marginBottom: 8,
+              }}
+            >
+              <span
+                style={{
+                  fontSize: 10,
+                  letterSpacing: '0.18em',
+                  color: 'var(--text-m)',
+                  fontFamily: 'JetBrains Mono, ui-monospace, monospace',
+                  fontWeight: 500,
+                  textTransform: 'uppercase',
+                }}
+              >
+                {mesocycle.name}
+              </span>
+              <span
+                style={{
+                  fontSize: 10,
+                  letterSpacing: '0.18em',
+                  color: 'var(--text-2)',
+                  fontFamily: 'JetBrains Mono, ui-monospace, monospace',
+                  fontWeight: 500,
+                }}
+              >
+                WK {mesocycle.current_week} / {mesocycle.total_weeks} · {progressPct}%
+              </span>
+            </div>
+            <div
+              style={{
+                height: 2,
+                background: 'rgba(255,255,255,0.06)',
+                borderRadius: 1,
+                overflow: 'hidden',
+              }}
+            >
+              <div
+                style={{
+                  width: `${progressPct}%`,
+                  height: '100%',
+                  background: 'var(--p-grad)',
+                  boxShadow: '0 0 8px rgba(var(--accent-rgb),0.6)',
+                }}
+              />
+            </div>
+          </Link>
+        )}
+
+        {/* CTA */}
+        {continueHref ? (
+          <Link
+            to={continueHref}
+            style={{
+              position: 'relative',
+              width: '100%',
+              height: 58,
+              borderRadius: 16,
+              background: 'var(--p-grad)',
+              color: 'var(--btn-text)',
+              fontWeight: 700,
+              fontSize: 16,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 10,
+              boxShadow: '0 14px 40px -10px rgba(var(--accent-rgb),0.55), inset 0 1px 0 rgba(255,255,255,0.18)',
+              textDecoration: 'none',
+              overflow: 'hidden',
+            }}
+          >
+            <span
+              aria-hidden
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '40%',
+                height: '100%',
+                background:
+                  'linear-gradient(110deg, transparent, rgba(255,255,255,0.25), transparent)',
+                animation: 'p-shimmer 3s ease-in-out infinite',
+                pointerEvents: 'none',
+              }}
+            />
+            Continue workout
+            <ArrowIcon />
+          </Link>
+        ) : (
+          <Link
+            to="/mesocycles"
+            style={{
+              width: '100%',
+              height: 58,
+              borderRadius: 16,
+              background: 'var(--p-grad)',
+              color: 'var(--btn-text)',
+              fontWeight: 700,
+              fontSize: 16,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 10,
+              boxShadow: '0 14px 40px -10px rgba(var(--accent-rgb),0.55), inset 0 1px 0 rgba(255,255,255,0.18)',
+              textDecoration: 'none',
+            }}
+          >
+            Create mesocycle
+            <ArrowIcon />
+          </Link>
+        )}
       </div>
     </div>
   )
