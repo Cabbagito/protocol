@@ -185,7 +185,6 @@ def _log_session(
     meso_session: dict,
     exercises_by_id: dict,
     session_date: str,
-    rir: int,
     *,
     use_suggested: bool = False,
 ) -> None:
@@ -202,7 +201,6 @@ def _log_session(
                 weight = base_weight
             s["weight"] = weight
             s["reps"] = 10
-            s["rir"] = rir
             s["logged"] = True
 
 
@@ -228,20 +226,20 @@ async def seed_demo_mesocycle(session: AsyncSession) -> None:
     total_weeks = 4
     structure = build_mesocycle_structure(days, exercises_by_id, total_weeks)
 
-    # Week 1: all 5 sessions logged (RiR 3)
+    # Week 1: all 5 sessions logged
     start_date = date.today() - timedelta(days=16)
     week1 = structure["weeks"][0]
     for si, meso_session in enumerate(week1["sessions"]):
         day = (start_date + timedelta(days=si)).isoformat()
-        _log_session(meso_session, exercises_by_id, day, rir=3)
+        _log_session(meso_session, exercises_by_id, day)
         compute_progression(structure, 0, si)
 
-    # Week 2: all 5 sessions logged (RiR 2), using suggested weights
+    # Week 2: all 5 sessions logged, using suggested weights
     week2_start = date.today() - timedelta(days=9)
     week2 = structure["weeks"][1]
     for si, meso_session in enumerate(week2["sessions"]):
         day = (week2_start + timedelta(days=si)).isoformat()
-        _log_session(meso_session, exercises_by_id, day, rir=2, use_suggested=True)
+        _log_session(meso_session, exercises_by_id, day, use_suggested=True)
         compute_progression(structure, 1, si)
 
     # Week 3: first 2 sessions logged (Pull, Push), Legs is next
@@ -250,7 +248,7 @@ async def seed_demo_mesocycle(session: AsyncSession) -> None:
     for si in range(2):
         meso_session = week3["sessions"][si]
         day = (week3_start + timedelta(days=si)).isoformat()
-        _log_session(meso_session, exercises_by_id, day, rir=1, use_suggested=True)
+        _log_session(meso_session, exercises_by_id, day, use_suggested=True)
         compute_progression(structure, 2, si)
 
     meso = Mesocycle(

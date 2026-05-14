@@ -24,7 +24,6 @@ async def get_next_template(db: AsyncSession, mesocycle_id: str, user_id: str) -
     return {
         "session_name": session["session_name"],
         "week_number": week["week_number"],
-        "target_rir": week["rir"],
         "week_index": pos["week_index"],
         "session_index": pos["session_index"],
         "exercises": session["exercises"],
@@ -42,7 +41,6 @@ async def get_specific_template(
     return {
         "session_name": session["session_name"],
         "week_number": week["week_number"],
-        "target_rir": week["rir"],
         "week_index": week_index,
         "session_index": session_index,
         "exercises": session["exercises"],

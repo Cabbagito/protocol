@@ -6,15 +6,7 @@ and SQLAlchemy model instances used as attribute bags.
 
 import math
 
-from app.domain.constants import RIR_SCHEMES
 from app.domain.propagation import iter_future_exercise_instances
-
-
-def calculate_rir_scheme(total_weeks: int) -> list[int]:
-    """Return the RiR scheme for a mesocycle of 3-8 weeks."""
-    if total_weeks not in RIR_SCHEMES:
-        raise ValueError(f"Unsupported week count: {total_weeks}. Must be 3-8.")
-    return RIR_SCHEMES[total_weeks]
 
 
 def build_mesocycle_structure(
@@ -30,12 +22,10 @@ def build_mesocycle_structure(
     If exercise_performances is provided (dict mapping exercise_id to ExercisePerformance),
     uses stored working_weight, working_reps, and num_sets for week 1 seeding.
     """
-    rir_scheme = calculate_rir_scheme(total_weeks)
     perf_map = exercise_performances or {}
 
     weeks = []
     for week_idx in range(total_weeks):
-        week_rir = rir_scheme[week_idx]
         week_sessions = []
         for day in days:
             exercise_entries = []
@@ -58,7 +48,6 @@ def build_mesocycle_structure(
                             "reps": None,
                             "target_reps": ex_target_reps,
                             "suggested_weight": ex_suggested if week_idx == 0 else None,
-                            "rir": None,
                             "logged": False,
                         }
                     )
@@ -85,7 +74,6 @@ def build_mesocycle_structure(
         weeks.append(
             {
                 "week_number": week_idx + 1,
-                "rir": week_rir,
                 "sessions": week_sessions,
             }
         )
@@ -174,7 +162,7 @@ def handle_weight_bump(structure: dict, week_index: int, session_index: int) -> 
 
 def compute_progression(structure: dict, week_index: int, session_index: int) -> None:
     """Compute per-set rep progression from a completed session to the next unlogged
-    instance of each exercise anywhere in the structure (deload weeks excluded).
+    instance of each exercise anywhere in the structure.
 
     Algorithm: for each logged set, if reps >= target_reps, the next unlogged
     instance's matching set gets target_reps + 1 (or averaged-up). Weight carries
@@ -211,7 +199,6 @@ def compute_progression(structure: dict, week_index: int, session_index: int) ->
                     week_index,
                     session_index,
                     exercise_id,
-                    skip_deloads=True,
                 )
             ),
             None,
@@ -251,18 +238,15 @@ def compute_progression(structure: dict, week_index: int, session_index: int) ->
 
 
 def derive_fields(structure: dict) -> dict:
-    """Derive total_weeks, current_week, rir_scheme, workouts_completed from structure."""
+    """Derive total_weeks, current_week, workouts_completed from structure."""
     weeks = structure.get("weeks", [])
     total_weeks = len(weeks)
-    rir_scheme = [w.get("rir", 0) for w in weeks]
 
     pos = get_current_position(structure)
     if pos.get("completed"):
         current_week = total_weeks
     else:
         current_week = pos["week_index"] + 1
-
-    current_rir = rir_scheme[current_week - 1] if rir_scheme else 0
 
     # Count fully-logged sessions (respecting skipped exercises)
     workouts_completed = 0
@@ -279,8 +263,6 @@ def derive_fields(structure: dict) -> dict:
 
     return {
         "total_weeks": total_weeks,
-        "rir_scheme": rir_scheme,
         "current_week": current_week,
-        "current_rir": current_rir,
         "workouts_completed": workouts_completed,
     }

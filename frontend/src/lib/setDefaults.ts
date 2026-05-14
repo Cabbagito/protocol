@@ -18,14 +18,6 @@ export function resolveSetReps(set: MesoSet, localReps?: number | null): number 
 }
 
 /**
- * Resolve the RiR for a set, falling back to the week's target RiR.
- */
-export function resolveSetRir(set: MesoSet, targetRir: number, localRir?: number | null): number | null {
-  if (set.logged) return set.rir
-  return localRir ?? (targetRir >= 0 ? targetRir : null)
-}
-
-/**
  * Resolve the set type for a set.
  */
 export function resolveSetType(set: MesoSet, localSetType?: SetType | null): SetType | undefined {
@@ -40,7 +32,6 @@ export function buildWorkingSet(
   set: MesoSet,
   exerciseId: string,
   exerciseName: string,
-  targetRir: number,
   local?: WorkingSet,
 ): WorkingSet {
   return {
@@ -49,7 +40,6 @@ export function buildWorkingSet(
     exercise_name: exerciseName,
     weight: resolveSetWeight(set, local?.weight),
     reps: resolveSetReps(set, local?.reps),
-    rir: resolveSetRir(set, targetRir, local?.rir),
     set_type: resolveSetType(set, local?.set_type),
     completed: set.logged,
   }

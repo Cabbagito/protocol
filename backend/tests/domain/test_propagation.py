@@ -11,8 +11,8 @@ def _make_structure(weeks):
     return {"weeks": weeks}
 
 
-def _make_week(sessions, rir=3):
-    return {"sessions": sessions, "rir": rir}
+def _make_week(sessions):
+    return {"sessions": sessions}
 
 
 def _make_session(name="Push", day_order=0, exercises=None):
@@ -124,19 +124,6 @@ class TestIterFutureExerciseInstances:
             ]
         )
         results = list(iter_future_exercise_instances(structure, 0, 0, "ex1"))
-        assert [(wi, si) for wi, si, _ in results] == [(2, 0)]
-
-    def test_skip_deloads(self):
-        structure = _make_structure(
-            [
-                _make_week([_make_session("Push", 0, [_make_exercise("ex1")])], rir=3),
-                _make_week([_make_session("Push", 0, [_make_exercise("ex1")])], rir=-1),
-                _make_week([_make_session("Push", 0, [_make_exercise("ex1")])], rir=2),
-            ]
-        )
-        results = list(
-            iter_future_exercise_instances(structure, 0, 0, "ex1", skip_deloads=True)
-        )
         assert [(wi, si) for wi, si, _ in results] == [(2, 0)]
 
     def test_excludes_current_session(self):

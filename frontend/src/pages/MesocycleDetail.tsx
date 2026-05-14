@@ -133,8 +133,6 @@ export default function MesocycleDetail() {
 
           <div className="text-[10px] mb-3" style={{ color: 'var(--text-m)' }}>
             Week {mesocycle.current_week}
-            {' '}&middot;{' '}
-            {mesocycle.current_rir === -1 ? 'Deload' : `RiR ${mesocycle.current_rir}`}
             {currentPos && (
               <>
                 {' '}&middot;{' '}
@@ -176,10 +174,6 @@ export default function MesocycleDetail() {
                   </div>
                   <div className="text-[11px]" style={{ color: 'var(--text-m)' }}>
                     {nextSession.session.exercises.length} exercises
-                    {' '}&middot;{' '}
-                    {mesocycle.rir_scheme[nextSession.weekIndex] === -1
-                      ? 'Deload'
-                      : `RiR ${mesocycle.rir_scheme[nextSession.weekIndex]}`}
                   </div>
                 </div>
               </div>

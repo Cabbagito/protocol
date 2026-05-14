@@ -2,24 +2,55 @@ import { useState, useCallback, useRef, useMemo, useEffect } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useToast } from '../components/Toast'
-import { useMesocycle, useUpdateExerciseNote, useReplaceExercise, useAddExercise, useReorderExercise, useRemoveExerciseFromSession, queryKeys } from '../api/hooks'
+import {
+  useMesocycle, useUpdateExerciseNote, useReplaceExercise, useAddExercise,
+  useReorderExercise, useRemoveExerciseFromSession, useExerciseHistory, queryKeys,
+} from '../api/hooks'
 import { api } from '../api/client'
 import PageLoader from '../components/PageLoader'
-import AppHeader from '../components/AppHeader'
-import RirBadge from '../components/RirBadge'
-import MesoGrid from '../components/MesoGrid'
+import MuscleWaveBackground from '../components/MuscleWaveBackground'
+import ProgressRail from '../components/ProgressRail'
+import ExercisePeekCard from '../components/ExercisePeekCard'
+import NumeralsCard from '../components/NumeralsCard'
+import MuscleAccent from '../components/MuscleAccent'
+import BottomSheet from '../components/BottomSheet'
+import { getMuscleColor } from '../lib/muscleColors'
+import { formatHistorySummary } from '../lib/exerciseHistory'
 import { getCurrentPosition } from '../lib/mesoUtils'
-import { getExerciseHistory } from '../lib/exerciseHistory'
 import { useKeyboardVisible } from '../lib/useKeyboardVisible'
 import { useAnimPhase } from '../hooks/useAnimPhase'
 import { useWorkoutState } from '../hooks/useWorkoutState'
 import { useWorkoutAutoSave } from '../hooks/useWorkoutAutoSave'
 import { useSetModification } from '../hooks/useSetModification'
 import { useWorkoutCompletion } from '../hooks/useWorkoutCompletion'
-import { ExerciseCard } from './workout/ExerciseCard'
 import { NoteModal } from './workout/NoteModal'
 import { ExercisePicker } from './workout/ExercisePicker'
-import type { WorkoutTemplate } from '../types'
+import { ExerciseHistoryPopup } from './workout/ExerciseHistoryPopup'
+import { SET_TYPE_LABELS } from '../lib/setConstants'
+import type { WorkoutTemplate, MesoExercise, WorkingSet, SetType } from '../types'
+
+const ORDINAL_WORDS = [
+  'one', 'two', 'three', 'four', 'five', 'six', 'seven',
+  'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen',
+] as const
+
+function BackIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="15 18 9 12 15 6" />
+    </svg>
+  )
+}
+
+function DotsIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+      <circle cx="5" cy="12" r="1.8" />
+      <circle cx="12" cy="12" r="1.8" />
+      <circle cx="19" cy="12" r="1.8" />
+    </svg>
+  )
+}
 
 export default function Workout() {
   const toast = useToast()
@@ -31,7 +62,7 @@ export default function Workout() {
   const weekParam = searchParams.get('week')
   const sessionParam = searchParams.get('session')
 
-  // Data fetching
+  // Data fetching ─────────────────────────────────────────────────────
   const { data: template, isLoading } = useQuery({
     queryKey: weekParam !== null && sessionParam !== null
       ? ['workouts', 'template', mesocycleId, Number(weekParam), Number(sessionParam)]
@@ -48,21 +79,25 @@ export default function Workout() {
   const reorderExerciseMutation = useReorderExercise()
   const removeExerciseMutation = useRemoveExerciseFromSession()
 
-  // UI state
-  const [headerExpanded, setHeaderExpanded] = useState(false)
-  useEffect(() => {
-    setHeaderExpanded(false)
-  }, [weekParam, sessionParam])
+  // UI state ──────────────────────────────────────────────────────────
   const [noteModal, setNoteModal] = useState<{ exerciseId: string; exerciseName: string } | null>(null)
   const [replaceModal, setReplaceModal] = useState<{ exerciseId: string; exerciseIndex: number; muscleGroup: string; equipmentType: string } | null>(null)
   const [addExerciseOpen, setAddExerciseOpen] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [perSetSheetOpen, setPerSetSheetOpen] = useState(false)
+  const [historyOpen, setHistoryOpen] = useState(false)
+  // Local current-exercise cursor. Defaults to first un-finished exercise.
+  // User can jump by tapping a peek card.
+  const [curIdxOverride, setCurIdxOverride] = useState<number | null>(null)
+  // Per-exercise active-set override (chip taps).
+  const [activeSetOverride, setActiveSetOverride] = useState<Record<string, number>>({})
 
-  // Refs shared across hooks
+  // Shared refs ───────────────────────────────────────────────────────
   const modifyingRef = useRef(false)
   const prevCompletedRef = useRef(0)
   const prevSkippedRef = useRef<string>('')
 
-  // Derived state
+  // Derived: current position in meso (for back-to-current CTA on previews)
   const currentPos = useMemo(() => {
     if (!mesocycle) return null
     return getCurrentPosition(mesocycle.structure)
@@ -73,14 +108,14 @@ export default function Workout() {
     return template.week_index > currentPos.weekIndex
   }, [template, currentPos])
 
-  // Hooks
-  const { animPhaseRef, bumpAnim, setAnimKey, clearAnim } = useAnimPhase()
+  // Workout hooks ─────────────────────────────────────────────────────
+  const { animPhaseRef, bumpAnim, setAnimKey } = useAnimPhase()
 
   const {
     sets, setSets, initialized, skippedExercises, skippedSets, setSkippedSets,
     removedExercises, exerciseNotes, setExerciseNotes,
-    updateSet, completeSet, uncompleteSet,
-    toggleSkip, toggleSkipSet, resetForReplace,
+    updateSet, completeSet,
+    toggleSkip, resetForReplace,
   } = useWorkoutState({
     template, isFutureSession, weekParam, sessionParam,
     animPhaseRef, setAnimKey, bumpAnim, prevCompletedRef, prevSkippedRef,
@@ -101,6 +136,12 @@ export default function Workout() {
     skippedExercises, skippedSets, isFutureSession,
     isSaving, setIsSaving, pendingSavesRef, logSets,
   })
+
+  // Reset overrides when route changes
+  useEffect(() => {
+    setCurIdxOverride(null)
+    setActiveSetOverride({})
+  }, [weekParam, sessionParam, mesocycleId])
 
   // Note save handler
   const handleSaveNote = useCallback((exerciseId: string, note: string | null) => {
@@ -138,7 +179,6 @@ export default function Workout() {
     }
   }, [mesocycleId, template, replaceModal, replaceExercise, queryClient, toast, resetForReplace])
 
-  // Add exercise handler
   const handleAddExercise = useCallback(async (newExerciseId: string) => {
     if (!mesocycleId || !template) return
     try {
@@ -159,7 +199,26 @@ export default function Workout() {
     }
   }, [mesocycleId, template, addExerciseMutation, queryClient, toast, resetForReplace])
 
-  // Reorder exercise handler
+  const handleRemoveExercise = useCallback(async (exerciseId: string) => {
+    if (!mesocycleId || !template) return
+    try {
+      await removeExerciseMutation.mutateAsync({
+        mesocycle_id: mesocycleId,
+        week_index: template.week_index,
+        session_index: template.session_index,
+        exercise_id: exerciseId,
+        apply_to_future: true,
+      })
+      resetForReplace()
+      queryClient.removeQueries({ queryKey: ['workouts', 'template'] })
+      queryClient.invalidateQueries({ queryKey: queryKeys.workouts.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.mesocycles.all })
+    } catch {
+      toast.showError('Failed to remove exercise')
+    }
+  }, [mesocycleId, template, removeExerciseMutation, queryClient, toast, resetForReplace])
+
+  // Reorder helper (used by the menu sheet)
   const handleReorderExercise = useCallback(async (exerciseIndex: number, direction: 'up' | 'down') => {
     if (!mesocycleId || !template) return
     try {
@@ -180,208 +239,270 @@ export default function Workout() {
     }
   }, [mesocycleId, template, reorderExerciseMutation, queryClient, toast, resetForReplace])
 
-  // Remove exercise handler (persisted to backend)
-  const handleRemoveExercise = useCallback(async (exerciseId: string) => {
-    if (!mesocycleId || !template) return
-    try {
-      await removeExerciseMutation.mutateAsync({
-        mesocycle_id: mesocycleId,
-        week_index: template.week_index,
-        session_index: template.session_index,
-        exercise_id: exerciseId,
-        apply_to_future: true,
-      })
-      resetForReplace()
-      queryClient.removeQueries({ queryKey: ['workouts', 'template'] })
-      queryClient.invalidateQueries({ queryKey: queryKeys.workouts.all })
-      queryClient.invalidateQueries({ queryKey: queryKeys.mesocycles.all })
-    } catch {
-      toast.showError('Failed to remove exercise')
-    }
-  }, [mesocycleId, template, removeExerciseMutation, queryClient, toast, resetForReplace])
-
-  // Current workout info for "go to current" CTA
-  const currentWorkoutInfo = useMemo(() => {
-    if (!mesocycle || !currentPos) return null
-    const session = mesocycle.structure.weeks[currentPos.weekIndex]?.sessions[currentPos.sessionIndex]
-    const rir = mesocycle.rir_scheme[currentPos.weekIndex]
-    return {
-      name: session?.session_name ?? 'Workout',
-      week: currentPos.weekIndex + 1,
-      rir: rir === -1 ? 'Deload' : `RiR ${rir}`,
-    }
-  }, [mesocycle, currentPos])
-
-  const exerciseGroups = useMemo(() => {
-    if (!template) return []
+  // Visible (un-removed) exercises with sets attached ─────────────────
+  const exerciseList = useMemo(() => {
+    if (!template) return [] as Array<MesoExercise & {
+      exerciseIndex: number
+      workingSets: WorkingSet[]
+      allDone: boolean
+    }>
     return template.exercises
-      .map((ex, idx) => ({
-        ...ex,
-        exerciseIndex: idx,
-        workingSets: sets.filter((s) => s.exercise_id === ex.exercise_id),
-        history: mesocycle ? getExerciseHistory(
-          mesocycle.structure, ex.exercise_id, template.week_index, template.session_index,
-        ) : [],
-      }))
-      .filter(ex => !removedExercises.has(ex.exercise_id))
-  }, [template, sets, mesocycle, removedExercises])
+      .map((ex, idx) => {
+        const workingSets = sets.filter(s => s.exercise_id === ex.exercise_id)
+        const allDone = workingSets.length > 0 && workingSets.every(s => s.completed || skippedSets.has(`${ex.exercise_id}:${s.set_num}`))
+        return {
+          ...ex,
+          exerciseIndex: idx,
+          workingSets,
+          allDone,
+        }
+      })
+      .filter(ex => !removedExercises.has(ex.exercise_id) && !skippedExercises.has(ex.exercise_id))
+  }, [template, sets, removedExercises, skippedExercises, skippedSets])
 
-  // Loading / error states
-  if (isLoading) {
-    return <PageLoader className="min-h-[60vh]" />
+  // Loading / empty states ────────────────────────────────────────────
+  if (isLoading) return <PageLoader className="min-h-[60vh]" />
+  if (!template) return (
+    <div style={{ padding: 24, textAlign: 'center', color: 'var(--text-m)' }}>
+      Workout template not found
+    </div>
+  )
+
+  // ─── DERIVED STATE ──────────────────────────────────────────────────
+  // Active "current" exercise: an explicit override (set on first LOG,
+  // chip taps, or NEXT EXERCISE) wins; otherwise we default to the first
+  // unfinished exercise. The cursor sticks even when an exercise becomes
+  // fully done, so the user can review/edit before advancing.
+  const firstUnfinished = exerciseList.findIndex(ex => !ex.allDone)
+  const fallbackIdx = firstUnfinished === -1 ? Math.max(0, exerciseList.length - 1) : firstUnfinished
+  const curIdx = Math.min(
+    curIdxOverride ?? fallbackIdx,
+    Math.max(0, exerciseList.length - 1),
+  )
+  const currentEx = exerciseList[curIdx]
+
+  const allLogged = exerciseList.length > 0 && exerciseList.every(ex => ex.allDone)
+  type ScreenState = 'logging' | 'session-done'
+  const screenState: ScreenState = allLogged ? 'session-done' : 'logging'
+
+  // Active set within current exercise: override (chip tap) > first unlogged > last
+  let activeSetIdx = 0
+  if (currentEx) {
+    const override = activeSetOverride[currentEx.exercise_id]
+    if (override != null && override < currentEx.workingSets.length) {
+      activeSetIdx = override
+    } else {
+      const firstOpen = currentEx.workingSets.findIndex(
+        s => !s.completed && !skippedSets.has(`${currentEx.exercise_id}:${s.set_num}`),
+      )
+      activeSetIdx = firstOpen === -1 ? currentEx.workingSets.length - 1 : firstOpen
+    }
   }
-
-  if (!template) {
-    return <div className="text-[var(--text-m)] text-center py-8">Workout template not found</div>
-  }
-
-  // Compute completion excluding skipped exercises
-  const activeSets = sets.filter(s => !skippedExercises.has(s.exercise_id) && !removedExercises.has(s.exercise_id) && !skippedSets.has(`${s.exercise_id}:${s.set_num}`))
-  const completedSets = activeSets.filter(s => s.completed).length
-  const totalSets = activeSets.length
-
-  const rirLabel = template.target_rir === -1 ? 'Deload' : `RiR ${template.target_rir}`
+  const activeSet = currentEx?.workingSets[activeSetIdx]
 
   return (
-    <div className="pb-20">
-      <AppHeader
-        title={template.session_name}
-        subtitle={isFutureSession ? `Week ${template.week_number} · ${rirLabel}` : `Week ${template.week_number}`}
-        rightContent={
-          isFutureSession ? (
+    <div
+      style={{
+        position: 'relative',
+        minHeight: '100vh',
+        background: 'var(--deep)',
+        overflow: 'hidden',
+      }}
+    >
+      <MuscleWaveBackground group={currentEx?.muscle_group ?? 'chest'} />
+
+      <div style={{ position: 'relative', zIndex: 1, padding: '12px 20px 130px' }}>
+        {/* ── Header: back / title / menu ── */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            aria-label="Back"
+            style={{
+              width: 36, height: 36, borderRadius: 12,
+              background: 'rgba(255,255,255,0.05)',
+              border: '1px solid rgba(255,255,255,0.06)',
+              backdropFilter: 'blur(20px)',
+              WebkitBackdropFilter: 'blur(20px)',
+              color: 'var(--text-2)',
+              display: 'grid', placeItems: 'center',
+            }}
+          >
+            <BackIcon />
+          </button>
+          <div style={{ textAlign: 'center' }}>
             <div
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg"
-              style={{ background: 'rgba(148,163,184,0.1)', border: '1px solid rgba(148,163,184,0.15)' }}
+              style={{
+                fontSize: 9, color: 'var(--text-m)', letterSpacing: '0.22em',
+                fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontWeight: 500,
+              }}
             >
-              <svg className="w-3.5 h-3.5" style={{ color: 'var(--text-2)' }} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
-              </svg>
-              <span className="text-xs font-medium" style={{ color: 'var(--text-2)' }}>Preview</span>
+              WEEK {template.week_number} · DAY {template.session_index + 1}
             </div>
-          ) : (
-            <RirBadge rir={template.target_rir} />
-          )
-        }
-        progressPercent={isFutureSession ? undefined : (totalSets > 0 ? (completedSets / totalSets) * 100 : 0)}
-        drawerContent={mesocycle && (
-          <MesoGrid
-            mesocycle={mesocycle}
-            compact
-            viewingWeek={(template.week_index !== currentPos?.weekIndex || template.session_index !== currentPos?.sessionIndex) ? template.week_index : undefined}
-            viewingSession={(template.week_index !== currentPos?.weekIndex || template.session_index !== currentPos?.sessionIndex) ? template.session_index : undefined}
+            <div
+              style={{
+                fontFamily: "'Fraunces', 'Instrument Serif', Georgia, serif",
+                fontStyle: 'italic', fontSize: 18,
+                color: 'var(--text-1)', marginTop: 1,
+              }}
+            >
+              {template.session_name}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setMenuOpen(true)}
+            aria-label="Menu"
+            style={{
+              width: 36, height: 36, borderRadius: 12,
+              background: 'rgba(255,255,255,0.05)',
+              border: '1px solid rgba(255,255,255,0.06)',
+              backdropFilter: 'blur(20px)',
+              WebkitBackdropFilter: 'blur(20px)',
+              color: 'var(--text-2)',
+              display: 'grid', placeItems: 'center',
+            }}
+          >
+            <DotsIcon />
+          </button>
+        </div>
+
+        {/* ── Future-session banner (preview only) ── */}
+        {isFutureSession && (
+          <div
+            style={{
+              marginTop: 14, padding: '10px 12px', borderRadius: 12,
+              background: 'rgba(245,158,11,0.08)',
+              border: '1px solid rgba(245,158,11,0.2)',
+              display: 'flex', alignItems: 'center', gap: 8,
+              fontSize: 12, color: '#f59e0b', fontWeight: 500,
+            }}
+          >
+            Preview — complete previous workouts first.
+          </div>
+        )}
+
+        {/* ── Progress rail ── */}
+        {!isFutureSession && exerciseList.length > 0 && (
+          <div style={{ marginTop: 14 }}>
+            <ProgressRail exercises={exerciseList} currentIndex={curIdx} />
+          </div>
+        )}
+
+        {/* ── State C: session complete ── */}
+        {!isFutureSession && screenState === 'session-done' && (
+          <SessionCompleteHero
+            template={template}
+            exerciseList={exerciseList}
+            isLastSession={isLastSession}
+            isSaving={isSaving}
+            onFinish={handleFinishOrNext}
+            onReviewSets={() => {
+              if (!mesocycleId || !template) return
+              navigate(`/workouts/${mesocycleId}/${template.week_index}/${template.session_index}`)
+            }}
           />
         )}
-        drawerExpanded={headerExpanded}
-        onHeaderAreaClick={() => setHeaderExpanded(prev => !prev)}
-      />
 
-      {/* Future session banner */}
-      {isFutureSession && (
-        <div
-          className="mx-2.5 mt-3 px-3 py-2 rounded-lg flex items-center gap-2"
-          style={{
-            background: 'rgba(245,158,11,0.08)',
-            border: '1px solid rgba(245,158,11,0.2)',
-          }}
-        >
-          <svg className="w-4 h-4 flex-shrink-0" style={{ color: '#f59e0b' }} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
-          </svg>
-          <span className="text-xs font-medium" style={{ color: '#f59e0b' }}>
-            Complete previous workouts first
-          </span>
-        </div>
-      )}
-
-      {/* Exercise Cards */}
-      <div className="px-2.5 pt-4 flex flex-col gap-3" style={isFutureSession ? { opacity: 0.5, pointerEvents: 'none' } : undefined}>
-        {exerciseGroups.map((ex, idx) => (
-          <ExerciseCard
-            key={ex.exercise_id}
-            exercise={ex}
-            exerciseIndex={ex.exerciseIndex}
-            sets={ex.workingSets}
-            allSets={sets}
-            targetRir={template.target_rir}
-            onUpdateSet={updateSet}
-            onCompleteSet={completeSet}
-            onUncompleteSet={uncompleteSet}
-            locked={isFutureSession}
-            skipped={skippedExercises.has(ex.exercise_id)}
-            onToggleSkip={() => toggleSkip(ex.exercise_id)}
-            note={exerciseNotes[ex.exercise_id]}
-            onEditNote={() => setNoteModal({ exerciseId: ex.exercise_id, exerciseName: ex.exercise_name })}
-            onReplace={() => setReplaceModal({ exerciseId: ex.exercise_id, exerciseIndex: ex.exerciseIndex, muscleGroup: ex.muscle_group, equipmentType: ex.equipment_type })}
-            onAddSet={handleAddSet}
-            onRemoveSet={handleRemoveSet}
-            onToggleSkipSet={toggleSkipSet}
-            onRemoveExercise={() => handleRemoveExercise(ex.exercise_id)}
-            onMoveUp={idx > 0 ? () => handleReorderExercise(ex.exerciseIndex, 'up') : null}
-            onMoveDown={idx < exerciseGroups.length - 1 ? () => handleReorderExercise(ex.exerciseIndex, 'down') : null}
+        {/* ── State A: logging (and exercise-complete: same shell, "Next exercise" CTA) ── */}
+        {!isFutureSession && screenState === 'logging' && currentEx && activeSet && (
+          <LoggingState
+            currentEx={currentEx}
+            activeSet={activeSet}
+            activeSetIdx={activeSetIdx}
             skippedSets={skippedSets}
-            animPhaseRef={animPhaseRef}
-            onClearAnim={clearAnim}
-            history={ex.history}
+            onUpdateSet={updateSet}
+            onCompleteSet={(exId, setNum) => {
+              // Lock cursor to current exercise so we don't auto-jump off
+              // it when this becomes the last set — user must tap "Next
+              // exercise" explicitly.
+              setCurIdxOverride(curIdx)
+              completeSet(exId, setNum)
+            }}
+            onAddSet={handleAddSet}
+            onChipTap={(setIdx) => setActiveSetOverride(prev => ({
+              ...prev,
+              [currentEx.exercise_id]: setIdx,
+            }))}
+            onChipMore={() => setPerSetSheetOpen(true)}
+            onOpenHistory={() => setHistoryOpen(true)}
+            onAdvanceExercise={() => setCurIdxOverride(curIdx + 1)}
+            hasNextExercise={curIdx < exerciseList.length - 1}
+            isSaving={isSaving}
           />
-        ))}
-      </div>
+        )}
 
-      {/* Add Exercise button */}
-      {!isFutureSession && (
-        <div className="px-2.5 pt-3 pb-3">
+        {/* ── Workout list (always visible during logging) ── */}
+        {!isFutureSession && screenState === 'logging' && exerciseList.length > 0 && (
+          <div style={{ marginTop: 28 }}>
+            <div
+              style={{
+                fontSize: 10, fontWeight: 600, letterSpacing: '0.18em',
+                textTransform: 'uppercase', color: 'var(--text-m)',
+                fontFamily: 'JetBrains Mono, ui-monospace, monospace', marginBottom: 10,
+              }}
+            >
+              Workout
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {exerciseList.map((ex, i) => {
+                const status: 'done' | 'current' | 'queued' = ex.allDone
+                  ? 'done'
+                  : i === curIdx
+                  ? 'current'
+                  : 'queued'
+                return (
+                  <ExercisePeekCard
+                    key={ex.exercise_id}
+                    exercise={ex}
+                    index={i}
+                    status={status}
+                    onClick={() => setCurIdxOverride(i)}
+                  />
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ── Add exercise CTA below the list ── */}
+        {!isFutureSession && screenState !== 'session-done' && (
           <button
+            type="button"
             onClick={() => setAddExerciseOpen(true)}
-            className="w-full py-3 text-center text-sm font-medium rounded-xl active:bg-white/5"
             style={{
+              marginTop: 16, width: '100%', padding: '14px 0',
+              fontSize: 13, fontWeight: 500,
               color: 'var(--text-m)',
+              borderRadius: 14,
               border: '1.5px dashed rgba(255,255,255,0.1)',
               background: 'rgba(255,255,255,0.02)',
+              cursor: 'pointer',
             }}
           >
             + Add Exercise
           </button>
-        </div>
-      )}
+        )}
 
-      {/* Context-aware sticky button */}
-      {!keyboardOpen && !isFutureSession && completedSets === totalSets && totalSets > 0 && (
-        <div className="sticky bottom-0 z-30 px-4 pb-3">
-          <div className="max-w-lg mx-auto">
-            <button
-              onClick={handleFinishOrNext}
-              disabled={isSaving}
-              className="btn btn-primary w-full"
-            >
-              {isSaving ? 'Saving...' : isLastSession ? 'Finish Mesocycle' : 'Next Workout'}
-            </button>
-          </div>
-        </div>
-      )}
+        {/* ── Go-to-current CTA for preview screens ── */}
+        {!keyboardOpen && isFutureSession && currentPos && (
+          <button
+            type="button"
+            onClick={() => navigate(`/workout/${mesocycleId}`)}
+            style={{
+              marginTop: 20, width: '100%', height: 52, borderRadius: 14,
+              background: 'rgba(var(--accent-rgb),0.15)',
+              border: '1.5px solid rgba(var(--accent-rgb),0.3)',
+              color: 'var(--accent-l)',
+              fontWeight: 600, fontSize: 14, cursor: 'pointer',
+            }}
+          >
+            Go to current workout
+          </button>
+        )}
+      </div>
 
-      {/* Go to current workout CTA */}
-      {!keyboardOpen && isFutureSession && currentWorkoutInfo && (
-        <div className="sticky bottom-0 z-30 px-4 pb-3">
-          <div className="max-w-lg mx-auto flex flex-col gap-1.5">
-            <button
-              onClick={() => navigate(`/workout/${mesocycleId}`)}
-              className="btn w-full font-medium"
-              style={{
-                background: 'rgba(var(--accent-rgb),0.15)',
-                border: '1.5px solid rgba(var(--accent-rgb),0.3)',
-                color: 'var(--accent-l)',
-              }}
-            >
-              Go to Current Workout
-            </button>
-            <span className="text-[11px] text-center" style={{ color: 'var(--text-m)' }}>
-              {currentWorkoutInfo.name} · Week {currentWorkoutInfo.week} · {currentWorkoutInfo.rir}
-            </span>
-          </div>
-        </div>
-      )}
-
-      {/* Note Modal */}
+      {/* ── Note Modal ── */}
       {noteModal && (
         <NoteModal
           exerciseName={noteModal.exerciseName}
@@ -394,7 +515,7 @@ export default function Workout() {
         />
       )}
 
-      {/* Replace Exercise Picker */}
+      {/* ── Replace Exercise Picker ── */}
       {replaceModal && (
         <ExercisePicker
           mode="replace"
@@ -406,15 +527,439 @@ export default function Workout() {
         />
       )}
 
-      {/* Add Exercise Picker */}
+      {/* ── Add Exercise Picker ── */}
       {addExerciseOpen && (
         <ExercisePicker
           mode="add"
-          excludeExerciseIds={exerciseGroups.map(ex => ex.exercise_id)}
+          excludeExerciseIds={exerciseList.map(ex => ex.exercise_id)}
           onSelect={(exerciseId) => handleAddExercise(exerciseId)}
           onClose={() => setAddExerciseOpen(false)}
+        />
+      )}
+
+      {/* ── Header dots menu — exercise-level actions only ── */}
+      {currentEx && (() => {
+        const close = () => setMenuOpen(false)
+        return (
+          <BottomSheet
+            open={menuOpen}
+            onClose={close}
+            title={currentEx.exercise_name}
+            actions={[
+              { label: 'Add note', onClick: () => { close(); setNoteModal({ exerciseId: currentEx.exercise_id, exerciseName: currentEx.exercise_name }) } },
+              { label: 'Replace exercise', onClick: () => { close(); setReplaceModal({ exerciseId: currentEx.exercise_id, exerciseIndex: currentEx.exerciseIndex, muscleGroup: currentEx.muscle_group, equipmentType: currentEx.equipment_type }) } },
+              { label: 'Add a set', onClick: () => { close(); handleAddSet(currentEx.exercise_id) } },
+              ...(curIdx > 0 ? [{ label: 'Move up', onClick: () => { close(); handleReorderExercise(currentEx.exerciseIndex, 'up') } }] : []),
+              ...(curIdx < exerciseList.length - 1 ? [{ label: 'Move down', onClick: () => { close(); handleReorderExercise(currentEx.exerciseIndex, 'down') } }] : []),
+              { label: 'Skip exercise', onClick: () => { close(); toggleSkip(currentEx.exercise_id) } },
+              { label: 'Remove from workout', variant: 'danger', onClick: () => { close(); handleRemoveExercise(currentEx.exercise_id) } },
+            ]}
+          />
+        )
+      })()}
+
+      {/* ── Per-set sheet — opens from the "..." button on the active chip ── */}
+      {currentEx && activeSet && (() => {
+        const close = () => setPerSetSheetOpen(false)
+        const currentSetType: SetType = (activeSet.set_type as SetType | undefined) ?? 'straight'
+        const canRemoveSet = currentEx.workingSets.length > 1
+        return (
+          <BottomSheet
+            open={perSetSheetOpen}
+            onClose={close}
+            title={`Set ${activeSetIdx + 1} · ${currentEx.exercise_name}`}
+            actions={[
+              { label: currentSetType === 'straight' ? '✓ Straight set' : 'Straight set', onClick: () => { close(); updateSet(currentEx.exercise_id, activeSet.set_num, 'set_type', 'straight') } },
+              { label: currentSetType === 'myorep' ? '✓ Myorep' : 'Myorep', onClick: () => { close(); updateSet(currentEx.exercise_id, activeSet.set_num, 'set_type', 'myorep') } },
+              // myorep_match is meaningless on the first set — it must reference a prior set.
+              ...(activeSet.set_num > 1 ? [{ label: currentSetType === 'myorep_match' ? '✓ Myorep match' : 'Myorep match', onClick: () => { close(); updateSet(currentEx.exercise_id, activeSet.set_num, 'set_type', 'myorep_match') } }] : []),
+              ...(canRemoveSet ? [{ label: `Remove this set`, variant: 'danger' as const, onClick: () => { close(); handleRemoveSet(currentEx.exercise_id, activeSet.set_num) } }] : []),
+            ]}
+          />
+        )
+      })()}
+
+      {/* ── Exercise history popup ── */}
+      {historyOpen && currentEx && (
+        <ExerciseHistoryWrap
+          exerciseId={currentEx.exercise_id}
+          exerciseName={currentEx.exercise_name}
+          muscleGroup={currentEx.muscle_group}
+          equipmentType={currentEx.equipment_type}
+          onClose={() => setHistoryOpen(false)}
         />
       )}
     </div>
   )
 }
+
+/* ─────────────────────────────────────────────────────────────────── */
+/*  STATE A — logging                                                  */
+/* ─────────────────────────────────────────────────────────────────── */
+
+interface LoggingStateProps {
+  currentEx: MesoExercise & { workingSets: WorkingSet[] }
+  activeSet: WorkingSet
+  activeSetIdx: number
+  skippedSets: Set<string>
+  onUpdateSet: (exerciseId: string, setNum: number, field: keyof WorkingSet, value: number | boolean | string) => void
+  onCompleteSet: (exerciseId: string, setNum: number) => void
+  onAddSet: (exerciseId: string) => void
+  onChipTap: (setIdx: number) => void
+  onChipMore: () => void
+  onOpenHistory: () => void
+  onAdvanceExercise: () => void
+  hasNextExercise: boolean
+  isSaving: boolean
+}
+
+function LoggingState({
+  currentEx, activeSet, activeSetIdx, skippedSets,
+  onUpdateSet, onCompleteSet, onAddSet, onChipTap, onChipMore,
+  onOpenHistory, onAdvanceExercise, hasNextExercise, isSaving,
+}: LoggingStateProps) {
+  const c = getMuscleColor(currentEx.muscle_group)
+
+  // Cross-meso "last session" reference (Commit 2's history endpoint).
+  const { data: history } = useExerciseHistory(currentEx.exercise_id)
+  const previousSession = history?.find(h => h.sets.length > 0) ?? null
+  const lastSummary = previousSession ? formatHistorySummary(previousSession.sets) : null
+
+  const weight = activeSet.weight ?? 0
+  const reps = activeSet.reps ?? 0
+  const isLogValid = weight > 0 && reps > 0
+  const isActiveLogged = !!activeSet.completed
+  const allDone = currentEx.workingSets.every(
+    s => s.completed || skippedSets.has(`${currentEx.exercise_id}:${s.set_num}`),
+  )
+
+  // LOG button label adapts to what the user is doing.
+  const logLabel = isActiveLogged ? 'UPDATE' : 'LOG'
+
+  return (
+    <div style={{ marginTop: 28, textAlign: 'center' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 14 }}>
+        <MuscleAccent group={currentEx.muscle_group} variant="dot" />
+      </div>
+      <div
+        style={{
+          fontSize: 36, fontWeight: 700,
+          color: 'var(--text-1)',
+          lineHeight: 1.05, letterSpacing: '-0.025em',
+          padding: '0 12px',
+          filter: `drop-shadow(0 0 28px color-mix(in oklab, ${c.primary} 45%, transparent))`,
+        }}
+      >
+        {currentEx.exercise_name}
+      </div>
+      {allDone && (
+        <div
+          style={{
+            fontSize: 11, color: c.light, marginTop: 8, letterSpacing: '0.22em',
+            fontFamily: 'JetBrains Mono, ui-monospace, monospace',
+            textTransform: 'uppercase', fontWeight: 600,
+          }}
+        >
+          Exercise complete
+        </div>
+      )}
+
+      <div style={{ marginTop: 24 }}>
+        <NumeralsCard
+          group={currentEx.muscle_group}
+          weight={weight}
+          reps={reps}
+          setNum={activeSetIdx + 1}
+          totalSets={currentEx.workingSets.length}
+          lastSummary={lastSummary}
+          onLastClick={onOpenHistory}
+          onWeightChange={(n) => onUpdateSet(currentEx.exercise_id, activeSet.set_num, 'weight', n)}
+          onRepsChange={(n) => onUpdateSet(currentEx.exercise_id, activeSet.set_num, 'reps', n)}
+          onLog={() => onCompleteSet(currentEx.exercise_id, activeSet.set_num)}
+          disabled={isSaving || !isLogValid}
+          logLabel={logLabel}
+        />
+      </div>
+
+      {/* Set chips ─ persistent set_type badge + "..." on active chip ─── */}
+      <div style={{ marginTop: 12, display: 'flex', gap: 6 }}>
+        {currentEx.workingSets.map((s, i) => {
+          const key = `${currentEx.exercise_id}:${s.set_num}`
+          const isSkipped = skippedSets.has(key)
+          const isActive = i === activeSetIdx
+          const done = s.completed
+          const colorText = done ? c.light : isActive ? 'var(--text-1)' : 'var(--text-m)'
+          const setTypeInfo = s.set_type && s.set_type !== 'straight' ? SET_TYPE_LABELS[s.set_type] : null
+          return (
+            <div
+              key={s.set_num}
+              style={{ flex: 1, position: 'relative' }}
+            >
+              <button
+                type="button"
+                onClick={() => onChipTap(i)}
+                style={{
+                  width: '100%',
+                  padding: '10px 4px',
+                  borderRadius: 10,
+                  textAlign: 'center',
+                  background: isActive
+                    ? `color-mix(in oklab, ${c.primary} 18%, rgba(255,255,255,0.02))`
+                    : done
+                    ? `color-mix(in oklab, ${c.primary} 10%, transparent)`
+                    : 'rgba(255,255,255,0.03)',
+                  border: `1px solid ${
+                    isActive
+                      ? `color-mix(in oklab, ${c.primary} 45%, transparent)`
+                      : done
+                      ? `color-mix(in oklab, ${c.primary} 20%, transparent)`
+                      : 'rgba(255,255,255,0.06)'
+                  }`,
+                  backdropFilter: 'blur(20px)',
+                  cursor: 'pointer',
+                  opacity: isSkipped ? 0.4 : 1,
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: 8, color: 'var(--text-m)', letterSpacing: '0.15em',
+                    fontFamily: 'JetBrains Mono, ui-monospace, monospace',
+                  }}
+                >
+                  SET {i + 1}
+                </div>
+                <div
+                  style={{
+                    fontSize: 13, fontWeight: 600, marginTop: 3, color: colorText,
+                    fontFamily: 'JetBrains Mono, ui-monospace, monospace',
+                  }}
+                >
+                  {done && s.weight != null && s.reps != null
+                    ? `${s.weight}×${s.reps}`
+                    : '—'}
+                </div>
+              </button>
+
+              {/* Set-type badge (top-left of chip, always visible if set) */}
+              {setTypeInfo && (
+                <span
+                  style={{
+                    position: 'absolute',
+                    top: 3, left: 3,
+                    fontSize: 8, fontWeight: 700,
+                    padding: '1px 4px',
+                    borderRadius: 4,
+                    background: setTypeInfo.bg,
+                    border: `1px solid ${setTypeInfo.border}`,
+                    color: setTypeInfo.color,
+                    fontFamily: 'JetBrains Mono, ui-monospace, monospace',
+                    pointerEvents: 'none',
+                  }}
+                >
+                  {setTypeInfo.label}
+                </span>
+              )}
+
+              {/* "..." button on the active chip → opens per-set sheet */}
+              {isActive && (
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); onChipMore() }}
+                  aria-label="Set options"
+                  style={{
+                    position: 'absolute',
+                    top: 1, right: 1,
+                    width: 22, height: 22,
+                    background: 'transparent',
+                    border: 'none',
+                    color: c.light,
+                    display: 'grid', placeItems: 'center',
+                    cursor: 'pointer',
+                    fontSize: 14,
+                  }}
+                >
+                  ⋯
+                </button>
+              )}
+            </div>
+          )
+        })}
+        <button
+          type="button"
+          onClick={() => onAddSet(currentEx.exercise_id)}
+          aria-label="Add set"
+          style={{
+            width: 36, padding: '10px 0', borderRadius: 10,
+            background: 'transparent',
+            border: '1px dashed rgba(255,255,255,0.08)',
+            color: 'var(--text-m)',
+            display: 'grid', placeItems: 'center',
+            cursor: 'pointer',
+          }}
+        >
+          +
+        </button>
+      </div>
+
+      {/* "Next exercise" CTA — only when the exercise is fully done AND there's a next one. */}
+      {allDone && hasNextExercise && (
+        <button
+          type="button"
+          onClick={onAdvanceExercise}
+          style={{
+            marginTop: 16, width: '100%', height: 50, borderRadius: 14,
+            background: `linear-gradient(135deg, ${c.primary}, ${c.light})`,
+            color: 'white', fontWeight: 700, fontSize: 14, letterSpacing: '0.2em',
+            border: 'none', cursor: 'pointer',
+            boxShadow: `0 12px 30px -8px color-mix(in oklab, ${c.primary} 60%, transparent)`,
+          }}
+        >
+          NEXT EXERCISE →
+        </button>
+      )}
+    </div>
+  )
+}
+
+/* ─────────────────────────────────────────────────────────────────── */
+/*  Exercise history popup wrapper — fetches history then renders     */
+/* ─────────────────────────────────────────────────────────────────── */
+
+interface ExerciseHistoryWrapProps {
+  exerciseId: string
+  exerciseName: string
+  muscleGroup: string
+  equipmentType: string
+  onClose: () => void
+}
+
+function ExerciseHistoryWrap({ exerciseId, exerciseName, muscleGroup, equipmentType, onClose }: ExerciseHistoryWrapProps) {
+  const { data: history = [] } = useExerciseHistory(exerciseId)
+  return (
+    <ExerciseHistoryPopup
+      exerciseName={exerciseName}
+      muscleGroup={muscleGroup}
+      equipmentType={equipmentType}
+      history={history}
+      onClose={onClose}
+    />
+  )
+}
+
+/* ─────────────────────────────────────────────────────────────────── */
+/*  STATE C — session complete                                         */
+/* ─────────────────────────────────────────────────────────────────── */
+
+interface SessionCompleteHeroProps {
+  template: WorkoutTemplate
+  exerciseList: Array<MesoExercise & { workingSets: WorkingSet[] }>
+  isLastSession: boolean
+  isSaving: boolean
+  onFinish: () => void
+  onReviewSets: () => void
+}
+
+function SessionCompleteHero({
+  template, exerciseList, isLastSession, isSaving, onFinish, onReviewSets,
+}: SessionCompleteHeroProps) {
+  const totalSets = exerciseList.reduce((n, ex) => n + ex.workingSets.filter(s => s.completed).length, 0)
+  const exerciseCount = exerciseList.length
+  const dayOrdinal = ORDINAL_WORDS[template.session_index] ?? String(template.session_index + 1)
+
+  return (
+    <div
+      style={{
+        minHeight: 'calc(100vh - 260px)',
+        display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center',
+        textAlign: 'center', marginTop: 24,
+      }}
+    >
+      <div
+        style={{
+          fontSize: 11, color: 'var(--accent-l)', letterSpacing: '0.22em',
+          fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontWeight: 600,
+          textTransform: 'uppercase',
+        }}
+      >
+        Session complete
+      </div>
+      <div
+        className="p-grad-text"
+        style={{
+          fontSize: 110, fontWeight: 700, letterSpacing: '-0.05em',
+          lineHeight: 1.05, paddingBottom: '0.05em', marginTop: 10,
+          filter: 'drop-shadow(0 0 40px rgba(var(--accent-rgb),0.4))',
+        }}
+      >
+        Done.
+      </div>
+      <div
+        style={{
+          fontFamily: "'Fraunces', 'Instrument Serif', Georgia, serif",
+          fontStyle: 'italic', fontSize: 17, color: 'var(--text-2)', marginTop: 8,
+        }}
+      >
+        {template.session_name.toLowerCase()} · day {dayOrdinal}
+      </div>
+      <div
+        style={{
+          fontSize: 10, color: 'var(--text-m)', letterSpacing: '0.2em',
+          fontFamily: 'JetBrains Mono, ui-monospace, monospace',
+          marginTop: 14, fontWeight: 500,
+        }}
+      >
+        {totalSets} SETS · {exerciseCount} {exerciseCount === 1 ? 'EXERCISE' : 'EXERCISES'}
+      </div>
+
+      <div style={{ width: '100%', maxWidth: 420, marginTop: 36, padding: '0 8px' }}>
+        <button
+          type="button"
+          onClick={onFinish}
+          disabled={isSaving}
+          style={{
+            position: 'relative', overflow: 'hidden',
+            width: '100%', height: 58, borderRadius: 16,
+            background: 'var(--p-grad)',
+            color: 'var(--btn-text)', fontWeight: 700, fontSize: 16,
+            letterSpacing: '0.2em',
+            border: 'none',
+            cursor: isSaving ? 'not-allowed' : 'pointer',
+            opacity: isSaving ? 0.7 : 1,
+            boxShadow:
+              '0 14px 40px -10px rgba(var(--accent-rgb),0.55), inset 0 1px 0 rgba(255,255,255,0.18)',
+          }}
+        >
+          <span
+            aria-hidden
+            style={{
+              position: 'absolute', top: 0, left: 0, width: '40%', height: '100%',
+              background: 'linear-gradient(110deg, transparent, rgba(255,255,255,0.25), transparent)',
+              animation: 'p-shimmer 3s ease-in-out infinite',
+              pointerEvents: 'none',
+            }}
+          />
+          {isSaving ? 'SAVING…' : isLastSession ? 'FINISH MESOCYCLE' : 'FINISH'}
+        </button>
+        <button
+          type="button"
+          onClick={onReviewSets}
+          style={{
+            marginTop: 10, width: '100%', height: 50, borderRadius: 14,
+            background: 'transparent',
+            border: '1px solid rgba(255,255,255,0.08)',
+            color: 'var(--text-2)', fontWeight: 500, fontSize: 14,
+            cursor: 'pointer',
+          }}
+        >
+          Review sets
+        </button>
+      </div>
+    </div>
+  )
+}
+
+/* ─────────────────────────────────────────────────────────────────── */
+/*  Menu sheet rows                                                    */
+/* ─────────────────────────────────────────────────────────────────── */
+

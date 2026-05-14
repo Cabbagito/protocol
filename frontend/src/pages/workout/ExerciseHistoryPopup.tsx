@@ -81,12 +81,12 @@ export function ExerciseHistoryPopup({ exerciseName, muscleGroup, equipmentType,
                 style={{ background: 'var(--panel)', border: '1px solid rgba(255,255,255,0.04)' }}
               >
                 {/* Session header */}
-                <div className="flex items-center gap-1.5 mb-2">
+                <div className="flex items-center gap-1.5 mb-1">
                   <span className="text-[11px] font-medium uppercase tracking-wider" style={{ color: 'var(--accent-l)' }}>
-                    Week {session.weekNumber}
+                    Week {session.week_number}
                   </span>
                   <span className="text-[11px] text-[var(--text-m)]">·</span>
-                  <span className="text-[12px] font-medium text-[var(--text-2)]">{session.sessionName}</span>
+                  <span className="text-[12px] font-medium text-[var(--text-2)]">{session.session_name}</span>
                   {session.date && (
                     <>
                       <span className="text-[11px] text-[var(--text-m)]">·</span>
@@ -94,6 +94,7 @@ export function ExerciseHistoryPopup({ exerciseName, muscleGroup, equipmentType,
                     </>
                   )}
                 </div>
+                <div className="text-[10px] mb-2 text-[var(--text-m)] truncate">{session.meso_name}</div>
 
                 {/* Set rows */}
                 <div className="space-y-1">

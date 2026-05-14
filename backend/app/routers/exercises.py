@@ -55,3 +55,13 @@ async def delete_exercise(
     current_user: User = Depends(get_current_user),
 ):
     await exercise_service.delete_exercise(db, exercise_id, current_user.id)
+
+
+@router.get("/{exercise_id}/history")
+async def get_exercise_history(
+    exercise_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Every logged session of this exercise across all the user's mesocycles."""
+    return await exercise_service.get_exercise_history(db, exercise_id, current_user.id)

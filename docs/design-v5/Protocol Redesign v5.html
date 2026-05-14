@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Protocol — v5 · Ready to export</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="protocol-tokens.css" />
+<style>
+  html, body { margin: 0; padding: 0; background: #050a12; height: 100%; font-family: 'Inter', sans-serif; color: #e2e8f0; overscroll-behavior: none; }
+  *, *::before, *::after { box-sizing: border-box; }
+
+  body { --p-sans:'Inter',sans-serif; --p-display:'Fraunces',serif; --p-mono:'JetBrains Mono',monospace; }
+
+  @keyframes p-spin { to { transform: rotate(360deg); } }
+  @keyframes p-spin-r { to { transform: rotate(-360deg); } }
+
+  .frame-wrap {
+    width: 360px; height: 780px;
+    border-radius: 48px; background: #050a12;
+    border: 1px solid #1e293b;
+    box-shadow: 0 30px 80px -20px rgba(0,0,0,0.6), 0 0 0 8px #0a0f18, 0 0 0 9px #1e293b;
+    overflow: hidden; position: relative;
+  }
+  .frame-wrap > * { width: 100%; height: 100%; }
+
+  .page-head { position: fixed; top:0; left:0; right:0; padding: 14px 24px; z-index: 100;
+    background: linear-gradient(180deg, rgba(5,10,18,0.95), rgba(5,10,18,0)); pointer-events: none; }
+  .page-head .row { display:flex; align-items:center; gap:14px; pointer-events:auto; }
+  .page-head h1 { font-family:'Fraunces',serif; font-size:24px; font-weight:400; letter-spacing:-0.02em; margin:0; color:#e2e8f0; font-style: italic; }
+  .page-head .sub { font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.18em; color:#64748b; text-transform:uppercase; }
+</style>
+</head>
+<body data-scheme="midnight" data-motion="ribbon">
+
+<div class="page-head">
+  <div class="row">
+    <div style="width:30px;height:30px;border-radius:8px;background:#0f1d2e;border:1px solid #1e3a52;display:grid;place-items:center;">
+      <svg width="22" height="22" viewBox="0 0 100 100">
+        <defs><linearGradient id="hg5" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#f97316"/><stop offset="100%" stop-color="#a855f7"/></linearGradient></defs>
+        <path d="M30 76 L30 20 L52 20 C63 20 70 27 70 36 C70 45 63 52 52 52 L42 52 L42 76 Z M42 30 L50 30 C56 30 58 33 58 36 C58 39 56 42 50 42 L42 42 Z" fill="url(#hg5)"/>
+      </svg>
+    </div>
+    <div>
+      <h1>Protocol — v5</h1>
+      <div class="sub">final pass · colorschemes · motion styles</div>
+    </div>
+  </div>
+</div>
+
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="protocol-primitives.jsx"></script>
+<script type="text/babel" src="protocol-nav-splash.jsx"></script>
+<script type="text/babel" src="protocol-dashboard-v5.jsx"></script>
+<script type="text/babel" src="protocol-workout-v5.jsx"></script>
+<script type="text/babel" src="protocol-other-pages.jsx"></script>
+
+<script type="text/babel" data-presets="react">
+const { useEffect } = React;
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "scheme": "crimson",
+  "motion": "ribbon"
+}/*EDITMODE-END*/;
+
+const SCHEMES = [
+  // Existing in the app (ported)
+  { id:'dark',     colors:['#0d1b2a','#0ea5e9','#8b5cf6'] },
+  { id:'black',    colors:['#000000','#0ea5e9','#8b5cf6'] },
+  { id:'white',    colors:['#f1f5f9','#0ea5e9','#8b5cf6'] },
+  { id:'cyan',     colors:['#054560','#7dd3fc','#06b6d4'] },
+  { id:'violet',   colors:['#1a0840','#c4b5fd','#ec4899'] },
+  { id:'gradient', colors:['#0848a0','#0ea5e9','#7c3aed'] },
+  // New in v5
+  { id:'midnight', colors:['#0d1b2a','#f97316','#a855f7'] },
+  { id:'forest',   colors:['#0a1f17','#10b981','#06b6d4'] },
+  { id:'crimson',  colors:['#1f0a12','#f43f5e','#eab308'] },
+  { id:'mono',     colors:['#000000','#fafafa','#737373'] },
+];
+
+function App() {
+  const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+
+  // Coerce legacy object scheme value back to string id
+  const schemeId = typeof t.scheme === 'string'
+    ? t.scheme
+    : (t.scheme && t.scheme.value) || 'midnight';
+
+  useEffect(() => {
+    document.body.dataset.scheme = schemeId;
+    document.body.dataset.motion = t.motion;
+    if (typeof t.scheme !== 'string') setTweak('scheme', schemeId);
+  }, [schemeId, t.motion, t.scheme]);
+
+  const curColors = (SCHEMES.find(s => s.id === schemeId) || SCHEMES[0]).colors;
+
+  const Frame = ({ children }) => (
+    <div className="frame-wrap">{children}</div>
+  );
+
+  return (
+    <>
+      <DesignCanvas title="Protocol · v5" subtitle="ready to hand off · colorschemes · motion">
+
+        <DCSection id="home" title="01 · Dashboard">
+          <DCArtboard id="dash" label="Home" width={360} height={780}>
+            <Frame><Dashboard /></Frame>
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="workout" title="02 · Active workout — 3 states">
+          <DCArtboard id="wk-log" label="Logging — set in progress" width={360} height={780}>
+            <Frame><WorkoutLogging /></Frame>
+          </DCArtboard>
+          <DCArtboard id="wk-exdone" label="Exercise complete — next teed up, full list visible" width={360} height={780}>
+            <Frame><WorkoutExerciseDone /></Frame>
+          </DCArtboard>
+          <DCArtboard id="wk-done" label="Session complete — finish or review" width={360} height={780}>
+            <Frame><WorkoutDone /></Frame>
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="other" title="03 · Diet & Settings">
+          <DCArtboard id="diet" label="Diet" width={360} height={780}>
+            <Frame><DietPage /></Frame>
+          </DCArtboard>
+          <DCArtboard id="settings" label="Settings" width={360} height={780}>
+            <Frame><SettingsPage /></Frame>
+          </DCArtboard>
+        </DCSection>
+
+      </DesignCanvas>
+
+      <TweaksPanel title="Tweaks">
+        <TweakSection title="Colorscheme">
+          <TweakColor
+            label="Theme"
+            value={curColors}
+            options={SCHEMES.map(s => s.colors)}
+            onChange={cols => {
+              const k = JSON.stringify(cols);
+              const found = SCHEMES.find(s => JSON.stringify(s.colors) === k);
+              if (found) setTweak('scheme', found.id);
+            }}
+          />
+        </TweakSection>
+        <TweakSection title="Background motion">
+          <TweakRadio label="Style"
+            value={t.motion} onChange={v=>setTweak('motion',v)}
+            options={[
+              {value:'ribbon', label:'Aurora'},
+              {value:'pulse',  label:'Pulse'},
+            ]} />
+          <TweakRadio label="Reduce"
+            value={t.motion} onChange={v=>setTweak('motion',v)}
+            options={[
+              {value:'still', label:'Still'},
+              {value:'none',  label:'None'},
+            ]} />
+        </TweakSection>
+      </TweaksPanel>
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

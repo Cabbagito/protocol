@@ -3,7 +3,6 @@ import AppHeader from '../components/AppHeader'
 import PageLoader from '../components/PageLoader'
 import { useWorkoutDetail } from '../api/hooks'
 import MuscleGroupBadge from '../components/MuscleGroupBadge'
-import RirBadge from '../components/RirBadge'
 import { getMuscleColor } from '../lib/muscleColors'
 import { formatWeight } from '../lib/weightUtils'
 import { SET_TYPE_LABELS, STRAIGHT_PILL } from '../lib/setConstants'
@@ -121,10 +120,6 @@ export default function WorkoutDetail() {
   const exceededPct = perfTotal > 0 ? (exceededCount / perfTotal) * 100 : 0
   const underPct = perfTotal > 0 ? (underCount / perfTotal) * 100 : 0
 
-  // Derive RiR from first logged set
-  const firstLoggedSet = allLoggedSets[0]
-  const rir = firstLoggedSet?.rir ?? null
-
   // Volume by muscle group
   const muscleVolume: Record<string, number> = {}
   for (const ex of activeExercises) {
@@ -145,7 +140,6 @@ export default function WorkoutDetail() {
         title={workout.session_name}
         subtitle={`Week ${workout.week_number}${workout.date ? ` · ${new Date(workout.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}` : ''}`}
         breadcrumb={{ label: 'Mesocycle', to: `/mesocycles/${mesocycleId}` }}
-        rightContent={rir !== null ? <RirBadge rir={rir} /> : undefined}
       />
 
       <div className="px-4 space-y-3 pb-10">

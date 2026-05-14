@@ -113,7 +113,6 @@ async def replace_exercise(
                         "reps": None,
                         "target_reps": target_reps,
                         "suggested_weight": suggested,
-                        "rir": None,
                         "logged": False,
                         "set_type": None,
                     }
@@ -202,7 +201,6 @@ async def modify_sets(
             "reps": None,
             "target_reps": last_set.get("target_reps"),
             "suggested_weight": last_set.get("suggested_weight"),
-            "rir": None,
             "logged": False,
             "set_type": None,
         }
@@ -228,7 +226,6 @@ async def modify_sets(
                         "reps": None,
                         "target_reps": last_fs.get("target_reps"),
                         "suggested_weight": last_fs.get("suggested_weight"),
-                        "rir": None,
                         "logged": False,
                         "set_type": None,
                     }
@@ -334,7 +331,6 @@ async def add_exercise(
                     "reps": None,
                     "target_reps": target_reps,
                     "suggested_weight": suggested,
-                    "rir": None,
                     "logged": False,
                     "set_type": None,
                 }

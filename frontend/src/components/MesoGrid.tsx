@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import { getCurrentPosition } from '../lib/mesoUtils'
 import type { Mesocycle } from '../types'
 
-type CellState = 'done' | 'current' | 'pending' | 'deload-done' | 'deload-current' | 'deload-pending' | 'viewing' | 'deload-viewing'
+type CellState = 'done' | 'current' | 'pending' | 'viewing'
 
 const cellStyles: Record<CellState, React.CSSProperties> = {
   done: {
@@ -21,29 +21,7 @@ const cellStyles: Record<CellState, React.CSSProperties> = {
     background: 'var(--input)',
     border: '1.5px solid var(--border)',
   },
-  'deload-done': {
-    background: 'rgba(234,179,8,0.12)',
-    border: '1.5px solid rgba(234,179,8,0.25)',
-  },
-  'deload-current': {
-    background: 'rgba(234,179,8,0.15)',
-    border: '2px solid #eab308',
-    boxShadow: '0 0 0 3px rgba(234,179,8,0.35)',
-    animation: 'pulse-deload 2s ease-in-out infinite',
-    willChange: 'opacity',
-  },
-  'deload-pending': {
-    background: 'rgba(234,179,8,0.06)',
-    border: '1.5px solid rgba(234,179,8,0.12)',
-  },
   viewing: {
-    background: 'rgba(148,163,184,0.08)',
-    border: '2px solid var(--text-m)',
-    boxShadow: '0 0 0 3px rgba(148,163,184,0.35)',
-    animation: 'pulse-viewing 2s ease-in-out infinite',
-    willChange: 'opacity',
-  },
-  'deload-viewing': {
     background: 'rgba(148,163,184,0.08)',
     border: '2px solid var(--text-m)',
     boxShadow: '0 0 0 3px rgba(148,163,184,0.35)',
@@ -84,17 +62,10 @@ export default function MesoGrid({ mesocycle, compact = false, viewingWeek, view
     const isLogged =
       nonSkipped.length > 0 &&
       nonSkipped.every(ex => ex.sets.every(s => s.logged))
-    const isDeload = mesocycle.rir_scheme[wi] === -1
     const isCurrent = wi === currentWi && si === currentSi
     const isViewing = viewingWeek !== undefined && viewingSession !== undefined &&
       wi === viewingWeek && si === viewingSession
 
-    if (isDeload) {
-      if (isLogged) return 'deload-done'
-      if (isCurrent) return 'deload-current'
-      if (isViewing) return 'deload-viewing'
-      return 'deload-pending'
-    }
     if (isLogged) return 'done'
     if (isCurrent) return 'current'
     if (isViewing) return 'viewing'
@@ -137,26 +108,17 @@ export default function MesoGrid({ mesocycle, compact = false, viewingWeek, view
       >
         {/* Header row */}
         <div /> {/* empty corner cell */}
-        {weeks.map((week, wi) => {
-          const isDeload = mesocycle.rir_scheme[wi] === -1
-          return (
-            <div
-              key={wi}
-              className="text-center"
-              style={{ lineHeight: 1.2 }}
-            >
-              <div className="text-[10px] font-medium text-[var(--text-2)]">
-                W{wi + 1}
-              </div>
-              <div
-                className="text-[10px]"
-                style={{ color: isDeload ? '#eab308' : 'var(--text-m)' }}
-              >
-                {isDeload ? 'DL' : `R${week.rir}`}
-              </div>
+        {weeks.map((_, wi) => (
+          <div
+            key={wi}
+            className="text-center"
+            style={{ lineHeight: 1.2 }}
+          >
+            <div className="text-[10px] font-medium text-[var(--text-2)]">
+              W{wi + 1}
             </div>
-          )
-        })}
+          </div>
+        ))}
 
         {/* Session rows */}
         {sessionNames.map((name, si) => (
@@ -170,9 +132,6 @@ export default function MesoGrid({ mesocycle, compact = false, viewingWeek, view
             </div>
             {weeks.map((_, wi) => {
               const state = getCellState(wi, si)
-              const isCurrent = state === 'current' || state === 'deload-current'
-              const isDone = state === 'done' || state === 'deload-done'
-              const isViewing = state === 'viewing' || state === 'deload-viewing'
 
               return (
                 <button
@@ -191,22 +150,18 @@ export default function MesoGrid({ mesocycle, compact = false, viewingWeek, view
                     ...cellStyles[state],
                   }}
                 >
-                  {isDone && (
-                    <CheckIcon
-                      color={state === 'deload-done' ? '#eab308' : '#22c55e'}
-                    />
-                  )}
-                  {isCurrent && (
+                  {state === 'done' && <CheckIcon color="#22c55e" />}
+                  {state === 'current' && (
                     <div
                       style={{
                         width: 8,
                         height: 8,
                         borderRadius: '50%',
-                        background: state === 'deload-current' ? '#eab308' : 'var(--accent-d)',
+                        background: 'var(--accent-d)',
                       }}
                     />
                   )}
-                  {isViewing && (
+                  {state === 'viewing' && (
                     <div
                       style={{
                         width: 8,

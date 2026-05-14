@@ -61,7 +61,6 @@ export function useWorkoutState({
             exercise_name: ex.exercise_name,
             weight: resolveSetWeight(s),
             reps: s.reps ?? 0,
-            rir: template.target_rir >= 0 ? template.target_rir : null,
             completed: s.logged,
             set_type: s.set_type,
           })

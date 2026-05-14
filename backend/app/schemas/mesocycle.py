@@ -22,7 +22,6 @@ class MesocycleListItem(BaseModel):
     split_color: str | None
     total_weeks: int
     current_week: int
-    current_rir: int
     is_active: bool
     started_at: date_type
     workouts_completed: int
@@ -39,9 +38,7 @@ class MesocycleResponse(BaseModel):
     split_name: str
     split_color: str | None
     total_weeks: int
-    rir_scheme: list[int]
     current_week: int
-    current_rir: int
     is_active: bool
     started_at: date_type
     workouts_completed: int

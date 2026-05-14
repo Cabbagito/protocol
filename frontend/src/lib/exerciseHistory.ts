@@ -1,53 +1,18 @@
-import type { MesoStructure, MesoSet } from '../types'
+import type { MesoSet } from '../types'
 import { formatWeight } from './weightUtils'
 
-export interface ExerciseSessionHistory {
-  weekNumber: number
-  sessionName: string
-  date: string | null
-  rir: number
-  sets: MesoSet[]
-}
-
 /**
- * Extract history for an exercise from every prior logged session in the mesocycle
- * (not just the same session slot). Excludes the session currently being viewed.
- * Returns sessions newest-first (reverse chronological structure order).
+ * One session's worth of logged sets for an exercise, as returned by
+ * GET /api/exercises/{id}/history. Spans all the user's mesocycles.
  */
-export function getExerciseHistory(
-  structure: MesoStructure,
-  exerciseId: string,
-  currentWeekIndex: number,
-  currentSessionIndex: number,
-): ExerciseSessionHistory[] {
-  const history: ExerciseSessionHistory[] = []
-
-  for (let w = currentWeekIndex; w >= 0; w--) {
-    const week = structure.weeks[w]
-    if (!week) continue
-    for (let s = week.sessions.length - 1; s >= 0; s--) {
-      if (w === currentWeekIndex && s >= currentSessionIndex) continue
-
-      const session = week.sessions[s]
-      if (!session) continue
-
-      const exercise = session.exercises.find(e => e.exercise_id === exerciseId)
-      if (!exercise) continue
-
-      const loggedSets = exercise.sets.filter(st => st.logged && !st.skipped)
-      if (loggedSets.length === 0) continue
-
-      history.push({
-        weekNumber: week.week_number,
-        sessionName: session.session_name,
-        date: session.date,
-        rir: week.rir,
-        sets: loggedSets,
-      })
-    }
-  }
-
-  return history
+export interface ExerciseSessionHistory {
+  meso_id: string
+  meso_name: string
+  week_number: number
+  session_name: string
+  date: string | null
+  meso_started_at: string
+  sets: MesoSet[]
 }
 
 /**
