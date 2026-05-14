@@ -264,20 +264,20 @@ export default function Dashboard() {
                 <div key={g} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                   <span
                     style={{
-                      width: 9,
-                      height: 9,
+                      width: 10,
+                      height: 10,
                       borderRadius: '50%',
                       background: `var(--m-${g.replace(/\s+/g, '-')}, var(--accent))`,
-                      boxShadow: `0 0 14px var(--m-${g.replace(/\s+/g, '-')}, var(--accent)), 0 0 4px var(--m-${g.replace(/\s+/g, '-')}, var(--accent))`,
+                      boxShadow: `0 0 22px var(--m-${g.replace(/\s+/g, '-')}, var(--accent)), 0 0 8px var(--m-${g.replace(/\s+/g, '-')}, var(--accent)), 0 0 2px white`,
                       animation: `p-pulse-dot 2.6s ease-in-out infinite ${i * 0.4}s`,
                     }}
                   />
                   <span
                     style={{
-                      fontSize: 9,
+                      fontSize: 10,
                       fontWeight: 600,
                       letterSpacing: '0.18em',
-                      color: 'var(--text-2)',
+                      color: `var(--m-${g.replace(/\s+/g, '-')}-l, var(--text-2))`,
                       textTransform: 'uppercase',
                       fontFamily: 'JetBrains Mono, ui-monospace, monospace',
                     }}
@@ -297,7 +297,8 @@ export default function Dashboard() {
                   fontSize: 130,
                   fontWeight: 700,
                   letterSpacing: '-0.06em',
-                  lineHeight: 0.9,
+                  lineHeight: 1.05,
+                  paddingBottom: '0.08em',
                   textAlign: 'center',
                   filter: 'drop-shadow(0 0 40px rgba(var(--accent-rgb),0.35))',
                 }}

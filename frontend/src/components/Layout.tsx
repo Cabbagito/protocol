@@ -67,6 +67,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 key={item.path}
                 to={item.path}
                 style={{
+                  position: 'relative',
                   flex: 1,
                   height: 52,
                   borderRadius: 16,
@@ -83,8 +84,25 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                     ? '0 6px 20px -6px rgba(var(--accent-rgb),0.6)'
                     : 'none',
                   transition: 'background 0.2s, color 0.2s, box-shadow 0.2s',
+                  overflow: 'hidden',
                 }}
               >
+                {isActive && (
+                  <span
+                    aria-hidden
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '40%',
+                      height: '100%',
+                      background:
+                        'linear-gradient(110deg, transparent, rgba(255,255,255,0.25), transparent)',
+                      animation: 'p-shimmer 3s ease-in-out infinite',
+                      pointerEvents: 'none',
+                    }}
+                  />
+                )}
                 <item.icon className="w-5 h-5" />
                 {isActive && <span>{item.label}</span>}
               </Link>
