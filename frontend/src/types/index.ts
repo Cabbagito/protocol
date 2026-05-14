@@ -54,7 +54,6 @@ export interface MesocycleListItem {
   split_color: string | null
   total_weeks: number
   current_week: number
-  current_rir: number
   is_active: boolean
   started_at: string
   workouts_completed: number
@@ -71,7 +70,6 @@ export interface MesoSet {
   reps: number | null
   target_reps: number | null
   suggested_weight: number | null
-  rir: number | null
   logged: boolean
   set_type?: SetType
   skipped?: boolean
@@ -96,7 +94,6 @@ export interface MesoSession {
 
 export interface MesoWeek {
   week_number: number
-  rir: number
   sessions: MesoSession[]
 }
 
@@ -112,9 +109,7 @@ export interface Mesocycle {
   split_name: string
   split_color: string | null
   total_weeks: number
-  rir_scheme: number[]
   current_week: number
-  current_rir: number
   is_active: boolean
   started_at: string
   workouts_completed: number
@@ -126,7 +121,6 @@ export interface Mesocycle {
 export interface WorkoutTemplate {
   session_name: string
   week_number: number
-  target_rir: number
   week_index: number
   session_index: number
   exercises: MesoExercise[]

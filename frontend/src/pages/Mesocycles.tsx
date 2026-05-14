@@ -109,10 +109,6 @@ function ActiveMesoCard({ meso, fullMeso }: { meso: MesocycleListItem; fullMeso:
         <span className="text-[11px]" style={{ color: 'var(--text-m)' }}>{meso.split_name}</span>
         <span className="text-[11px]" style={{ color: 'var(--text-m)' }}>&middot;</span>
         <span className="mono text-[11px]" style={{ color: 'var(--text-m)' }}>Week {meso.current_week} / {meso.total_weeks}</span>
-        <span className="text-[11px]" style={{ color: 'var(--text-m)' }}>&middot;</span>
-        <span className="mono text-[11px]" style={{ color: meso.current_rir === -1 ? '#eab308' : 'var(--accent-l)' }}>
-          {meso.current_rir === -1 ? 'Deload' : `RiR ${meso.current_rir}`}
-        </span>
       </div>
 
       {/* Progress bar */}
@@ -170,57 +166,6 @@ function InactiveMesoCard({ meso }: { meso: MesocycleListItem }) {
         <span className="mono text-[11px]" style={{ color: 'var(--text-m)' }}>{meso.workouts_completed}/{meso.total_workouts}</span>
       </div>
     </Link>
-  )
-}
-
-// --- RIR Scheme Calculation ---
-
-const RIR_SCHEMES: Record<number, number[]> = {
-  3: [2, 0, -1],
-  4: [3, 1, 0, -1],
-  5: [3, 2, 1, 0, -1],
-  6: [3, 2, 1, 0, 0, -1],
-  7: [3, 2, 2, 1, 1, 0, -1],
-  8: [3, 3, 2, 2, 1, 1, 0, -1],
-}
-
-function getRirScheme(weeks: number): number[] {
-  return RIR_SCHEMES[weeks] ?? [0]
-}
-
-// --- RIR Heatmap Strip ---
-
-function RirHeatmap({ weeks }: { weeks: number }) {
-  const scheme = getRirScheme(weeks)
-  const trainingCount = scheme.filter((r) => r >= 0).length
-
-  return (
-    <div>
-      <div className="flex justify-between text-[9px] mb-1.5" style={{ color: 'var(--text-m)' }}>
-        <span>Easy</span>
-        <span>{trainingCount} training + 1 deload</span>
-        <span>Hard</span>
-      </div>
-      <div className="flex gap-[2px]" style={{ borderRadius: 8, overflow: 'hidden' }}>
-        {scheme.map((rir, i) => {
-          const isDeload = rir === -1
-          const opacity = isDeload ? 0.4 : [1, 0.7, 0.5, 0.3][rir] ?? 0.3
-          const bg = isDeload ? '#a855f7' : '#0ea5e9'
-          return (
-            <div
-              key={i}
-              className="flex-1 flex flex-col items-center justify-center py-2"
-              style={{ background: bg, opacity, transition: 'all 0.3s ease' }}
-            >
-              <span className="mono text-[12px] font-bold text-white leading-none">
-                {isDeload ? 'D' : rir}
-              </span>
-              <span className="text-[8px] text-white/70 leading-none mt-0.5">W{i + 1}</span>
-            </div>
-          )
-        })}
-      </div>
-    </div>
   )
 }
 
@@ -364,11 +309,6 @@ function MesocycleForm({ onSave, onCancel }: MesocycleFormProps) {
             </div>
           </div>
 
-          {/* Divider */}
-          <div className="mb-4" style={{ height: 1, background: 'rgba(255,255,255,0.04)' }} />
-
-          {/* Heatmap */}
-          <RirHeatmap weeks={totalWeeks} />
         </div>
       </div>
 

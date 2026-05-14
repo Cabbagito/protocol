@@ -14,7 +14,6 @@ export interface ExerciseCardProps {
   exerciseIndex: number
   sets: WorkingSet[]
   allSets: WorkingSet[]
-  targetRir: number
   onUpdateSet: (exerciseId: string, setNum: number, field: keyof WorkingSet, value: number | boolean | string) => void
   onCompleteSet: (exerciseId: string, setNum: number) => void
   onUncompleteSet: (exerciseId: string, setNum: number) => void
@@ -36,7 +35,7 @@ export interface ExerciseCardProps {
   history: ExerciseSessionHistory[]
 }
 
-export function ExerciseCard({ exercise, sets, allSets, targetRir, onUpdateSet, onCompleteSet, onUncompleteSet, locked, skipped, onToggleSkip, note, onEditNote, onReplace, onAddSet, onRemoveSet, onToggleSkipSet, onRemoveExercise, onMoveUp, onMoveDown, skippedSets, animPhaseRef, onClearAnim, history }: ExerciseCardProps) {
+export function ExerciseCard({ exercise, sets, allSets, onUpdateSet, onCompleteSet, onUncompleteSet, locked, skipped, onToggleSkip, note, onEditNote, onReplace, onAddSet, onRemoveSet, onToggleSkipSet, onRemoveExercise, onMoveUp, onMoveDown, skippedSets, animPhaseRef, onClearAnim, history }: ExerciseCardProps) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
   const color = getMuscleColor(exercise.muscle_group)
@@ -132,7 +131,6 @@ export function ExerciseCard({ exercise, sets, allSets, targetRir, onUpdateSet, 
                 set={set}
                 exercise={exercise}
                 allSets={allSets}
-                targetRir={targetRir}
                 onUpdate={onUpdateSet}
                 onComplete={onCompleteSet}
                 onUncomplete={onUncompleteSet}

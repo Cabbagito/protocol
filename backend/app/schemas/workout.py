@@ -6,7 +6,6 @@ class SetLog(BaseModel):
     set_num: int = Field(ge=1)
     weight: float = Field(ge=0)
     reps: int = Field(ge=0)
-    rir: int | None = Field(default=None, ge=-1, le=5)
     set_type: str | None = None
 
 
@@ -59,7 +58,6 @@ class WorkoutTemplateExercise(BaseModel):
 class WorkoutTemplateResponse(BaseModel):
     session_name: str
     week_number: int
-    target_rir: int
     exercises: list[WorkoutTemplateExercise]
 
 

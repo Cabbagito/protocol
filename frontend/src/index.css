@@ -317,10 +317,6 @@
     0%, 100% { opacity: 0.43; }
     50%      { opacity: 1; }
   }
-  @keyframes pulse-deload {
-    0%, 100% { opacity: 0.43; }
-    50%      { opacity: 1; }
-  }
   @keyframes pulse-viewing {
     0%, 100% { opacity: 0.43; }
     50%      { opacity: 1; }

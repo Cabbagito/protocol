@@ -6,7 +6,6 @@ import { useMesocycle, useUpdateExerciseNote, useReplaceExercise, useAddExercise
 import { api } from '../api/client'
 import PageLoader from '../components/PageLoader'
 import AppHeader from '../components/AppHeader'
-import RirBadge from '../components/RirBadge'
 import MesoGrid from '../components/MesoGrid'
 import { getCurrentPosition } from '../lib/mesoUtils'
 import { getExerciseHistory } from '../lib/exerciseHistory'
@@ -204,11 +203,9 @@ export default function Workout() {
   const currentWorkoutInfo = useMemo(() => {
     if (!mesocycle || !currentPos) return null
     const session = mesocycle.structure.weeks[currentPos.weekIndex]?.sessions[currentPos.sessionIndex]
-    const rir = mesocycle.rir_scheme[currentPos.weekIndex]
     return {
       name: session?.session_name ?? 'Workout',
       week: currentPos.weekIndex + 1,
-      rir: rir === -1 ? 'Deload' : `RiR ${rir}`,
     }
   }, [mesocycle, currentPos])
 
@@ -240,13 +237,11 @@ export default function Workout() {
   const completedSets = activeSets.filter(s => s.completed).length
   const totalSets = activeSets.length
 
-  const rirLabel = template.target_rir === -1 ? 'Deload' : `RiR ${template.target_rir}`
-
   return (
     <div className="pb-20">
       <AppHeader
         title={template.session_name}
-        subtitle={isFutureSession ? `Week ${template.week_number} · ${rirLabel}` : `Week ${template.week_number}`}
+        subtitle={`Week ${template.week_number}`}
         rightContent={
           isFutureSession ? (
             <div
@@ -259,9 +254,7 @@ export default function Workout() {
               </svg>
               <span className="text-xs font-medium" style={{ color: 'var(--text-2)' }}>Preview</span>
             </div>
-          ) : (
-            <RirBadge rir={template.target_rir} />
-          )
+          ) : undefined
         }
         progressPercent={isFutureSession ? undefined : (totalSets > 0 ? (completedSets / totalSets) * 100 : 0)}
         drawerContent={mesocycle && (
@@ -303,7 +296,6 @@ export default function Workout() {
             exerciseIndex={ex.exerciseIndex}
             sets={ex.workingSets}
             allSets={sets}
-            targetRir={template.target_rir}
             onUpdateSet={updateSet}
             onCompleteSet={completeSet}
             onUncompleteSet={uncompleteSet}
@@ -375,7 +367,7 @@ export default function Workout() {
               Go to Current Workout
             </button>
             <span className="text-[11px] text-center" style={{ color: 'var(--text-m)' }}>
-              {currentWorkoutInfo.name} · Week {currentWorkoutInfo.week} · {currentWorkoutInfo.rir}
+              {currentWorkoutInfo.name} · Week {currentWorkoutInfo.week}
             </span>
           </div>
         </div>

@@ -115,7 +115,6 @@ async def log_sets(
                 log = logged_map[key]
                 set_data["weight"] = log.weight
                 set_data["reps"] = log.reps
-                set_data["rir"] = log.rir
                 set_data["logged"] = True
                 if log.set_type:
                     set_data["set_type"] = log.set_type

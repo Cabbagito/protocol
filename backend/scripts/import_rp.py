@@ -22,7 +22,6 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import async_session
-from app.domain.progression import calculate_rir_scheme
 from app.models.exercise import Exercise
 from app.models.mesocycle import Mesocycle
 from app.models.split import Session, SessionExercise, Split
@@ -315,10 +314,8 @@ async def build_and_import_mesocycles(
         await db.flush()
 
         # Build JSONB structure
-        rir_scheme = calculate_rir_scheme(total_weeks)
         weeks = []
         for week_num in range(1, total_weeks + 1):
-            week_rir = rir_scheme[week_num - 1] if week_num <= len(rir_scheme) else 0
             week_sessions_data = []
 
             for day_idx, day in enumerate(all_days):
@@ -355,7 +352,6 @@ async def build_and_import_mesocycles(
                                     "reps": rp_set.get("reps"),
                                     "target_reps": target_reps,
                                     "suggested_weight": rp_set.get("weightTarget"),
-                                    "rir": None,
                                     "logged": True,
                                 }
                             )
@@ -369,7 +365,6 @@ async def build_and_import_mesocycles(
                                 "reps": None,
                                 "target_reps": 10,
                                 "suggested_weight": None,
-                                "rir": None,
                                 "logged": False,
                             }
                         ]
@@ -413,7 +408,6 @@ async def build_and_import_mesocycles(
             weeks.append(
                 {
                     "week_number": week_num,
-                    "rir": week_rir,
                     "sessions": week_sessions_data,
                 }
             )

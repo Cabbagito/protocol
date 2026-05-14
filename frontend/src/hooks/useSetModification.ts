@@ -47,7 +47,7 @@ export function useSetModification({
           .forEach(s => localValues.set(s.set_num, s))
         const newSets: WorkingSet[] = result.sets.map(s => {
           const local = !s.logged ? localValues.get(s.set_num) : undefined
-          return buildWorkingSet(s, exerciseId, exerciseName, template.target_rir, local)
+          return buildWorkingSet(s, exerciseId, exerciseName, local)
         })
         // Maintain exercise ordering from template
         const orderedSets: WorkingSet[] = []
@@ -101,7 +101,7 @@ export function useSetModification({
           })
         const newSets: WorkingSet[] = result.sets.map(s => {
           const local = !s.logged ? localValues.get(s.set_num) : undefined
-          return buildWorkingSet(s, exerciseId, exerciseName, template.target_rir, local)
+          return buildWorkingSet(s, exerciseId, exerciseName, local)
         })
         const orderedSets: WorkingSet[] = []
         for (const ex of template.exercises) {

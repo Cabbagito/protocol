@@ -8,7 +8,6 @@ interface SetRowProps {
   set: WorkingSet
   exercise: MesoExercise
   allSets: WorkingSet[]
-  targetRir: number
   onUpdate: (exerciseId: string, setNum: number, field: keyof WorkingSet, value: number | boolean | string) => void
   onComplete: (exerciseId: string, setNum: number) => void
   onUncomplete: (exerciseId: string, setNum: number) => void

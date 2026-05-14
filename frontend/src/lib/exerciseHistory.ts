@@ -5,7 +5,6 @@ export interface ExerciseSessionHistory {
   weekNumber: number
   sessionName: string
   date: string | null
-  rir: number
   sets: MesoSet[]
 }
 
@@ -41,7 +40,6 @@ export function getExerciseHistory(
         weekNumber: week.week_number,
         sessionName: session.session_name,
         date: session.date,
-        rir: week.rir,
         sets: loggedSets,
       })
     }

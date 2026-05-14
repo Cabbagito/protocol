@@ -77,7 +77,6 @@ export function useWorkoutCompletion({
             set_num: s.set_num,
             weight: s.weight ?? 0,
             reps: s.reps ?? 0,
-            rir: s.rir,
             set_type: s.set_type ?? null,
           })),
           notes: null,

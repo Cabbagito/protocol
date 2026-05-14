@@ -5,11 +5,8 @@ All functions operate on plain dicts (the JSONB structure). No DB, no async.
 
 import math
 
-import pytest
-
 from app.domain.progression import (
     build_mesocycle_structure,
-    calculate_rir_scheme,
     compute_progression,
     derive_fields,
     get_current_position,
@@ -29,7 +26,6 @@ def _make_set(
     suggested_weight=None,
     logged=False,
     skipped=False,
-    rir=None,
     set_type=None,
 ):
     s = {
@@ -38,13 +34,10 @@ def _make_set(
         "reps": reps,
         "target_reps": target_reps,
         "suggested_weight": suggested_weight,
-        "rir": None,
         "logged": logged,
     }
     if skipped:
         s["skipped"] = True
-    if rir is not None:
-        s["rir"] = rir
     if set_type is not None:
         s["set_type"] = set_type
     return s
@@ -72,10 +65,9 @@ def _make_session(session_name="Push", day_order=0, exercises=None, date=None, n
     }
 
 
-def _make_week(week_number=1, rir=3, sessions=None):
+def _make_week(week_number=1, sessions=None):
     return {
         "week_number": week_number,
-        "rir": rir,
         "sessions": sessions or [_make_session()],
     }
 
@@ -87,8 +79,6 @@ def _make_structure(weeks):
 def _two_week_structure(
     w1_sets=None,
     w2_sets=None,
-    w1_rir=3,
-    w2_rir=2,
     exercise_id="ex1",
     session_name="Push",
     day_order=0,
@@ -96,7 +86,6 @@ def _two_week_structure(
     """Build a minimal 2-week structure with one exercise for testing progression."""
     w1 = _make_week(
         1,
-        w1_rir,
         [
             _make_session(
                 session_name,
@@ -107,7 +96,6 @@ def _two_week_structure(
     )
     w2 = _make_week(
         2,
-        w2_rir,
         [
             _make_session(
                 session_name,
@@ -117,24 +105,6 @@ def _two_week_structure(
         ],
     )
     return _make_structure([w1, w2])
-
-
-# ---------------------------------------------------------------------------
-# calculate_rir_scheme
-# ---------------------------------------------------------------------------
-
-
-class TestCalculateRirScheme:
-    def test_valid_week_counts(self):
-        for n in range(3, 9):
-            scheme = calculate_rir_scheme(n)
-            assert len(scheme) == n
-
-    def test_invalid_week_count_raises(self):
-        with pytest.raises(ValueError, match="Unsupported week count"):
-            calculate_rir_scheme(2)
-        with pytest.raises(ValueError, match="Unsupported week count"):
-            calculate_rir_scheme(9)
 
 
 # ---------------------------------------------------------------------------
@@ -245,19 +215,6 @@ class TestComputeProgression:
         next_set = structure["weeks"][1]["sessions"][0]["exercises"][0]["sets"][0]
         assert next_set["target_reps"] == 12
 
-    def test_skips_deload_week(self):
-        """Progression should not carry into deload weeks (RiR = -1)."""
-        w1_sets = [_make_set(1, weight=100, reps=10, target_reps=10, logged=True)]
-        w2_sets = [_make_set(1)]
-        structure = _two_week_structure(w1_sets, w2_sets, w2_rir=-1)
-
-        compute_progression(structure, 0, 0)
-
-        # Deload week should be untouched
-        next_set = structure["weeks"][1]["sessions"][0]["exercises"][0]["sets"][0]
-        assert next_set["target_reps"] == 10  # original, not incremented
-        assert next_set["suggested_weight"] is None  # not propagated
-
     def test_does_not_modify_already_logged_sets(self):
         """Sets already logged in the next week should not be overwritten."""
         w1_sets = [_make_set(1, weight=100, reps=10, target_reps=10, logged=True)]
@@ -287,10 +244,9 @@ class TestComputeProgression:
 
         w1 = _make_week(
             1,
-            3,
             [_make_session(exercises=[_make_exercise(sets=w1_sets, skipped=True)])],
         )
-        w2 = _make_week(2, 2, [_make_session(exercises=[_make_exercise(sets=w2_sets)])])
+        w2 = _make_week(2, [_make_session(exercises=[_make_exercise(sets=w2_sets)])])
         structure = _make_structure([w1, w2])
 
         compute_progression(structure, 0, 0)
@@ -306,11 +262,9 @@ class TestComputeProgression:
 
         w1 = _make_week(
             1,
-            3,
             [_make_session("Push", 0, [_make_exercise(sets=w1_sets)])],
         )
         w2 = _make_week(
-            2,
             2,
             [_make_session("Pull", 1, [_make_exercise(sets=w2_sets)])],
         )
@@ -331,14 +285,12 @@ class TestComputeProgression:
 
         w1 = _make_week(
             1,
-            3,
             [
                 _make_session("Push", 0, [_make_exercise(sets=w1_push_sets)]),
                 _make_session("Pull", 1, [_make_exercise(sets=w1_pull_sets)]),
             ],
         )
         w2 = _make_week(
-            2,
             2,
             [
                 _make_session("Push", 0, [_make_exercise(sets=w2_push_sets)]),
@@ -359,29 +311,6 @@ class TestComputeProgression:
         w2_pull_set = structure["weeks"][1]["sessions"][1]["exercises"][0]["sets"][0]
         assert w2_push_set["suggested_weight"] is None
         assert w2_pull_set["suggested_weight"] is None
-
-    def test_progression_skips_deload_week_for_next_instance(self):
-        """If the immediate next instance lives in a deload week, skip it."""
-        w1_sets = [_make_set(1, weight=100, reps=10, target_reps=10, logged=True)]
-        w2_sets = [_make_set(1)]  # deload
-        w3_sets = [_make_set(1)]
-
-        w1 = _make_week(1, 3, [_make_session("Push", 0, [_make_exercise(sets=w1_sets)])])
-        w2 = _make_week(2, -1, [_make_session("Push", 0, [_make_exercise(sets=w2_sets)])])
-        w3 = _make_week(3, 2, [_make_session("Push", 0, [_make_exercise(sets=w3_sets)])])
-        structure = _make_structure([w1, w2, w3])
-
-        compute_progression(structure, 0, 0)
-
-        # Deload untouched
-        w2_set = structure["weeks"][1]["sessions"][0]["exercises"][0]["sets"][0]
-        assert w2_set["suggested_weight"] is None
-        assert w2_set["target_reps"] == 10
-
-        # Week 3 is the next non-deload instance — progression lands there
-        w3_set = structure["weeks"][2]["sessions"][0]["exercises"][0]["sets"][0]
-        assert w3_set["suggested_weight"] == 100
-        assert w3_set["target_reps"] == 11
 
     def test_multiple_sets_progress_independently(self):
         """Each set progresses based on its own reps vs target."""
@@ -561,9 +490,9 @@ class TestHandleWeightBump:
         w2_sets = [_make_set(1)]
         w3_sets = [_make_set(1)]
 
-        w1 = _make_week(1, 3, [_make_session(exercises=[_make_exercise(sets=w1_sets)])])
-        w2 = _make_week(2, 2, [_make_session(exercises=[_make_exercise(sets=w2_sets)])])
-        w3 = _make_week(3, 1, [_make_session(exercises=[_make_exercise(sets=w3_sets)])])
+        w1 = _make_week(1, [_make_session(exercises=[_make_exercise(sets=w1_sets)])])
+        w2 = _make_week(2, [_make_session(exercises=[_make_exercise(sets=w2_sets)])])
+        w3 = _make_week(3, [_make_session(exercises=[_make_exercise(sets=w3_sets)])])
         structure = _make_structure([w1, w2, w3])
 
         handle_weight_bump(structure, 0, 0)
@@ -591,13 +520,11 @@ class TestDeriveFields:
 
     def test_basic_derive(self):
         structure = _make_structure(
-            [_make_week(1, 3), _make_week(2, 2), _make_week(3, 1), _make_week(4, -1)]
+            [_make_week(1), _make_week(2), _make_week(3), _make_week(4)]
         )
         result = derive_fields(structure)
         assert result["total_weeks"] == 4
-        assert result["rir_scheme"] == [3, 2, 1, -1]
         assert result["current_week"] == 1
-        assert result["current_rir"] == 3
         assert result["workouts_completed"] == 0
 
     def test_all_completed(self):
@@ -670,8 +597,6 @@ class TestBuildMesocycleStructure:
         result = build_mesocycle_structure(days, exercises, total_weeks=4)
 
         assert len(result["weeks"]) == 4
-        assert result["weeks"][0]["rir"] == 3  # from 4-week scheme
-        assert result["weeks"][3]["rir"] == -1  # deload
 
         session = result["weeks"][0]["sessions"][0]
         assert session["session_name"] == "Push"

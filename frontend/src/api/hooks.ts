@@ -238,7 +238,7 @@ export function useLogSets() {
       mesocycle_id: string
       week_index: number
       session_index: number
-      sets: { exercise_id: string; set_num: number; weight: number; reps: number; rir?: number | null; set_type?: string | null }[]
+      sets: { exercise_id: string; set_num: number; weight: number; reps: number; set_type?: string | null }[]
       notes?: string | null
       exercise_updates?: { exercise_id: string; skipped?: boolean }[] | null
       skipped_sets?: { exercise_id: string; set_num: number }[] | null
