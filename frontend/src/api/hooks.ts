@@ -16,12 +16,14 @@ import type {
   FoodLogCreate,
   DailyLog,
 } from '../types'
+import type { ExerciseSessionHistory } from '../lib/exerciseHistory'
 
 // --- Query Keys ---
 
 export const queryKeys = {
   exercises: {
     all: ['exercises'] as const,
+    history: (exerciseId: string) => ['exercises', 'history', exerciseId] as const,
   },
   splits: {
     all: ['splits'] as const,
@@ -58,6 +60,14 @@ export function useExercises() {
   return useQuery({
     queryKey: queryKeys.exercises.all,
     queryFn: () => api.get<Exercise[]>('/exercises'),
+  })
+}
+
+export function useExerciseHistory(exerciseId: string | undefined) {
+  return useQuery({
+    queryKey: exerciseId ? queryKeys.exercises.history(exerciseId) : ['exercises', 'history', 'none'],
+    queryFn: () => api.get<ExerciseSessionHistory[]>(`/exercises/${exerciseId}/history`),
+    enabled: !!exerciseId,
   })
 }
 

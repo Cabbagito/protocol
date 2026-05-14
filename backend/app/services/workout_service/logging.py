@@ -7,7 +7,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.attributes import flag_modified
 
-from app.domain.progression import compute_progression, handle_weight_bump
+from app.domain.progression import compute_progression, get_current_position, handle_weight_bump
 from app.models.base import generate_uuid
 from app.models.exercise_performance import ExercisePerformance
 from app.services.common import get_user_mesocycle
@@ -137,6 +137,10 @@ async def log_sets(
         handle_weight_bump(structure, week_index, session_index)
         compute_progression(structure, week_index, session_index)
         await update_exercise_performances(db, user_id, session)
+
+        # Stamp completed_at when the final session of the mesocycle is logged
+        if get_current_position(structure).get("completed"):
+            mesocycle.completed_at = datetime.now(UTC)
 
     flag_modified(mesocycle, "structure")
     await db.commit()

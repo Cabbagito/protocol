@@ -3,7 +3,7 @@ import MuscleGroupBadge from '../../components/MuscleGroupBadge'
 import BottomSheet from '../../components/BottomSheet'
 import { getMuscleColor } from '../../lib/muscleColors'
 import { formatHistorySummary } from '../../lib/exerciseHistory'
-import type { ExerciseSessionHistory } from '../../lib/exerciseHistory'
+import { useExerciseHistory } from '../../api/hooks'
 import { EllipsisIcon, ReplaceIcon, SkipIcon, UnskipIcon, NoteIcon, TrashIcon, HistoryIcon, MoveUpIcon, MoveDownIcon } from './icons'
 import { ExerciseHistoryPopup } from './ExerciseHistoryPopup'
 import { SetRow } from './SetRow'
@@ -32,13 +32,13 @@ export interface ExerciseCardProps {
   skippedSets: Set<string>
   animPhaseRef: React.MutableRefObject<Map<string, 'saving' | 'success'>>
   onClearAnim: (exerciseId: string, setNum: number) => void
-  history: ExerciseSessionHistory[]
 }
 
-export function ExerciseCard({ exercise, sets, allSets, onUpdateSet, onCompleteSet, onUncompleteSet, locked, skipped, onToggleSkip, note, onEditNote, onReplace, onAddSet, onRemoveSet, onToggleSkipSet, onRemoveExercise, onMoveUp, onMoveDown, skippedSets, animPhaseRef, onClearAnim, history }: ExerciseCardProps) {
+export function ExerciseCard({ exercise, sets, allSets, onUpdateSet, onCompleteSet, onUncompleteSet, locked, skipped, onToggleSkip, note, onEditNote, onReplace, onAddSet, onRemoveSet, onToggleSkipSet, onRemoveExercise, onMoveUp, onMoveDown, skippedSets, animPhaseRef, onClearAnim }: ExerciseCardProps) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
   const color = getMuscleColor(exercise.muscle_group)
+  const { data: history = [] } = useExerciseHistory(exercise.exercise_id)
   const lastSession = history.length > 0 ? history[0] : null
   const summaryText = lastSession ? formatHistorySummary(lastSession.sets) : null
 

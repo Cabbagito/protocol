@@ -131,6 +131,7 @@ export function useWorkoutAutoSave({
       queryClient.invalidateQueries({ queryKey: queryKeys.mesocycles.detail(mesocycleId) })
       queryClient.invalidateQueries({ queryKey: queryKeys.mesocycles.active })
       queryClient.invalidateQueries({ queryKey: queryKeys.workouts.history(mesocycleId) })
+      queryClient.invalidateQueries({ queryKey: ['exercises', 'history'] })
     }).catch(() => {
       toast.showError('Auto-save failed')
       // On error, remove saving keys so no success animation plays

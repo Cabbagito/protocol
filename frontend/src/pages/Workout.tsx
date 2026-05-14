@@ -8,7 +8,6 @@ import PageLoader from '../components/PageLoader'
 import AppHeader from '../components/AppHeader'
 import MesoGrid from '../components/MesoGrid'
 import { getCurrentPosition } from '../lib/mesoUtils'
-import { getExerciseHistory } from '../lib/exerciseHistory'
 import { useKeyboardVisible } from '../lib/useKeyboardVisible'
 import { useAnimPhase } from '../hooks/useAnimPhase'
 import { useWorkoutState } from '../hooks/useWorkoutState'
@@ -216,12 +215,9 @@ export default function Workout() {
         ...ex,
         exerciseIndex: idx,
         workingSets: sets.filter((s) => s.exercise_id === ex.exercise_id),
-        history: mesocycle ? getExerciseHistory(
-          mesocycle.structure, ex.exercise_id, template.week_index, template.session_index,
-        ) : [],
       }))
       .filter(ex => !removedExercises.has(ex.exercise_id))
-  }, [template, sets, mesocycle, removedExercises])
+  }, [template, sets, removedExercises])
 
   // Loading / error states
   if (isLoading) {
@@ -314,7 +310,6 @@ export default function Workout() {
             skippedSets={skippedSets}
             animPhaseRef={animPhaseRef}
             onClearAnim={clearAnim}
-            history={ex.history}
           />
         ))}
       </div>
