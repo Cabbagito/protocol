@@ -737,11 +737,12 @@
 /* ── Aurora background — four blobs + two panning stripes + grain ── */
 
 .wave-bg {
-  position: absolute;
+  position: fixed;
   inset: 0;
   overflow: hidden;
   pointer-events: none;
   contain: strict;
+  z-index: 0;
 }
 .wave-bg .blob {
   position: absolute;

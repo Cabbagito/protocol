@@ -20,11 +20,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen flex flex-col">
-      {/* Mask behind the status bar so scrolling content doesn't peek through */}
-      <div
-        className="fixed top-0 left-0 right-0 z-50"
-        style={{ height: 'env(safe-area-inset-top)', background: 'var(--base)' }}
-      />
       <main
         ref={mainRef}
         data-main-scroll

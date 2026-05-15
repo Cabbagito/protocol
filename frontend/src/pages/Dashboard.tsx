@@ -122,7 +122,7 @@ export default function Dashboard() {
     <div
       style={{
         position: 'relative',
-        minHeight: '100vh',
+        minHeight: '100dvh',
         background: 'var(--deep)',
         overflow: 'hidden',
       }}
@@ -133,8 +133,8 @@ export default function Dashboard() {
         style={{
           position: 'relative',
           zIndex: 1,
-          padding: '12px 22px 130px',
-          minHeight: '100vh',
+          padding: '12px 22px calc(env(safe-area-inset-bottom) + 130px)',
+          minHeight: '100dvh',
           display: 'flex',
           flexDirection: 'column',
         }}
@@ -254,8 +254,8 @@ export default function Dashboard() {
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            padding: '24px 0',
-            minHeight: 280,
+            padding: '20px 0',
+            minHeight: 180,
           }}
         >
           {mesocycle && heroGroups.length > 0 && (
