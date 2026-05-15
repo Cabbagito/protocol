@@ -1,11 +1,14 @@
-import { useState, useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { getMuscleColor } from '../../lib/muscleColors'
 import type { Exercise } from '../../types'
 import type { DayState } from '../SplitEditor'
 import ExerciseSearch from './ExerciseSearch'
 
+const MONO = 'JetBrains Mono, ui-monospace, monospace'
+
 interface DayCardProps {
   day: DayState
+  index: number
   isExpanded: boolean
   isSearchOpen: boolean
   isEditingName: boolean
@@ -23,6 +26,7 @@ interface DayCardProps {
 
 export default function DayCard({
   day,
+  index,
   isExpanded,
   isSearchOpen,
   isEditingName,
@@ -51,40 +55,61 @@ export default function DayCard({
     }
   }, [isEditingName])
 
-  const commitName = () => {
+  function commitName() {
     onFinishRename(localName)
   }
 
   return (
     <div
-      className="rounded-xl overflow-hidden transition-shadow"
       style={{
-        background: 'var(--card)',
-        boxShadow: isExpanded ? '0 4px 16px rgba(0,0,0,0.5)' : '0 2px 8px rgba(0,0,0,0.3)',
-        border: isExpanded ? '1px solid rgba(56,189,248,0.1)' : '1px solid rgba(255,255,255,0.04)',
+        borderRadius: 14,
+        background: 'rgba(15,29,46,0.5)',
+        border: isExpanded
+          ? '1px solid rgba(var(--accent-rgb),0.30)'
+          : '1px solid rgba(255,255,255,0.05)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        overflow: 'hidden',
       }}
     >
       {/* Header */}
-      <div
-        className="flex items-center gap-2.5 px-3.5 py-3 cursor-pointer select-none active:bg-white/[0.02]"
+      <button
+        type="button"
         onClick={(e) => {
           if ((e.target as HTMLElement).closest('.day-delete') || (e.target as HTMLElement).closest('.day-name-input')) return
           onToggle()
         }}
+        style={{
+          width: '100%',
+          padding: '12px 14px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+          cursor: 'pointer',
+          background: 'transparent',
+          border: 'none',
+          textAlign: 'left',
+          color: 'inherit',
+        }}
       >
-        <svg
-          className="w-4 h-4 shrink-0 transition-transform duration-200"
-          style={{ color: 'var(--text-m)', transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)' }}
-          viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round"
+        <span
+          style={{
+            fontSize: 9,
+            color: 'var(--text-m)',
+            letterSpacing: '0.18em',
+            width: 22,
+            fontFamily: MONO,
+            fontWeight: 600,
+            flexShrink: 0,
+          }}
         >
-          <path d="M9 18l6-6-6-6" />
-        </svg>
+          D{index + 1}
+        </span>
 
         {isEditingName ? (
           <input
             ref={nameInputRef}
-            className="day-name-input flex-1 bg-transparent border-b-[1.5px] border-b-[var(--accent)] text-[14px] font-semibold outline-none pb-0.5 min-w-0"
-            style={{ color: 'var(--text-1)', border: 'none', borderBottom: '1.5px solid var(--accent)' }}
+            className="day-name-input"
             value={localName}
             onChange={(e) => setLocalName(e.target.value)}
             onClick={(e) => e.stopPropagation()}
@@ -92,100 +117,240 @@ export default function DayCard({
               if (e.key === 'Enter' || e.key === 'Escape') commitName()
             }}
             onBlur={commitName}
-            placeholder="Day name..."
+            placeholder="Day name…"
+            style={{
+              flex: 1,
+              background: 'transparent',
+              border: 'none',
+              borderBottom: '1.5px solid var(--accent)',
+              color: 'var(--text-1)',
+              fontSize: 14,
+              fontWeight: 600,
+              outline: 'none',
+              padding: 0,
+              minWidth: 0,
+            }}
           />
         ) : (
           <span
-            className="flex-1 text-[14px] font-semibold truncate"
-            style={{ color: 'var(--text-1)' }}
             onDoubleClick={(e) => {
               e.stopPropagation()
               onStartRename()
             }}
+            style={{
+              flex: 1,
+              fontSize: 14,
+              fontWeight: 600,
+              color: isExpanded ? 'var(--text-1)' : 'var(--text-2)',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              minWidth: 0,
+            }}
           >
-            {day.name || 'Untitled'}
+            {day.name || (
+              <span style={{ color: 'var(--text-m)', fontWeight: 400, fontStyle: 'italic' }}>Untitled</span>
+            )}
           </span>
         )}
 
-        {!isExpanded && (
-          <span
-            className="text-[11px] font-medium px-2 py-0.5 rounded-[10px] mono"
-            style={{ color: 'var(--text-m)', background: 'var(--panel)' }}
-          >
-            {day.exercises.length}
-          </span>
-        )}
+        <span
+          style={{
+            fontSize: 10,
+            color: 'var(--text-m)',
+            fontFamily: MONO,
+            fontWeight: 600,
+            flexShrink: 0,
+          }}
+        >
+          {day.exercises.length} {day.exercises.length === 1 ? 'lift' : 'lifts'}
+        </span>
 
         {canDelete && (
           <button
             type="button"
-            className="day-delete w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-colors hover:bg-red-500/10 hover:text-red-400"
-            style={{ color: 'var(--text-m)' }}
+            className="day-delete"
             onClick={(e) => {
               e.stopPropagation()
               onDelete()
             }}
+            aria-label="Delete day"
+            style={{
+              width: 26,
+              height: 26,
+              borderRadius: 8,
+              background: 'transparent',
+              border: 'none',
+              color: 'var(--text-m)',
+              display: 'grid',
+              placeItems: 'center',
+              cursor: 'pointer',
+              flexShrink: 0,
+            }}
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
               <path d="M18 6L6 18M6 6l12 12" />
             </svg>
           </button>
         )}
-      </div>
+
+        <svg
+          width="12"
+          height="12"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="var(--text-m)"
+          strokeWidth={2}
+          strokeLinecap="round"
+          style={{
+            transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
+            transition: 'transform 0.2s',
+            flexShrink: 0,
+          }}
+        >
+          <path d="M9 18l6-6-6-6" />
+        </svg>
+      </button>
 
       {/* Body */}
       <div
-        className="overflow-hidden transition-all duration-300"
-        style={{ maxHeight: isExpanded ? 2000 : 0 }}
+        style={{
+          overflow: 'hidden',
+          maxHeight: isExpanded ? 4000 : 0,
+          transition: 'max-height 0.3s ease',
+        }}
       >
-        <div className="px-3.5 pb-3.5">
-          {/* Exercise list */}
-          {day.exercises.length > 0 && (
-            <div className="flex flex-col gap-0.5">
-              {day.exercises.map((ex, i) => {
-                const color = getMuscleColor(ex.muscle_group)
-                return (
+        <div style={{ padding: '0 12px 12px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+            {day.exercises.map((ex, i) => {
+              const color = getMuscleColor(ex.muscle_group)
+              return (
+                <div
+                  key={`${ex.exercise_id}-${i}`}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 10,
+                    padding: '9px 12px',
+                    borderRadius: 10,
+                    background: 'rgba(255,255,255,0.02)',
+                    border: '1px solid rgba(255,255,255,0.05)',
+                  }}
+                >
                   <div
-                    key={`${ex.exercise_id}-${i}`}
-                    className="flex items-center gap-2.5 px-2.5 py-2 rounded-lg hover:bg-white/[0.02] transition-colors"
-                  >
-                    <div className="w-[7px] h-[7px] rounded-full shrink-0" style={{ background: color.primary }} />
-                    <span className="flex-1 text-[13px] font-medium" style={{ color: 'var(--text-1)' }}>
-                      {ex.exercise_name}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => onRemoveExercise(i)}
-                      className="w-[22px] h-[22px] rounded-md flex items-center justify-center opacity-50 hover:opacity-100 hover:bg-red-500/10 hover:text-red-400 transition-all"
-                      style={{ color: 'var(--text-m)' }}
+                    style={{
+                      width: 2,
+                      height: 18,
+                      borderRadius: 1,
+                      background: `linear-gradient(180deg, ${color.primary}, ${color.light})`,
+                    }}
+                  />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div
+                      style={{
+                        fontSize: 13,
+                        color: 'var(--text-1)',
+                        fontWeight: 500,
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                      }}
                     >
-                      &times;
-                    </button>
+                      {ex.exercise_name}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 9,
+                        color: color.light,
+                        letterSpacing: '0.15em',
+                        textTransform: 'uppercase',
+                        fontFamily: MONO,
+                        fontWeight: 600,
+                      }}
+                    >
+                      {ex.muscle_group}
+                    </div>
                   </div>
-                )
-              })}
-            </div>
-          )}
+                  <button
+                    type="button"
+                    onClick={() => onRemoveExercise(i)}
+                    aria-label="Remove exercise"
+                    style={{
+                      width: 24,
+                      height: 24,
+                      borderRadius: 6,
+                      background: 'transparent',
+                      border: 'none',
+                      color: 'var(--text-m)',
+                      cursor: 'pointer',
+                      display: 'grid',
+                      placeItems: 'center',
+                    }}
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round">
+                      <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                    </svg>
+                  </button>
+                </div>
+              )
+            })}
 
-          {/* Add exercise / search */}
-          {isSearchOpen ? (
-            <ExerciseSearch
-              allExercises={allExercises}
-              addedExerciseIds={day.exercises.map((e) => e.exercise_id)}
-              onAdd={onAddExercise}
-              onDone={onCloseSearch}
-            />
-          ) : (
-            <button
-              type="button"
-              onClick={onOpenSearch}
-              className="flex items-center gap-1.5 py-2.5 px-2.5 w-full text-[12px] font-semibold transition-opacity hover:opacity-80"
-              style={{ color: 'var(--accent-l)' }}
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
-              Add exercise
-            </button>
-          )}
+            {day.exercises.length === 0 && !isSearchOpen && (
+              <div
+                style={{
+                  padding: '14px 12px',
+                  textAlign: 'center',
+                  borderRadius: 10,
+                  border: '1px dashed rgba(255,255,255,0.08)',
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: 10,
+                    color: 'var(--text-m)',
+                    letterSpacing: '0.18em',
+                    fontFamily: MONO,
+                    fontWeight: 600,
+                  }}
+                >
+                  NO LIFTS YET
+                </span>
+              </div>
+            )}
+
+            {isSearchOpen ? (
+              <ExerciseSearch
+                allExercises={allExercises}
+                addedExerciseIds={day.exercises.map((e) => e.exercise_id)}
+                onAdd={onAddExercise}
+                onDone={onCloseSearch}
+              />
+            ) : (
+              <button
+                type="button"
+                onClick={onOpenSearch}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
+                  padding: '10px 12px',
+                  borderRadius: 10,
+                  background: 'transparent',
+                  border: '1px dashed rgba(255,255,255,0.08)',
+                  color: 'var(--accent-l)',
+                  fontSize: 12,
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                }}
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round">
+                  <path d="M12 5v14M5 12h14" />
+                </svg>
+                Add lift
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>

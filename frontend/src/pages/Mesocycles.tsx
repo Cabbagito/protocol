@@ -1,334 +1,747 @@
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
-import { useToast } from '../components/Toast'
-import { ChevronRightIcon } from '../components/Icons'
-import AppHeader from '../components/AppHeader'
+import { useEffect, useMemo, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import AuroraBackground from '../components/AuroraBackground'
 import PageLoader from '../components/PageLoader'
-import MesoGrid from '../components/MesoGrid'
-import { useMesocycles, useCreateMesocycle, useSplits, useActiveMesocycle } from '../api/hooks'
+import { useToast } from '../components/Toast'
+import {
+  useMesocycles,
+  useActiveMesocycle,
+  useCreateMesocycle,
+  useSplits,
+} from '../api/hooks'
+import { getCurrentPosition } from '../lib/mesoUtils'
+import { getMuscleColor } from '../lib/muscleColors'
 import type { MesocycleListItem, Mesocycle } from '../types'
 
+const MONO = 'JetBrains Mono, ui-monospace, monospace'
+
 export default function Mesocycles() {
+  const navigate = useNavigate()
   const { data: mesocycles = [], isLoading } = useMesocycles()
   const { data: activeMeso } = useActiveMesocycle()
-  const [showForm, setShowForm] = useState(false)
+  const [createOpen, setCreateOpen] = useState(false)
 
-  const activeMesocycle = mesocycles.find((m) => m.is_active)
-  const inactiveMesocycles = mesocycles.filter((m) => !m.is_active)
+  const activeMesos = mesocycles.filter((m) => m.is_active)
+  const archived = mesocycles.filter((m) => !m.is_active)
+  const primaryActive = activeMeso ?? activeMesos[0] ?? null
+  const secondaryActive = activeMesos.filter((m) => m.id !== primaryActive?.id)
 
   return (
-    <div>
-      <AppHeader
-        title="Mesocycles"
-        subtitle={`${mesocycles.length} mesocycles`}
-        rightContent={
-          <button onClick={() => setShowForm(!showForm)} className="plus-btn">
-            <svg className="w-3.5 h-3.5" style={{ color: 'var(--accent-l)' }} fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-            </svg>
-            <span className="text-xs font-medium" style={{ color: 'var(--accent-l)' }}>New</span>
-          </button>
-        }
-      />
+    <div
+      style={{
+        position: 'relative',
+        minHeight: '100vh',
+        background: 'var(--deep)',
+        overflow: 'hidden',
+      }}
+    >
+      <AuroraBackground />
 
-      <div className="px-4 space-y-3">
-      {showForm && (
-        <MesocycleForm
-          onSave={() => setShowForm(false)}
-          onCancel={() => setShowForm(false)}
+      <div style={{ position: 'relative', zIndex: 1, padding: '12px 22px 130px' }}>
+        <Chrome
+          title="Mesocycles"
+          sub={`${activeMesos.length} ACTIVE · ${archived.length} ARCHIVED`}
+          onBack={() => navigate(-1)}
+        />
+
+        {isLoading ? (
+          <PageLoader />
+        ) : mesocycles.length === 0 ? (
+          <EmptyState onCreate={() => setCreateOpen(true)} />
+        ) : (
+          <>
+            {primaryActive && <PrimaryActiveCard meso={primaryActive} />}
+
+            {secondaryActive.map((m) => (
+              <SecondaryActiveCard key={m.id} meso={m} />
+            ))}
+
+            {archived.length > 0 && (
+              <div style={{ marginTop: 22 }}>
+                <Eyebrow>Archived · {archived.length}</Eyebrow>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 12 }}>
+                  {archived.map((m) => (
+                    <ArchivedRow key={m.id} meso={m} />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={() => setCreateOpen(true)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                width: '100%',
+                height: 52,
+                marginTop: 18,
+                borderRadius: 14,
+                background: 'var(--p-grad)',
+                color: 'var(--btn-text)',
+                fontWeight: 700,
+                fontSize: 13,
+                letterSpacing: '0.05em',
+                border: 'none',
+                cursor: 'pointer',
+                boxShadow:
+                  '0 14px 40px -10px rgba(var(--accent-rgb),0.55), inset 0 1px 0 rgba(255,255,255,0.18)',
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round">
+                <path d="M12 4v16M4 12h16" />
+              </svg>
+              New mesocycle
+            </button>
+          </>
+        )}
+      </div>
+
+      {createOpen && (
+        <CreateMesoDialog
+          onClose={() => setCreateOpen(false)}
+          onCreated={(id) => {
+            setCreateOpen(false)
+            navigate(`/mesocycles/${id}`)
+          }}
         />
       )}
-
-      {isLoading ? (
-        <PageLoader />
-      ) : mesocycles.length === 0 ? (
-        <div className="text-[var(--text-2)] text-center py-8">
-          No mesocycles yet. Create your first training block!
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {/* Active mesocycle */}
-          {activeMesocycle && (
-            <ActiveMesoCard meso={activeMesocycle} fullMeso={activeMeso ?? null} />
-          )}
-
-          {/* Completed/inactive */}
-          {inactiveMesocycles.map((meso) => (
-            <InactiveMesoCard key={meso.id} meso={meso} />
-          ))}
-
-          {/* Add row */}
-          <button
-            onClick={() => setShowForm(true)}
-            className="add-row flex items-center justify-center gap-2 py-3 w-full stagger"
-          >
-            <svg className="w-4 h-4" style={{ color: 'var(--accent-l)' }} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-            </svg>
-            <span className="text-xs font-medium" style={{ color: 'var(--accent-l)' }}>New Mesocycle</span>
-          </button>
-        </div>
-      )}
-      </div>
     </div>
   )
 }
 
-// --- Active Meso Card ---
+/* ─── Chrome header ─────────────────────────────────────────────── */
 
-function ActiveMesoCard({ meso, fullMeso }: { meso: MesocycleListItem; fullMeso: Mesocycle | null }) {
-  const progressPct = meso.total_workouts > 0
-    ? (meso.workouts_completed / meso.total_workouts) * 100
-    : 0
+function Chrome({ title, sub, onBack }: { title: string; sub: string; onBack: () => void }) {
+  return (
+    <div
+      style={{
+        padding: '4px 0 18px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+      }}
+    >
+      <button
+        onClick={onBack}
+        aria-label="Back"
+        style={{
+          width: 36,
+          height: 36,
+          borderRadius: 12,
+          background: 'rgba(255,255,255,0.04)',
+          border: '1px solid rgba(255,255,255,0.05)',
+          backdropFilter: 'blur(20px)',
+          color: 'var(--text-2)',
+          display: 'grid',
+          placeItems: 'center',
+          cursor: 'pointer',
+        }}
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
+          <path d="M15 18l-6-6 6-6" />
+        </svg>
+      </button>
+      <div style={{ textAlign: 'center' }}>
+        <div
+          style={{
+            fontSize: 9,
+            color: 'var(--text-m)',
+            letterSpacing: '0.22em',
+            fontFamily: MONO,
+            fontWeight: 500,
+          }}
+        >
+          {sub}
+        </div>
+        <div
+          className="p-display"
+          style={{
+            fontSize: 18,
+            color: 'var(--text-1)',
+            marginTop: 1,
+          }}
+        >
+          {title}
+        </div>
+      </div>
+      <div style={{ width: 36 }} />
+    </div>
+  )
+}
+
+function Eyebrow({ children }: { children: React.ReactNode }) {
+  return (
+    <div
+      style={{
+        fontSize: 10,
+        fontWeight: 600,
+        letterSpacing: '0.18em',
+        textTransform: 'uppercase',
+        color: 'var(--text-m)',
+        fontFamily: MONO,
+      }}
+    >
+      {children}
+    </div>
+  )
+}
+
+/* ─── Primary active hero ───────────────────────────────────────── */
+
+function PrimaryActiveCard({ meso }: { meso: MesocycleListItem | Mesocycle }) {
+  // Build the per-session mini-strip. If we have the full structure
+  // (active fetched via /active), use it. Otherwise fall back to
+  // workouts_completed / total_workouts.
+  const ticks = useMemo(() => buildTicks(meso), [meso])
+
+  const sessionsTotal = ticks.length || (meso as MesocycleListItem).total_workouts || 0
+  const sessionsDone = ticks.filter((t) => t === 'done').length
+  const pct = sessionsTotal > 0 ? Math.round((sessionsDone / sessionsTotal) * 100) : 0
 
   return (
     <Link
       to={`/mesocycles/${meso.id}`}
-      className="compact-card p-4 block stagger"
       style={{
-        borderColor: 'rgba(74,222,128,0.2)',
-        borderLeft: meso.split_color ? `3px solid ${meso.split_color}` : undefined,
+        display: 'block',
+        borderRadius: 20,
+        padding: 20,
+        position: 'relative',
+        overflow: 'hidden',
+        textDecoration: 'none',
+        color: 'inherit',
+        background:
+          'linear-gradient(180deg, rgba(var(--accent-rgb),0.14), rgba(15,29,46,0.6))',
+        border: '1px solid rgba(var(--accent-rgb),0.30)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
       }}
     >
-      {/* Top row */}
-      <div className="flex items-center justify-between mb-1">
-        <div className="flex items-center gap-2">
-          <span className="text-[15px] font-semibold text-[var(--text-1)]">{meso.name}</span>
-          <span
-            className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded"
-            style={{ color: '#4ade80', background: 'rgba(74,222,128,0.1)', border: '1px solid rgba(74,222,128,0.2)' }}
-          >
-            Active
-          </span>
-        </div>
-        <ChevronRightIcon className="w-4 h-4 shrink-0 text-[var(--text-m)]" />
-      </div>
-
-      {/* Meta row */}
-      <div className="flex items-center gap-1.5 mb-3">
-        <span className="text-[11px]" style={{ color: 'var(--text-m)' }}>{meso.split_name}</span>
-        <span className="text-[11px]" style={{ color: 'var(--text-m)' }}>&middot;</span>
-        <span className="mono text-[11px]" style={{ color: 'var(--text-m)' }}>Week {meso.current_week} / {meso.total_weeks}</span>
-      </div>
-
-      {/* Progress bar */}
-      <div className="flex items-center gap-2 mb-3">
-        <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--input)' }}>
+      <div
+        aria-hidden
+        style={{
+          position: 'absolute',
+          inset: 0,
+          pointerEvents: 'none',
+          background:
+            'radial-gradient(ellipse 80% 50% at 50% 0%, rgba(var(--accent-rgb),0.20), transparent 70%)',
+        }}
+      />
+      <div style={{ position: 'relative', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: 9, color: 'var(--accent-l)', letterSpacing: '0.28em', fontFamily: MONO, fontWeight: 600 }}>
+            ACTIVE · WEEK {meso.current_week}
+          </div>
           <div
-            className="h-full rounded-full"
+            className="p-display"
             style={{
-              width: `${progressPct}%`,
-              background: '#4ade80',
-              boxShadow: '0 0 6px rgba(74,222,128,0.4)',
+              fontSize: 30,
+              color: 'var(--text-1)',
+              lineHeight: 1,
+              marginTop: 6,
+              letterSpacing: '-0.02em',
             }}
-          />
+          >
+            {meso.name}
+          </div>
+          <div
+            style={{
+              fontSize: 10,
+              color: 'var(--text-m)',
+              marginTop: 6,
+              letterSpacing: '0.18em',
+              fontFamily: MONO,
+              textTransform: 'uppercase',
+            }}
+          >
+            {meso.split_name} · {meso.total_weeks} WEEKS
+          </div>
         </div>
-        <span className="mono text-[10px] font-semibold" style={{ color: '#4ade80' }}>
-          {meso.workouts_completed}/{meso.total_workouts}
-        </span>
+        <div style={{ textAlign: 'right', flexShrink: 0 }}>
+          <div
+            className="p-grad-text"
+            style={{
+              fontSize: 32,
+              fontWeight: 700,
+              letterSpacing: '-0.03em',
+              lineHeight: 1,
+              fontFamily: MONO,
+            }}
+          >
+            {pct}
+            <span style={{ fontSize: 14, opacity: 0.6 }}>%</span>
+          </div>
+          <div
+            style={{
+              fontSize: 9,
+              color: 'var(--text-m)',
+              letterSpacing: '0.18em',
+              marginTop: 4,
+              fontFamily: MONO,
+            }}
+          >
+            {sessionsTotal} SESSIONS
+          </div>
+        </div>
       </div>
 
-      {/* Dot grid */}
-      {fullMeso && <MesoGrid mesocycle={fullMeso} compact />}
+      {ticks.length > 0 && (
+        <div style={{ position: 'relative', display: 'flex', gap: 4, marginTop: 18 }}>
+          {ticks.map((state, i) => {
+            const isCurrent = state === 'current'
+            const isDone = state === 'done'
+            return (
+              <div
+                key={i}
+                style={{
+                  flex: 1,
+                  height: isCurrent ? 6 : 4,
+                  borderRadius: 2,
+                  background: isDone
+                    ? 'var(--accent-l)'
+                    : isCurrent
+                      ? 'color-mix(in oklab, var(--accent) 60%, rgba(255,255,255,0.06))'
+                      : 'rgba(255,255,255,0.05)',
+                  boxShadow: isDone || isCurrent ? '0 0 6px var(--accent)' : 'none',
+                  alignSelf: 'center',
+                }}
+              />
+            )
+          })}
+        </div>
+      )}
     </Link>
   )
 }
 
-// --- Inactive Meso Card ---
+function buildTicks(meso: MesocycleListItem | Mesocycle): ('done' | 'current' | 'queued')[] {
+  if ('structure' in meso && meso.structure) {
+    const ticks: ('done' | 'current' | 'queued')[] = []
+    const pos = getCurrentPosition(meso.structure)
+    for (let wi = 0; wi < meso.structure.weeks.length; wi++) {
+      const week = meso.structure.weeks[wi]!
+      for (let si = 0; si < week.sessions.length; si++) {
+        const session = week.sessions[si]!
+        const nonSkipped = session.exercises.filter((ex) => !ex.skipped)
+        const allLogged =
+          nonSkipped.length > 0 && nonSkipped.every((ex) => ex.sets.every((s) => s.logged))
+        if (allLogged) ticks.push('done')
+        else if (pos && pos.weekIndex === wi && pos.sessionIndex === si) ticks.push('current')
+        else ticks.push('queued')
+      }
+    }
+    return ticks
+  }
+  const total = (meso as MesocycleListItem).total_workouts
+  const done = (meso as MesocycleListItem).workouts_completed
+  const ticks: ('done' | 'current' | 'queued')[] = []
+  for (let i = 0; i < total; i++) {
+    ticks.push(i < done ? 'done' : i === done ? 'current' : 'queued')
+  }
+  return ticks
+}
 
-function InactiveMesoCard({ meso }: { meso: MesocycleListItem }) {
+/* ─── Secondary active (compact) ────────────────────────────────── */
+
+function SecondaryActiveCard({ meso }: { meso: MesocycleListItem }) {
+  const color = getMuscleColor(meso.split_name.toLowerCase().includes('run') ? 'quads' : 'back')
+  const accent = meso.split_color || color.primary
+  const accentLight = color.light
+  const pct =
+    meso.total_workouts > 0 ? Math.round((meso.workouts_completed / meso.total_workouts) * 100) : 0
+
   return (
     <Link
       to={`/mesocycles/${meso.id}`}
-      className="compact-card p-4 block stagger"
       style={{
-        opacity: 0.6,
-        borderLeft: meso.split_color ? `3px solid ${meso.split_color}` : undefined,
+        display: 'flex',
+        alignItems: 'center',
+        gap: 14,
+        marginTop: 12,
+        padding: 16,
+        borderRadius: 14,
+        background: 'rgba(15,29,46,0.5)',
+        border: '1px solid rgba(255,255,255,0.05)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        textDecoration: 'none',
+        color: 'inherit',
       }}
     >
-      <div className="flex items-center justify-between mb-1">
-        <div className="flex items-center gap-2">
-          <span className="text-[15px] font-medium" style={{ color: 'var(--text-2)' }}>{meso.name}</span>
-          <span
-            className="text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded"
-            style={{ color: 'var(--text-m)', background: 'rgba(100,116,139,0.1)', border: '1px solid rgba(100,116,139,0.15)' }}
-          >
-            Done
-          </span>
+      <div
+        style={{
+          width: 3,
+          height: 46,
+          borderRadius: 2,
+          background: `linear-gradient(180deg, ${accent}, ${accentLight})`,
+        }}
+      />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div
+          style={{
+            fontSize: 9,
+            color: accentLight,
+            letterSpacing: '0.22em',
+            fontFamily: MONO,
+            fontWeight: 600,
+          }}
+        >
+          ACTIVE · WEEK {meso.current_week}
         </div>
-        <ChevronRightIcon className="w-4 h-4 shrink-0 text-[var(--text-m)]" />
+        <div
+          style={{
+            fontSize: 15,
+            fontWeight: 600,
+            color: 'var(--text-1)',
+            marginTop: 2,
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+          }}
+        >
+          {meso.name}
+        </div>
+        <div
+          style={{
+            fontSize: 10,
+            color: 'var(--text-m)',
+            marginTop: 2,
+            letterSpacing: '0.15em',
+            fontFamily: MONO,
+            textTransform: 'uppercase',
+          }}
+        >
+          {meso.split_name} · {meso.total_weeks} WEEKS · {pct}%
+        </div>
       </div>
-      <div className="flex items-center gap-1.5">
-        <span className="text-[11px]" style={{ color: 'var(--text-m)' }}>{meso.split_name}</span>
-        <span className="text-[11px]" style={{ color: 'var(--text-m)' }}>&middot;</span>
-        <span className="mono text-[11px]" style={{ color: 'var(--text-m)' }}>{meso.total_weeks} weeks</span>
-        <span className="text-[11px]" style={{ color: 'var(--text-m)' }}>&middot;</span>
-        <span className="mono text-[11px]" style={{ color: 'var(--text-m)' }}>{meso.workouts_completed}/{meso.total_workouts}</span>
-      </div>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-m)" strokeWidth={2} strokeLinecap="round">
+        <path d="M9 18l6-6-6-6" />
+      </svg>
     </Link>
   )
 }
 
-// --- Mesocycle Form ---
+/* ─── Archived row ──────────────────────────────────────────────── */
 
-interface MesocycleFormProps {
-  onSave: () => void
-  onCancel: () => void
+function ArchivedRow({ meso }: { meso: MesocycleListItem }) {
+  const pct =
+    meso.total_workouts > 0 ? Math.round((meso.workouts_completed / meso.total_workouts) * 100) : 0
+  const dateLabel = formatDateRange(meso.started_at, meso.total_weeks)
+  return (
+    <Link
+      to={`/mesocycles/${meso.id}`}
+      style={{
+        padding: '12px 14px',
+        borderRadius: 12,
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12,
+        background: 'rgba(15,29,46,0.4)',
+        border: '1px solid rgba(255,255,255,0.05)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        textDecoration: 'none',
+        color: 'inherit',
+      }}
+    >
+      <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'rgba(255,255,255,0.15)' }} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div
+          style={{
+            fontSize: 13,
+            fontWeight: 500,
+            color: 'var(--text-2)',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+          }}
+        >
+          {meso.name}
+        </div>
+        <div
+          style={{
+            fontSize: 10,
+            color: 'var(--text-m)',
+            marginTop: 2,
+            letterSpacing: '0.1em',
+            fontFamily: MONO,
+          }}
+        >
+          {dateLabel}
+        </div>
+      </div>
+      <span style={{ fontSize: 10, color: 'var(--text-m)', fontFamily: MONO }}>{pct}%</span>
+    </Link>
+  )
 }
 
-function MesocycleForm({ onSave, onCancel }: MesocycleFormProps) {
+function formatDateRange(startedAt: string, weeks: number): string {
+  const start = new Date(startedAt + 'T00:00:00')
+  if (Number.isNaN(start.getTime())) return startedAt
+  const end = new Date(start)
+  end.setDate(end.getDate() + weeks * 7)
+  const fmt = (d: Date) =>
+    d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  return `${fmt(start)} — ${fmt(end)}`
+}
+
+/* ─── Create dialog ─────────────────────────────────────────────── */
+
+function CreateMesoDialog({
+  onClose,
+  onCreated,
+}: {
+  onClose: () => void
+  onCreated: (id: string) => void
+}) {
   const toast = useToast()
-  const [name, setName] = useState('')
-  const [splitId, setSplitId] = useState('')
-  const [totalWeeks, setTotalWeeks] = useState(4)
   const { data: splits = [] } = useSplits()
-  const createMesocycle = useCreateMesocycle()
+  const createMeso = useCreateMesocycle()
+  const [name, setName] = useState('')
+  const [splitId, setSplitId] = useState<string>('')
+  const [weeks, setWeeks] = useState(4)
 
-  // Auto-select first split when loaded
-  if (splits.length > 0 && !splitId) {
-    setSplitId(splits[0]!.id)
-  }
+  useEffect(() => {
+    if (!splitId && splits.length > 0) setSplitId(splits[0]!.id)
+  }, [splits, splitId])
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!splitId) return
-
+    if (!name.trim() || !splitId) return
     try {
-      await createMesocycle.mutateAsync({
-        name,
+      const result = await createMeso.mutateAsync({
+        name: name.trim(),
         split_id: splitId,
-        total_weeks: totalWeeks,
+        total_weeks: weeks,
       })
-      onSave()
+      onCreated((result as { id: string }).id)
     } catch {
       toast.showError('Failed to create mesocycle')
     }
   }
 
   return (
-    <form onSubmit={handleSubmit} className="card space-y-4">
-      {/* Name */}
-      <div>
-        <div className="text-[10px] font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--text-m)' }}>
-          Name
+    <div
+      className="fixed inset-0 z-[102] flex items-center justify-center px-4"
+      onClick={onClose}
+    >
+      <div
+        className="absolute inset-0"
+        style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(2px)' }}
+      />
+      <form
+        onSubmit={handleSubmit}
+        onClick={(e) => e.stopPropagation()}
+        className="relative w-full max-w-sm rounded-2xl slide-up"
+        style={{
+          background: 'var(--card)',
+          border: '1px solid rgba(255,255,255,0.06)',
+          boxShadow: '0 24px 48px rgba(0,0,0,0.6)',
+          padding: 20,
+        }}
+      >
+        <div className="p-display" style={{ fontSize: 22, color: 'var(--text-1)' }}>
+          New mesocycle
         </div>
-        <input
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="e.g. March Hypertrophy"
-          className="input"
-          autoFocus
-        />
-      </div>
+        <div style={{ fontSize: 11, color: 'var(--text-m)', marginTop: 4, fontFamily: MONO, letterSpacing: '0.18em' }}>
+          START A NEW BLOCK
+        </div>
 
-      {/* Split Picker */}
-      <div>
-        <div className="text-[10px] font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--text-m)' }}>
-          Split
+        <div style={{ marginTop: 18 }}>
+          <Eyebrow>Name</Eyebrow>
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="e.g. Mass — Phase 2"
+            autoFocus
+            style={{
+              marginTop: 8,
+              width: '100%',
+              padding: '10px 12px',
+              borderRadius: 10,
+              background: 'rgba(255,255,255,0.04)',
+              border: '1px solid rgba(255,255,255,0.06)',
+              color: 'var(--text-1)',
+              fontSize: 14,
+              outline: 'none',
+            }}
+          />
         </div>
-        {splits.length === 0 ? (
-          <div className="text-[var(--text-m)] text-sm py-2">
-            No splits available. <Link to="/splits" className="text-protocol-400">Create one first.</Link>
-          </div>
-        ) : (
-          <div className="-mx-4 px-4 flex gap-2.5 overflow-x-auto scrollbar-hide pb-1">
-            {splits.map((split) => {
-              const isSelected = splitId === split.id
-              const accent = split.color || 'var(--accent)'
-              return (
-                <button
-                  key={split.id}
-                  type="button"
-                  onClick={() => setSplitId(split.id)}
-                  className="shrink-0 w-[190px] rounded-xl text-left relative overflow-hidden transition-all"
-                  style={{
-                    background: 'var(--card)',
-                    border: isSelected ? `1.5px solid ${accent}` : '1.5px solid var(--border)',
-                  }}
-                >
-                  {isSelected && (
-                    <div className="h-[3px] w-full" style={{ background: accent }} />
-                  )}
-                  <div className="p-3">
-                    <div className="flex items-center gap-2 mb-1.5">
-                      {split.color && (
-                        <span className="w-2 h-2 rounded-full shrink-0" style={{ background: split.color }} />
-                      )}
-                      <span
-                        className="text-[13px] font-semibold truncate"
-                        style={{ color: isSelected ? 'var(--text-1)' : 'var(--text-2)' }}
-                      >
-                        {split.name}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1 text-[10px]" style={{ color: 'var(--text-m)' }}>
-                      <span>{split.day_count} days</span>
-                      <span>&middot;</span>
-                      <span>{split.exercise_count} exercises</span>
-                    </div>
-                  </div>
-                </button>
-              )
-            })}
-          </div>
-        )}
-      </div>
 
-      {/* Weeks Stepper */}
-      <div>
-        <div className="text-[10px] font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--text-m)' }}>
-          Duration & Intensity
-        </div>
-        <div className="rounded-xl p-4" style={{ background: 'var(--panel)', border: '1px solid rgba(255,255,255,0.04)' }}>
-          {/* Stepper */}
-          <div className="flex items-center justify-between mb-4">
-            <span className="text-[13px] font-medium" style={{ color: 'var(--text-2)' }}>Weeks</span>
-            <div className="flex items-center gap-4">
-              <button
-                type="button"
-                onClick={() => setTotalWeeks(Math.max(3, totalWeeks - 1))}
-                disabled={totalWeeks <= 3}
-                className="w-10 h-10 rounded-lg flex items-center justify-center disabled:opacity-30 transition-all active:scale-90"
-                style={{ background: 'var(--input)', border: '1px solid var(--border)' }}
-              >
-                <span className="text-lg" style={{ color: 'var(--text-2)' }}>-</span>
-              </button>
-              <span className="mono text-2xl font-bold w-6 text-center" style={{ color: 'var(--text-1)' }}>
-                {totalWeeks}
-              </span>
-              <button
-                type="button"
-                onClick={() => setTotalWeeks(Math.min(8, totalWeeks + 1))}
-                disabled={totalWeeks >= 8}
-                className="w-10 h-10 rounded-lg flex items-center justify-center disabled:opacity-30 transition-all active:scale-90"
-                style={{ background: 'var(--input)', border: '1px solid var(--border)' }}
-              >
-                <span className="text-lg" style={{ color: 'var(--text-2)' }}>+</span>
-              </button>
+        <div style={{ marginTop: 14 }}>
+          <Eyebrow>Split</Eyebrow>
+          {splits.length === 0 ? (
+            <div style={{ marginTop: 8, fontSize: 12, color: 'var(--text-m)' }}>
+              No splits yet —{' '}
+              <Link to="/splits/new" style={{ color: 'var(--accent-l)' }}>
+                create one first
+              </Link>
+              .
             </div>
-          </div>
-
+          ) : (
+            <select
+              value={splitId}
+              onChange={(e) => setSplitId(e.target.value)}
+              style={{
+                marginTop: 8,
+                width: '100%',
+                padding: '10px 12px',
+                borderRadius: 10,
+                background: 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(255,255,255,0.06)',
+                color: 'var(--text-1)',
+                fontSize: 14,
+                outline: 'none',
+              }}
+            >
+              {splits.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
-      </div>
 
-      {/* Actions */}
-      <div className="flex gap-2">
-        <button
-          type="button"
-          onClick={onCancel}
-          className="btn btn-secondary flex-1"
-        >
-          Cancel
-        </button>
-        <button
-          type="submit"
-          disabled={createMesocycle.isPending || !name || !splitId}
-          className="btn btn-primary flex-1 disabled:opacity-50"
-        >
-          {createMesocycle.isPending ? 'Creating...' : 'Create'}
-        </button>
+        <div style={{ marginTop: 14 }}>
+          <Eyebrow>Weeks</Eyebrow>
+          <div
+            style={{
+              marginTop: 8,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '10px 14px',
+              borderRadius: 10,
+              background: 'rgba(255,255,255,0.04)',
+              border: '1px solid rgba(255,255,255,0.06)',
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => setWeeks(Math.max(3, weeks - 1))}
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 8,
+                background: 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(255,255,255,0.06)',
+                color: 'var(--text-2)',
+                cursor: 'pointer',
+              }}
+            >
+              −
+            </button>
+            <span
+              style={{
+                fontFamily: MONO,
+                fontSize: 22,
+                fontWeight: 700,
+                color: 'var(--text-1)',
+              }}
+            >
+              {weeks}
+            </span>
+            <button
+              type="button"
+              onClick={() => setWeeks(Math.min(8, weeks + 1))}
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 8,
+                background: 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(255,255,255,0.06)',
+                color: 'var(--text-2)',
+                cursor: 'pointer',
+              }}
+            >
+              +
+            </button>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', gap: 8, marginTop: 22 }}>
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              flex: 1,
+              height: 44,
+              borderRadius: 12,
+              background: 'rgba(255,255,255,0.04)',
+              border: '1px solid rgba(255,255,255,0.06)',
+              color: 'var(--text-2)',
+              fontSize: 13,
+              fontWeight: 500,
+              cursor: 'pointer',
+            }}
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={createMeso.isPending || !name.trim() || !splitId}
+            style={{
+              flex: 2,
+              height: 44,
+              borderRadius: 12,
+              background: 'var(--p-grad)',
+              color: 'var(--btn-text)',
+              fontSize: 13,
+              fontWeight: 700,
+              letterSpacing: '0.05em',
+              border: 'none',
+              cursor: 'pointer',
+              opacity: createMeso.isPending || !name.trim() || !splitId ? 0.5 : 1,
+            }}
+          >
+            {createMeso.isPending ? 'Creating…' : 'Create'}
+          </button>
+        </div>
+      </form>
+    </div>
+  )
+}
+
+/* ─── Empty state ───────────────────────────────────────────────── */
+
+function EmptyState({ onCreate }: { onCreate: () => void }) {
+  return (
+    <div
+      style={{
+        marginTop: 40,
+        padding: '40px 22px',
+        borderRadius: 16,
+        textAlign: 'center',
+        background: 'rgba(15,29,46,0.4)',
+        border: '1px dashed rgba(255,255,255,0.08)',
+      }}
+    >
+      <div className="p-display" style={{ fontSize: 22, color: 'var(--text-1)' }}>
+        No mesocycles yet
       </div>
-    </form>
+      <div style={{ fontSize: 12, color: 'var(--text-m)', marginTop: 8 }}>
+        Start a training block to track your progress.
+      </div>
+      <button
+        onClick={onCreate}
+        style={{
+          marginTop: 18,
+          padding: '10px 20px',
+          borderRadius: 12,
+          background: 'var(--p-grad)',
+          color: 'var(--btn-text)',
+          fontWeight: 700,
+          fontSize: 13,
+          border: 'none',
+          cursor: 'pointer',
+        }}
+      >
+        New mesocycle
+      </button>
+    </div>
   )
 }
