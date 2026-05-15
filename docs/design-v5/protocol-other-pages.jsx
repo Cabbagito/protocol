@@ -77,7 +77,7 @@ window.MesocyclesPage = function MesocyclesPage() {
               <span className="p-mono" style={{fontSize:9, color:'var(--p-text-m)', letterSpacing:'0.18em'}}>W1 · R3</span>
               <span className="p-mono" style={{fontSize:9, color:'var(--p-text-m)', letterSpacing:'0.18em'}}>W2 · R2</span>
               <span className="p-mono" style={{fontSize:9, color:'var(--p-text-m)', letterSpacing:'0.18em'}}>W3 · R1</span>
-              <span className="p-mono" style={{fontSize:9, color:'var(--p-quads-l)', letterSpacing:'0.18em'}}>W4 · DELOAD</span>
+              <span className="p-mono" style={{fontSize:9, color:'var(--m-quads-l)', letterSpacing:'0.18em'}}>W4 · DELOAD</span>
             </div>
           </div>
 

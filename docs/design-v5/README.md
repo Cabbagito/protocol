@@ -10,7 +10,9 @@ Three things get redone:
 2. **Active workout** (`pages/Workout.tsx`) — re-imagined as a "cinematic" single-focus screen: the current exercise is huge and tinted in its muscle-group color, every other exercise is visible as a peek card below the hero.
 3. **Theme system** (`lib/themes.ts` + `index.css`) — 4 new themes added (`midnight`, `forest`, `crimson`, `mono`), plus a new "background motion" system (`aurora` / `pulse` / `still` / `none`).
 
-`Diet` and `Settings` pages get a lighter polish to align with the new aesthetic. `Splash`, `Login`, `Mesocycles`, `Splits`, `Exercises`, `Progress`, `WorkoutDetail`, `WorkoutHub` are **not** redesigned — keep them as is for now.
+`Diet` and `Settings` pages get a lighter polish to align with the new aesthetic.
+
+**Added in this iteration** — `Mesocycles`, `MesocycleDetail`, `Splits`, `SplitEditor`, `Exercises`, and `Progress` are now also part of the redesign. See sections 5–10 below for specs. `Splash`, `Login`, `WorkoutDetail`, `WorkoutHub` remain unchanged.
 
 ## About the design files
 
@@ -111,6 +113,153 @@ Lighter touch. Existing diet logging structure stays.
 - "184 DAYS · 142 WORKOUTS" mono stat line.
 - Four sectioned card-lists below: **Profile** (Name / Units / Default rest), **Library** (Mesocycles / Splits / Exercises — these tap into the existing pages), **Appearance** (Theme / Density / Motion), **Account** (Export data / Log out).
 - Each section is one rounded glass card with hairline dividers between items.
+
+### 5 · Mesocycles list — `pages/Mesocycles.tsx`
+
+Reference: `protocol-more-pages-v5.jsx` → `MesocyclesV5Page`.
+
+**Purpose.** See active training blocks at a glance; jump into the active one; review archived ones.
+
+**Layout (top → bottom):**
+
+- **Chrome.** Back / centered title ("Mesocycles" Fraunces italic + "2 ACTIVE · 4 ARCHIVED" mono eyebrow) / dots menu — same chrome as Settings/Diet.
+- **Hero card** for the current active meso:
+  - 20px-radius glass panel, tinted with `linear-gradient(180deg, rgba(var(--p-accent-rgb), 0.14), rgba(15,29,46,0.6))` plus a `radial-gradient` halo at the top.
+  - Left column: "ACTIVE · WEEK 2" mono eyebrow in `var(--p-accent-l)`, then meso name 30px Fraunces italic, then "UPPER / LOWER · 4×WEEK" mono.
+  - Right column: a big gradient-text percentage (`p-grad-text`, 32px mono weight 700) with "%" smaller and faded, then "4 WEEKS" mono caption.
+  - **Mini-strip** under the row: 16 tick marks (one per session), each `flex: 1`. Logged = `--p-accent-l` solid with glow; current = 6px tall accent-mixed bar; future = `rgba(255,255,255,0.05)`. The current tick is **6px** while the rest are 4px — quick "you-are-here" affordance.
+- **Second-active card** (compact). 14px-radius glass, muscle-color vertical accent (e.g. `--m-quads` for a Run block), mono "ACTIVE · PAUSED" label, name 15px weight 600, "5×WEEK · 6 WEEKS · 30%" mono caption, chevron.
+- **Archived section.** "Archived · 4" eyebrow + list of compact rows. Each: gray dot, dim 13px name, mono date range "Mar 4 — Apr 1", "100%" mono on the right.
+- **CTA.** Full-width gradient button "+ New mesocycle".
+
+**Data wiring.** Use `useMesocycles()` and `useActiveMesocycle()` from `api/hooks.ts`. The hero is the result of `useActiveMesocycle()`; second-active comes from `mesocycles.filter(m => m.is_active && m.id !== activeMeso.id)`; archived is the `!is_active` list.
+
+### 6 · Mesocycle detail — `pages/MesocycleDetail.tsx`
+
+Reference: `protocol-more-pages-v5.jsx` → `MesocycleDetailPage`.
+
+**Purpose.** Drill into one meso. See the full week × session grid, jump into the next session, scan volume distribution.
+
+**Layout (top → bottom):**
+
+- **Chrome.** "Mass — Phase 2" Fraunces italic title + "MESOCYCLE · ACTIVE" mono eyebrow.
+- **Hero block (centered).**
+  - "PROGRESS" mono eyebrow (10px, `letter-spacing: 0.28em`, `var(--p-text-m)`).
+  - Big `p-grad-text` percentage: number is **78px** weight 700, the `%` is **30px** weight 500 at 70% opacity, both baseline-aligned with 6px gap. `filter: drop-shadow(0 0 28px rgba(var(--p-accent-rgb), 0.35))`.
+  - Caption: "6 / 16 SESSIONS · WEEK 2 OF 4" — **11px mono**, `letter-spacing: 0.2em`, `var(--p-accent-l)`.
+  - Sub-caption: "UPPER / LOWER · 4× WEEK" — 9px mono, `var(--p-text-m)`.
+  - **Don't** add a ring/arc — the typography is the visualization.
+- **Week × session grid.** Glass panel, 18px radius. CSS grid `60px repeat(4, 1fr)`, gap 6.
+  - Header row: blank + W1 W2 W3 W4 mono labels (9px, `var(--p-text-m)`). The W4 column says "W4 · D" in `var(--m-quads-l)` (yellow) to mark deload.
+  - 4 session rows: Upper A / Lower A / Upper B / Lower B (10px mono, `var(--p-text-2)`) followed by 4 cells per row.
+  - Cell states:
+    - `done` — `rgba(var(--p-accent-rgb), 0.18)` bg + 1px `rgba(var(--p-accent-rgb), 0.30)` border + small checkmark in `var(--p-accent-l)`.
+    - `current` — full `--p-grad` bg + white 5px-circle dot in the middle + `0 0 14px rgba(var(--p-accent-rgb), 0.55)` glow. No border.
+    - `queued` — `rgba(255,255,255,0.03)` bg + 1px `rgba(255,255,255,0.06)` border.
+    - `deload-queued` — `rgba(234,179,8,0.10)` bg + 1px `rgba(234,179,8,0.25)` border (yellow tint for the deload week).
+  - All cells 26px tall, 7px radius.
+- **Up-next CTA card.** 16px radius, accent-tinted gradient bg + radial halo. Inside: 4px vertical gradient bar (gradient) / "NEXT SESSION" eyebrow + "Upper B · Week 2" + "4 LIFTS · ~52 MIN" / a small `p-btn-grad` "START →" button (42px tall, mono 12px tracked).
+- **Volume by muscle (this week).** Eyebrow "Volume · this week" left, "SETS / PEAK" mono right. Glass panel containing rows, one per trained muscle: muscle dot + uppercase muscle label (9px mono in muscle-light) / progress bar (6px tall, gradient muscle → muscle-light, glow) / "32 / 38" mono on the right.
+- **Action row.** Two 50/50 ghost buttons: "Edit" / "Archive".
+
+**Data wiring.** Use `useMesocycle(id)` and `useWorkoutHistory(id)`. Compute the grid from `mesocycle.structure.weeks` and `getCurrentPosition()` (already exists in `lib/mesoUtils.ts`). Volume by muscle comes from `getVolumeByMuscleGroup()` in `lib/mesoAnalysis.ts`.
+
+### 7 · Splits list — `pages/Splits.tsx`
+
+Reference: `protocol-more-pages-v5.jsx` → `SplitsPage`.
+
+**Purpose.** Browse split templates (the recurring weekly structure of training days). Show each split's days and which muscle groups it touches. One split is "LIVE" (assigned to the active meso).
+
+**Layout:**
+
+- **Chrome.** "Splits" / "4 TEMPLATES".
+- **Card list.** One 18px-radius glass card per split. Cards stack with 12px gap.
+  - **Live split** gets a `linear-gradient(180deg, color-mix(in oklab, var(<split-color>) 14%, rgba(15,29,46,0.5)), rgba(15,29,46,0.6))` bg + a radial halo from the top-left in the split color, plus a `color-mix(35%)` border. Inactive cards are plain `rgba(15,29,46,0.45)` with the standard soft border.
+  - Card header row: 4px vertical accent (`linear-gradient(180deg, var(<color>), var(<color>-l))`, 12px glow) / split name 17px weight 600 / live badge: tiny mono "· LIVE" pill in the split color (only on the active split) / "4 DAYS · 18 GROUPS" mono caption / chevron right.
+  - Card body: one row per day. Each row: "D1" mono index (9px) / day name (12px weight 500) / **muscle chips** (one per muscle the day trains) — `padding: 2px 7px`, radius 100, fontsize 9, with a leading 4px muscle-color dot, `color-mix(12%)` bg, `color-mix(25%)` border, muscle-light text. Wraps onto multiple lines if needed.
+- **CTA.** Dashed-border "+ New split" button at the bottom.
+
+**Split colors.** Each split stores a color hex in the DB (`splits.color`). The prototype maps the hex to one of the muscle vars for visual harmony, but production code should just use the stored hex directly. Recommended palette (from `SplitEditor.tsx`): `#14b8a6`, `#6366f1`, `#f97316`, `#ec4899`, `#22c55e`, `#eab308`, `#06b6d4`, `#f43f5e`.
+
+**Data wiring.** `useSplits()` for the list. Each split has `days[] → { name, exercises[] → { muscle_group } }`. Reduce per-day to a unique set of muscle groups for the chip rendering.
+
+### 8 · Split editor — `pages/SplitEditor.tsx`
+
+Reference: `protocol-more-pages-v5.jsx` → `SplitEditorPage`.
+
+**Purpose.** Create or edit one split. Name + color + ordered list of days, each containing an ordered list of exercises.
+
+**Layout (top → bottom):**
+
+- **Chrome.** "Upper / Lower" Fraunces italic + "EDIT SPLIT · UNSAVED" mono eyebrow.
+- **Name row.** 14px-radius glass card: 36×36 color swatch (gradient bg matching the chosen color, 10px radius, glow) / "SPLIT NAME" mono micro-eyebrow + split name 15px weight 600 / pencil-edit icon.
+- **Color picker row.** 8 swatches, 30×30, 10px radius, gradient `var(<color>), var(<color>-l)`. Selected swatch gets a 2px `var(--p-text-1)` border + outer offset outline + glow. Tapping sets the color.
+- **Days section.**
+  - Header: "Days · 4" eyebrow left, "DRAG TO REORDER" mono caption right.
+  - Each day is a 14px-radius accordion card. Collapsed:
+    - Drag handle (6-dots icon) / "D1" mono index / day name 14px weight 600 (italic gray "Untitled" if empty) / "5 lifts" mono count / chevron.
+    - Border becomes `rgba(var(--p-accent-rgb), 0.30)` when expanded.
+  - Expanded body: list of exercise rows. Each: drag handle / 2px muscle-color gradient bar / exercise name 13px weight 500 + muscle group 9px mono in muscle-light / trash icon on hover. Empty days show a dashed "NO LIFTS YET" placeholder. Below the rows, a dashed "+ Add lift" CTA in accent-light text.
+  - At the bottom: dashed "+ Add day" CTA (gray, full-width).
+- **Sticky save bar.** Positioned 96px from the bottom (clears the bottom nav), 18px radius, glass, padded 8. Two buttons: "Discard" (ghost, 1fr) and "SAVE SPLIT" (`p-btn-grad`, 2fr, mono tracked 13px).
+
+**Interactions:**
+- Drag handles wire to a sortable library (the codebase already uses `@dnd-kit/sortable` in `pages/split-editor/DayCard.tsx`).
+- Tapping a collapsed day toggles expanded state. Only one open at a time.
+- "Add lift" opens an exercise picker bottom sheet (existing component pattern — see `components/BottomSheet.tsx` and the search in `pages/Exercises.tsx`).
+- "Save" calls `useCreateSplit` / `useUpdateSplit`.
+
+### 9 · Exercises library — `pages/Exercises.tsx`
+
+Reference: `protocol-more-pages-v5.jsx` → `ExercisesV5Page`.
+
+**Purpose.** Browse all lifts, filter by muscle group and equipment, jump into one to see progress / history / edit.
+
+**Key design decision (this iteration):** muscle-group and equipment filters are **always visible in a single glass panel**, not behind a button. The earlier prototype used a single horizontally-scrolling chip row — replaced because the existing codebase already organizes muscle groups by Push / Pull / Legs / Core rows (`MUSCLE_GROUP_ROWS` in `components/exerciseConstants.ts`) and the user wants both axes filterable at once.
+
+**Layout (top → bottom):**
+
+- **Chrome.** "Exercises" / "78 LIFTS · 12 GROUPS".
+- **Search bar.** 14px-radius glass: search icon / "Search lifts…" placeholder / "⌘K" hotkey hint pill.
+- **Filter panel.** 14px-radius glass, 10/12 padding, vertical 6px gap between rows.
+  - **Muscle rows.** Four rows: `PUSH`, `PULL`, `LEGS`, `CORE`. Each row: 30px-wide mono label (9px, `letter-spacing: 0.2em`, `var(--p-text-m)`) + flex chip group. Each chip 4×9 padding, radius 100, 10px mono uppercase, with a 4×4 muscle-color dot prefix. Selected chip: `color-mix(in oklab, var(<muscle>) 18%, transparent)` bg, `color-mix(40%)` border, muscle-light text. Unselected: transparent bg, soft border, `var(--p-text-2)` text. **Multi-select.**
+  - **Divider.** 1px `var(--p-border-soft)` with 8px top padding above the next row.
+  - **Equipment row.** Label "GEAR". Five chips: `barbell`, `dumbbell`, `machine`, `cable`, `bodyweight`. Each chip 4×9 padding, radius 100, leading 11px icon SVG + 10px mono label. Selected: `rgba(var(--p-accent-rgb), 0.16)` bg, `0.40` border, `var(--p-accent-l)` text.
+- **Grouped sections.** One per muscle group, ordered. Each section:
+  - Header: 8px muscle dot with glow / muscle name 10px mono uppercase in muscle-light / "4 LIFTS" mono count on the right.
+  - List of exercise rows. Each row: 2px vertical muscle-color gradient bar / exercise name 14px weight 500 + "72.5kg · 4 wks ago" mono caption / set count "148" mono in muscle-light + "SETS" mono micro-label, right-aligned.
+
+**Filter semantics.** Show an exercise if (no muscle selected OR exercise.muscle_group ∈ selected) AND (no gear selected OR exercise.equipment_type ∈ selected) AND (search query matches name).
+
+**Data wiring.** `useExercises()` for the list. Group on the fly by `muscle_group`. Use the existing `getMuscleColor()` helper for the per-group accents.
+
+### 10 · Progress — `pages/Progress.tsx`
+
+Reference: `protocol-more-pages-v5.jsx` → `ProgressPage`.
+
+**Purpose.** One exercise at a time. Show its strength trajectory, key stats, and weekly training volume. Quick switch to other lifts via a list at the bottom.
+
+**Layout (top → bottom):**
+
+- **Chrome.** "Progress" / "LAST 8 WEEKS".
+- **Selected-exercise hero card.** 20px radius, tinted in the **muscle group's color** (`color-mix(in oklab, var(<muscle>) 12%, rgba(15,29,46,0.6))`) with a radial halo at the top.
+  - Top row: muscle dot + muscle label mono (left); "EST 1RM" mono micro-eyebrow + value "96kg" mono 24px weight 700 (right).
+  - Exercise name 22px weight 600, `-0.015em` letter-spacing.
+  - **Sparkline.** Full-width 82px tall SVG. Filled gradient under the line (muscle color at 35% top → 0% bottom). Line stroke `var(<muscle>-l)` 2px with `drop-shadow(0 0 6px var(<muscle>))`. Final point gets a 3.5px circle with white stroke + 8px glow.
+  - Bottom row: "MAR 4" mono left, "NOW" mono right.
+- **Stats trio.** Three equal-width 13px-radius glass cards: `BEST SET / 72.5×8 / +5kg`, `TREND / +21% / 8 WK`, `CONSISTENCY / 94% / 18/19`. Each card stacks micro-eyebrow → 16px mono value → muscle-color caption.
+- **Period toggle.** Glass segmented control, 4 values: `4 WEEKS`, `8 WEEKS`, `12 WEEKS`, `ALL`. Selected segment is `rgba(var(--p-accent-rgb), 0.18)` bg + `0.35` border + accent-light text. Tapping a segment updates the sparkline + stats.
+- **Weekly volume** (separate from the per-exercise hero — shows total session volume across **all** lifts).
+  - Header: "Weekly volume" eyebrow left, "+38% · 8WK" accent-light mono right.
+  - Glass panel: 8-column CSS grid of bars, 96px tall, gap 6. Each bar is gradient `accent → 30%-mixed`, the latest week gets the full `--p-accent-l → --p-accent` gradient + 10px glow.
+  - W1–W8 mono labels below the bars.
+- **Other lifts.** "Other lifts" eyebrow + list of compact rows. Each row: `1fr 110px 56px` grid — muscle dot + group + lift name (left); 110×28 mini sparkline (middle); delta "+25%" mono in muscle-light (right).
+
+**Data wiring.**
+- `useExercises()` for the list.
+- `useExerciseProgress(selectedExerciseId)` for the selected hero's sparkline series.
+- `useWorkoutHistory(mesocycle.id)` rolled up by `w.week_number` for the weekly-volume chart.
+- Other-lifts list: top 4 exercises by session frequency in the current meso, each with their own `useExerciseProgress` series (mini sparkline only — no fills).
 
 ---
 
@@ -386,6 +535,12 @@ Implement as a setter on `<body>` from a setting page. Persist to `localStorage`
 | `frontend/src/pages/Workout.tsx` | Rewrite per spec above. Keep existing hook usage (`useWorkoutState`, `useWorkoutAutoSave`, `useWorkoutCompletion`, `useSetModification`). The single biggest task — split into the three states and route between them based on workout completion. |
 | `frontend/src/pages/Diet.tsx` | Add calorie ring + macro bars. |
 | `frontend/src/pages/Settings.tsx` | Restructure into sectioned cards. Add motion picker. |
+| `frontend/src/pages/Mesocycles.tsx` | Rewrite per section 5. Hero active card + mini-strip + archived list. |
+| `frontend/src/pages/MesocycleDetail.tsx` | Rewrite per section 6. Big progress %, week×session grid, volume-by-muscle. |
+| `frontend/src/pages/Splits.tsx` | Rewrite per section 7. Color-tinted cards with day rows of muscle chips. |
+| `frontend/src/pages/SplitEditor.tsx` | Rewrite per section 8. Color picker + accordion days + sticky save bar. |
+| `frontend/src/pages/Exercises.tsx` | Rewrite per section 9. Always-visible Push/Pull/Legs/Core rows + GEAR row. |
+| `frontend/src/pages/Progress.tsx` | Rewrite per section 10. Sparkline hero, stats trio, weekly volume bars. |
 | `frontend/src/components/Layout.tsx` | Replace `BottomNav` with the floating capsule version. |
 | `frontend/src/components/ThemePicker.tsx` | Verify it picks up the 4 new themes. May need swatch updates. |
 
@@ -393,7 +548,7 @@ Implement as a setter on `<body>` from a setting page. Persist to `localStorage`
 
 - `SplashScreen.tsx`, `ProtocolMark.tsx` — user likes them.
 - `Login.tsx`.
-- `Mesocycles.tsx`, `MesocycleDetail.tsx`, `Splits.tsx`, `SplitEditor.tsx`, `Exercises.tsx`, `Progress.tsx`, `WorkoutDetail.tsx`, `WorkoutHub.tsx` — not part of this redesign pass.
+- `WorkoutDetail.tsx`, `WorkoutHub.tsx` — not part of this redesign pass.
 - Everything in `backend/` — design only.
 
 ### Things I removed that the user explicitly asked for
@@ -484,6 +639,7 @@ The aurora bg is GPU-friendly (only `transform` and `opacity` animated, `will-ch
 | `protocol-dashboard-v5.jsx` | Dashboard prototype. |
 | `protocol-workout-v5.jsx` | Workout prototype — all three states. **The reference for State A / B / C.** |
 | `protocol-other-pages.jsx` | Diet + Settings prototypes. |
+| `protocol-more-pages-v5.jsx` | **NEW.** Mesocycles list, Mesocycle detail, Splits list, Split editor, Exercises library, Progress — sections 5–10. |
 | `design-canvas.jsx` | Pan/zoom canvas frame. Not relevant to the app — just how the prototype is presented. Ignore. |
 | `tweaks-panel.jsx` | The Tweaks panel component. Not relevant to the app. Ignore. |
 
@@ -499,7 +655,9 @@ The aurora bg is GPU-friendly (only `transform` and `opacity` animated, `will-ch
 6. **Workout — State B and C.** Add the state transitions.
 7. **Diet and Settings polish.**
 8. **Motion picker in Settings + persistence.**
+9. **Planning pages** — Mesocycles list → Mesocycle detail → Splits list → Split editor. Reuse the AuroraBackground component and the peek/glass card patterns. The mesocycle detail's week×session grid is the trickiest piece — it's just a CSS grid with conditional cell states, but make sure the deload-week styling reads.
+10. **Library & Progress** — Exercises list (filter panel is the key novelty), then Progress (sparkline + bars). The Progress page's sparkline doesn't need recharts — raw SVG is fine and avoids the dependency for a 1-component use case (recharts is already a dep, but the prototype's SVG sparkline is simpler and matches the visual better than recharts' default line chart).
 
-Estimate: ~1-2 days for a focused dev.
+Estimate: ~3-4 days for a focused dev (was ~1-2 for just the original three screens).
 
 Good luck.

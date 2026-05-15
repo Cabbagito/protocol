@@ -63,6 +63,7 @@
 <script type="text/babel" src="protocol-dashboard-v5.jsx"></script>
 <script type="text/babel" src="protocol-workout-v5.jsx"></script>
 <script type="text/babel" src="protocol-other-pages.jsx"></script>
+<script type="text/babel" src="protocol-more-pages-v5.jsx"></script>
 
 <script type="text/babel" data-presets="react">
 const { useEffect } = React;
@@ -129,7 +130,31 @@ function App() {
           </DCArtboard>
         </DCSection>
 
-        <DCSection id="other" title="03 · Diet & Settings">
+        <DCSection id="planning" title="03 · Planning — Mesocycles & Splits">
+          <DCArtboard id="meso-list" label="Mesocycles — overview" width={360} height={780}>
+            <Frame><MesocyclesV5Page /></Frame>
+          </DCArtboard>
+          <DCArtboard id="meso-detail" label="Mesocycle detail — Mass · Phase 2" width={360} height={780}>
+            <Frame><MesocycleDetailPage /></Frame>
+          </DCArtboard>
+          <DCArtboard id="splits" label="Splits — templates" width={360} height={780}>
+            <Frame><SplitsPage /></Frame>
+          </DCArtboard>
+          <DCArtboard id="split-editor" label="Split editor — Upper / Lower" width={360} height={780}>
+            <Frame><SplitEditorPage /></Frame>
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="library" title="04 · Library & Progress">
+          <DCArtboard id="exercises" label="Exercises — library" width={360} height={780}>
+            <Frame><ExercisesV5Page /></Frame>
+          </DCArtboard>
+          <DCArtboard id="progress" label="Progress — Bench press 8wk" width={360} height={780}>
+            <Frame><ProgressPage /></Frame>
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="other" title="05 · Diet & Settings">
           <DCArtboard id="diet" label="Diet" width={360} height={780}>
             <Frame><DietPage /></Frame>
           </DCArtboard>
