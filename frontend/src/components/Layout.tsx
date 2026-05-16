@@ -23,7 +23,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <main
         ref={mainRef}
         data-main-scroll
-        className="flex-1 pb-28 max-w-lg mx-auto w-full"
+        className="flex-1 max-w-lg mx-auto w-full"
       >
         {children}
       </main>
@@ -82,22 +82,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   overflow: 'hidden',
                 }}
               >
-                {isActive && (
-                  <span
-                    aria-hidden
-                    style={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      width: '40%',
-                      height: '100%',
-                      background:
-                        'linear-gradient(110deg, transparent, rgba(255,255,255,0.25), transparent)',
-                      animation: 'p-shimmer 3s ease-in-out infinite',
-                      pointerEvents: 'none',
-                    }}
-                  />
-                )}
                 <item.icon className="w-5 h-5" />
                 {isActive && <span>{item.label}</span>}
               </Link>

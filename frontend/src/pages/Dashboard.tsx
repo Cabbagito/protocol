@@ -123,7 +123,6 @@ export default function Dashboard() {
       style={{
         position: 'relative',
         minHeight: '100dvh',
-        background: 'var(--deep)',
         overflow: 'hidden',
       }}
     >
@@ -428,20 +427,6 @@ export default function Dashboard() {
               overflow: 'hidden',
             }}
           >
-            <span
-              aria-hidden
-              style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                width: '40%',
-                height: '100%',
-                background:
-                  'linear-gradient(110deg, transparent, rgba(255,255,255,0.25), transparent)',
-                animation: 'p-shimmer 3s ease-in-out infinite',
-                pointerEvents: 'none',
-              }}
-            />
             Continue workout
             <ArrowIcon />
           </Link>
