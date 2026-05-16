@@ -143,7 +143,7 @@ export default function Dashboard() {
         style={{
           position: 'relative',
           zIndex: 1,
-          padding: '12px 22px calc(env(safe-area-inset-bottom) + 130px)',
+          padding: '12px 22px calc(env(safe-area-inset-bottom) + 180px)',
           minHeight: '100dvh',
           display: 'flex',
           flexDirection: 'column',
