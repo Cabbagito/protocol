@@ -13,6 +13,13 @@ const THEME_LABELS: Record<ThemeId, string> = {
   forest: 'Forest',
   crimson: 'Crimson',
   mono: 'Mono',
+  walnut: 'Walnut',
+  gruvbox: 'Gruvbox',
+  'onyx-gold': 'Onyx Gold',
+  'onyx-wine': 'Onyx Wine',
+  graphite: 'Graphite',
+  slate: 'Slate',
+  linen: 'Linen',
 }
 
 function MiniLogo({ theme, size = 44 }: { theme: ThemeId; size?: number }) {

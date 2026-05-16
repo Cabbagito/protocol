@@ -846,9 +846,12 @@
 }
 
 /* Light-theme: tone down the waves so the bg stays light */
-[data-theme="white"] .wave-bg .blob { opacity: 0.35 !important; mix-blend-mode: multiply; }
+[data-theme="white"] .wave-bg .blob,
+[data-theme="linen"] .wave-bg .blob { opacity: 0.35 !important; mix-blend-mode: multiply; }
 [data-theme="white"] .wave-bg .aurora,
-[data-theme="white"] .wave-bg .aurora-2 { opacity: 0.25 !important; mix-blend-mode: multiply; }
+[data-theme="white"] .wave-bg .aurora-2,
+[data-theme="linen"] .wave-bg .aurora,
+[data-theme="linen"] .wave-bg .aurora-2 { opacity: 0.25 !important; mix-blend-mode: multiply; }
 
 /* Gradient theme amps up saturation */
 [data-theme="gradient"] .wave-bg .blob { opacity: 1 !important; }
@@ -863,7 +866,8 @@
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.5 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
   background-size: 200px 200px;
 }
-[data-theme="white"] .grain { mix-blend-mode: multiply; opacity: 0.06; }
+[data-theme="white"] .grain,
+[data-theme="linen"] .grain { mix-blend-mode: multiply; opacity: 0.06; }
 
 /* ── Motion modes (data-motion on <html>) ─────────────────── */
 
