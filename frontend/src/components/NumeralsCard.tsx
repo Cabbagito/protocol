@@ -51,11 +51,11 @@ export default function NumeralsCard({
       style={{
         padding: 20,
         borderRadius: 22,
-        background: `linear-gradient(180deg, color-mix(in oklab, ${c.primary} 10%, color-mix(in oklab, var(--card) 60%, transparent)) 0%, color-mix(in oklab, var(--card) 70%, transparent) 100%)`,
-        border: `1px solid color-mix(in oklab, ${c.primary} 35%, var(--border))`,
+        background: `linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0) 60%), color-mix(in oklab, var(--card) 70%, transparent)`,
+        border: `1px solid color-mix(in oklab, ${c.primary} 18%, var(--border))`,
         backdropFilter: 'blur(24px) saturate(180%)',
         WebkitBackdropFilter: 'blur(24px) saturate(180%)',
-        boxShadow: `0 20px 60px -20px color-mix(in oklab, ${c.primary} 35%, transparent), inset 0 1px 0 rgba(255,255,255,0.06)`,
+        boxShadow: `0 20px 60px -20px rgba(0,0,0,0.5), inset 0 0 30px -10px color-mix(in oklab, ${c.primary} 30%, transparent), inset 0 1px 0 rgba(255,255,255,0.06)`,
         position: 'relative',
         overflow: 'hidden',
       }}

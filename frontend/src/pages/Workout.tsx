@@ -8,7 +8,8 @@ import {
 } from '../api/hooks'
 import { api } from '../api/client'
 import PageLoader from '../components/PageLoader'
-import MuscleWaveBackground from '../components/MuscleWaveBackground'
+import AuroraBackground from '../components/AuroraBackground'
+import MuscleSpotlight from '../components/MuscleSpotlight'
 import ProgressRail from '../components/ProgressRail'
 import ExercisePeekCard from '../components/ExercisePeekCard'
 import NumeralsCard from '../components/NumeralsCard'
@@ -309,7 +310,8 @@ export default function Workout() {
         overflow: 'hidden',
       }}
     >
-      <MuscleWaveBackground group={currentEx?.muscle_group ?? 'chest'} />
+      <AuroraBackground />
+      <MuscleSpotlight group={currentEx?.muscle_group ?? 'chest'} />
 
       <div style={{ position: 'relative', zIndex: 1, padding: '12px 20px 130px' }}>
         {/* ── Header: back / title / menu ── */}
@@ -704,17 +706,16 @@ function LoggingState({
                   borderRadius: 10,
                   textAlign: 'center',
                   background: isActive
-                    ? `color-mix(in oklab, ${c.primary} 18%, rgba(255,255,255,0.02))`
-                    : done
-                    ? `color-mix(in oklab, ${c.primary} 10%, transparent)`
-                    : 'rgba(255,255,255,0.03)',
+                    ? 'rgba(255,255,255,0.04)'
+                    : 'rgba(255,255,255,0.02)',
                   border: `1px solid ${
                     isActive
-                      ? `color-mix(in oklab, ${c.primary} 45%, transparent)`
-                      : done
-                      ? `color-mix(in oklab, ${c.primary} 20%, transparent)`
+                      ? `color-mix(in oklab, ${c.primary} 60%, transparent)`
                       : 'rgba(255,255,255,0.06)'
                   }`,
+                  boxShadow: isActive
+                    ? `0 0 14px -4px color-mix(in oklab, ${c.primary} 55%, transparent)`
+                    : 'none',
                   backdropFilter: 'blur(20px)',
                   cursor: 'pointer',
                   opacity: isSkipped ? 0.4 : 1,

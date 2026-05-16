@@ -24,9 +24,7 @@ export default function ExercisePeekCard({
   onClick,
 }: ExercisePeekCardProps) {
   const c = getMuscleColor(exercise.muscle_group)
-  const tintStrength = status === 'next' || status === 'current' ? 10 : 4
-  const borderMix =
-    status === 'next' ? 35 : status === 'current' ? 45 : 0
+  const isActive = status === 'next' || status === 'current'
 
   return (
     <button
@@ -42,11 +40,10 @@ export default function ExercisePeekCard({
         background:
           status === 'done'
             ? 'color-mix(in oklab, var(--card) 60%, transparent)'
-            : `linear-gradient(90deg, color-mix(in oklab, ${c.primary} ${tintStrength}%, transparent), transparent 65%), color-mix(in oklab, var(--card) 70%, transparent)`,
-        border:
-          borderMix > 0
-            ? `1px solid color-mix(in oklab, ${c.primary} ${borderMix}%, rgba(255,255,255,0.05))`
-            : '1px solid rgba(255,255,255,0.05)',
+            : 'color-mix(in oklab, var(--card) 70%, transparent)',
+        border: isActive
+          ? '1px solid var(--border)'
+          : '1px solid rgba(255,255,255,0.05)',
         backdropFilter: 'blur(20px)',
         WebkitBackdropFilter: 'blur(20px)',
         display: 'flex',
@@ -58,10 +55,13 @@ export default function ExercisePeekCard({
       <div
         style={{
           width: 3,
-          height: 38,
+          height: 44,
           borderRadius: 2,
           background: `linear-gradient(180deg, ${c.primary}, ${c.light})`,
-          opacity: status === 'next' || status === 'current' ? 1 : 0.55,
+          opacity: isActive ? 1 : 0.7,
+          boxShadow: isActive
+            ? `0 0 10px color-mix(in oklab, ${c.primary} 50%, transparent)`
+            : 'none',
         }}
       />
       <div style={{ flex: 1, minWidth: 0 }}>
