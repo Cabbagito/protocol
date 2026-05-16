@@ -4,8 +4,8 @@ import { useActiveMesocycle } from '../api/hooks'
 import { getCurrentPosition } from '../lib/mesoUtils'
 import { GearIcon } from '../components/Icons'
 import PageLoader from '../components/PageLoader'
-import ProtocolMark from '../components/ProtocolMark'
 import AuroraBackground from '../components/AuroraBackground'
+import { getUserInfo } from '../lib/auth'
 
 function ArrowIcon({ size = 18 }: { size?: number }) {
   return (
@@ -81,6 +81,17 @@ export default function Dashboard() {
     }
   })
 
+  const userInfo = getUserInfo()
+  const firstName = userInfo?.name?.split(/\s+/)[0] ?? ''
+  const hour = today.getHours()
+  const partOfDay =
+    hour < 5 ? 'Late night' :
+    hour < 12 ? 'Good morning' :
+    hour < 17 ? 'Good afternoon' :
+    hour < 22 ? 'Good evening' :
+    'Late night'
+  const greeting = firstName ? `${partOfDay} · ${firstName}` : partOfDay
+
   const dateLabel = today
     .toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
     .toUpperCase()
@@ -139,33 +150,18 @@ export default function Dashboard() {
         }}
       >
         {/* Top bar */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ position: 'relative' }}>
-            <div
-              aria-hidden="true"
-              style={{
-                position: 'absolute',
-                inset: '-40%',
-                background: 'radial-gradient(circle, rgba(var(--accent-rgb),0.35), transparent 65%)',
-                filter: 'blur(14px)',
-                pointerEvents: 'none',
-              }}
-            />
-            <div
-              style={{
-                width: 38,
-                height: 38,
-                borderRadius: 12,
-                background: 'var(--logo-bg)',
-                border: '1px solid var(--border)',
-                position: 'relative',
-                overflow: 'hidden',
-                display: 'grid',
-                placeItems: 'center',
-              }}
-            >
-              <ProtocolMark className="w-9 h-9" />
-            </div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', minHeight: 38 }}>
+          <div
+            style={{
+              fontSize: 11,
+              color: 'var(--text-2)',
+              letterSpacing: '0.22em',
+              fontFamily: 'JetBrains Mono, ui-monospace, monospace',
+              fontWeight: 500,
+              textTransform: 'uppercase',
+            }}
+          >
+            {greeting}
           </div>
           <Link
             to="/settings"
