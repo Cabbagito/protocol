@@ -12,7 +12,7 @@
 
   body {
     @apply antialiased;
-    background: var(--base);
+    background: var(--deep);
     color: var(--text-1);
     overscroll-behavior: none;
     padding-top: env(safe-area-inset-top);
