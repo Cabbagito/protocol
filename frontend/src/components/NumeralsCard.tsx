@@ -194,22 +194,8 @@ export default function NumeralsCard({
           opacity: disabled ? 0.6 : 1,
           boxShadow: `0 14px 40px -10px color-mix(in oklab, ${c.primary} 65%, transparent), inset 0 1px 0 rgba(255,255,255,0.25)`,
           animation: disabled ? 'none' : `p-btn-breathe-${breatheKey} 3.2s ease-in-out infinite`,
-          overflow: 'hidden',
         }}
       >
-        <div
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: '40%',
-            height: '100%',
-            background:
-              'linear-gradient(110deg, transparent, rgba(255,255,255,0.25), transparent)',
-            animation: 'p-shimmer 3s ease-in-out infinite',
-            pointerEvents: 'none',
-          }}
-        />
         {logLabel}
       </button>
     </div>

@@ -919,7 +919,7 @@ function SessionCompleteHero({
           onClick={onFinish}
           disabled={isSaving}
           style={{
-            position: 'relative', overflow: 'hidden',
+            position: 'relative',
             width: '100%', height: 58, borderRadius: 16,
             background: 'var(--p-grad)',
             color: 'var(--btn-text)', fontWeight: 700, fontSize: 16,
@@ -931,15 +931,6 @@ function SessionCompleteHero({
               '0 14px 40px -10px rgba(var(--accent-rgb),0.55), inset 0 1px 0 rgba(255,255,255,0.18)',
           }}
         >
-          <span
-            aria-hidden
-            style={{
-              position: 'absolute', top: 0, left: 0, width: '40%', height: '100%',
-              background: 'linear-gradient(110deg, transparent, rgba(255,255,255,0.25), transparent)',
-              animation: 'p-shimmer 3s ease-in-out infinite',
-              pointerEvents: 'none',
-            }}
-          />
           {isSaving ? 'SAVING…' : isLastSession ? 'FINISH MESOCYCLE' : 'FINISH'}
         </button>
         <button
