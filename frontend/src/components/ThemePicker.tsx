@@ -4,27 +4,24 @@ import { applyTheme, getSavedTheme } from '../lib/theme'
 
 const THEME_LABELS: Record<ThemeId, string> = {
   dark: 'Dark',
-  black: 'Black',
-  white: 'White',
-  cyan: 'Cyan',
-  violet: 'Violet',
-  gradient: 'Gradient',
-  midnight: 'Midnight',
-  forest: 'Forest',
-  crimson: 'Crimson',
+  light: 'Light',
   mono: 'Mono',
-  walnut: 'Walnut',
-  gruvbox: 'Gruvbox',
-  'onyx-gold': 'Onyx Gold',
-  'onyx-wine': 'Onyx Wine',
-  graphite: 'Graphite',
+  indigo: 'Indigo',
+  cyan: 'Cyan',
+  ice: 'Ice',
+  emerald: 'Emerald',
+  violet: 'Violet',
   slate: 'Slate',
+  blush: 'Blush',
+  crimson: 'Crimson',
+  wine: 'Wine',
+  amber: 'Amber',
+  gold: 'Gold',
   linen: 'Linen',
 }
 
 function MiniLogo({ theme, size = 44 }: { theme: ThemeId; size?: number }) {
   const t = themes[theme]
-  const isGradient = theme === 'gradient'
 
   return (
     <svg width={size} height={size} viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
@@ -33,19 +30,8 @@ function MiniLogo({ theme, size = 44 }: { theme: ThemeId; size?: number }) {
           <stop offset="0%" stopColor={t['--accent']} />
           <stop offset="100%" stopColor={t['--accent-l']} />
         </linearGradient>
-        {isGradient && (
-          <linearGradient id="tg-gradient-bg" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#0ea5e9" />
-            <stop offset="100%" stopColor="#8b5cf6" />
-          </linearGradient>
-        )}
       </defs>
-      <rect
-        width="100"
-        height="100"
-        rx="22"
-        fill={isGradient ? 'url(#tg-gradient-bg)' : t['--logo-bg']}
-      />
+      <rect width="100" height="100" rx="22" fill={t['--logo-bg']} />
       <path
         d="M30 76 L30 20 L52 20 C63 20 70 27 70 36 C70 45 63 52 52 52 L42 52 L42 76 Z M42 30 L50 30 C56 30 58 33 58 36 C58 39 56 42 50 42 L42 42 Z"
         fill={`url(#tg-${theme})`}

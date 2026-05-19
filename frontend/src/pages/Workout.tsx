@@ -921,8 +921,10 @@ function SessionCompleteHero({
           style={{
             position: 'relative',
             width: '100%', height: 58, borderRadius: 16,
-            background: 'var(--p-grad)',
-            color: 'var(--btn-text)', fontWeight: 700, fontSize: 16,
+            background: 'var(--p-grad-cta)',
+            color: 'var(--btn-text)',
+            fontFamily: "'JetBrains Mono', 'SF Mono', monospace",
+            fontWeight: 500, fontSize: 14,
             letterSpacing: '0.2em',
             border: 'none',
             cursor: isSaving ? 'not-allowed' : 'pointer',

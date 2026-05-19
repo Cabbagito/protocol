@@ -66,7 +66,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   flex: 1,
                   height: 52,
                   borderRadius: 16,
-                  background: isActive ? 'var(--p-grad)' : 'transparent',
+                  background: isActive ? 'var(--p-grad-cta)' : 'transparent',
                   color: isActive ? 'var(--btn-text)' : 'var(--text-m)',
                   display: 'flex',
                   alignItems: 'center',

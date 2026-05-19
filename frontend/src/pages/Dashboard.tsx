@@ -200,7 +200,7 @@ export default function Dashboard() {
             {weekCells.map((cell, i) => {
               const { letter, trained, isToday, isPast } = cell
               const bg = isToday
-                ? 'var(--p-grad)'
+                ? 'var(--p-grad-cta)'
                 : trained
                 ? 'rgba(var(--accent-rgb),0.18)'
                 : 'rgba(255,255,255,0.04)'
@@ -393,7 +393,7 @@ export default function Dashboard() {
                 style={{
                   width: `${progressPct}%`,
                   height: '100%',
-                  background: 'var(--p-grad)',
+                  background: 'var(--p-grad-cta)',
                   boxShadow: '0 0 8px rgba(var(--accent-rgb),0.6)',
                 }}
               />
@@ -410,10 +410,12 @@ export default function Dashboard() {
               width: '100%',
               height: 58,
               borderRadius: 16,
-              background: 'var(--p-grad)',
+              background: 'var(--p-grad-cta)',
               color: 'var(--btn-text)',
-              fontWeight: 700,
-              fontSize: 16,
+              fontFamily: "'JetBrains Mono', 'SF Mono', monospace",
+              fontWeight: 500,
+              fontSize: 14,
+              letterSpacing: '0.04em',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -433,10 +435,12 @@ export default function Dashboard() {
               width: '100%',
               height: 58,
               borderRadius: 16,
-              background: 'var(--p-grad)',
+              background: 'var(--p-grad-cta)',
               color: 'var(--btn-text)',
-              fontWeight: 700,
-              fontSize: 16,
+              fontFamily: "'JetBrains Mono', 'SF Mono', monospace",
+              fontWeight: 500,
+              fontSize: 14,
+              letterSpacing: '0.04em',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',

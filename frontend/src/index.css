@@ -696,19 +696,6 @@
   }
 }
 
-/* ===== GRADIENT THEME OVERRIDES ===== */
-[data-theme="gradient"] body {
-  background: linear-gradient(135deg, #0ea5e9, #8b5cf6);
-  background-attachment: fixed;
-}
-[data-theme="gradient"] body::before {
-  background: radial-gradient(ellipse at center, transparent 60%, rgba(58,32,160,0.35) 100%);
-  opacity: 1;
-}
-[data-theme="gradient"] .btn-primary {
-  background: linear-gradient(135deg, #0ea5e9, #8b5cf6);
-}
-
 /* ============================================================
    v5 — Muscle color vars, aurora background, motion system,
    per-muscle breathing keyframes.
@@ -732,6 +719,22 @@
   --m-front-delt:#a855f7;    --m-front-delt-l:#c084fc;
   --m-side-delt:#a855f7;     --m-side-delt-l:#c084fc;
   --m-rear-delt:#a855f7;     --m-rear-delt-l:#c084fc;
+
+  /* CTA / nav-active / day-pill background — quieter 1-hue gradient
+     derived from the current theme's accent range. Inherits per-theme
+     automatically via cascade. Distinct from --p-grad (multi-hue,
+     reserved for hero text). */
+  --p-grad-cta: linear-gradient(135deg, var(--accent-l) 0%, var(--accent-d) 100%);
+}
+
+/* Primary CTA fill — 1-hue accent gradient + mono label font.
+   Compose with layout/sizing classes (px/py/rounded/etc) at the site. */
+.btn-primary {
+  background: var(--p-grad-cta);
+  color: var(--btn-text);
+  font-family: 'JetBrains Mono', 'SF Mono', monospace;
+  font-weight: 500;
+  letter-spacing: 0.02em;
 }
 
 /* ── Aurora background — four blobs + two panning stripes + grain ── */
@@ -852,10 +855,6 @@
 [data-theme="white"] .wave-bg .aurora-2,
 [data-theme="linen"] .wave-bg .aurora,
 [data-theme="linen"] .wave-bg .aurora-2 { opacity: 0.25 !important; mix-blend-mode: multiply; }
-
-/* Gradient theme amps up saturation */
-[data-theme="gradient"] .wave-bg .blob { opacity: 1 !important; }
-[data-theme="gradient"] .wave-bg .aurora { opacity: 0.75 !important; }
 
 /* ── Film grain (static — no per-frame paint cost) ──────────── */
 .grain {

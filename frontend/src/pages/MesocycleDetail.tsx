@@ -278,7 +278,7 @@ export default function MesocycleDetail() {
                     width: 4,
                     height: 50,
                     borderRadius: 2,
-                    background: 'var(--p-grad)',
+                    background: 'var(--p-grad-cta)',
                   }}
                 />
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -321,10 +321,10 @@ export default function MesocycleDetail() {
                     height: 42,
                     padding: '0 16px',
                     borderRadius: 12,
-                    background: 'var(--p-grad)',
+                    background: 'var(--p-grad-cta)',
                     color: 'var(--btn-text)',
                     fontSize: 12,
-                    fontWeight: 700,
+                    fontWeight: 500,
                     letterSpacing: '0.18em',
                     fontFamily: MONO,
                     display: 'flex',
@@ -541,7 +541,7 @@ function GridCell({ state }: { state: CellState }) {
         style={{
           height: 26,
           borderRadius: 7,
-          background: 'var(--p-grad)',
+          background: 'var(--p-grad-cta)',
           display: 'grid',
           placeItems: 'center',
           boxShadow: '0 0 14px rgba(var(--accent-rgb),0.55)',
