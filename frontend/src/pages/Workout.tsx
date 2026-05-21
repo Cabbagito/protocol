@@ -420,6 +420,15 @@ export default function Workout() {
               // exercise" explicitly.
               setCurIdxOverride(curIdx)
               completeSet(exId, setNum)
+              // Advance to the next still-open set within this exercise.
+              // If every later set is already done/skipped, leave the
+              // cursor here so the "Next exercise" CTA appears.
+              const nextIdx = currentEx.workingSets.findIndex(
+                (s, i) => i > activeSetIdx && !s.completed && !skippedSets.has(`${exId}:${s.set_num}`),
+              )
+              if (nextIdx !== -1) {
+                setActiveSetOverride(prev => ({ ...prev, [exId]: nextIdx }))
+              }
             }}
             onAddSet={handleAddSet}
             onChipTap={(setIdx) => setActiveSetOverride(prev => ({
