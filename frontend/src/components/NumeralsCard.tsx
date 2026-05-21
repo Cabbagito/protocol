@@ -229,12 +229,13 @@ function Column({
   }
 
   function commit(raw: string) {
-    if (raw === '' || raw === '.' || raw === '-') {
+    const normalized = raw.replace(',', '.')
+    if (normalized === '' || normalized === '.' || normalized === '-') {
       onChange(minValue)
       setText(fmt(minValue))
       return
     }
-    let n = Number(raw)
+    let n = Number(normalized)
     if (!Number.isFinite(n)) {
       setText(fmt(value))
       return
@@ -264,7 +265,11 @@ function Column({
         className="p-num-input"
         inputMode={integerOnly ? 'numeric' : 'decimal'}
         value={text}
-        onChange={(e) => setText(e.target.value.replace(/[^\d.]/g, ''))}
+        onChange={(e) => setText(
+          integerOnly
+            ? e.target.value.replace(/\D/g, '')
+            : e.target.value.replace(/[^\d.,]/g, '').replace(',', '.')
+        )}
         onBlur={(e) => commit(e.target.value)}
         onKeyDown={(e) => {
           if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
