@@ -220,7 +220,7 @@ export default function Workout() {
   }, [mesocycleId, template, removeExerciseMutation, queryClient, toast, resetForReplace])
 
   // Reorder helper (used by the menu sheet)
-  const handleReorderExercise = useCallback(async (exerciseIndex: number, direction: 'up' | 'down') => {
+  const handleReorderExercise = useCallback(async (exerciseIndex: number, direction: 'up' | 'down', visibleIdx: number) => {
     if (!mesocycleId || !template) return
     try {
       await reorderExerciseMutation.mutateAsync({
@@ -232,6 +232,7 @@ export default function Workout() {
         apply_to_future: true,
       })
       resetForReplace()
+      setCurIdxOverride(direction === 'up' ? visibleIdx - 1 : visibleIdx + 1)
       queryClient.removeQueries({ queryKey: ['workouts', 'template'] })
       queryClient.invalidateQueries({ queryKey: queryKeys.workouts.all })
       queryClient.invalidateQueries({ queryKey: queryKeys.mesocycles.all })
@@ -560,8 +561,8 @@ export default function Workout() {
               { label: 'Add note', onClick: () => { close(); setNoteModal({ exerciseId: currentEx.exercise_id, exerciseName: currentEx.exercise_name }) } },
               { label: 'Replace exercise', onClick: () => { close(); setReplaceModal({ exerciseId: currentEx.exercise_id, exerciseIndex: currentEx.exerciseIndex, muscleGroup: currentEx.muscle_group, equipmentType: currentEx.equipment_type }) } },
               { label: 'Add a set', onClick: () => { close(); handleAddSet(currentEx.exercise_id) } },
-              ...(curIdx > 0 ? [{ label: 'Move up', onClick: () => { close(); handleReorderExercise(currentEx.exerciseIndex, 'up') } }] : []),
-              ...(curIdx < exerciseList.length - 1 ? [{ label: 'Move down', onClick: () => { close(); handleReorderExercise(currentEx.exerciseIndex, 'down') } }] : []),
+              ...(curIdx > 0 ? [{ label: 'Move up', onClick: () => { close(); handleReorderExercise(currentEx.exerciseIndex, 'up', curIdx) } }] : []),
+              ...(curIdx < exerciseList.length - 1 ? [{ label: 'Move down', onClick: () => { close(); handleReorderExercise(currentEx.exerciseIndex, 'down', curIdx) } }] : []),
               { label: 'Skip exercise', onClick: () => { close(); toggleSkip(currentEx.exercise_id) } },
               { label: 'Remove from workout', variant: 'danger', onClick: () => { close(); handleRemoveExercise(currentEx.exercise_id) } },
             ]}
