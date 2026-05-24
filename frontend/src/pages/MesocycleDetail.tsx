@@ -236,7 +236,11 @@ export default function MesocycleDetail() {
               </div>
               {mesocycle.structure.weeks.map((_, wi) => {
                 const st = grid[wi]?.[ri] ?? 'queued'
-                return <GridCell key={wi} state={st} />
+                const to =
+                  st === 'done' || st === 'current'
+                    ? `/workout/${mesocycle.id}?week=${wi}&session=${ri}`
+                    : undefined
+                return <GridCell key={wi} state={st} to={to} />
               })}
             </div>
           ))}
@@ -534,9 +538,10 @@ function findNextSession(
 
 /* ─── Subcomponents ─────────────────────────────────────────────── */
 
-function GridCell({ state }: { state: CellState }) {
+function GridCell({ state, to }: { state: CellState; to?: string }) {
+  let inner: React.ReactNode
   if (state === 'current') {
-    return (
+    inner = (
       <div
         style={{
           height: 26,
@@ -550,9 +555,8 @@ function GridCell({ state }: { state: CellState }) {
         <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'white' }} />
       </div>
     )
-  }
-  if (state === 'done') {
-    return (
+  } else if (state === 'done') {
+    inner = (
       <div
         style={{
           height: 26,
@@ -568,17 +572,27 @@ function GridCell({ state }: { state: CellState }) {
         </svg>
       </div>
     )
+  } else {
+    inner = (
+      <div
+        style={{
+          height: 26,
+          borderRadius: 7,
+          background: 'rgba(255,255,255,0.03)',
+          border: '1px solid rgba(255,255,255,0.06)',
+        }}
+      />
+    )
   }
-  return (
-    <div
-      style={{
-        height: 26,
-        borderRadius: 7,
-        background: 'rgba(255,255,255,0.03)',
-        border: '1px solid rgba(255,255,255,0.06)',
-      }}
-    />
-  )
+
+  if (to) {
+    return (
+      <Link to={to} style={{ display: 'block', textDecoration: 'none', color: 'inherit' }}>
+        {inner}
+      </Link>
+    )
+  }
+  return <>{inner}</>
 }
 
 function Chrome({ title, sub, onBack }: { title: string; sub: string; onBack: () => void }) {
