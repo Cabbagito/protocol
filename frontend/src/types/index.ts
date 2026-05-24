@@ -218,3 +218,16 @@ export interface DailyLog {
   totals: DailyTotals
   entries: FoodLog[]
 }
+
+export interface DailyTargets {
+  protein_g: number
+  carbs_g: number
+  fat_g: number
+  kcal: number
+}
+
+export interface DailyTargetsUpdate {
+  protein_g: number
+  carbs_g: number
+  fat_g: number
+}

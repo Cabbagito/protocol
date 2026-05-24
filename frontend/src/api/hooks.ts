@@ -15,6 +15,8 @@ import type {
   FoodLog,
   FoodLogCreate,
   DailyLog,
+  DailyTargets,
+  DailyTargetsUpdate,
 } from '../types'
 import type { ExerciseSessionHistory } from '../lib/exerciseHistory'
 
@@ -52,6 +54,7 @@ export const queryKeys = {
     all: ['food-logs'] as const,
     day: (date: string) => ['food-logs', date] as const,
   },
+  dailyTargets: ['daily-targets'] as const,
 }
 
 // --- Exercise Hooks ---
@@ -413,6 +416,26 @@ export function useDeleteLog() {
       api.delete(`/food-logs/${id}`),
     onSuccess: (_result, variables) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.foodLogs.day(variables.date) })
+    },
+  })
+}
+
+export function useDailyTargets() {
+  return useQuery({
+    queryKey: queryKeys.dailyTargets,
+    queryFn: () => api.get<DailyTargets>('/me/daily-targets'),
+    staleTime: 1000 * 60 * 5,
+  })
+}
+
+export function useUpdateDailyTargets() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (data: DailyTargetsUpdate) =>
+      api.put<DailyTargets>('/me/daily-targets', data),
+    onSuccess: (result) => {
+      queryClient.setQueryData(queryKeys.dailyTargets, result)
+      queryClient.invalidateQueries({ queryKey: queryKeys.foodLogs.all })
     },
   })
 }

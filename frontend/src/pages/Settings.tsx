@@ -1,9 +1,16 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import AuroraBackground from '../components/AuroraBackground'
 import ThemePicker from '../components/ThemePicker'
 import { ChevronRightIcon } from '../components/Icons'
-import { useMesocycles, useExercises, useSplits } from '../api/hooks'
+import { useToast } from '../components/Toast'
+import {
+  useMesocycles,
+  useExercises,
+  useSplits,
+  useDailyTargets,
+  useUpdateDailyTargets,
+} from '../api/hooks'
 import { clearToken, getUserInfo } from '../lib/auth'
 import {
   applyMotion, getSavedMotion, MOTION_IDS, type MotionId,
@@ -133,6 +140,11 @@ export default function Settings() {
           <Row label="Splits" value={`${splits.length} templates`} to="/splits" />
           <Row label="Exercises" value={`${exercises.length} lifts`} to="/exercises" />
           <Row label="Progress" value="Charts & history" to="/progress" />
+        </SectionCard>
+
+        {/* Diet targets */}
+        <SectionCard label="Diet targets">
+          <DietTargetsEditor />
         </SectionCard>
 
         {/* Appearance */}
@@ -306,6 +318,141 @@ function Row({ label, value, to }: { label: string; value?: string; to?: string 
 
 function Divider() {
   return <div style={{ height: 1, background: 'rgba(255,255,255,0.05)' }} />
+}
+
+function DietTargetsEditor() {
+  const { data: targets, isLoading } = useDailyTargets()
+  const update = useUpdateDailyTargets()
+  const toast = useToast()
+
+  const [protein, setProtein] = useState('')
+  const [carbs, setCarbs] = useState('')
+  const [fat, setFat] = useState('')
+
+  useEffect(() => {
+    if (!targets) return
+    setProtein(String(Math.round(targets.protein_g)))
+    setCarbs(String(Math.round(targets.carbs_g)))
+    setFat(String(Math.round(targets.fat_g)))
+  }, [targets])
+
+  const proteinN = Number(protein)
+  const carbsN = Number(carbs)
+  const fatN = Number(fat)
+  const valid =
+    Number.isFinite(proteinN) && proteinN > 0 &&
+    Number.isFinite(carbsN) && carbsN > 0 &&
+    Number.isFinite(fatN) && fatN > 0
+
+  const derivedKcal = valid ? proteinN * 4 + carbsN * 4 + fatN * 9 : 0
+
+  const pristine =
+    !!targets &&
+    proteinN === Math.round(targets.protein_g) &&
+    carbsN === Math.round(targets.carbs_g) &&
+    fatN === Math.round(targets.fat_g)
+
+  async function handleSave() {
+    if (!valid || pristine) return
+    try {
+      await update.mutateAsync({
+        protein_g: proteinN,
+        carbs_g: carbsN,
+        fat_g: fatN,
+      })
+      toast.showSuccess('Targets updated')
+    } catch {
+      toast.showError('Failed to update targets')
+    }
+  }
+
+  if (isLoading && !targets) {
+    return <div style={{ padding: '14px 16px', color: 'var(--text-m)', fontSize: 13 }}>Loading…</div>
+  }
+
+  return (
+    <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <TargetRow label="Protein" value={protein} onChange={setProtein} />
+      <TargetRow label="Carbs" value={carbs} onChange={setCarbs} />
+      <TargetRow label="Fat" value={fat} onChange={setFat} />
+
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          paddingTop: 10,
+          borderTop: '1px solid rgba(255,255,255,0.05)',
+        }}
+      >
+        <span style={{ fontSize: 14, color: 'var(--text-1)' }}>Calories</span>
+        <span
+          style={{
+            fontSize: 13,
+            color: 'var(--text-2)',
+            fontFamily: 'JetBrains Mono, ui-monospace, monospace',
+          }}
+        >
+          {valid ? Math.round(derivedKcal).toLocaleString() : '—'}
+          <span style={{ color: 'var(--text-m)', fontSize: 10, marginLeft: 4 }}>kcal · auto</span>
+        </span>
+      </div>
+
+      <button
+        type="button"
+        onClick={handleSave}
+        disabled={!valid || pristine || update.isPending}
+        className="btn-primary"
+        style={{
+          marginTop: 6,
+          padding: '10px 14px',
+          fontSize: 13,
+          fontWeight: 500,
+          fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+          letterSpacing: '0.05em',
+          opacity: !valid || pristine || update.isPending ? 0.5 : 1,
+          cursor: !valid || pristine || update.isPending ? 'not-allowed' : 'pointer',
+        }}
+      >
+        {update.isPending ? 'Saving…' : 'Save'}
+      </button>
+    </div>
+  )
+}
+
+function TargetRow({
+  label,
+  value,
+  onChange,
+}: {
+  label: string
+  value: string
+  onChange: (v: string) => void
+}) {
+  return (
+    <label style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      <span style={{ flex: 1, fontSize: 14, color: 'var(--text-1)' }}>{label}</span>
+      <input
+        type="number"
+        inputMode="decimal"
+        min={0}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="input"
+        style={{ width: 90, textAlign: 'right' }}
+      />
+      <span
+        style={{
+          width: 14,
+          fontSize: 11,
+          color: 'var(--text-m)',
+          fontFamily: 'JetBrains Mono, ui-monospace, monospace',
+        }}
+      >
+        g
+      </span>
+    </label>
+  )
 }
 
 function Chevron({ rotated }: { rotated: boolean }) {
