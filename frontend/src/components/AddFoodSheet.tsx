@@ -123,7 +123,7 @@ function SearchTab({ date, onLogged }: { date: string; onLogged: () => void }) {
 
   return (
     <div className="space-y-3">
-      <SearchInput value={query} onChange={setQuery} placeholder="Search foods..." autoFocus />
+      <SearchInput value={query} onChange={setQuery} placeholder="Search foods..." />
 
       {selected ? (
         <SelectedFoodForm
