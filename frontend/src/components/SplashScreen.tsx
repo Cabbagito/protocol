@@ -38,11 +38,11 @@ export default function SplashScreen({ children }: SplashScreenProps) {
           <svg width="300" height="340" viewBox="0 0 300 340" xmlns="http://www.w3.org/2000/svg" style={{ overflow: 'hidden' }}>
             <defs>
               <linearGradient id="spl-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#0ea5e9" />
-                <stop offset="100%" stopColor="#8b5cf6" />
+                <stop offset="0%" style={{ stopColor: 'var(--accent-l)' }} />
+                <stop offset="100%" style={{ stopColor: 'var(--accent-d)' }} />
               </linearGradient>
               <radialGradient id="spl-flash-grad" cx="50%" cy="38%" r="45%">
-                <stop offset="0%" stopColor="#0ea5e9" />
+                <stop offset="0%" style={{ stopColor: 'var(--accent)' }} />
                 <stop offset="100%" stopColor="transparent" />
               </radialGradient>
             </defs>
@@ -55,17 +55,17 @@ export default function SplashScreen({ children }: SplashScreenProps) {
 
             {/* Pulse rings */}
             <circle className="spl-pulse-1" cx="150" cy="130" r="10" fill="none" stroke="url(#spl-grad)" strokeWidth="3" />
-            <circle className="spl-pulse-2" cx="150" cy="130" r="8" fill="none" stroke="#22d3ee" strokeWidth="2" opacity="0" />
+            <circle className="spl-pulse-2" cx="150" cy="130" r="8" fill="none" style={{ stroke: 'var(--accent-l)' }} strokeWidth="2" opacity="0" />
 
             {/* Orbiting dots */}
             <g className="d1-orbit" style={{ transformOrigin: '150px 130px' }}>
-              <circle className="d1-entry" cx="150" cy="130" r="3.5" fill="#0ea5e9" opacity="0" />
+              <circle className="d1-entry" cx="150" cy="130" r="3.5" style={{ fill: 'var(--accent)' }} opacity="0" />
             </g>
             <g className="d2-orbit" style={{ transformOrigin: '150px 130px' }}>
-              <circle className="d2-entry" cx="150" cy="130" r="2.5" fill="#8b5cf6" opacity="0" />
+              <circle className="d2-entry" cx="150" cy="130" r="2.5" style={{ fill: 'var(--accent-d)' }} opacity="0" />
             </g>
             <g className="d3-orbit" style={{ transformOrigin: '150px 130px' }}>
-              <circle className="d3-entry" cx="150" cy="130" r="2" fill="#22d3ee" opacity="0" />
+              <circle className="d3-entry" cx="150" cy="130" r="2" style={{ fill: 'var(--accent-l)' }} opacity="0" />
             </g>
 
             {/* Side lines */}
