@@ -23,7 +23,9 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    op.drop_table("exercise_performances")
+    # IF EXISTS: prod's table was dropped during a botched 0010 collision
+    # before this migration was numbered. Self-heal instead of crashing.
+    op.execute("DROP TABLE IF EXISTS exercise_performances")
 
 
 def downgrade() -> None:
