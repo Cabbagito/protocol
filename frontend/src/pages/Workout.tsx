@@ -30,11 +30,6 @@ import { ExerciseHistoryPopup } from './workout/ExerciseHistoryPopup'
 import { SET_TYPE_LABELS } from '../lib/setConstants'
 import type { WorkoutTemplate, MesoExercise, WorkingSet, SetType } from '../types'
 
-const ORDINAL_WORDS = [
-  'one', 'two', 'three', 'four', 'five', 'six', 'seven',
-  'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen',
-] as const
-
 function BackIcon() {
   return (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -284,8 +279,7 @@ export default function Workout() {
   const currentEx = exerciseList[curIdx]
 
   const allLogged = exerciseList.length > 0 && exerciseList.every(ex => ex.allDone)
-  type ScreenState = 'logging' | 'session-done'
-  const screenState: ScreenState = allLogged ? 'session-done' : 'logging'
+  const showFinishBar = !isFutureSession && allLogged && !keyboardOpen
 
   // Active set within current exercise: override (chip tap) > first unlogged > last
   let activeSetIdx = 0
@@ -314,7 +308,7 @@ export default function Workout() {
       <AuroraBackground />
       <MuscleSpotlight group={currentEx?.muscle_group ?? 'chest'} />
 
-      <div style={{ position: 'relative', zIndex: 1, padding: '12px 20px 130px' }}>
+      <div style={{ position: 'relative', zIndex: 1, padding: `12px 20px ${showFinishBar ? 250 : 130}px` }}>
         {/* ── Header: back / title / menu ── */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <button
@@ -392,23 +386,8 @@ export default function Workout() {
           </div>
         )}
 
-        {/* ── State C: session complete ── */}
-        {!isFutureSession && screenState === 'session-done' && (
-          <SessionCompleteHero
-            template={template}
-            exerciseList={exerciseList}
-            isLastSession={isLastSession}
-            isSaving={isSaving}
-            onFinish={handleFinishOrNext}
-            onReviewSets={() => {
-              if (!mesocycleId || !template) return
-              navigate(`/workouts/${mesocycleId}/${template.week_index}/${template.session_index}`)
-            }}
-          />
-        )}
-
         {/* ── State A: logging (and exercise-complete: same shell, "Next exercise" CTA) ── */}
-        {!isFutureSession && screenState === 'logging' && currentEx && activeSet && (
+        {!isFutureSession && currentEx && activeSet && (
           <LoggingState
             currentEx={currentEx}
             activeSet={activeSet}
@@ -445,7 +424,7 @@ export default function Workout() {
         )}
 
         {/* ── Workout list (always visible during logging) ── */}
-        {!isFutureSession && screenState === 'logging' && exerciseList.length > 0 && (
+        {!isFutureSession && exerciseList.length > 0 && (
           <div style={{ marginTop: 28 }}>
             <div
               style={{
@@ -478,7 +457,7 @@ export default function Workout() {
         )}
 
         {/* ── Add exercise CTA below the list ── */}
-        {!isFutureSession && screenState !== 'session-done' && (
+        {!isFutureSession && (
           <button
             type="button"
             onClick={() => setAddExerciseOpen(true)}
@@ -600,6 +579,20 @@ export default function Workout() {
           muscleGroup={currentEx.muscle_group}
           equipmentType={currentEx.equipment_type}
           onClose={() => setHistoryOpen(false)}
+        />
+      )}
+
+      {/* ── Sticky finish bar — all sets logged, user must explicitly finish ── */}
+      {showFinishBar && (
+        <WorkoutFinishBar
+          exerciseList={exerciseList}
+          isLastSession={isLastSession}
+          isSaving={isSaving}
+          onFinish={handleFinishOrNext}
+          onReviewSets={() => {
+            if (!mesocycleId || !template) return
+            navigate(`/workouts/${mesocycleId}/${template.week_index}/${template.session_index}`)
+          }}
         />
       )}
     </div>
@@ -859,11 +852,10 @@ function ExerciseHistoryWrap({ exerciseId, exerciseName, muscleGroup, equipmentT
 }
 
 /* ─────────────────────────────────────────────────────────────────── */
-/*  STATE C — session complete                                         */
+/*  Sticky finish bar — shown when every set is logged or skipped       */
 /* ─────────────────────────────────────────────────────────────────── */
 
-interface SessionCompleteHeroProps {
-  template: WorkoutTemplate
+interface WorkoutFinishBarProps {
   exerciseList: Array<MesoExercise & { workingSets: WorkingSet[] }>
   isLastSession: boolean
   isSaving: boolean
@@ -871,95 +863,87 @@ interface SessionCompleteHeroProps {
   onReviewSets: () => void
 }
 
-function SessionCompleteHero({
-  template, exerciseList, isLastSession, isSaving, onFinish, onReviewSets,
-}: SessionCompleteHeroProps) {
+function WorkoutFinishBar({
+  exerciseList, isLastSession, isSaving, onFinish, onReviewSets,
+}: WorkoutFinishBarProps) {
   const totalSets = exerciseList.reduce((n, ex) => n + ex.workingSets.filter(s => s.completed).length, 0)
   const exerciseCount = exerciseList.length
-  const dayOrdinal = ORDINAL_WORDS[template.session_index] ?? String(template.session_index + 1)
 
   return (
     <div
       style={{
-        minHeight: 'calc(100vh - 260px)',
-        display: 'flex', flexDirection: 'column',
-        alignItems: 'center', justifyContent: 'center',
-        textAlign: 'center', marginTop: 24,
+        position: 'fixed',
+        left: 18, right: 18,
+        bottom: 'calc(env(safe-area-inset-bottom) + 98px)',
+        zIndex: 100,
+        maxWidth: 480,
+        marginLeft: 'auto', marginRight: 'auto',
+        padding: 14,
+        borderRadius: 22,
+        background: 'color-mix(in oklab, var(--card) 88%, transparent)',
+        backdropFilter: 'blur(28px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(28px) saturate(180%)',
+        border: '1px solid rgba(255,255,255,0.06)',
+        boxShadow:
+          '0 18px 50px -14px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.05)',
       }}
     >
       <div
         style={{
-          fontSize: 11, color: 'var(--accent-l)', letterSpacing: '0.22em',
-          fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontWeight: 600,
-          textTransform: 'uppercase',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '0 4px 10px',
         }}
       >
-        Session complete
-      </div>
-      <div
-        className="p-grad-text"
-        style={{
-          fontSize: 110, fontWeight: 700, letterSpacing: '-0.05em',
-          lineHeight: 1.05, paddingBottom: '0.05em', marginTop: 10,
-          filter: 'drop-shadow(0 0 40px rgba(var(--accent-rgb),0.4))',
-        }}
-      >
-        Done.
-      </div>
-      <div
-        style={{
-          fontFamily: "'Fraunces', 'Instrument Serif', Georgia, serif",
-          fontStyle: 'italic', fontSize: 17, color: 'var(--text-2)', marginTop: 8,
-        }}
-      >
-        {template.session_name.toLowerCase()} · day {dayOrdinal}
-      </div>
-      <div
-        style={{
-          fontSize: 10, color: 'var(--text-m)', letterSpacing: '0.2em',
-          fontFamily: 'JetBrains Mono, ui-monospace, monospace',
-          marginTop: 14, fontWeight: 500,
-        }}
-      >
-        {totalSets} SETS · {exerciseCount} {exerciseCount === 1 ? 'EXERCISE' : 'EXERCISES'}
-      </div>
-
-      <div style={{ width: '100%', maxWidth: 420, marginTop: 36, padding: '0 8px' }}>
-        <button
-          type="button"
-          onClick={onFinish}
-          disabled={isSaving}
+        <span
           style={{
-            position: 'relative',
-            width: '100%', height: 58, borderRadius: 16,
-            background: 'var(--p-grad-cta)',
-            color: 'var(--btn-text)',
-            fontFamily: "'JetBrains Mono', 'SF Mono', monospace",
-            fontWeight: 500, fontSize: 14,
-            letterSpacing: '0.2em',
-            border: 'none',
-            cursor: isSaving ? 'not-allowed' : 'pointer',
-            opacity: isSaving ? 0.7 : 1,
-            boxShadow:
-              '0 14px 40px -10px rgba(var(--accent-rgb),0.55), inset 0 1px 0 rgba(255,255,255,0.18)',
+            fontSize: 10, color: 'var(--accent-l)', letterSpacing: '0.22em',
+            fontFamily: 'JetBrains Mono, ui-monospace, monospace',
+            fontWeight: 600, textTransform: 'uppercase',
           }}
         >
-          {isSaving ? 'SAVING…' : isLastSession ? 'FINISH MESOCYCLE' : 'FINISH'}
-        </button>
-        <button
-          type="button"
-          onClick={onReviewSets}
+          Session complete
+        </span>
+        <span
           style={{
-            marginTop: 10, width: '100%', height: 50, borderRadius: 14,
-            background: 'transparent',
-            border: '1px solid rgba(255,255,255,0.08)',
-            color: 'var(--text-2)', fontWeight: 500, fontSize: 14,
-            cursor: 'pointer',
+            fontSize: 10, color: 'var(--text-m)', letterSpacing: '0.18em',
+            fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontWeight: 500,
           }}
         >
-          Review sets
-        </button>
+          {totalSets} SETS · {exerciseCount} {exerciseCount === 1 ? 'EX' : 'EX'}
+        </span>
       </div>
+      <button
+        type="button"
+        onClick={onFinish}
+        disabled={isSaving}
+        style={{
+          width: '100%', height: 54, borderRadius: 16,
+          background: 'var(--p-grad-cta)',
+          color: 'var(--btn-text)',
+          fontFamily: "'JetBrains Mono', 'SF Mono', monospace",
+          fontWeight: 500, fontSize: 13,
+          letterSpacing: '0.22em',
+          border: 'none',
+          cursor: isSaving ? 'not-allowed' : 'pointer',
+          opacity: isSaving ? 0.7 : 1,
+          boxShadow:
+            '0 14px 36px -10px rgba(var(--accent-rgb),0.55), inset 0 1px 0 rgba(255,255,255,0.18)',
+        }}
+      >
+        {isSaving ? 'SAVING…' : isLastSession ? 'FINISH MESOCYCLE' : 'FINISH WORKOUT'}
+      </button>
+      <button
+        type="button"
+        onClick={onReviewSets}
+        style={{
+          marginTop: 8, width: '100%', height: 36, borderRadius: 12,
+          background: 'transparent', border: 'none',
+          color: 'var(--text-m)', fontSize: 12, letterSpacing: '0.05em',
+          cursor: 'pointer',
+        }}
+      >
+        Review sets
+      </button>
     </div>
   )
 }
