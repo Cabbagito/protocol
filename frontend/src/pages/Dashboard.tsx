@@ -321,7 +321,8 @@ export default function Dashboard() {
                   fontSize: 90,
                   fontWeight: 700,
                   letterSpacing: '-0.05em',
-                  lineHeight: 0.9,
+                  lineHeight: 1.05,
+                  paddingBottom: '0.12em',
                   textAlign: 'center',
                   filter: 'drop-shadow(0 0 40px rgba(var(--accent-rgb),0.35))',
                 }}
