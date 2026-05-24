@@ -5,15 +5,17 @@ import BottomSheet from '../components/BottomSheet'
 import AuroraBackground from '../components/AuroraBackground'
 import { useToast } from '../components/Toast'
 import { ChevronLeftIcon, ChevronRightIcon, TrashIcon } from '../components/Icons'
-import { useDailyLog, useDeleteLog } from '../api/hooks'
+import { useDailyLog, useDailyTargets, useDeleteLog } from '../api/hooks'
 import type { FoodLog } from '../types'
 
-// Daily targets are not yet user-configurable; sensible defaults from
-// the v5 prototype. Can be moved to user prefs later.
-const KCAL_GOAL = 2400
-const PROTEIN_GOAL = 180
-const CARBS_GOAL = 280
-const FAT_GOAL = 80
+// Fallback shown only while the targets query is loading. The server
+// backfills a real row for every user; this is purely a no-flash default.
+const FALLBACK_TARGETS = {
+  kcal: 2400,
+  protein_g: 180,
+  carbs_g: 280,
+  fat_g: 80,
+}
 
 function todayIso(): string {
   const now = new Date()
@@ -57,11 +59,13 @@ export default function Diet() {
   const [sheetOpen, setSheetOpen] = useState(false)
   const [logToDelete, setLogToDelete] = useState<FoodLog | null>(null)
   const { data, isLoading } = useDailyLog(date)
+  const { data: targets } = useDailyTargets()
   const deleteLog = useDeleteLog()
   const toast = useToast()
 
   const totals = data?.totals ?? { kcal: 0, protein_g: 0, carbs_g: 0, fat_g: 0 }
   const entries = data?.entries ?? []
+  const goals = targets ?? FALLBACK_TARGETS
   const dateLabel = useMemo(() => formatDateLabel(date), [date])
 
   async function handleDelete() {
@@ -150,7 +154,7 @@ export default function Diet() {
             WebkitBackdropFilter: 'blur(20px)',
           }}
         >
-          <CalorieRing kcal={totals.kcal} goal={KCAL_GOAL} />
+          <CalorieRing kcal={totals.kcal} goal={goals.kcal} />
 
           <div
             style={{
@@ -163,19 +167,19 @@ export default function Diet() {
             <MacroBar
               label="PROTEIN"
               value={totals.protein_g}
-              goal={PROTEIN_GOAL}
+              goal={goals.protein_g}
               color="var(--m-chest)"
             />
             <MacroBar
               label="CARBS"
               value={totals.carbs_g}
-              goal={CARBS_GOAL}
+              goal={goals.carbs_g}
               color="var(--accent)"
             />
             <MacroBar
               label="FAT"
               value={totals.fat_g}
-              goal={FAT_GOAL}
+              goal={goals.fat_g}
               color="var(--m-quads)"
             />
           </div>
@@ -342,7 +346,7 @@ function CalorieRing({ kcal, goal }: { kcal: number; goal: number }) {
               fontFamily: 'JetBrains Mono, ui-monospace, monospace',
             }}
           >
-            / {goal} KCAL
+            / {Math.round(goal)} KCAL
           </div>
         </div>
       </div>

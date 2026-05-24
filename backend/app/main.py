@@ -9,7 +9,16 @@ from app.core.database import async_session, engine
 from app.core.migrations import check_needs_stamp, run_stamp, run_upgrade
 from app.core.seed import ensure_admin_user, seed_default_splits, seed_exercises, seed_foods
 from app.models import base  # noqa: F401 - Import to register models
-from app.routers import auth, exercises, food, health, mesocycles, splits, workouts
+from app.routers import (
+    auth,
+    daily_targets,
+    exercises,
+    food,
+    health,
+    mesocycles,
+    splits,
+    workouts,
+)
 
 
 @asynccontextmanager
@@ -64,3 +73,4 @@ app.include_router(splits.router, prefix="/api/splits", tags=["splits"])
 app.include_router(mesocycles.router, prefix="/api/mesocycles", tags=["mesocycles"])
 app.include_router(workouts.router, prefix="/api/workouts", tags=["workouts"])
 app.include_router(food.router, prefix="/api", tags=["diet"])
+app.include_router(daily_targets.router, prefix="/api/me", tags=["diet"])
