@@ -559,6 +559,7 @@ export default function Workout() {
             title={currentEx.exercise_name}
             actions={[
               { label: 'Add note', onClick: () => { close(); setNoteModal({ exerciseId: currentEx.exercise_id, exerciseName: currentEx.exercise_name }) } },
+              { label: 'View mesocycle', onClick: () => { close(); navigate(`/mesocycles/${mesocycleId}`) } },
               { label: 'Replace exercise', onClick: () => { close(); setReplaceModal({ exerciseId: currentEx.exercise_id, exerciseIndex: currentEx.exerciseIndex, muscleGroup: currentEx.muscle_group, equipmentType: currentEx.equipment_type }) } },
               { label: 'Add a set', onClick: () => { close(); handleAddSet(currentEx.exercise_id) } },
               ...(curIdx > 0 ? [{ label: 'Move up', onClick: () => { close(); handleReorderExercise(currentEx.exerciseIndex, 'up', curIdx) } }] : []),
