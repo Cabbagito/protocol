@@ -1,10 +1,8 @@
-"""Pure domain functions for mesocycle structure building and progression.
+"""Pure domain functions for mesocycle structure building and weight carry-forward.
 
 No database imports, no async. Operates on plain dicts (the JSONB structure)
 and SQLAlchemy model instances used as attribute bags.
 """
-
-import math
 
 from app.domain.propagation import iter_future_exercise_instances
 
@@ -13,17 +11,14 @@ def build_mesocycle_structure(
     days,
     exercises_by_id: dict,
     total_weeks: int,
-    target_reps: int | None = None,
     sets_per_exercise: int = 3,
-    exercise_performances: dict | None = None,
 ) -> dict:
     """Build the full nested JSONB structure for a mesocycle.
 
-    If exercise_performances is provided (dict mapping exercise_id to ExercisePerformance),
-    uses stored working_weight, working_reps, and num_sets for week 1 seeding.
+    All sets start blank — no seeded weights or reps. The first logged set
+    of an exercise carries its weight forward into the next instance via
+    ``carry_weight_forward``.
     """
-    perf_map = exercise_performances or {}
-
     weeks = []
     for week_idx in range(total_weeks):
         week_sessions = []
@@ -34,23 +29,16 @@ def build_mesocycle_structure(
                 if not ex:
                     continue
 
-                perf = perf_map.get(ex.id)
-                ex_sets = perf.num_sets if perf and perf.num_sets else sets_per_exercise
-                ex_target_reps = perf.working_reps if perf and perf.working_reps else target_reps
-                ex_suggested = perf.working_weight if perf and perf.working_weight else None
-
-                sets_list = []
-                for set_num in range(1, ex_sets + 1):
-                    sets_list.append(
-                        {
-                            "set_num": set_num,
-                            "weight": None,
-                            "reps": None,
-                            "target_reps": ex_target_reps,
-                            "suggested_weight": ex_suggested if week_idx == 0 else None,
-                            "logged": False,
-                        }
-                    )
+                sets_list = [
+                    {
+                        "set_num": set_num,
+                        "weight": None,
+                        "reps": None,
+                        "suggested_weight": None,
+                        "logged": False,
+                    }
+                    for set_num in range(1, sets_per_exercise + 1)
+                ]
                 exercise_entries.append(
                     {
                         "exercise_id": ex.id,
@@ -97,78 +85,12 @@ def get_current_position(structure: dict) -> dict:
     return {"completed": True}
 
 
-def handle_weight_bump(structure: dict, week_index: int, session_index: int) -> None:
-    """Recalculate target_reps when the user changes weight from suggested.
+def carry_weight_forward(structure: dict, week_index: int, session_index: int) -> None:
+    """Copy each logged set's weight to the matching set on the next unlogged
+    instance of the same exercise anywhere later in the structure.
 
-    Called before compute_progression. For each logged set where the user changed
-    the weight from suggested, recalculates target_reps using e1RM equivalence
-    and propagates the new weight to all future unlogged instances of the same
-    exercise anywhere in the structure (not just the same session slot).
-
-    Mutates the structure in place.
-    """
-    weeks = structure.get("weeks", [])
-    if week_index >= len(weeks):
-        return
-
-    session = weeks[week_index]["sessions"][session_index]
-
-    for exercise in session.get("exercises", []):
-        if exercise.get("skipped", False):
-            continue
-
-        exercise_id = exercise["exercise_id"]
-
-        for s in exercise.get("sets", []):
-            if not s.get("logged") or s.get("skipped"):
-                continue
-
-            suggested = s.get("suggested_weight")
-            actual_weight = s.get("weight") or 0
-            if suggested is None or actual_weight == 0:
-                continue
-            if actual_weight == suggested:
-                continue
-
-            # Weight was changed — recalculate target_reps via e1RM
-            target = s.get("target_reps")
-            if target is None:
-                continue
-            e1rm = suggested * (1 + target / 30)
-            new_reps = math.floor(30 * (e1rm / actual_weight - 1))
-            new_reps = max(new_reps, 5)
-            s["target_reps"] = new_reps
-
-        # Propagate actual weights to all future unlogged instances of the exercise
-        logged_sets = [
-            s for s in exercise.get("sets", []) if s.get("logged") and not s.get("skipped")
-        ]
-        if not logged_sets:
-            continue
-
-        for _wi, _si, fe in iter_future_exercise_instances(
-            structure, week_index, session_index, exercise_id
-        ):
-            for fs in fe.get("sets", []):
-                if fs.get("logged"):
-                    continue
-                matching = next(
-                    (ls for ls in logged_sets if ls["set_num"] == fs["set_num"]),
-                    None,
-                )
-                if matching and matching.get("weight"):
-                    fs["suggested_weight"] = matching["weight"]
-
-
-def compute_progression(structure: dict, week_index: int, session_index: int) -> None:
-    """Compute per-set rep progression from a completed session to the next unlogged
-    instance of each exercise anywhere in the structure.
-
-    Algorithm: for each logged set, if reps >= target_reps, the next unlogged
-    instance's matching set gets target_reps + 1 (or averaged-up). Weight carries
-    forward as suggested_weight.
-
-    Mutates the structure in place.
+    No rep handling, no e1RM math. Pure copy-forward as a placeholder/default
+    for the user's next session. Mutates the structure in place.
     """
     weeks = structure.get("weeks", [])
     if week_index >= len(weeks):
@@ -180,25 +102,19 @@ def compute_progression(structure: dict, week_index: int, session_index: int) ->
         if exercise.get("skipped", False):
             continue
 
-        exercise_id = exercise["exercise_id"]
-
-        # Build set lookup from completed session (exclude skipped sets)
-        logged_sets = {
+        logged_by_set_num = {
             s["set_num"]: s
             for s in exercise.get("sets", [])
             if s.get("logged") and not s.get("skipped")
         }
-        if not logged_sets:
+        if not logged_by_set_num:
             continue
 
         next_exercise = next(
             (
                 fe
                 for _wi, _si, fe in iter_future_exercise_instances(
-                    structure,
-                    week_index,
-                    session_index,
-                    exercise_id,
+                    structure, week_index, session_index, exercise["exercise_id"]
                 )
             ),
             None,
@@ -209,32 +125,9 @@ def compute_progression(structure: dict, week_index: int, session_index: int) ->
         for next_set in next_exercise.get("sets", []):
             if next_set.get("logged"):
                 continue
-
-            prev_set = logged_sets.get(next_set["set_num"])
-            if not prev_set:
-                continue
-
-            # Carry weight forward
-            prev_weight = prev_set.get("weight") or 0
-            if prev_weight > 0:
-                next_set["suggested_weight"] = prev_weight
-
-            # Per-set rep progression
-            prev_reps = prev_set.get("reps") or 0
-            prev_target = prev_set.get("target_reps")
-
-            if prev_target is None:
-                # First workout — actual reps become the baseline
-                if prev_reps > 0:
-                    next_set["target_reps"] = prev_reps
-            elif prev_reps >= prev_target:
-                # Met/exceeded — average for faster catch-up, minimum +1
-                next_set["target_reps"] = max(
-                    prev_target + 1, math.ceil((prev_target + prev_reps) / 2)
-                )
-            else:
-                # Didn't meet — hold target
-                next_set["target_reps"] = prev_target
+            prev = logged_by_set_num.get(next_set["set_num"])
+            if prev and (prev.get("weight") or 0) > 0:
+                next_set["suggested_weight"] = prev["weight"]
 
 
 def derive_fields(structure: dict) -> dict:

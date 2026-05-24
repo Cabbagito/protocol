@@ -68,7 +68,6 @@ export interface MesoSet {
   set_num: number
   weight: number | null
   reps: number | null
-  target_reps: number | null
   suggested_weight: number | null
   logged: boolean
   set_type?: SetType

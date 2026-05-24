@@ -1,7 +1,6 @@
 import { SET_TYPE_LABELS } from '../../lib/setConstants'
 import { formatWeight } from '../../lib/weightUtils'
 import type { ExerciseSessionHistory } from '../../lib/exerciseHistory'
-import type { MesoSet } from '../../types'
 
 interface ExerciseHistoryPopupProps {
   exerciseName: string
@@ -11,21 +10,8 @@ interface ExerciseHistoryPopupProps {
   onClose: () => void
 }
 
-type HistorySetState = 'logged' | 'exceeded' | 'under'
-
-function getHistorySetState(set: MesoSet): HistorySetState {
-  if (set.set_type === 'myorep_match') return 'logged'
-  if (set.target_reps == null) return 'logged'
-  if ((set.reps ?? 0) > set.target_reps) return 'exceeded'
-  if ((set.reps ?? 0) < set.target_reps) return 'under'
-  return 'logged'
-}
-
-const STATE_COLORS: Record<HistorySetState, string> = {
-  logged: 'var(--accent-l)',
-  exceeded: '#c084fc',
-  under: '#f87171',
-}
+const NEUTRAL_TEXT = 'var(--text-1)'
+const NEUTRAL_DOT = 'var(--text-2)'
 
 function formatDate(date: string | null): string | null {
   if (!date) return null
@@ -99,8 +85,6 @@ export function ExerciseHistoryPopup({ exerciseName, muscleGroup, equipmentType,
                 {/* Set rows */}
                 <div className="space-y-1">
                   {session.sets.map(set => {
-                    const state = getHistorySetState(set)
-                    const color = STATE_COLORS[state]
                     const setType = set.set_type ?? 'straight'
                     const typeInfo = SET_TYPE_LABELS[setType]
 
@@ -128,18 +112,18 @@ export function ExerciseHistoryPopup({ exerciseName, muscleGroup, equipmentType,
                         {/* State dot */}
                         <span
                           className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                          style={{ background: typeInfo ? typeInfo.color : color }}
+                          style={{ background: typeInfo ? typeInfo.color : NEUTRAL_DOT }}
                         />
 
                         {/* Weight */}
-                        <span className="font-mono font-medium" style={{ color: typeInfo ? typeInfo.color : color }}>
+                        <span className="font-mono font-medium" style={{ color: typeInfo ? typeInfo.color : NEUTRAL_TEXT }}>
                           {set.weight != null ? `${formatWeight(set.weight)}kg` : '–'}
                         </span>
 
                         <span className="text-[var(--text-m)]">×</span>
 
                         {/* Reps */}
-                        <span className="font-mono font-medium" style={{ color: typeInfo ? typeInfo.color : color }}>
+                        <span className="font-mono font-medium" style={{ color: typeInfo ? typeInfo.color : NEUTRAL_TEXT }}>
                           {set.reps ?? '–'}
                         </span>
                       </div>

@@ -7,7 +7,7 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.domain.progression import build_mesocycle_structure, compute_progression
+from app.domain.progression import build_mesocycle_structure, carry_weight_forward
 from app.models.exercise import Exercise
 from app.models.food_item import FoodItem
 from app.models.food_log import FoodLog
@@ -232,7 +232,7 @@ async def seed_demo_mesocycle(session: AsyncSession) -> None:
     for si, meso_session in enumerate(week1["sessions"]):
         day = (start_date + timedelta(days=si)).isoformat()
         _log_session(meso_session, exercises_by_id, day)
-        compute_progression(structure, 0, si)
+        carry_weight_forward(structure, 0, si)
 
     # Week 2: all 5 sessions logged, using suggested weights
     week2_start = date.today() - timedelta(days=9)
@@ -240,7 +240,7 @@ async def seed_demo_mesocycle(session: AsyncSession) -> None:
     for si, meso_session in enumerate(week2["sessions"]):
         day = (week2_start + timedelta(days=si)).isoformat()
         _log_session(meso_session, exercises_by_id, day, use_suggested=True)
-        compute_progression(structure, 1, si)
+        carry_weight_forward(structure, 1, si)
 
     # Week 3: first 2 sessions logged (Pull, Push), Legs is next
     week3_start = date.today() - timedelta(days=2)
@@ -249,7 +249,7 @@ async def seed_demo_mesocycle(session: AsyncSession) -> None:
         meso_session = week3["sessions"][si]
         day = (week3_start + timedelta(days=si)).isoformat()
         _log_session(meso_session, exercises_by_id, day, use_suggested=True)
-        compute_progression(structure, 2, si)
+        carry_weight_forward(structure, 2, si)
 
     meso = Mesocycle(
         split_id=split.id,

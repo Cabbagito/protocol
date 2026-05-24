@@ -339,22 +339,16 @@ async def build_and_import_mesocycles(
 
                     if rp_sets:
                         # Build sets from actual RP data
-                        sets_list = []
-                        for set_idx, rp_set in enumerate(rp_sets):
-                            target_reps = rp_set.get("repsTarget")
-                            if target_reps is None:
-                                target_reps = rp_set.get("reps", 10)
-
-                            sets_list.append(
-                                {
-                                    "set_num": set_idx + 1,
-                                    "weight": rp_set.get("weight"),
-                                    "reps": rp_set.get("reps"),
-                                    "target_reps": target_reps,
-                                    "suggested_weight": rp_set.get("weightTarget"),
-                                    "logged": True,
-                                }
-                            )
+                        sets_list = [
+                            {
+                                "set_num": set_idx + 1,
+                                "weight": rp_set.get("weight"),
+                                "reps": rp_set.get("reps"),
+                                "suggested_weight": None,
+                                "logged": True,
+                            }
+                            for set_idx, rp_set in enumerate(rp_sets)
+                        ]
                         total_sets += len(sets_list)
                     else:
                         # No data for this week/day/exercise — mark as skipped
@@ -363,7 +357,6 @@ async def build_and_import_mesocycles(
                                 "set_num": 1,
                                 "weight": None,
                                 "reps": None,
-                                "target_reps": 10,
                                 "suggested_weight": None,
                                 "logged": False,
                             }

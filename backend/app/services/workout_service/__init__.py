@@ -8,7 +8,7 @@ from app.services.workout_service.exercise_ops import (
     replace_exercise,
     update_exercise_note,
 )
-from app.services.workout_service.logging import log_sets, update_exercise_performances
+from app.services.workout_service.logging import log_sets
 from app.services.workout_service.queries import (
     get_exercise_progress,
     get_workout_detail,
@@ -29,5 +29,4 @@ __all__ = [
     "reorder_exercise",
     "replace_exercise",
     "update_exercise_note",
-    "update_exercise_performances",
 ]

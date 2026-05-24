@@ -9,7 +9,6 @@ from sqlalchemy.orm import selectinload
 
 from app.domain.progression import build_mesocycle_structure, derive_fields
 from app.models.exercise import Exercise
-from app.models.exercise_performance import ExercisePerformance
 from app.models.mesocycle import Mesocycle
 from app.models.split import Split, SplitDay, SplitDayExercise
 from app.services.common import deactivate_user_mesos
@@ -67,20 +66,7 @@ async def create_mesocycle(
     else:
         exercises_by_id = {}
 
-    # Query exercise performances for cross-meso memory
-    perf_map = {}
-    if exercise_ids:
-        perf_result = await db.execute(
-            select(ExercisePerformance).where(
-                ExercisePerformance.user_id == user_id,
-                ExercisePerformance.exercise_id.in_(exercise_ids),
-            )
-        )
-        perf_map = {p.exercise_id: p for p in perf_result.scalars().all()}
-
-    structure = build_mesocycle_structure(
-        split.days, exercises_by_id, total_weeks, exercise_performances=perf_map
-    )
+    structure = build_mesocycle_structure(split.days, exercises_by_id, total_weeks)
 
     mesocycle = Mesocycle(
         split_id=split_id,

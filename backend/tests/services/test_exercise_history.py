@@ -10,12 +10,11 @@ def _meso(meso_id, name, started_at, structure):
     return SimpleNamespace(id=meso_id, name=name, started_at=started_at, structure=structure)
 
 
-def _logged_set(set_num, weight, reps, target_reps=10):
+def _logged_set(set_num, weight, reps):
     return {
         "set_num": set_num,
         "weight": weight,
         "reps": reps,
-        "target_reps": target_reps,
         "suggested_weight": None,
         "logged": True,
     }

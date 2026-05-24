@@ -1,61 +1,14 @@
-"""Workout logging — log_sets and update_exercise_performances."""
+"""Workout logging — log_sets."""
 
 from datetime import UTC, datetime
 from datetime import date as date_type
 
-from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.attributes import flag_modified
 
-from app.domain.progression import compute_progression, get_current_position, handle_weight_bump
-from app.models.base import generate_uuid
-from app.models.exercise_performance import ExercisePerformance
+from app.domain.progression import carry_weight_forward, get_current_position
 from app.services.common import get_user_mesocycle
 from app.services.workout_service._helpers import get_session_from_structure
-
-
-async def update_exercise_performances(db: AsyncSession, user_id: str, session: dict) -> None:
-    """Upsert exercise_performances for each non-skipped exercise in a completed session."""
-    for exercise in session.get("exercises", []):
-        if exercise.get("skipped", False):
-            continue
-
-        logged_sets = [
-            s for s in exercise.get("sets", []) if s.get("logged") and not s.get("skipped")
-        ]
-        if not logged_sets:
-            continue
-
-        # Use reps from the heaviest set so weight and reps stay paired
-        best_set = max(logged_sets, key=lambda s: s.get("weight") or 0)
-        working_weight = best_set.get("weight") or 0
-        working_reps = best_set.get("reps") or None
-        num_sets = len(logged_sets)
-
-        if working_weight == 0:
-            continue
-
-        now = datetime.now(UTC)
-        stmt = pg_insert(ExercisePerformance).values(
-            id=generate_uuid(),
-            user_id=user_id,
-            exercise_id=exercise["exercise_id"],
-            working_weight=working_weight,
-            working_reps=working_reps,
-            num_sets=num_sets,
-            created_at=now,
-            updated_at=now,
-        )
-        stmt = stmt.on_conflict_do_update(
-            constraint="uq_exercise_performances_user_exercise",
-            set_={
-                "working_weight": stmt.excluded.working_weight,
-                "working_reps": stmt.excluded.working_reps,
-                "num_sets": stmt.excluded.num_sets,
-                "updated_at": now,
-            },
-        )
-        await db.execute(stmt)
 
 
 async def log_sets(
@@ -124,19 +77,13 @@ async def log_sets(
                 if draft:
                     if draft.weight is not None:
                         set_data["weight"] = draft.weight
-                        # Also update suggested_weight so the draft value
-                        # takes priority when the frontend re-fetches
-                        # (resolveSetWeight checks suggested_weight before weight)
-                        set_data["suggested_weight"] = draft.weight
                     if draft.reps is not None:
                         set_data["reps"] = draft.reps
             set_data["skipped"] = key in skipped_set_keys
 
-    # Only compute progression on explicit end-of-workout
+    # On explicit end-of-workout, carry logged weights into the next instance
     if complete:
-        handle_weight_bump(structure, week_index, session_index)
-        compute_progression(structure, week_index, session_index)
-        await update_exercise_performances(db, user_id, session)
+        carry_weight_forward(structure, week_index, session_index)
 
         # Stamp completed_at when the final session of the mesocycle is logged
         if get_current_position(structure).get("completed"):

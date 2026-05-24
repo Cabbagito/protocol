@@ -7,46 +7,7 @@ import { getMuscleColor } from '../lib/muscleColors'
 import { formatWeight } from '../lib/weightUtils'
 import { SET_TYPE_LABELS, STRAIGHT_PILL } from '../lib/setConstants'
 import { formatVolume } from '../lib/formatters'
-import type { MesoExercise, MesoSet } from '../types'
-
-type SetState = 'met' | 'exceeded' | 'under'
-
-function getSetState(set: MesoSet): SetState {
-  if (set.set_type === 'myorep_match') return 'met'
-  if (set.target_reps == null) return 'met'  // No target — neutral
-  const reps = set.reps ?? 0
-  if (reps > set.target_reps) return 'exceeded'
-  if (reps >= set.target_reps) return 'met'
-  return 'under'
-}
-
-const SET_COLORS: Record<SetState, { text: string; icon: string; bg: string }> = {
-  met: { text: 'var(--accent-l)', icon: 'var(--accent)', bg: 'rgba(var(--accent-rgb),0.06)' },
-  exceeded: { text: '#c084fc', icon: '#a855f7', bg: 'rgba(168,85,247,0.06)' },
-  under: { text: '#f87171', icon: '#ef4444', bg: 'rgba(239,68,68,0.04)' },
-}
-
-function SetStatusIcon({ state }: { state: SetState }) {
-  if (state === 'met') {
-    return (
-      <svg className="w-3.5 h-3.5" style={{ color: SET_COLORS.met.icon }} fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-      </svg>
-    )
-  }
-  if (state === 'exceeded') {
-    return (
-      <svg className="w-3.5 h-3.5" style={{ color: SET_COLORS.exceeded.icon }} fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" />
-      </svg>
-    )
-  }
-  return (
-    <svg className="w-3.5 h-3.5" style={{ color: SET_COLORS.under.icon }} fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-    </svg>
-  )
-}
+import type { MesoExercise } from '../types'
 
 function computeExerciseSummary(exercise: MesoExercise) {
   const logged = exercise.sets.filter((s) => s.logged)
@@ -107,19 +68,6 @@ export default function WorkoutDetail() {
   const totalVolume = allLoggedSets.reduce((sum, s) => sum + (s.weight ?? 0) * (s.reps ?? 0), 0)
   const exerciseCount = activeExercises.filter((ex) => ex.sets.some((s) => s.logged)).length
 
-  // Performance breakdown using getSetState so MM sets are always 'met'
-  const metCount = allLoggedSets.filter((s) => getSetState(s) === 'met').length
-  const exceededCount = allLoggedSets.filter((s) => getSetState(s) === 'exceeded').length
-  const underCount = allLoggedSets.filter((s) => getSetState(s) === 'under').length
-
-  // On-target percentage (met + exceeded)
-  const onTargetCount = metCount + exceededCount
-  const onTargetPct = totalSets > 0 ? Math.round((onTargetCount / totalSets) * 100) : 0
-  const perfTotal = metCount + exceededCount + underCount
-  const metPct = perfTotal > 0 ? (metCount / perfTotal) * 100 : 0
-  const exceededPct = perfTotal > 0 ? (exceededCount / perfTotal) * 100 : 0
-  const underPct = perfTotal > 0 ? (underCount / perfTotal) * 100 : 0
-
   // Volume by muscle group
   const muscleVolume: Record<string, number> = {}
   for (const ex of activeExercises) {
@@ -145,7 +93,7 @@ export default function WorkoutDetail() {
       <div className="px-4 space-y-3 pb-10">
         {/* Session Summary Scoreboard */}
         <div className="card stagger">
-          <div className="grid grid-cols-4 gap-2 text-center">
+          <div className="grid grid-cols-3 gap-2 text-center">
             <div>
               <div className="mono text-[22px] font-bold" style={{ color: 'var(--accent-l)' }}>
                 {totalSets}
@@ -164,67 +112,8 @@ export default function WorkoutDetail() {
               </div>
               <div className="text-[9px] font-medium uppercase tracking-wider text-[var(--text-m)]">Exercises</div>
             </div>
-            <div>
-              <div className="mono text-[22px] font-bold" style={{ color: '#4ade80' }}>
-                {onTargetPct}<span className="text-[14px]">%</span>
-              </div>
-              <div className="text-[9px] font-medium uppercase tracking-wider text-[var(--text-m)]">On Target</div>
-            </div>
           </div>
         </div>
-
-        {/* Performance Breakdown */}
-        {perfTotal > 0 && (
-          <div className="card stagger" style={{ padding: '12px 16px' }}>
-            {/* Proportional bar */}
-            <div
-              className="flex mb-3 overflow-hidden"
-              style={{ height: 6, borderRadius: 3, background: 'var(--input)' }}
-            >
-              {metPct > 0 && (
-                <div
-                  style={{
-                    width: `${metPct}%`,
-                    background: 'var(--accent)',
-                    borderRadius: exceededPct === 0 && underPct === 0 ? 3 : undefined,
-                    borderTopLeftRadius: 3,
-                    borderBottomLeftRadius: 3,
-                  }}
-                />
-              )}
-              {exceededPct > 0 && (
-                <div style={{ width: `${exceededPct}%`, background: '#a855f7' }} />
-              )}
-              {underPct > 0 && (
-                <div
-                  style={{
-                    width: `${underPct}%`,
-                    background: '#ef4444',
-                    borderTopRightRadius: 3,
-                    borderBottomRightRadius: 3,
-                  }}
-                />
-              )}
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5">
-                <div className="w-2 h-2 rounded-full" style={{ background: 'var(--accent)' }} />
-                <span className="text-[10px] text-[var(--text-2)]">Hit target</span>
-                <span className="mono text-[11px] font-semibold" style={{ color: 'var(--accent-l)' }}>{metCount}</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <div className="w-2 h-2 rounded-full" style={{ background: '#a855f7' }} />
-                <span className="text-[10px] text-[var(--text-2)]">Exceeded</span>
-                <span className="mono text-[11px] font-semibold" style={{ color: '#c084fc' }}>{exceededCount}</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <div className="w-2 h-2 rounded-full" style={{ background: '#ef4444' }} />
-                <span className="text-[10px] text-[var(--text-2)]">Under</span>
-                <span className="mono text-[11px] font-semibold" style={{ color: '#f87171' }}>{underCount}</span>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Section label */}
         <div className="stagger pt-1">
@@ -287,30 +176,27 @@ export default function WorkoutDetail() {
                 {/* Column headers */}
                 <div
                   className="grid items-center gap-1"
-                  style={{ gridTemplateColumns: '36px 1fr 1fr 1fr 28px', padding: '4px 8px 2px' }}
+                  style={{ gridTemplateColumns: '36px 1fr 1fr', padding: '4px 8px 2px' }}
                 >
                   <div className="text-[9px] font-medium uppercase tracking-wider text-center text-[var(--text-m)]">#</div>
                   <div className="text-[9px] font-medium uppercase tracking-wider text-center text-[var(--text-m)]">Weight</div>
                   <div className="text-[9px] font-medium uppercase tracking-wider text-center text-[var(--text-m)]">Reps</div>
-                  <div className="text-[9px] font-medium uppercase tracking-wider text-center text-[var(--text-m)]">Target</div>
-                  <div />
                 </div>
 
                 {/* Set rows */}
-                {loggedSets.map((set, i) => {
-                  const state = getSetState(set)
-                  const colors = SET_COLORS[state]
+                {loggedSets.map((set) => {
                   const setType = set.set_type ?? 'straight'
                   const typeInfo = SET_TYPE_LABELS[setType]
+                  const textColor = typeInfo ? typeInfo.color : 'var(--text-1)'
 
                   return (
                     <div
                       key={set.set_num}
                       className="grid items-center gap-1 rounded-md"
                       style={{
-                        gridTemplateColumns: '36px 1fr 1fr 1fr 28px',
+                        gridTemplateColumns: '36px 1fr 1fr',
                         padding: '6px 8px',
-                        background: typeInfo ? typeInfo.rowBg : (i % 2 === 0 ? colors.bg : undefined),
+                        background: typeInfo ? typeInfo.rowBg : undefined,
                       }}
                     >
                       <div className="flex justify-center">
@@ -330,15 +216,11 @@ export default function WorkoutDetail() {
                           </span>
                         )}
                       </div>
-                      <div className="mono text-[13px] font-medium text-center" style={{ color: colors.text }}>
+                      <div className="mono text-[13px] font-medium text-center" style={{ color: textColor }}>
                         {formatWeight(set.weight ?? 0)}
                       </div>
-                      <div className="mono text-[13px] font-medium text-center" style={{ color: colors.text }}>
+                      <div className="mono text-[13px] font-medium text-center" style={{ color: textColor }}>
                         {set.reps ?? 0}
-                      </div>
-                      <div className="mono text-[11px] text-center text-[var(--text-m)]">{set.target_reps ?? '—'}</div>
-                      <div className="flex justify-center">
-                        <SetStatusIcon state={state} />
                       </div>
                     </div>
                   )

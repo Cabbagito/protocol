@@ -1,6 +1,5 @@
 from app.models.base import Base
 from app.models.exercise import Exercise
-from app.models.exercise_performance import ExercisePerformance
 from app.models.food_item import FoodItem
 from app.models.food_log import FoodLog
 from app.models.mesocycle import Mesocycle
@@ -10,7 +9,6 @@ from app.models.user import User
 __all__ = [
     "Base",
     "Exercise",
-    "ExercisePerformance",
     "FoodItem",
     "FoodLog",
     "Mesocycle",
