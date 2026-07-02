@@ -12,7 +12,7 @@
 # Requires operator SSH keys. See backend/scripts/manage_users.py for
 # list/delete, e.g.:
 #   ssh -o RequestTTY=no -o RemoteCommand=none protocol \
-#     "docker exec protocol-backend-1 uv run python -m scripts.manage_users list"
+#     "docker exec protocol-backend-1 python -m scripts.manage_users list"
 set -euo pipefail
 
 NAME="${1:?usage: create-user.sh \"Name\" [password]}"
@@ -27,4 +27,4 @@ else
 fi
 
 ssh -o RequestTTY=no -o RemoteCommand=none "$HOST" \
-  "docker exec $CONTAINER uv run python -m scripts.manage_users create $ARGS"
+  "docker exec $CONTAINER python -m scripts.manage_users create $ARGS"

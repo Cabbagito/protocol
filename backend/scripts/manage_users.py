@@ -5,8 +5,8 @@ Usage:
     uv run python -m scripts.manage_users create "Name" [password]
     uv run python -m scripts.manage_users delete <user-id>
 
-Docker:
-    docker exec protocol-backend-1 uv run python -m scripts.manage_users list
+Docker (prod image has no uv; the venv's python is on PATH):
+    docker exec protocol-backend-1 python -m scripts.manage_users list
 
 Creating without a password generates a random one and prints it once —
 passwords identify users at login, so they must be unique across users.
