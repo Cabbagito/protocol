@@ -6,6 +6,8 @@ import AuroraBackground from '../components/AuroraBackground'
 import { useToast } from '../components/Toast'
 import { ChevronLeftIcon, ChevronRightIcon, TrashIcon } from '../components/Icons'
 import { useDailyLog, useDailyTargets, useDeleteLog } from '../api/hooks'
+import { todayIso, parseIso, localDateKey } from '../lib/dates'
+import { round1 } from '../lib/formatters'
 import type { FoodLog } from '../types'
 
 // Fallback shown only while the targets query is loading. The server
@@ -17,29 +19,10 @@ const FALLBACK_TARGETS = {
   fat_g: 80,
 }
 
-function todayIso(): string {
-  const now = new Date()
-  const y = now.getFullYear()
-  const m = String(now.getMonth() + 1).padStart(2, '0')
-  const d = String(now.getDate()).padStart(2, '0')
-  return `${y}-${m}-${d}`
-}
-
-function parseIso(iso: string): Date {
-  const parts = iso.split('-').map(Number)
-  const y = parts[0] ?? 1970
-  const m = parts[1] ?? 1
-  const d = parts[2] ?? 1
-  return new Date(y, m - 1, d)
-}
-
 function shiftDate(iso: string, delta: number): string {
   const date = parseIso(iso)
   date.setDate(date.getDate() + delta)
-  const yy = date.getFullYear()
-  const mm = String(date.getMonth() + 1).padStart(2, '0')
-  const dd = String(date.getDate()).padStart(2, '0')
-  return `${yy}-${mm}-${dd}`
+  return localDateKey(date)
 }
 
 function formatDateLabel(iso: string): string {
@@ -48,10 +31,6 @@ function formatDateLabel(iso: string): string {
     .toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })
     .toUpperCase()
     .replace(',', ' ·')
-}
-
-function round1(n: number): number {
-  return Math.round(n * 10) / 10
 }
 
 export default function Diet() {

@@ -3,6 +3,7 @@ import { useFoods, useCreateLog } from '../api/hooks'
 import { useToast } from './Toast'
 import SearchInput from './SearchInput'
 import PageLoader from './PageLoader'
+import { round1 } from '../lib/formatters'
 import type { FoodItem } from '../types'
 
 interface AddFoodSheetProps {
@@ -380,8 +381,4 @@ function MacroField({
 function parseNum(s: string): number {
   const n = parseFloat(s)
   return Number.isFinite(n) ? n : NaN
-}
-
-function round1(n: number): number {
-  return Math.round(n * 10) / 10
 }

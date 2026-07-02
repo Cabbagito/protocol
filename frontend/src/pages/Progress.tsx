@@ -9,6 +9,7 @@ import {
   useExerciseProgress,
 } from '../api/hooks'
 import { getMuscleColor } from '../lib/muscleColors'
+import { localDateKey, todayIso } from '../lib/dates'
 import type { Exercise, ProgressEntry } from '../types'
 
 const MONO = 'JetBrains Mono, ui-monospace, monospace'
@@ -714,7 +715,7 @@ function sliceByPeriod(entries: ProgressEntry[], weeks: number | null): Progress
   const sorted = [...entries].sort((a, b) => a.date.localeCompare(b.date))
   const cutoff = new Date()
   cutoff.setDate(cutoff.getDate() - weeks * 7)
-  const iso = cutoff.toISOString().slice(0, 10)
+  const iso = localDateKey(cutoff)
   return sorted.filter((e) => e.date >= iso)
 }
 
@@ -732,8 +733,7 @@ function formatShortDate(iso: string): string {
 }
 
 function isToday(iso: string): boolean {
-  const today = new Date().toISOString().slice(0, 10)
-  return iso === today
+  return iso === todayIso()
 }
 
 /* ─── Chrome ───────────────────────────────────────────────────── */
