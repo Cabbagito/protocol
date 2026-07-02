@@ -44,7 +44,6 @@ def _make_exercise(exercise_id="ex1", name="Bench Press", sets=None, skipped=Fal
         "exercise_name": name,
         "muscle_group": "chest",
         "equipment_type": "barbell",
-        "technique": None,
         "sets": sets or [_make_set(n) for n in range(1, 4)],
         **({"skipped": True} if skipped else {}),
     }

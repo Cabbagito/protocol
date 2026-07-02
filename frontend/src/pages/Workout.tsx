@@ -117,7 +117,7 @@ export default function Workout() {
     animPhaseRef, setAnimKey, bumpAnim, prevCompletedRef, prevSkippedRef,
   })
 
-  const { isSaving, setIsSaving, pendingSavesRef, logSets } = useWorkoutAutoSave({
+  const { isSaving, setIsSaving, pendingSavesRef, logSets, saveChainRef, cancelDebouncedSave } = useWorkoutAutoSave({
     mesocycleId, template, isFutureSession, sets, initialized,
     skippedExercises, skippedSets, animPhaseRef, bumpAnim,
     modifyingRef, prevCompletedRef, prevSkippedRef,
@@ -130,7 +130,7 @@ export default function Workout() {
   const { isLastSession, handleFinishOrNext } = useWorkoutCompletion({
     mesocycleId, template, mesocycle, sets,
     skippedExercises, skippedSets, isFutureSession,
-    isSaving, setIsSaving, pendingSavesRef, logSets,
+    isSaving, setIsSaving, pendingSavesRef, logSets, saveChainRef, cancelDebouncedSave,
   })
 
   // Reset overrides when route changes

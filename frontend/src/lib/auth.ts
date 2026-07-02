@@ -3,7 +3,6 @@ const USER_KEY = 'protocol_user'
 
 export interface UserInfo {
   name: string
-  is_admin: boolean
 }
 
 export function getToken(): string | null {

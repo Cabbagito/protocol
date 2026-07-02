@@ -52,6 +52,7 @@ async def log_sets(
         mesocycle_id=data.mesocycle_id,
         week_index=data.week_index,
         session_index=data.session_index,
+        logged_on=data.logged_on,
         sets=data.sets,
         notes=data.notes,
         exercise_updates=data.exercise_updates,
