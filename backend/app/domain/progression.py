@@ -45,7 +45,6 @@ def build_mesocycle_structure(
                         "exercise_name": ex.name,
                         "muscle_group": ex.muscle_group,
                         "equipment_type": ex.equipment_type,
-                        "technique": None,
                         "sets": sets_list,
                     }
                 )
