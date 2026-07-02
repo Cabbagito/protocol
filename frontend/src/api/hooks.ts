@@ -11,6 +11,7 @@ import type {
   WorkoutHistoryItem,
   WorkoutDetailResponse,
   ProgressEntry,
+  BarcodeLookup,
   FoodItem,
   FoodLog,
   FoodLogCreate,
@@ -376,18 +377,45 @@ export function useFoods(q: string) {
   })
 }
 
+export interface FoodItemPayload {
+  name: string
+  brand?: string | null
+  kcal_per_100g: number
+  protein_per_100g: number
+  carbs_per_100g: number
+  fat_per_100g: number
+  default_serving_g?: number | null
+}
+
 export function useCreateFood() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (data: {
-      name: string
-      brand?: string | null
-      kcal_per_100g: number
-      protein_per_100g: number
-      carbs_per_100g: number
-      fat_per_100g: number
-      default_serving_g?: number | null
-    }) => api.post<FoodItem>('/foods', data),
+    mutationFn: (data: FoodItemPayload & { barcode?: string | null }) =>
+      api.post<FoodItem>('/foods', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.foods.all })
+    },
+  })
+}
+
+export function useUpdateFood() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: FoodItemPayload }) =>
+      api.put<FoodItem>(`/foods/${id}`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.foods.all })
+    },
+  })
+}
+
+export function useBarcodeLookup() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    // A lookup can create a shared food server-side (Open Food Facts hit),
+    // so it's modeled as a mutation and invalidates the food cache.
+    mutationFn: (barcode: string) =>
+      api.get<BarcodeLookup>(`/foods/by-barcode/${barcode}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.foods.all })
     },
