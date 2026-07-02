@@ -1,9 +1,21 @@
 from datetime import date, datetime
+from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, computed_field
 
 
 class FoodItemCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=255)
+    brand: str | None = Field(default=None, max_length=100)
+    kcal_per_100g: float = Field(ge=0)
+    protein_per_100g: float = Field(ge=0)
+    carbs_per_100g: float = Field(ge=0)
+    fat_per_100g: float = Field(ge=0)
+    default_serving_g: float | None = Field(default=None, gt=0)
+    barcode: str | None = Field(default=None, min_length=8, max_length=32, pattern=r"^\d+$")
+
+
+class FoodItemUpdate(BaseModel):
     name: str = Field(min_length=1, max_length=255)
     brand: str | None = Field(default=None, max_length=100)
     kcal_per_100g: float = Field(ge=0)
@@ -22,9 +34,33 @@ class FoodItemResponse(BaseModel):
     carbs_per_100g: float
     fat_per_100g: float
     default_serving_g: float | None
+    barcode: str | None
+    seed_key: str | None = Field(exclude=True)
+
+    @computed_field
+    @property
+    def seeded(self) -> bool:
+        return self.seed_key is not None
 
     class Config:
         from_attributes = True
+
+
+class FoodDraft(BaseModel):
+    barcode: str
+    name: str | None = None
+    brand: str | None = None
+    kcal_per_100g: float | None = None
+    protein_per_100g: float | None = None
+    carbs_per_100g: float | None = None
+    fat_per_100g: float | None = None
+    default_serving_g: float | None = None
+
+
+class BarcodeLookupResponse(BaseModel):
+    status: Literal["found", "draft"]
+    food: FoodItemResponse | None = None
+    draft: FoodDraft | None = None
 
 
 class FoodLogCreate(BaseModel):

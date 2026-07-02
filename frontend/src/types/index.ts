@@ -180,6 +180,25 @@ export interface FoodItem {
   carbs_per_100g: number
   fat_per_100g: number
   default_serving_g: number | null
+  barcode: string | null
+  seeded: boolean
+}
+
+export interface FoodDraft {
+  barcode: string
+  name: string | null
+  brand: string | null
+  kcal_per_100g: number | null
+  protein_per_100g: number | null
+  carbs_per_100g: number | null
+  fat_per_100g: number | null
+  default_serving_g: number | null
+}
+
+export interface BarcodeLookup {
+  status: 'found' | 'draft'
+  food: FoodItem | null
+  draft: FoodDraft | null
 }
 
 export interface FoodLog {
