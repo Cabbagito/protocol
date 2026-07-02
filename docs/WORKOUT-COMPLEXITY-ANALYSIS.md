@@ -1,5 +1,11 @@
 # Workout System: Complexity Analysis & Architecture Review
 
+> **⚠️ Historical document.** Written before the progression system was removed
+> (commit `bd928a1`, 2026-05-24). Everything here about `compute_progression`,
+> e1RM, `target_reps`, and `ExercisePerformance` describes code that no longer
+> exists — the current system is a simple weight carry-forward on workout
+> finish. Kept for the architecture discussion of the JSONB structure.
+
 **Date:** 2026-03-29
 **Scope:** Backend domain/services + Frontend hooks/components for workout logging and mesocycle progression
 

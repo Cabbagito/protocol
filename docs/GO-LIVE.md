@@ -7,7 +7,7 @@
 
 ## Current State
 
-Phase 1 (Gym MVP) is feature-complete and functional. Exercises, splits, mesocycles, workout logging with progression, history, progress charts, PWA install — all working. The frontend is polished with animations, rest timers, set types (straight/myorep/myorep match), exercise replacement, per-exercise notes, and a responsive mobile-first UI.
+Phase 1 (Gym MVP) is feature-complete and functional. Exercises, splits, mesocycles, workout logging with weight carry-forward, history, progress charts, PWA install — all working. The frontend is polished with animations, rest timers, set types (straight/myorep/myorep match), exercise replacement, per-exercise notes, and a responsive mobile-first UI.
 
 **What's not ready:**
 - ~~Database wipes on every restart (`DEV_RESET_DB=true` hardcoded)~~ — removed entirely
@@ -17,7 +17,8 @@ Phase 1 (Gym MVP) is feature-complete and functional. Exercises, splits, mesocyc
 - No backups
 - No tests
 - Settings page is minimal (shows user name + logout, no user management yet)
-- Diet and Glucose domains: 0% implemented (not blocking go-live)
+- Diet domain: core shipped (food search/custom entry, daily log, per-user macro targets); see `docs/ROADMAP.md` for what's next
+- Glucose domain: 0% implemented (not blocking go-live)
 
 ---
 
