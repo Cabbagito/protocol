@@ -17,6 +17,7 @@ import type {
   DailyLog,
   DailyTargets,
   DailyTargetsUpdate,
+  WeightLog,
 } from '../types'
 import type { ExerciseSessionHistory } from '../lib/exerciseHistory'
 
@@ -55,6 +56,7 @@ export const queryKeys = {
     day: (date: string) => ['food-logs', date] as const,
   },
   dailyTargets: ['daily-targets'] as const,
+  weightLogs: ['weight-logs'] as const,
 }
 
 // --- Exercise Hooks ---
@@ -426,6 +428,35 @@ export function useDailyTargets() {
     queryKey: queryKeys.dailyTargets,
     queryFn: () => api.get<DailyTargets>('/me/daily-targets'),
     staleTime: 1000 * 60 * 5,
+  })
+}
+
+export function useWeightLogs() {
+  return useQuery({
+    queryKey: queryKeys.weightLogs,
+    queryFn: () => api.get<WeightLog[]>('/weight-logs'),
+    staleTime: 1000 * 60 * 5,
+  })
+}
+
+export function useLogWeight() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (data: { logged_on: string; weight_kg: number }) =>
+      api.post<WeightLog>('/weight-logs', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.weightLogs })
+    },
+  })
+}
+
+export function useDeleteWeightLog() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => api.delete(`/weight-logs/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.weightLogs })
+    },
   })
 }
 
