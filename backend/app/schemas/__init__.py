@@ -20,12 +20,9 @@ from app.schemas.workout import (
     ExerciseUpdate,
     LogSetsRequest,
     ModifySetsRequest,
-    ProgressEntry,
     ReplaceExerciseRequest,
     SetLog,
     SkippedSetInfo,
-    WorkoutTemplateExercise,
-    WorkoutTemplateResponse,
 )
 
 __all__ = [
@@ -44,7 +41,6 @@ __all__ = [
     "MesocycleResponse",
     "MesocycleUpdate",
     "ModifySetsRequest",
-    "ProgressEntry",
     "ReplaceExerciseRequest",
     "SetLog",
     "SkippedSetInfo",
@@ -52,6 +48,4 @@ __all__ = [
     "SplitListItem",
     "SplitResponse",
     "TokenResponse",
-    "WorkoutTemplateExercise",
-    "WorkoutTemplateResponse",
 ]

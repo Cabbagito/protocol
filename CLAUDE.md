@@ -53,11 +53,13 @@ bun run lint
 
 **Split** (`/api/splits`): Training template with ordered days. Each day has exercises (no sets/reps — those are a mesocycle concern, defaulting to 3 sets). Tables: `splits` -> `split_days` -> `split_day_exercises`. API accepts/returns nested create/update in one request.
 
-**Mesocycle** (`/api/mesocycles`): Core training block, always user-owned. Stores a `structure` JSONB column: `weeks[] -> sessions[] -> exercises[] -> sets[]`. Each set has `weight`, `reps`, `target_reps`, `suggested_weight`, `rir`, and `logged` flag. No separate WorkoutLog table — all workout data lives in the structure.
+**Mesocycle** (`/api/mesocycles`): Core training block, always user-owned. Stores a `structure` JSONB column: `weeks[] -> sessions[] -> exercises[] -> sets[]`. Each set has `weight`, `reps`, `suggested_weight`, and a `logged` flag. No separate WorkoutLog table — all workout data lives in the structure.
 
 **"Where we left off":** Scans structure for the first session with any unlogged sets.
 
-**Progression:** Computed eagerly when a session is saved. If all sets hit `target_reps`, next week's `suggested_weight` increases by equipment-specific increment (barbell 2.5, dumbbell 2.0, machine 5.0, cable 2.5).
+**Weight carry-forward:** When a workout is explicitly finished (`complete=true` on `/api/workouts/log`), each exercise's last logged weight is copied into `suggested_weight` on the next unlogged instance of that exercise. Reps always start blank. There is no automatic progression system (the earlier target-reps/increment-based one was removed).
+
+**Diet** (`/api/foods`, `/api/food-logs`, `/api/me/daily-targets`): Food items (pre-seeded + user-created, same `user_id` visibility pattern), per-day food log entries with denormalized macros, and per-user daily macro targets (kcal derived from macros).
 
 ## Environment Variables
 

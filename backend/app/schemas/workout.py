@@ -1,3 +1,5 @@
+from datetime import date
+
 from pydantic import BaseModel, Field
 
 
@@ -30,6 +32,9 @@ class LogSetsRequest(BaseModel):
     mesocycle_id: str
     week_index: int = Field(ge=0)
     session_index: int = Field(ge=0)
+    # Client's local calendar date; the server's own "today" is UTC and can
+    # be a day off for evening workouts.
+    logged_on: date | None = None
     sets: list[SetLog]
     notes: str | None = None
     exercise_updates: list[ExerciseUpdate] | None = None
@@ -45,30 +50,6 @@ class ModifySetsRequest(BaseModel):
     exercise_id: str
     action: str = Field(pattern=r"^(add|remove)$")
     set_num: int | None = None
-
-
-class WorkoutTemplateExercise(BaseModel):
-    exercise_id: str
-    exercise_name: str
-    muscle_group: str
-    equipment_type: str
-    sets: list[dict]
-
-
-class WorkoutTemplateResponse(BaseModel):
-    session_name: str
-    week_number: int
-    exercises: list[WorkoutTemplateExercise]
-
-
-class ProgressEntry(BaseModel):
-    date: str
-    week_number: int
-    max_weight: float
-    best_e1rm: float
-    total_reps: int
-    total_sets: int
-    volume: float
 
 
 class ExerciseNoteRequest(BaseModel):

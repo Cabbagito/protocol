@@ -18,6 +18,7 @@ async def log_sets(
     mesocycle_id: str,
     week_index: int,
     session_index: int,
+    logged_on: date_type | None,
     sets: list,
     notes: str | None,
     exercise_updates: list | None,
@@ -32,7 +33,7 @@ async def log_sets(
     week, session = get_session_from_structure(structure, week_index, session_index)
 
     # Update the session date and notes
-    session["date"] = date_type.today().isoformat()
+    session["date"] = (logged_on or date_type.today()).isoformat()
     if notes is not None:
         session["notes"] = notes
 

@@ -6,6 +6,7 @@ import { GearIcon } from '../components/Icons'
 import PageLoader from '../components/PageLoader'
 import AuroraBackground from '../components/AuroraBackground'
 import { getUserInfo } from '../lib/auth'
+import { localDateKey } from '../lib/dates'
 
 function ArrowIcon({ size = 18 }: { size?: number }) {
   return (
@@ -25,14 +26,6 @@ const ORDINAL_WORDS = [
 function mondayIndex(d: Date): number {
   // JS getDay: 0=Sun..6=Sat → shift so Monday is 0.
   return (d.getDay() + 6) % 7
-}
-
-/** Local YYYY-MM-DD (no tz drift from toISOString). */
-function localDateKey(d: Date): string {
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${y}-${m}-${day}`
 }
 
 export default function Dashboard() {
