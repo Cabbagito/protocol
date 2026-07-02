@@ -174,8 +174,9 @@ async def seed_default_splits(session: AsyncSession) -> int:
     return added
 
 
-async def ensure_admin_user(session: AsyncSession) -> None:
-    """Bootstrap the admin user on first run."""
+async def ensure_bootstrap_user(session: AsyncSession) -> None:
+    """Bootstrap the first user on first run. Further users are created
+    server-side via scripts/manage_users.py."""
     from app.core.config import settings
     from app.core.security import hash_password
 
@@ -189,7 +190,6 @@ async def ensure_admin_user(session: AsyncSession) -> None:
     admin = User(
         name=settings.admin_name,
         password_hash=hash_password(settings.app_password),
-        is_admin=True,
     )
     session.add(admin)
     await session.flush()
