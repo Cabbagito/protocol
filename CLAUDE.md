@@ -39,7 +39,7 @@ bun run lint
 
 **Auth:** Multi-user password-based JWT with bcrypt hashing. Each user has a unique password (no username). `APP_PASSWORD` env var bootstraps the admin user on first run. JWT `sub` contains the user UUID, tokens valid 1 year. `get_current_user` dependency returns a `User` object. Login iterates all users checking bcrypt hashes.
 
-**User management:** Admin-only endpoints at `/api/users` (list, create, delete) guarded by the `require_admin` dependency. Creating a user without a password generates a random one, returned once in the response; explicit passwords are rejected with 409 if they match any existing user's password (passwords identify users at login). `scripts/create-user.sh "Name" [password]` wraps the flow (env: `PROTOCOL_URL`, `ADMIN_PASSWORD`).
+**User management:** There is no admin role — every user is identical, and no user-management API exists. Users are managed server-side via `backend/scripts/manage_users.py` (list/create/delete, run with `docker exec` on the server); `scripts/create-user.sh "Name" [password]` wraps creation over SSH. Creating without a password generates a random one, printed once; explicit passwords are rejected if they match an existing user's (passwords identify users at login). Deleting a user cascades to all their data.
 
 **Database:** PostgreSQL with async SQLAlchemy and Alembic migrations. Migrations run automatically on startup (`alembic upgrade head`).
 

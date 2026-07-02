@@ -21,7 +21,6 @@ async def login(request: LoginRequest, db: AsyncSession = Depends(get_db)):
             return TokenResponse(
                 access_token=access_token,
                 user_name=user.name,
-                is_admin=user.is_admin,
             )
 
     raise HTTPException(

@@ -1,44 +1,30 @@
 #!/usr/bin/env bash
-# Create a new Protocol user via the admin API.
+# Create a new Protocol user on the production server over SSH.
 #
 # Usage:
 #   ./scripts/create-user.sh "Name"              # server generates the password
 #   ./scripts/create-user.sh "Name" "password"   # explicit password (must be unique)
 #
 # Env:
-#   PROTOCOL_URL     API base URL (default: https://protocol-42.com)
-#   ADMIN_PASSWORD   admin login password (prompted if unset)
+#   PROTOCOL_SSH_HOST    SSH host alias (default: protocol)
+#   PROTOCOL_CONTAINER   backend container name (default: protocol-backend-1)
+#
+# Requires operator SSH keys. See backend/scripts/manage_users.py for
+# list/delete, e.g.:
+#   ssh -o RequestTTY=no -o RemoteCommand=none protocol \
+#     "docker exec protocol-backend-1 uv run python -m scripts.manage_users list"
 set -euo pipefail
 
 NAME="${1:?usage: create-user.sh \"Name\" [password]}"
 PASSWORD="${2:-}"
-URL="${PROTOCOL_URL:-https://protocol-42.com}"
+HOST="${PROTOCOL_SSH_HOST:-protocol}"
+CONTAINER="${PROTOCOL_CONTAINER:-protocol-backend-1}"
 
-if [ -z "${ADMIN_PASSWORD:-}" ]; then
-  read -rs -p "Admin password: " ADMIN_PASSWORD
-  echo >&2
+if [ -n "$PASSWORD" ]; then
+  ARGS=$(printf '%q %q' "$NAME" "$PASSWORD")
+else
+  ARGS=$(printf '%q' "$NAME")
 fi
-export ADMIN_PASSWORD
 
-LOGIN_BODY=$(python3 -c 'import json, os; print(json.dumps({"password": os.environ["ADMIN_PASSWORD"]}))')
-TOKEN=$(curl -fsS -X POST "$URL/api/auth/login" \
-  -H 'Content-Type: application/json' \
-  -d "$LOGIN_BODY" | python3 -c 'import sys, json; print(json.load(sys.stdin)["access_token"])')
-
-CREATE_BODY=$(python3 -c '
-import json, sys
-body = {"name": sys.argv[1]}
-if len(sys.argv) > 2 and sys.argv[2]:
-    body["password"] = sys.argv[2]
-print(json.dumps(body))
-' "$NAME" "$PASSWORD")
-
-curl -fsS -X POST "$URL/api/users" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H 'Content-Type: application/json' \
-  -d "$CREATE_BODY" | python3 -c '
-import sys, json
-u = json.load(sys.stdin)
-print("Created user: " + u["name"] + " (" + u["id"] + ")")
-print("Password:     " + u["password"])
-'
+ssh -o RequestTTY=no -o RemoteCommand=none "$HOST" \
+  "docker exec $CONTAINER uv run python -m scripts.manage_users create $ARGS"

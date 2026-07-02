@@ -1,6 +1,5 @@
 import secrets
 
-from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -10,6 +9,10 @@ from app.models.user import User
 # Unambiguous alphabet (no 0/O, 1/l/I) so passwords are easy to read aloud.
 _PASSWORD_ALPHABET = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789"
 _PASSWORD_LENGTH = 12
+
+
+class PasswordCollisionError(ValueError):
+    """The password already belongs to another user."""
 
 
 def generate_password() -> str:
@@ -35,10 +38,9 @@ async def create_user(db: AsyncSession, name: str, password: str | None) -> tupl
         while password_collides(password, users):
             password = generate_password()
     elif password_collides(password, users):
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Password already in use by another user — passwords identify "
-            "users at login and must be unique",
+        raise PasswordCollisionError(
+            "Password already in use by another user — passwords identify "
+            "users at login and must be unique"
         )
 
     user = User(name=name, password_hash=hash_password(password))
@@ -48,17 +50,13 @@ async def create_user(db: AsyncSession, name: str, password: str | None) -> tupl
     return user, password
 
 
-async def delete_user(db: AsyncSession, user_id: str, current_user: User) -> None:
-    if user_id == current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Cannot delete your own account",
-        )
-
+async def delete_user(db: AsyncSession, user_id: str) -> User:
+    """Delete a user by id; owned data is removed via FK cascades."""
     result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
     if user is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+        raise LookupError(f"No user with id {user_id}")
 
     await db.delete(user)
     await db.commit()
+    return user

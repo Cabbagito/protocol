@@ -11,7 +11,6 @@ interface LoginProps {
 interface LoginResponse {
   access_token: string
   user_name: string
-  is_admin: boolean
 }
 
 export default function Login({ onLogin }: LoginProps) {
@@ -36,7 +35,7 @@ export default function Login({ onLogin }: LoginProps) {
     try {
       const response = await api.post<LoginResponse>('/auth/login', { password })
       setToken(response.access_token)
-      setUserInfo({ name: response.user_name, is_admin: response.is_admin })
+      setUserInfo({ name: response.user_name })
 
       // Clear splash flag so it plays after login
       sessionStorage.removeItem(SPLASH_STORAGE_KEY)
