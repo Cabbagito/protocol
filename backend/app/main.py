@@ -17,6 +17,7 @@ from app.routers import (
     health,
     mesocycles,
     splits,
+    users,
     workouts,
 )
 
@@ -74,3 +75,4 @@ app.include_router(mesocycles.router, prefix="/api/mesocycles", tags=["mesocycle
 app.include_router(workouts.router, prefix="/api/workouts", tags=["workouts"])
 app.include_router(food.router, prefix="/api", tags=["diet"])
 app.include_router(daily_targets.router, prefix="/api/me", tags=["diet"])
+app.include_router(users.router, prefix="/api/users", tags=["users"])
