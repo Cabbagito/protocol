@@ -231,3 +231,9 @@ export interface DailyTargetsUpdate {
   carbs_g: number
   fat_g: number
 }
+
+export interface WeightLog {
+  id: string
+  logged_on: string
+  weight_kg: number
+}

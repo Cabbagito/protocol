@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import PageLoader from '../components/PageLoader'
 import AddFoodSheet from '../components/AddFoodSheet'
+import BodyweightCard from '../components/BodyweightCard'
 import BottomSheet from '../components/BottomSheet'
 import AuroraBackground from '../components/AuroraBackground'
 import { useToast } from '../components/Toast'
@@ -210,6 +211,8 @@ export default function Diet() {
             </div>
           )}
         </div>
+
+        <BodyweightCard />
       </div>
 
       {/* Floating add button */}
