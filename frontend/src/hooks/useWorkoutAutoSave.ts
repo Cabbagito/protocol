@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useToast } from '../components/Toast'
 import { useLogSets, queryKeys } from '../api/hooks'
+import { todayIso } from '../lib/dates'
 import type { WorkingSet, WorkoutTemplate } from '../types'
 
 interface UseWorkoutAutoSaveParams {
@@ -39,6 +40,9 @@ export function useWorkoutAutoSave({
   const [isSaving, setIsSaving] = useState(false)
   const pendingSavesRef = useRef(0)
   const prevSkippedSetsRef = useRef<string>('')
+  // Serializes all log-sets requests: without this, two in-flight saves can
+  // resolve out of order and the older snapshot clobbers the newer one.
+  const saveChainRef = useRef<Promise<void>>(Promise.resolve())
 
   const triggerAutoSave = useCallback((currentSets: WorkingSet[], currentSkipped?: Set<string>, currentSkippedSets?: Set<string>) => {
     if (!mesocycleId || !template || isFutureSession || modifyingRef.current) return
@@ -67,10 +71,11 @@ export function useWorkoutAutoSave({
     pendingSavesRef.current++
     setIsSaving(true)
 
-    logSets.mutateAsync({
+    const payload = {
       mesocycle_id: mesocycleId,
       week_index: template.week_index,
       session_index: template.session_index,
+      logged_on: todayIso(),
       sets: completed.map(s => ({
         exercise_id: s.exercise_id,
         set_num: s.set_num,
@@ -87,7 +92,9 @@ export function useWorkoutAutoSave({
         weight: s.weight,
         reps: s.reps,
       })) : null,
-    }).then(() => {
+    }
+
+    saveChainRef.current = saveChainRef.current.then(() => logSets.mutateAsync(payload)).then(() => {
       // Update cached templates so navigating away and back shows correct logged state
       const loggedKeys = new Set(
         completed.map(s => `${s.exercise_id}:${s.set_num}`)
@@ -165,6 +172,10 @@ export function useWorkoutAutoSave({
   const prevFingerprintRef = useRef<string>('')
   const debouncedSaveRef = useRef<ReturnType<typeof setTimeout>>()
 
+  const cancelDebouncedSave = useCallback(() => {
+    if (debouncedSaveRef.current) clearTimeout(debouncedSaveRef.current)
+  }, [])
+
   // Trigger auto-save when completed count or skipped state changes (immediate)
   useEffect(() => {
     if (!initialized) return
@@ -201,5 +212,5 @@ export function useWorkoutAutoSave({
     }
   }, [sets, initialized, triggerAutoSave, skippedExercises, skippedSets])
 
-  return { isSaving, setIsSaving, pendingSavesRef, logSets }
+  return { isSaving, setIsSaving, pendingSavesRef, logSets, saveChainRef, cancelDebouncedSave }
 }

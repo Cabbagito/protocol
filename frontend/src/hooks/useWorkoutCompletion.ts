@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { useToast } from '../components/Toast'
 import { useLogSets, queryKeys } from '../api/hooks'
+import { todayIso } from '../lib/dates'
 import type { WorkingSet, WorkoutTemplate, Mesocycle } from '../types'
 
 function getNextSession(weekIndex: number, sessionIndex: number, mesocycle: Mesocycle) {
@@ -27,6 +28,8 @@ interface UseWorkoutCompletionParams {
   setIsSaving: (saving: boolean) => void
   pendingSavesRef: React.MutableRefObject<number>
   logSets: ReturnType<typeof useLogSets>
+  saveChainRef: React.MutableRefObject<Promise<void>>
+  cancelDebouncedSave: () => void
 }
 
 export function useWorkoutCompletion({
@@ -40,6 +43,8 @@ export function useWorkoutCompletion({
   setIsSaving,
   pendingSavesRef,
   logSets,
+  saveChainRef,
+  cancelDebouncedSave,
 }: UseWorkoutCompletionParams) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -51,18 +56,19 @@ export function useWorkoutCompletion({
   }, [mesocycle, template])
 
   const handleFinishOrNext = async () => {
-    if (pendingSavesRef.current > 0) {
-      setIsSaving(true)
-      await new Promise<void>(resolve => {
-        const check = setInterval(() => {
-          if (pendingSavesRef.current === 0) { clearInterval(check); resolve() }
-        }, 100)
-      })
-    }
+    // A debounced edit-save may still be queued; cancel it — the final save
+    // below carries the full current state (including drafts) itself.
+    cancelDebouncedSave()
 
-    // Send final save with complete=true to trigger progression + performance tracking
+    if (pendingSavesRef.current > 0) setIsSaving(true)
+    // Wait for all in-flight saves; the chain never rejects (errors are
+    // handled per-save inside useWorkoutAutoSave).
+    await saveChainRef.current
+
+    // Send final save with complete=true to carry weights forward
     if (mesocycleId && template && !isFutureSession) {
       const completed = sets.filter(s => s.completed && !skippedExercises.has(s.exercise_id))
+      const uncompleted = sets.filter(s => !s.completed && !skippedExercises.has(s.exercise_id) && !skippedSets.has(`${s.exercise_id}:${s.set_num}`))
       const exerciseUpdates = template.exercises.map(ex => ({
         exercise_id: ex.exercise_id,
         skipped: skippedExercises.has(ex.exercise_id),
@@ -72,6 +78,7 @@ export function useWorkoutCompletion({
           mesocycle_id: mesocycleId,
           week_index: template.week_index,
           session_index: template.session_index,
+          logged_on: todayIso(),
           sets: completed.map(s => ({
             exercise_id: s.exercise_id,
             set_num: s.set_num,
@@ -85,10 +92,18 @@ export function useWorkoutCompletion({
             const parts = key.split(':')
             return { exercise_id: parts[0]!, set_num: parseInt(parts[1]!) }
           }) : null,
+          draft_sets: uncompleted.length > 0 ? uncompleted.map(s => ({
+            exercise_id: s.exercise_id,
+            set_num: s.set_num,
+            weight: s.weight,
+            reps: s.reps,
+          })) : null,
           complete: true,
         })
       } catch {
         toast.showError('Failed to finalize workout')
+      } finally {
+        setIsSaving(false)
       }
     }
 
