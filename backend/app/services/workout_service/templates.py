@@ -26,6 +26,7 @@ async def get_next_template(db: AsyncSession, mesocycle_id: str, user_id: str) -
         "week_number": week["week_number"],
         "week_index": pos["week_index"],
         "session_index": pos["session_index"],
+        "skipped": session.get("skipped", False),
         "exercises": session["exercises"],
         "exercise_notes": structure.get("exercise_notes", {}),
     }
@@ -43,6 +44,7 @@ async def get_specific_template(
         "week_number": week["week_number"],
         "week_index": week_index,
         "session_index": session_index,
+        "skipped": session.get("skipped", False),
         "exercises": session["exercises"],
         "exercise_notes": mesocycle.structure.get("exercise_notes", {}),
     }

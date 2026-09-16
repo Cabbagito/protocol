@@ -88,6 +88,7 @@ export interface MesoSession {
   day_order: number
   date: string | null
   notes: string | null
+  skipped?: boolean
   exercises: MesoExercise[]
 }
 
@@ -122,6 +123,7 @@ export interface WorkoutTemplate {
   week_number: number
   week_index: number
   session_index: number
+  skipped: boolean
   exercises: MesoExercise[]
   exercise_notes?: Record<string, string>
 }
@@ -145,6 +147,7 @@ export interface WorkoutDetailResponse {
   week_number: number
   date: string | null
   notes: string | null
+  skipped: boolean
   exercises: MesoExercise[]
   exercise_notes?: Record<string, string>
 }

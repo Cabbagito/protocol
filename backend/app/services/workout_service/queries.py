@@ -95,6 +95,7 @@ async def get_workout_detail(
         "week_number": week["week_number"],
         "date": session.get("date"),
         "notes": session.get("notes"),
+        "skipped": session.get("skipped", False),
         "exercises": session["exercises"],
         "exercise_notes": mesocycle.structure.get("exercise_notes", {}),
     }

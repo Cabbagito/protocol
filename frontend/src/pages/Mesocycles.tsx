@@ -9,7 +9,7 @@ import {
   useCreateMesocycle,
   useSplits,
 } from '../api/hooks'
-import { getCurrentPosition } from '../lib/mesoUtils'
+import { getCurrentPosition, isSessionDone, isSessionSkipped } from '../lib/mesoUtils'
 import { getMuscleColor } from '../lib/muscleColors'
 import type { MesocycleListItem, Mesocycle } from '../types'
 
@@ -325,10 +325,9 @@ function buildTicks(meso: MesocycleListItem | Mesocycle): ('done' | 'current' | 
       const week = meso.structure.weeks[wi]!
       for (let si = 0; si < week.sessions.length; si++) {
         const session = week.sessions[si]!
-        const nonSkipped = session.exercises.filter((ex) => !ex.skipped)
-        const allLogged =
-          nonSkipped.length > 0 && nonSkipped.every((ex) => ex.sets.every((s) => s.logged))
-        if (allLogged) ticks.push('done')
+        // Skipped sessions are out of the count entirely, so no tick.
+        if (isSessionSkipped(session) || session.exercises.every((ex) => ex.skipped)) continue
+        if (isSessionDone(session)) ticks.push('done')
         else if (pos && pos.weekIndex === wi && pos.sessionIndex === si) ticks.push('current')
         else ticks.push('queued')
       }

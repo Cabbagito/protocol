@@ -18,6 +18,7 @@ interface UseWorkoutAutoSaveParams {
   modifyingRef: React.MutableRefObject<boolean>
   prevCompletedRef: React.MutableRefObject<number>
   prevSkippedRef: React.MutableRefObject<string>
+  prevSkippedSetsRef: React.MutableRefObject<string>
 }
 
 export function useWorkoutAutoSave({
@@ -33,19 +34,19 @@ export function useWorkoutAutoSave({
   modifyingRef,
   prevCompletedRef,
   prevSkippedRef,
+  prevSkippedSetsRef,
 }: UseWorkoutAutoSaveParams) {
   const toast = useToast()
   const queryClient = useQueryClient()
   const logSets = useLogSets()
   const [isSaving, setIsSaving] = useState(false)
   const pendingSavesRef = useRef(0)
-  const prevSkippedSetsRef = useRef<string>('')
   // Serializes all log-sets requests: without this, two in-flight saves can
   // resolve out of order and the older snapshot clobbers the newer one.
   const saveChainRef = useRef<Promise<void>>(Promise.resolve())
 
   const triggerAutoSave = useCallback((currentSets: WorkingSet[], currentSkipped?: Set<string>, currentSkippedSets?: Set<string>) => {
-    if (!mesocycleId || !template || isFutureSession || modifyingRef.current) return
+    if (!mesocycleId || !template || template.skipped || isFutureSession || modifyingRef.current) return
     const skipped = currentSkipped ?? skippedExercises
     const skipSets = currentSkippedSets ?? skippedSets
     const completed = currentSets.filter(s => s.completed && !skipped.has(s.exercise_id))
@@ -192,7 +193,7 @@ export function useWorkoutAutoSave({
     prevCompletedRef.current = count
     prevSkippedRef.current = skippedKey
     prevSkippedSetsRef.current = skippedSetsKey
-  }, [sets, initialized, triggerAutoSave, skippedExercises, skippedSets, prevCompletedRef, prevSkippedRef])
+  }, [sets, initialized, triggerAutoSave, skippedExercises, skippedSets, prevCompletedRef, prevSkippedRef, prevSkippedSetsRef])
 
   // Debounced auto-save for weight/reps edits on any sets
   useEffect(() => {
