@@ -12,6 +12,7 @@ interface UseWorkoutStateParams {
   bumpAnim: () => void
   prevCompletedRef: React.MutableRefObject<number>
   prevSkippedRef: React.MutableRefObject<string>
+  prevSkippedSetsRef: React.MutableRefObject<string>
 }
 
 export function useWorkoutState({
@@ -24,6 +25,7 @@ export function useWorkoutState({
   bumpAnim,
   prevCompletedRef,
   prevSkippedRef,
+  prevSkippedSetsRef,
 }: UseWorkoutStateParams) {
   const [sets, setSets] = useState<WorkingSet[]>([])
   const [initialized, setInitialized] = useState(false)
@@ -42,8 +44,9 @@ export function useWorkoutState({
     setExerciseNotes({})
     prevCompletedRef.current = 0
     prevSkippedRef.current = ''
+    prevSkippedSetsRef.current = ''
     animPhaseRef.current.clear()
-  }, [weekParam, sessionParam, animPhaseRef, prevCompletedRef, prevSkippedRef])
+  }, [weekParam, sessionParam, animPhaseRef, prevCompletedRef, prevSkippedRef, prevSkippedSetsRef])
 
   // Initialize from template
   useEffect(() => {
@@ -70,11 +73,14 @@ export function useWorkoutState({
       setSkippedExercises(initialSkipped)
       setSkippedSets(initialSkippedSets)
       setExerciseNotes(template.exercise_notes ?? {})
+      // Seed the auto-save fingerprints from the template so merely opening
+      // a session never fires a save (which would re-stamp its date).
       prevCompletedRef.current = initialSets.filter(s => s.completed).length
       prevSkippedRef.current = [...initialSkipped].sort().join(',')
+      prevSkippedSetsRef.current = [...initialSkippedSets].sort().join(',')
       setInitialized(true)
     }
-  }, [template, initialized, prevCompletedRef, prevSkippedRef])
+  }, [template, initialized, prevCompletedRef, prevSkippedRef, prevSkippedSetsRef])
 
   const updateSet = useCallback((exerciseId: string, setNum: number, field: keyof WorkingSet, value: number | boolean | string) => {
     if (isFutureSession) return
@@ -134,37 +140,30 @@ export function useWorkoutState({
   }, [isFutureSession, setAnimKey, bumpAnim, animPhaseRef])
 
   const toggleSkip = useCallback((exerciseId: string) => {
+    if (isFutureSession) return
+    const wasSkipped = skippedExercises.has(exerciseId)
     setSkippedExercises(prev => {
       const next = new Set(prev)
-      if (next.has(exerciseId)) {
-        next.delete(exerciseId)
-        // Also clear individual set skips for this exercise
-        setSkippedSets(prevSets => {
-          const nextSets = new Set(prevSets)
-          for (const key of nextSets) {
-            if (key.startsWith(`${exerciseId}:`)) nextSets.delete(key)
-          }
-          return nextSets
-        })
+      if (wasSkipped) next.delete(exerciseId)
+      else next.add(exerciseId)
+      return next
+    })
+    setSkippedSets(prev => {
+      const next = new Set(prev)
+      if (wasSkipped) {
+        // Un-skipping restores every set of the exercise
+        for (const key of next) {
+          if (key.startsWith(`${exerciseId}:`)) next.delete(key)
+        }
       } else {
-        next.add(exerciseId)
-        // Mark all unlogged sets as skipped
-        setSets(currentSets => {
-          setSkippedSets(prevSets => {
-            const nextSets = new Set(prevSets)
-            for (const s of currentSets) {
-              if (s.exercise_id === exerciseId && !s.completed) {
-                nextSets.add(`${exerciseId}:${s.set_num}`)
-              }
-            }
-            return nextSets
-          })
-          return currentSets
-        })
+        // Skipping marks every still-open set; logged sets keep their data
+        for (const s of sets) {
+          if (s.exercise_id === exerciseId && !s.completed) next.add(`${exerciseId}:${s.set_num}`)
+        }
       }
       return next
     })
-  }, [])
+  }, [isFutureSession, skippedExercises, sets])
 
   const toggleSkipSet = useCallback((exerciseId: string, setNum: number) => {
     const key = `${exerciseId}:${setNum}`

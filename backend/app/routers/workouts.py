@@ -12,6 +12,7 @@ from app.schemas.workout import (
     RemoveExerciseRequest,
     ReorderExerciseRequest,
     ReplaceExerciseRequest,
+    SkipSessionRequest,
 )
 from app.services import workout_service
 
@@ -154,6 +155,22 @@ async def remove_exercise(
         session_index=data.session_index,
         exercise_id=data.exercise_id,
         apply_to_future=data.apply_to_future,
+    )
+
+
+@router.post("/skip-session")
+async def skip_session(
+    data: SkipSessionRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return await workout_service.set_session_skipped(
+        db,
+        current_user.id,
+        mesocycle_id=data.mesocycle_id,
+        week_index=data.week_index,
+        session_index=data.session_index,
+        skipped=data.skipped,
     )
 
 

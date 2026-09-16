@@ -7,7 +7,11 @@ from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.domain.progression import build_mesocycle_structure, derive_fields
+from app.domain.progression import (
+    build_mesocycle_structure,
+    count_total_workouts,
+    derive_fields,
+)
 from app.models.exercise import Exercise
 from app.models.mesocycle import Mesocycle
 from app.models.split import Split, SplitDay, SplitDayExercise
@@ -174,13 +178,7 @@ def mesocycle_to_response(
 
 def mesocycle_to_list_item(mesocycle: Mesocycle) -> dict:
     derived = derive_fields(mesocycle.structure)
-    weeks = mesocycle.structure.get("weeks", [])
-    total_workouts = sum(
-        1
-        for week in weeks
-        for session in week.get("sessions", [])
-        if any(not ex.get("skipped", False) for ex in session.get("exercises", []))
-    )
+    total_workouts = count_total_workouts(mesocycle.structure)
     return {
         "id": mesocycle.id,
         "name": mesocycle.name,

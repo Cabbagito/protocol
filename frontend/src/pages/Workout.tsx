@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useToast } from '../components/Toast'
 import {
   useMesocycle, useUpdateExerciseNote, useReplaceExercise, useAddExercise,
-  useReorderExercise, useRemoveExerciseFromSession, useExerciseHistory, queryKeys,
+  useReorderExercise, useRemoveExerciseFromSession, useExerciseHistory, useSkipSession, queryKeys,
 } from '../api/hooks'
 import { api } from '../api/client'
 import PageLoader from '../components/PageLoader'
@@ -74,6 +74,7 @@ export default function Workout() {
   const addExerciseMutation = useAddExercise()
   const reorderExerciseMutation = useReorderExercise()
   const removeExerciseMutation = useRemoveExerciseFromSession()
+  const skipSessionMutation = useSkipSession()
 
   // UI state ──────────────────────────────────────────────────────────
   const [noteModal, setNoteModal] = useState<{ exerciseId: string; exerciseName: string } | null>(null)
@@ -92,6 +93,7 @@ export default function Workout() {
   const modifyingRef = useRef(false)
   const prevCompletedRef = useRef(0)
   const prevSkippedRef = useRef<string>('')
+  const prevSkippedSetsRef = useRef<string>('')
 
   // Derived: current position in meso (for back-to-current CTA on previews)
   const currentPos = useMemo(() => {
@@ -99,10 +101,13 @@ export default function Workout() {
     return getCurrentPosition(mesocycle.structure)
   }, [mesocycle])
 
+  // Only later *weeks* are locked as previews; any session in the current
+  // week can be logged out of order.
   const isFutureSession = useMemo(() => {
     if (!template || !currentPos) return false
     return template.week_index > currentPos.weekIndex
   }, [template, currentPos])
+  const isSkippedSession = !!template?.skipped
 
   // Workout hooks ─────────────────────────────────────────────────────
   const { animPhaseRef, bumpAnim, setAnimKey } = useAnimPhase()
@@ -114,13 +119,13 @@ export default function Workout() {
     toggleSkip, resetForReplace,
   } = useWorkoutState({
     template, isFutureSession, weekParam, sessionParam,
-    animPhaseRef, setAnimKey, bumpAnim, prevCompletedRef, prevSkippedRef,
+    animPhaseRef, setAnimKey, bumpAnim, prevCompletedRef, prevSkippedRef, prevSkippedSetsRef,
   })
 
   const { isSaving, setIsSaving, pendingSavesRef, logSets, saveChainRef, cancelDebouncedSave } = useWorkoutAutoSave({
     mesocycleId, template, isFutureSession, sets, initialized,
     skippedExercises, skippedSets, animPhaseRef, bumpAnim,
-    modifyingRef, prevCompletedRef, prevSkippedRef,
+    modifyingRef, prevCompletedRef, prevSkippedRef, prevSkippedSetsRef,
   })
 
   const { handleAddSet, handleRemoveSet } = useSetModification({
@@ -214,6 +219,28 @@ export default function Workout() {
     }
   }, [mesocycleId, template, removeExerciseMutation, queryClient, toast, resetForReplace])
 
+  // Skip / restore the whole session. Logged sets are kept server-side, so
+  // undo brings the workout back exactly as it was.
+  const handleSetSessionSkipped = useCallback(async (skipped: boolean) => {
+    if (!mesocycleId || !template) return
+    if (skipped && !confirm('Skip this workout? You can undo this later.')) return
+    cancelDebouncedSave()
+    await saveChainRef.current
+    try {
+      await skipSessionMutation.mutateAsync({
+        mesocycle_id: mesocycleId,
+        week_index: template.week_index,
+        session_index: template.session_index,
+        skipped,
+      })
+      // Pin the URL to this session: the param-less route re-resolves to
+      // "where we left off", which has just moved.
+      navigate(`/workout/${mesocycleId}?week=${template.week_index}&session=${template.session_index}`, { replace: true })
+    } catch {
+      toast.showError(skipped ? 'Failed to skip workout' : 'Failed to restore workout')
+    }
+  }, [mesocycleId, template, skipSessionMutation, navigate, toast, cancelDebouncedSave, saveChainRef])
+
   // Reorder helper (used by the menu sheet)
   const handleReorderExercise = useCallback(async (exerciseIndex: number, direction: 'up' | 'down', visibleIdx: number) => {
     if (!mesocycleId || !template) return
@@ -237,24 +264,29 @@ export default function Workout() {
   }, [mesocycleId, template, reorderExerciseMutation, queryClient, toast, resetForReplace])
 
   // Visible (un-removed) exercises with sets attached ─────────────────
+  // Skipped exercises stay in the list with `skipped: true` (dimmed, with an
+  // undo) rather than vanishing; they count as done for session completion.
   const exerciseList = useMemo(() => {
     if (!template) return [] as Array<MesoExercise & {
       exerciseIndex: number
       workingSets: WorkingSet[]
       allDone: boolean
+      skipped: boolean
     }>
     return template.exercises
       .map((ex, idx) => {
         const workingSets = sets.filter(s => s.exercise_id === ex.exercise_id)
-        const allDone = workingSets.length > 0 && workingSets.every(s => s.completed || skippedSets.has(`${ex.exercise_id}:${s.set_num}`))
+        const skipped = skippedExercises.has(ex.exercise_id)
+        const allDone = skipped || (workingSets.length > 0 && workingSets.every(s => s.completed || skippedSets.has(`${ex.exercise_id}:${s.set_num}`)))
         return {
           ...ex,
           exerciseIndex: idx,
           workingSets,
           allDone,
+          skipped,
         }
       })
-      .filter(ex => !removedExercises.has(ex.exercise_id) && !skippedExercises.has(ex.exercise_id))
+      .filter(ex => !removedExercises.has(ex.exercise_id))
   }, [template, sets, removedExercises, skippedExercises, skippedSets])
 
   // Loading / empty states ────────────────────────────────────────────
@@ -279,7 +311,8 @@ export default function Workout() {
   const currentEx = exerciseList[curIdx]
 
   const allLogged = exerciseList.length > 0 && exerciseList.every(ex => ex.allDone)
-  const showFinishBar = !isFutureSession && allLogged && !keyboardOpen
+  const canLog = !isFutureSession && !isSkippedSession
+  const showFinishBar = canLog && allLogged && !keyboardOpen
 
   // Active set within current exercise: override (chip tap) > first unlogged > last
   let activeSetIdx = 0
@@ -365,7 +398,7 @@ export default function Workout() {
         </div>
 
         {/* ── Future-session banner (preview only) ── */}
-        {isFutureSession && (
+        {isFutureSession && !isSkippedSession && (
           <div
             style={{
               marginTop: 14, padding: '10px 12px', borderRadius: 12,
@@ -379,15 +412,65 @@ export default function Workout() {
           </div>
         )}
 
+        {/* ── Skipped-session banner ── */}
+        {isSkippedSession && (
+          <div
+            style={{
+              marginTop: 14, padding: '14px 14px 12px', borderRadius: 14,
+              background: 'rgba(148,163,184,0.07)',
+              border: '1px dashed rgba(148,163,184,0.3)',
+            }}
+          >
+            <div
+              style={{
+                fontSize: 10, color: 'var(--text-m)', letterSpacing: '0.22em',
+                fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontWeight: 600,
+                textTransform: 'uppercase',
+              }}
+            >
+              Workout skipped
+            </div>
+            <div style={{ fontSize: 13, color: 'var(--text-2)', marginTop: 6, lineHeight: 1.4 }}>
+              This session is marked as skipped and won't count toward the mesocycle.
+              {exerciseList.some(ex => ex.workingSets.some(s => s.completed)) && ' Sets you already logged are kept.'}
+            </div>
+            <button
+              type="button"
+              onClick={() => handleSetSessionSkipped(false)}
+              disabled={skipSessionMutation.isPending}
+              style={{
+                marginTop: 12, width: '100%', height: 44, borderRadius: 12,
+                background: 'rgba(255,255,255,0.05)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                color: 'var(--text-1)', fontWeight: 600, fontSize: 13,
+                cursor: 'pointer',
+                opacity: skipSessionMutation.isPending ? 0.6 : 1,
+              }}
+            >
+              Undo skip
+            </button>
+          </div>
+        )}
+
         {/* ── Progress rail ── */}
-        {!isFutureSession && exerciseList.length > 0 && (
+        {canLog && exerciseList.length > 0 && (
           <div style={{ marginTop: 14 }}>
             <ProgressRail exercises={exerciseList} currentIndex={curIdx} />
           </div>
         )}
 
+        {/* ── Skipped exercise: dimmed shell with undo ── */}
+        {canLog && currentEx && currentEx.skipped && (
+          <SkippedExerciseState
+            currentEx={currentEx}
+            onUnskip={() => toggleSkip(currentEx.exercise_id)}
+            onAdvanceExercise={() => setCurIdxOverride(curIdx + 1)}
+            hasNextExercise={curIdx < exerciseList.length - 1}
+          />
+        )}
+
         {/* ── State A: logging (and exercise-complete: same shell, "Next exercise" CTA) ── */}
-        {!isFutureSession && currentEx && activeSet && (
+        {canLog && currentEx && !currentEx.skipped && activeSet && (
           <LoggingState
             currentEx={currentEx}
             activeSet={activeSet}
@@ -424,7 +507,7 @@ export default function Workout() {
         )}
 
         {/* ── Workout list (always visible during logging) ── */}
-        {!isFutureSession && exerciseList.length > 0 && (
+        {canLog && exerciseList.length > 0 && (
           <div style={{ marginTop: 28 }}>
             <div
               style={{
@@ -437,7 +520,9 @@ export default function Workout() {
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {exerciseList.map((ex, i) => {
-                const status: 'done' | 'current' | 'queued' = ex.allDone
+                const status: 'done' | 'current' | 'queued' | 'skipped' = ex.skipped
+                  ? 'skipped'
+                  : ex.allDone
                   ? 'done'
                   : i === curIdx
                   ? 'current'
@@ -457,7 +542,7 @@ export default function Workout() {
         )}
 
         {/* ── Add exercise CTA below the list ── */}
-        {!isFutureSession && (
+        {canLog && (
           <button
             type="button"
             onClick={() => setAddExerciseOpen(true)}
@@ -475,11 +560,32 @@ export default function Workout() {
           </button>
         )}
 
-        {/* ── Go-to-current CTA for preview screens ── */}
-        {!keyboardOpen && isFutureSession && currentPos && (
+        {/* ── Skip the whole workout ── */}
+        {canLog && !keyboardOpen && (
           <button
             type="button"
-            onClick={() => navigate(`/workout/${mesocycleId}`)}
+            onClick={() => handleSetSessionSkipped(true)}
+            disabled={skipSessionMutation.isPending}
+            style={{
+              marginTop: 10, width: '100%', padding: '12px 0',
+              fontSize: 12, fontWeight: 500, letterSpacing: '0.05em',
+              color: 'var(--text-m)',
+              borderRadius: 14,
+              border: 'none',
+              background: 'transparent',
+              cursor: 'pointer',
+              opacity: skipSessionMutation.isPending ? 0.6 : 1,
+            }}
+          >
+            Skip this workout
+          </button>
+        )}
+
+        {/* ── Go-to-current CTA for preview / skipped screens ── */}
+        {!keyboardOpen && (isFutureSession || isSkippedSession) && currentPos && (
+          <button
+            type="button"
+            onClick={() => navigate(`/workout/${mesocycleId}?week=${currentPos.weekIndex}&session=${currentPos.sessionIndex}`)}
             style={{
               marginTop: 20, width: '100%', height: 52, borderRadius: 14,
               background: 'rgba(var(--accent-rgb),0.15)',
@@ -535,16 +641,26 @@ export default function Workout() {
           <BottomSheet
             open={menuOpen}
             onClose={close}
-            title={currentEx.exercise_name}
-            actions={[
+            title={canLog ? currentEx.exercise_name : template.session_name}
+            actions={canLog ? [
               { label: 'Add note', onClick: () => { close(); setNoteModal({ exerciseId: currentEx.exercise_id, exerciseName: currentEx.exercise_name }) } },
               { label: 'View mesocycle', onClick: () => { close(); navigate(`/mesocycles/${mesocycleId}`) } },
               { label: 'Replace exercise', onClick: () => { close(); setReplaceModal({ exerciseId: currentEx.exercise_id, exerciseIndex: currentEx.exerciseIndex, muscleGroup: currentEx.muscle_group, equipmentType: currentEx.equipment_type }) } },
               { label: 'Add a set', onClick: () => { close(); handleAddSet(currentEx.exercise_id) } },
               ...(curIdx > 0 ? [{ label: 'Move up', onClick: () => { close(); handleReorderExercise(currentEx.exerciseIndex, 'up', curIdx) } }] : []),
               ...(curIdx < exerciseList.length - 1 ? [{ label: 'Move down', onClick: () => { close(); handleReorderExercise(currentEx.exerciseIndex, 'down', curIdx) } }] : []),
-              { label: 'Skip exercise', onClick: () => { close(); toggleSkip(currentEx.exercise_id) } },
+              {
+                label: currentEx.skipped ? 'Unskip exercise' : 'Skip exercise',
+                onClick: () => {
+                  close()
+                  toggleSkip(currentEx.exercise_id)
+                  if (!currentEx.skipped) setCurIdxOverride(null)
+                },
+              },
               { label: 'Remove from workout', variant: 'danger', onClick: () => { close(); handleRemoveExercise(currentEx.exercise_id) } },
+            ] : [
+              // Preview / skipped sessions: no exercise edits, nothing would be saved.
+              { label: 'View mesocycle', onClick: () => { close(); navigate(`/mesocycles/${mesocycleId}`) } },
             ]}
           />
         )
@@ -827,6 +943,85 @@ function LoggingState({
 }
 
 /* ─────────────────────────────────────────────────────────────────── */
+/*  Skipped exercise — same shell as logging, but dimmed with an undo  */
+/* ─────────────────────────────────────────────────────────────────── */
+
+interface SkippedExerciseStateProps {
+  currentEx: MesoExercise & { workingSets: WorkingSet[] }
+  onUnskip: () => void
+  onAdvanceExercise: () => void
+  hasNextExercise: boolean
+}
+
+function SkippedExerciseState({ currentEx, onUnskip, onAdvanceExercise, hasNextExercise }: SkippedExerciseStateProps) {
+  const c = getMuscleColor(currentEx.muscle_group)
+  const loggedCount = currentEx.workingSets.filter(s => s.completed).length
+
+  return (
+    <div style={{ marginTop: 28, textAlign: 'center' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 14, opacity: 0.5 }}>
+        <MuscleAccent group={currentEx.muscle_group} variant="dot" />
+      </div>
+      <div
+        style={{
+          fontSize: 36, fontWeight: 700,
+          color: 'var(--text-2)',
+          lineHeight: 1.05, letterSpacing: '-0.025em',
+          padding: '0 12px',
+          textDecoration: 'line-through',
+          textDecorationColor: 'rgba(148,163,184,0.5)',
+        }}
+      >
+        {currentEx.exercise_name}
+      </div>
+      <div
+        style={{
+          fontSize: 11, color: 'var(--text-m)', marginTop: 8, letterSpacing: '0.22em',
+          fontFamily: 'JetBrains Mono, ui-monospace, monospace',
+          textTransform: 'uppercase', fontWeight: 600,
+        }}
+      >
+        Exercise skipped
+      </div>
+      {loggedCount > 0 && (
+        <div style={{ fontSize: 12, color: 'var(--text-m)', marginTop: 6 }}>
+          {loggedCount} logged {loggedCount === 1 ? 'set is' : 'sets are'} kept.
+        </div>
+      )}
+
+      <button
+        type="button"
+        onClick={onUnskip}
+        style={{
+          marginTop: 24, width: '100%', height: 50, borderRadius: 14,
+          background: 'rgba(255,255,255,0.05)',
+          border: `1px solid color-mix(in oklab, ${c.primary} 40%, transparent)`,
+          color: 'var(--text-1)', fontWeight: 600, fontSize: 14,
+          cursor: 'pointer',
+        }}
+      >
+        Undo skip
+      </button>
+
+      {hasNextExercise && (
+        <button
+          type="button"
+          onClick={onAdvanceExercise}
+          style={{
+            marginTop: 10, width: '100%', height: 44, borderRadius: 14,
+            background: 'transparent', border: 'none',
+            color: 'var(--text-m)', fontWeight: 600, fontSize: 12, letterSpacing: '0.2em',
+            cursor: 'pointer',
+          }}
+        >
+          NEXT EXERCISE →
+        </button>
+      )}
+    </div>
+  )
+}
+
+/* ─────────────────────────────────────────────────────────────────── */
 /*  Exercise history popup wrapper — fetches history then renders     */
 /* ─────────────────────────────────────────────────────────────────── */
 
@@ -867,7 +1062,7 @@ function WorkoutFinishBar({
   exerciseList, isLastSession, isSaving, onFinish, onReviewSets,
 }: WorkoutFinishBarProps) {
   const totalSets = exerciseList.reduce((n, ex) => n + ex.workingSets.filter(s => s.completed).length, 0)
-  const exerciseCount = exerciseList.length
+  const exerciseCount = exerciseList.filter(ex => !ex.skipped).length
 
   return (
     <div

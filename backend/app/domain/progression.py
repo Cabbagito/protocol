@@ -68,18 +68,39 @@ def build_mesocycle_structure(
     return {"weeks": weeks}
 
 
+def is_session_skipped(session: dict) -> bool:
+    """A session the user explicitly skipped. It is passed over, never logged."""
+    return bool(session.get("skipped", False))
+
+
+def is_session_done(session: dict) -> bool:
+    """Every set of every non-skipped exercise is logged.
+
+    A session whose exercises are all skipped counts as done; a skipped
+    session does not (it is neither done nor open, see ``is_session_open``).
+    """
+    if is_session_skipped(session):
+        return False
+    non_skipped = [ex for ex in session.get("exercises", []) if not ex.get("skipped", False)]
+    if not non_skipped:
+        return True
+    return all(s["logged"] for ex in non_skipped for s in ex.get("sets", []))
+
+
+def is_session_open(session: dict) -> bool:
+    """Still has work to do: not skipped and not fully logged."""
+    return not is_session_skipped(session) and not is_session_done(session)
+
+
 def get_current_position(structure: dict) -> dict:
-    """Find the current position in the mesocycle structure."""
+    """Find the current position in the mesocycle structure.
+
+    The first open session, scanning in order. Skipped sessions and sessions
+    whose exercises are all skipped are passed over.
+    """
     for wi, week in enumerate(structure.get("weeks", [])):
         for si, session in enumerate(week.get("sessions", [])):
-            non_skipped = [
-                ex for ex in session.get("exercises", []) if not ex.get("skipped", False)
-            ]
-            if not non_skipped:
-                # All exercises skipped — session counts as complete
-                continue
-            all_logged = all(s["logged"] for ex in non_skipped for s in ex.get("sets", []))
-            if not all_logged:
+            if is_session_open(session):
                 return {"week_index": wi, "session_index": si, "completed": False}
     return {"completed": True}
 
@@ -140,21 +161,30 @@ def derive_fields(structure: dict) -> dict:
     else:
         current_week = pos["week_index"] + 1
 
-    # Count fully-logged sessions (respecting skipped exercises)
-    workouts_completed = 0
-    for week in weeks:
-        for session in week.get("sessions", []):
-            non_skipped = [
-                ex for ex in session.get("exercises", []) if not ex.get("skipped", False)
-            ]
-            if not non_skipped:
-                continue
-            all_logged = all(s["logged"] for ex in non_skipped for s in ex.get("sets", []))
-            if all_logged:
-                workouts_completed += 1
+    # Count fully-logged sessions. Skipped sessions are neither completed
+    # nor counted toward the total (see ``count_total_workouts``).
+    workouts_completed = sum(
+        1
+        for week in weeks
+        for session in week.get("sessions", [])
+        if is_session_done(session)
+        and any(not ex.get("skipped", False) for ex in session.get("exercises", []))
+    )
 
     return {
         "total_weeks": total_weeks,
         "current_week": current_week,
         "workouts_completed": workouts_completed,
     }
+
+
+def count_total_workouts(structure: dict) -> int:
+    """Sessions that can be completed: not skipped, with at least one
+    non-skipped exercise."""
+    return sum(
+        1
+        for week in structure.get("weeks", [])
+        for session in week.get("sessions", [])
+        if not is_session_skipped(session)
+        and any(not ex.get("skipped", False) for ex in session.get("exercises", []))
+    )

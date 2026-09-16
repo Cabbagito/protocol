@@ -349,6 +349,22 @@ export function useReorderExercise() {
   })
 }
 
+export function useSkipSession() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (data: {
+      mesocycle_id: string
+      week_index: number
+      session_index: number
+      skipped: boolean
+    }) => api.post('/workouts/skip-session', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.workouts.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.mesocycles.all })
+    },
+  })
+}
+
 export function useRemoveExerciseFromSession() {
   const queryClient = useQueryClient()
   return useMutation({

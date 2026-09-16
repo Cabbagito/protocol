@@ -14,6 +14,7 @@ from app.services.workout_service.queries import (
     get_workout_detail,
     get_workout_history,
 )
+from app.services.workout_service.sessions import set_session_skipped
 from app.services.workout_service.templates import get_next_template, get_specific_template
 
 __all__ = [
@@ -28,5 +29,6 @@ __all__ = [
     "remove_exercise",
     "reorder_exercise",
     "replace_exercise",
+    "set_session_skipped",
     "update_exercise_note",
 ]

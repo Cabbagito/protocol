@@ -6,6 +6,7 @@ All functions operate on plain dicts (the JSONB structure). No DB, no async.
 from app.domain.progression import (
     build_mesocycle_structure,
     carry_weight_forward,
+    count_total_workouts,
     derive_fields,
     get_current_position,
 )
@@ -49,13 +50,16 @@ def _make_exercise(exercise_id="ex1", name="Bench Press", sets=None, skipped=Fal
     }
 
 
-def _make_session(session_name="Push", day_order=0, exercises=None, date=None, notes=None):
+def _make_session(
+    session_name="Push", day_order=0, exercises=None, date=None, notes=None, skipped=False
+):
     return {
         "session_name": session_name,
         "day_order": day_order,
         "date": date,
         "notes": notes,
         "exercises": exercises or [_make_exercise()],
+        **({"skipped": True} if skipped else {}),
     }
 
 
@@ -151,6 +155,31 @@ class TestGetCurrentPosition:
         structure = _make_structure([w1, w2])
         result = get_current_position(structure)
         assert result == {"week_index": 1, "session_index": 0, "completed": False}
+
+    def test_skipped_session_is_passed_over(self):
+        s1 = _make_session("Push", 0, skipped=True)
+        s2 = _make_session("Pull", 1, [_make_exercise(exercise_id="ex2")])
+        structure = _make_structure([_make_week(sessions=[s1, s2])])
+        result = get_current_position(structure)
+        assert result == {"week_index": 0, "session_index": 1, "completed": False}
+
+    def test_skipping_last_open_session_completes_mesocycle(self):
+        logged_sets = [_make_set(n, weight=100, reps=10, logged=True) for n in range(1, 4)]
+        s1 = _make_session("Push", 0, [_make_exercise(sets=logged_sets)])
+        s2 = _make_session("Pull", 1, skipped=True)
+        structure = _make_structure([_make_week(sessions=[s1, s2])])
+        assert get_current_position(structure) == {"completed": True}
+
+    def test_unskipped_session_reopens(self):
+        s1 = _make_session("Push", 0, skipped=True)
+        structure = _make_structure([_make_week(sessions=[s1])])
+        assert get_current_position(structure) == {"completed": True}
+        s1["skipped"] = False
+        assert get_current_position(structure) == {
+            "week_index": 0,
+            "session_index": 0,
+            "completed": False,
+        }
 
 
 # ---------------------------------------------------------------------------
@@ -286,6 +315,21 @@ class TestCarryWeightForward:
         assert w2_ex["sets"][1]["suggested_weight"] == 95
         assert w2_ex["sets"][2]["suggested_weight"] == 90
 
+    def test_skipped_session_is_not_a_carry_target(self):
+        """Weight jumps over a skipped week to the next session that will be done."""
+        w1_sets = [_make_set(n, weight=100, reps=10, logged=True) for n in range(1, 4)]
+        w1 = _make_week(1, [_make_session("Push", 0, [_make_exercise(sets=w1_sets)])])
+        w2 = _make_week(2, [_make_session("Push", 0, [_make_exercise()], skipped=True)])
+        w3 = _make_week(3, [_make_session("Push", 0, [_make_exercise()])])
+        structure = _make_structure([w1, w2, w3])
+
+        carry_weight_forward(structure, 0, 0)
+
+        w2_sets = structure["weeks"][1]["sessions"][0]["exercises"][0]["sets"]
+        w3_sets = structure["weeks"][2]["sessions"][0]["exercises"][0]["sets"]
+        assert all(s["suggested_weight"] is None for s in w2_sets)
+        assert all(s["suggested_weight"] == 100 for s in w3_sets)
+
     def test_out_of_bounds_week_index_is_noop(self):
         structure = _make_structure([_make_week()])
         carry_weight_forward(structure, 5, 0)  # no raise
@@ -329,6 +373,37 @@ class TestDeriveFields:
         structure = _make_structure([w])
         result = derive_fields(structure)
         assert result["workouts_completed"] == 0
+
+    def test_skipped_session_not_counted_as_completed(self):
+        logged_sets = [_make_set(n, weight=100, reps=10, logged=True) for n in range(1, 4)]
+        s1 = _make_session("Push", 0, [_make_exercise(sets=logged_sets)])
+        s2 = _make_session("Pull", 1, [_make_exercise(sets=logged_sets)], skipped=True)
+        structure = _make_structure([_make_week(sessions=[s1, s2])])
+        result = derive_fields(structure)
+        assert result["workouts_completed"] == 1
+
+    def test_current_week_advances_past_skipped_week(self):
+        w1 = _make_week(1, [_make_session(skipped=True)])
+        w2 = _make_week(2, [_make_session()])
+        result = derive_fields(_make_structure([w1, w2]))
+        assert result["current_week"] == 2
+
+
+class TestCountTotalWorkouts:
+    def test_counts_every_session(self):
+        structure = _make_structure([_make_week(1), _make_week(2)])
+        assert count_total_workouts(structure) == 2
+
+    def test_excludes_skipped_sessions(self):
+        s1 = _make_session("Push", 0)
+        s2 = _make_session("Pull", 1, skipped=True)
+        structure = _make_structure([_make_week(sessions=[s1, s2])])
+        assert count_total_workouts(structure) == 1
+
+    def test_excludes_sessions_with_all_exercises_skipped(self):
+        s1 = _make_session("Push", 0, [_make_exercise(skipped=True)])
+        structure = _make_structure([_make_week(sessions=[s1])])
+        assert count_total_workouts(structure) == 0
 
 
 # ---------------------------------------------------------------------------

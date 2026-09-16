@@ -4,17 +4,8 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useToast } from '../components/Toast'
 import { useLogSets, queryKeys } from '../api/hooks'
 import { todayIso } from '../lib/dates'
+import { findNextOpenSession } from '../lib/mesoUtils'
 import type { WorkingSet, WorkoutTemplate, Mesocycle } from '../types'
-
-function getNextSession(weekIndex: number, sessionIndex: number, mesocycle: Mesocycle) {
-  const weeks = mesocycle.structure.weeks
-  const currentWeek = weeks[weekIndex]
-  if (currentWeek && sessionIndex + 1 < currentWeek.sessions.length)
-    return { weekIndex, sessionIndex: sessionIndex + 1 }
-  if (weekIndex + 1 < weeks.length)
-    return { weekIndex: weekIndex + 1, sessionIndex: 0 }
-  return null
-}
 
 interface UseWorkoutCompletionParams {
   mesocycleId: string | undefined
@@ -50,10 +41,17 @@ export function useWorkoutCompletion({
   const queryClient = useQueryClient()
   const toast = useToast()
 
-  const isLastSession = useMemo(() => {
-    if (!mesocycle || !template) return false
-    return getNextSession(template.week_index, template.session_index, mesocycle) === null
+  // Where to go after this session: the earliest session still open once
+  // this one is finished. Sessions can be done out of order, so this is not
+  // simply the next slot; null means the mesocycle is complete.
+  const nextOpenSession = useMemo(() => {
+    if (!mesocycle || !template) return null
+    return findNextOpenSession(mesocycle.structure, {
+      weekIndex: template.week_index,
+      sessionIndex: template.session_index,
+    })
   }, [mesocycle, template])
+  const isLastSession = !!mesocycle && !!template && nextOpenSession === null
 
   const handleFinishOrNext = async () => {
     // A debounced edit-save may still be queued; cancel it — the final save
@@ -111,11 +109,10 @@ export function useWorkoutCompletion({
     queryClient.invalidateQueries({ queryKey: queryKeys.mesocycles.active })
     queryClient.invalidateQueries({ queryKey: queryKeys.mesocycles.all })
 
-    if (isLastSession) {
+    if (!nextOpenSession) {
       navigate(`/mesocycles/${mesocycleId}`)
     } else {
-      const next = getNextSession(template!.week_index, template!.session_index, mesocycle!)
-      navigate(`/workout/${mesocycleId}?week=${next!.weekIndex}&session=${next!.sessionIndex}`)
+      navigate(`/workout/${mesocycleId}?week=${nextOpenSession.weekIndex}&session=${nextOpenSession.sessionIndex}`)
     }
   }
 

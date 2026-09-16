@@ -10,13 +10,16 @@ interface ProgressRailProps {
  * Horizontal segmented progress bar — one segment per exercise, each
  * subdivided by its sets. Logged ticks glow in the exercise's muscle
  * color; the current exercise's segment is 4px tall (others 3px).
+ * Skipped exercises render as a single flat, dimmed segment and are left
+ * out of the set counts.
  *
  * Also renders the eyebrow line below: "02 / 13 SETS" left, "EXERCISE 01 / 04"
  * right (in current muscle color).
  */
 export default function ProgressRail({ exercises, currentIndex }: ProgressRailProps) {
-  const totalSets = exercises.reduce((a, e) => a + e.sets.length, 0)
-  const loggedSets = exercises.reduce(
+  const active = exercises.filter(e => !e.skipped)
+  const totalSets = active.reduce((a, e) => a + e.sets.length, 0)
+  const loggedSets = active.reduce(
     (a, e) => a + e.sets.filter(s => s.logged).length, 0,
   )
   const current = exercises[currentIndex]
@@ -28,6 +31,20 @@ export default function ProgressRail({ exercises, currentIndex }: ProgressRailPr
         {exercises.map((e, i) => {
           const c = getMuscleColor(e.muscle_group)
           const isCur = i === currentIndex
+          if (e.skipped) {
+            return (
+              <div
+                key={`${e.exercise_id}-${i}`}
+                style={{
+                  flex: e.sets.length,
+                  height: isCur ? 4 : 3,
+                  borderRadius: 2,
+                  background: 'rgba(148,163,184,0.18)',
+                  transition: 'all 0.3s',
+                }}
+              />
+            )
+          }
           return (
             <div
               key={`${e.exercise_id}-${i}`}

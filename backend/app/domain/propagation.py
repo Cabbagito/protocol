@@ -33,8 +33,8 @@ def iter_future_exercise_instances(
     exercise_id: str,
 ) -> Iterator[tuple[int, int, dict]]:
     """Yield (week_index, session_index, exercise) for every non-skipped instance
-    of ``exercise_id`` in sessions strictly after ``(week_index, session_index)``,
-    in natural structure order.
+    of ``exercise_id`` in non-skipped sessions strictly after
+    ``(week_index, session_index)``, in natural structure order.
     """
     weeks = structure.get("weeks", [])
     for wi in range(week_index, len(weeks)):
@@ -43,6 +43,8 @@ def iter_future_exercise_instances(
         start_si = session_index + 1 if wi == week_index else 0
         for si in range(start_si, len(sessions)):
             session = sessions[si]
+            if session.get("skipped", False):
+                continue
             exercise = find_exercise_in_session(session, exercise_id)
             if exercise is None or exercise.get("skipped", False):
                 continue

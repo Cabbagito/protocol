@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { useActiveMesocycle } from '../api/hooks'
-import { getCurrentPosition } from '../lib/mesoUtils'
+import { countTotalWorkouts, getCurrentPosition } from '../lib/mesoUtils'
 import { GearIcon } from '../components/Icons'
 import PageLoader from '../components/PageLoader'
 import AuroraBackground from '../components/AuroraBackground'
@@ -110,13 +110,7 @@ export default function Dashboard() {
     : null
 
   // Meso hairline
-  const totalWorkouts = mesocycle
-    ? mesocycle.structure.weeks.reduce(
-        (n, w) =>
-          n + w.sessions.filter(s => s.exercises.some(e => !e.skipped)).length,
-        0,
-      )
-    : 0
+  const totalWorkouts = mesocycle ? countTotalWorkouts(mesocycle.structure) : 0
   const progressPct =
     mesocycle && totalWorkouts > 0
       ? Math.round((mesocycle.workouts_completed / totalWorkouts) * 100)

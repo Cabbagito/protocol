@@ -91,6 +91,21 @@ export default function WorkoutDetail() {
       />
 
       <div className="px-4 space-y-3 pb-10">
+        {workout.skipped && (
+          <div
+            className="stagger flex items-center gap-2 px-3 py-2.5 rounded-xl"
+            style={{ background: 'rgba(148,163,184,0.08)', border: '1px dashed rgba(148,163,184,0.3)' }}
+          >
+            <span
+              className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded"
+              style={{ background: 'rgba(148,163,184,0.12)', color: 'var(--text-2)' }}
+            >
+              Skipped
+            </span>
+            <span className="text-xs text-[var(--text-m)]">This workout was skipped.</span>
+          </div>
+        )}
+
         {/* Session Summary Scoreboard */}
         <div className="card stagger">
           <div className="grid grid-cols-3 gap-2 text-center">

@@ -85,6 +85,13 @@ class ReorderExerciseRequest(BaseModel):
     apply_to_future: bool = True
 
 
+class SkipSessionRequest(BaseModel):
+    mesocycle_id: str
+    week_index: int = Field(ge=0)
+    session_index: int = Field(ge=0)
+    skipped: bool = True
+
+
 class RemoveExerciseRequest(BaseModel):
     mesocycle_id: str
     week_index: int = Field(ge=0)

@@ -7,14 +7,14 @@ import {
   useUpdateMesocycle,
   useDeleteMesocycle,
 } from '../api/hooks'
-import { getCurrentPosition } from '../lib/mesoUtils'
+import { countTotalWorkouts, findNextOpenSession, getCurrentPosition, isSessionDone, isSessionSkipped } from '../lib/mesoUtils'
 import { getVolumeByMuscleGroup } from '../lib/mesoAnalysis'
 import { getMuscleColor } from '../lib/muscleColors'
 import type { Mesocycle, MesoSession } from '../types'
 
 const MONO = 'JetBrains Mono, ui-monospace, monospace'
 
-type CellState = 'done' | 'current' | 'queued'
+type CellState = 'done' | 'current' | 'queued' | 'skipped'
 
 export default function MesocycleDetail() {
   const { id } = useParams<{ id: string }>()
@@ -57,7 +57,9 @@ export default function MesocycleDetail() {
   )
 
   const flat = grid.flat()
-  const totalSessions = flat.length
+  // Skipped sessions drop out of the denominator, so a mesocycle with a
+  // skipped week can still reach 100%.
+  const totalSessions = countTotalWorkouts(mesocycle.structure)
   const doneSessions = flat.filter((s) => s === 'done').length
   const pct = totalSessions > 0 ? Math.round((doneSessions / totalSessions) * 100) : 0
 
@@ -236,10 +238,9 @@ export default function MesocycleDetail() {
               </div>
               {mesocycle.structure.weeks.map((_, wi) => {
                 const st = grid[wi]?.[ri] ?? 'queued'
-                const to =
-                  st === 'done' || st === 'current'
-                    ? `/workout/${mesocycle.id}?week=${wi}&session=${ri}`
-                    : undefined
+                // Every session is reachable: later sessions in the current
+                // week can be logged out of order; later weeks open as a preview.
+                const to = `/workout/${mesocycle.id}?week=${wi}&session=${ri}`
                 return <GridCell key={wi} state={st} to={to} />
               })}
             </div>
@@ -512,10 +513,9 @@ function sessionState(
   sessionIndex: number,
   pos: { weekIndex: number; sessionIndex: number } | null,
 ): CellState {
-  const nonSkipped = session.exercises.filter((ex) => !ex.skipped)
-  if (nonSkipped.length === 0) return 'queued'
-  const allLogged = nonSkipped.every((ex) => ex.sets.every((s) => s.logged))
-  if (allLogged) return 'done'
+  if (isSessionSkipped(session)) return 'skipped'
+  if (session.exercises.every((ex) => ex.skipped)) return 'queued'
+  if (isSessionDone(session)) return 'done'
   if (pos && pos.weekIndex === weekIndex && pos.sessionIndex === sessionIndex) return 'current'
   return 'queued'
 }
@@ -523,17 +523,10 @@ function sessionState(
 function findNextSession(
   meso: Mesocycle,
 ): { weekIndex: number; sessionIndex: number; session: MesoSession } | null {
-  for (let wi = 0; wi < meso.structure.weeks.length; wi++) {
-    const week = meso.structure.weeks[wi]!
-    for (let si = 0; si < week.sessions.length; si++) {
-      const session = week.sessions[si]!
-      const nonSkipped = session.exercises.filter((ex) => !ex.skipped)
-      if (nonSkipped.length === 0) continue
-      const allLogged = nonSkipped.every((ex) => ex.sets.every((s) => s.logged))
-      if (!allLogged) return { weekIndex: wi, sessionIndex: si, session }
-    }
-  }
-  return null
+  const pos = findNextOpenSession(meso.structure)
+  if (!pos) return null
+  const session = meso.structure.weeks[pos.weekIndex]!.sessions[pos.sessionIndex]!
+  return { ...pos, session }
 }
 
 /* ─── Subcomponents ─────────────────────────────────────────────── */
@@ -553,6 +546,21 @@ function GridCell({ state, to }: { state: CellState; to?: string }) {
         }}
       >
         <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'white' }} />
+      </div>
+    )
+  } else if (state === 'skipped') {
+    inner = (
+      <div
+        style={{
+          height: 26,
+          borderRadius: 7,
+          background: 'rgba(148,163,184,0.06)',
+          border: '1px dashed rgba(148,163,184,0.28)',
+          display: 'grid',
+          placeItems: 'center',
+        }}
+      >
+        <span style={{ width: 8, height: 1.5, borderRadius: 1, background: 'rgba(148,163,184,0.6)' }} />
       </div>
     )
   } else if (state === 'done') {
