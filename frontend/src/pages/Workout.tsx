@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useToast } from '../components/Toast'
 import {
   useMesocycle, useUpdateExerciseNote, useReplaceExercise, useAddExercise,
-  useReorderExercise, useRemoveExerciseFromSession, useExerciseHistory, useSkipSession, queryKeys,
+  useReorderExercises, useRemoveExerciseFromSession, useExerciseHistory, useSkipSession, queryKeys,
 } from '../api/hooks'
 import { api } from '../api/client'
 import PageLoader from '../components/PageLoader'
@@ -14,7 +14,6 @@ import ProgressRail from '../components/ProgressRail'
 import ExercisePeekCard from '../components/ExercisePeekCard'
 import NumeralsCard from '../components/NumeralsCard'
 import MuscleAccent from '../components/MuscleAccent'
-import BottomSheet from '../components/BottomSheet'
 import { getMuscleColor } from '../lib/muscleColors'
 import { formatHistorySummary } from '../lib/exerciseHistory'
 import { getCurrentPosition } from '../lib/mesoUtils'
@@ -27,7 +26,8 @@ import { useWorkoutCompletion } from '../hooks/useWorkoutCompletion'
 import { NoteModal } from './workout/NoteModal'
 import { ExercisePicker } from './workout/ExercisePicker'
 import { ExerciseHistoryPopup } from './workout/ExerciseHistoryPopup'
-import { SET_TYPE_LABELS } from '../lib/setConstants'
+import { ReorderSheet } from './workout/ReorderSheet'
+import { SET_TYPE_LABELS, STRAIGHT_PILL } from '../lib/setConstants'
 import type { WorkoutTemplate, MesoExercise, WorkingSet, SetType } from '../types'
 
 function BackIcon() {
@@ -38,12 +38,63 @@ function BackIcon() {
   )
 }
 
-function DotsIcon() {
+function MesocycleIcon() {
   return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-      <circle cx="5" cy="12" r="1.8" />
-      <circle cx="12" cy="12" r="1.8" />
-      <circle cx="19" cy="12" r="1.8" />
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="4" width="18" height="18" rx="2" />
+      <line x1="16" y1="2" x2="16" y2="6" />
+      <line x1="8" y1="2" x2="8" y2="6" />
+      <line x1="3" y1="10" x2="21" y2="10" />
+    </svg>
+  )
+}
+
+function ReorderIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="m7 15 5 5 5-5" />
+      <path d="m7 9 5-5 5 5" />
+    </svg>
+  )
+}
+
+function SkipIcon({ size = 14 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+      <polygon points="5 4 15 12 5 20 5 4" />
+      <line x1="19" y1="5" x2="19" y2="19" />
+    </svg>
+  )
+}
+
+function SwapIcon() {
+  return (
+    <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M7 4 3 8l4 4" />
+      <path d="M3 8h14" />
+      <path d="m17 20 4-4-4-4" />
+      <path d="M21 16H7" />
+    </svg>
+  )
+}
+
+function RemoveIcon() {
+  return (
+    <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="3 6 5 6 21 6" />
+      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+      <path d="M10 11v6" />
+      <path d="M14 11v6" />
+      <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+    </svg>
+  )
+}
+
+function NoteIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
     </svg>
   )
 }
@@ -72,7 +123,7 @@ export default function Workout() {
   const updateExerciseNote = useUpdateExerciseNote()
   const replaceExercise = useReplaceExercise()
   const addExerciseMutation = useAddExercise()
-  const reorderExerciseMutation = useReorderExercise()
+  const reorderExercisesMutation = useReorderExercises()
   const removeExerciseMutation = useRemoveExerciseFromSession()
   const skipSessionMutation = useSkipSession()
 
@@ -80,8 +131,7 @@ export default function Workout() {
   const [noteModal, setNoteModal] = useState<{ exerciseId: string; exerciseName: string } | null>(null)
   const [replaceModal, setReplaceModal] = useState<{ exerciseId: string; exerciseIndex: number; muscleGroup: string; equipmentType: string } | null>(null)
   const [addExerciseOpen, setAddExerciseOpen] = useState(false)
-  const [menuOpen, setMenuOpen] = useState(false)
-  const [perSetSheetOpen, setPerSetSheetOpen] = useState(false)
+  const [reorderOpen, setReorderOpen] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
   // Local current-exercise cursor. Defaults to first un-finished exercise.
   // User can jump by tapping a peek card.
@@ -116,7 +166,7 @@ export default function Workout() {
     sets, setSets, initialized, skippedExercises, skippedSets, setSkippedSets,
     removedExercises, exerciseNotes, setExerciseNotes,
     updateSet, completeSet,
-    toggleSkip, resetForReplace,
+    toggleSkip, toggleSkipSet, resetForReplace,
   } = useWorkoutState({
     template, isFutureSession, weekParam, sessionParam,
     animPhaseRef, setAnimKey, bumpAnim, prevCompletedRef, prevSkippedRef, prevSkippedSetsRef,
@@ -211,6 +261,7 @@ export default function Workout() {
         apply_to_future: true,
       })
       resetForReplace()
+      setCurIdxOverride(null)
       queryClient.removeQueries({ queryKey: ['workouts', 'template'] })
       queryClient.invalidateQueries({ queryKey: queryKeys.workouts.all })
       queryClient.invalidateQueries({ queryKey: queryKeys.mesocycles.all })
@@ -241,27 +292,31 @@ export default function Workout() {
     }
   }, [mesocycleId, template, skipSessionMutation, navigate, toast, cancelDebouncedSave, saveChainRef])
 
-  // Reorder helper (used by the menu sheet)
-  const handleReorderExercise = useCallback(async (exerciseIndex: number, direction: 'up' | 'down', visibleIdx: number) => {
+  // Persist a new exercise order from the reorder sheet. The cursor follows
+  // the exercise the user was on, not its old position.
+  const handleReorderExercises = useCallback(async (exerciseIds: string[], currentExerciseId: string | null) => {
     if (!mesocycleId || !template) return
     try {
-      await reorderExerciseMutation.mutateAsync({
+      await reorderExercisesMutation.mutateAsync({
         mesocycle_id: mesocycleId,
         week_index: template.week_index,
         session_index: template.session_index,
-        exercise_index: exerciseIndex,
-        direction,
+        exercise_ids: exerciseIds,
         apply_to_future: true,
       })
+      setReorderOpen(false)
       resetForReplace()
-      setCurIdxOverride(direction === 'up' ? visibleIdx - 1 : visibleIdx + 1)
+      if (currentExerciseId) {
+        const idx = exerciseIds.indexOf(currentExerciseId)
+        if (idx !== -1) setCurIdxOverride(idx)
+      }
       queryClient.removeQueries({ queryKey: ['workouts', 'template'] })
       queryClient.invalidateQueries({ queryKey: queryKeys.workouts.all })
       queryClient.invalidateQueries({ queryKey: queryKeys.mesocycles.all })
     } catch {
-      toast.showError('Failed to reorder exercise')
+      toast.showError('Failed to reorder exercises')
     }
-  }, [mesocycleId, template, reorderExerciseMutation, queryClient, toast, resetForReplace])
+  }, [mesocycleId, template, reorderExercisesMutation, queryClient, toast, resetForReplace])
 
   // Visible (un-removed) exercises with sets attached ─────────────────
   // Skipped exercises stay in the list with `skipped: true` (dimmed, with an
@@ -381,8 +436,8 @@ export default function Workout() {
           </div>
           <button
             type="button"
-            onClick={() => setMenuOpen(true)}
-            aria-label="Menu"
+            onClick={() => navigate(`/mesocycles/${mesocycleId}`)}
+            aria-label="View mesocycle"
             style={{
               width: 36, height: 36, borderRadius: 12,
               background: 'rgba(255,255,255,0.05)',
@@ -393,7 +448,7 @@ export default function Workout() {
               display: 'grid', placeItems: 'center',
             }}
           >
-            <DotsIcon />
+            <MesocycleIcon />
           </button>
         </div>
 
@@ -478,6 +533,8 @@ export default function Workout() {
             skippedSets={skippedSets}
             onUpdateSet={updateSet}
             onCompleteSet={(exId, setNum) => {
+              // Logging a skipped set brings it back.
+              if (skippedSets.has(`${exId}:${setNum}`)) toggleSkipSet(exId, setNum)
               // Lock cursor to current exercise so we don't auto-jump off
               // it when this becomes the last set — user must tap "Next
               // exercise" explicitly.
@@ -498,7 +555,37 @@ export default function Workout() {
               ...prev,
               [currentEx.exercise_id]: setIdx,
             }))}
-            onChipMore={() => setPerSetSheetOpen(true)}
+            note={exerciseNotes[currentEx.exercise_id] ?? null}
+            onEditNote={() => setNoteModal({ exerciseId: currentEx.exercise_id, exerciseName: currentEx.exercise_name })}
+            onSetType={(type) => updateSet(currentEx.exercise_id, activeSet.set_num, 'set_type', type)}
+            onSkipSet={() => {
+              const exId = currentEx.exercise_id
+              const wasSkipped = skippedSets.has(`${exId}:${activeSet.set_num}`)
+              toggleSkipSet(exId, activeSet.set_num)
+              if (wasSkipped) return
+              // Move on to the next still-open set, like logging does.
+              setCurIdxOverride(curIdx)
+              const nextIdx = currentEx.workingSets.findIndex(
+                (s, i) => i > activeSetIdx && !s.completed && !skippedSets.has(`${exId}:${s.set_num}`),
+              )
+              if (nextIdx !== -1) {
+                setActiveSetOverride(prev => ({ ...prev, [exId]: nextIdx }))
+              }
+            }}
+            onRemoveSet={currentEx.workingSets.length > 1
+              ? () => handleRemoveSet(currentEx.exercise_id, activeSet.set_num)
+              : undefined}
+            onSwapExercise={() => setReplaceModal({
+              exerciseId: currentEx.exercise_id,
+              exerciseIndex: currentEx.exerciseIndex,
+              muscleGroup: currentEx.muscle_group,
+              equipmentType: currentEx.equipment_type,
+            })}
+            onSkipExercise={() => {
+              toggleSkip(currentEx.exercise_id)
+              setCurIdxOverride(null)
+            }}
+            onRemoveExercise={() => handleRemoveExercise(currentEx.exercise_id)}
             onOpenHistory={() => setHistoryOpen(true)}
             onAdvanceExercise={() => setCurIdxOverride(curIdx + 1)}
             hasNextExercise={curIdx < exerciseList.length - 1}
@@ -509,14 +596,33 @@ export default function Workout() {
         {/* ── Workout list (always visible during logging) ── */}
         {canLog && exerciseList.length > 0 && (
           <div style={{ marginTop: 28 }}>
-            <div
-              style={{
-                fontSize: 10, fontWeight: 600, letterSpacing: '0.18em',
-                textTransform: 'uppercase', color: 'var(--text-m)',
-                fontFamily: 'JetBrains Mono, ui-monospace, monospace', marginBottom: 10,
-              }}
-            >
-              Workout
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+              <div
+                style={{
+                  fontSize: 10, fontWeight: 600, letterSpacing: '0.18em',
+                  textTransform: 'uppercase', color: 'var(--text-m)',
+                  fontFamily: 'JetBrains Mono, ui-monospace, monospace',
+                }}
+              >
+                Workout
+              </div>
+              {exerciseList.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => setReorderOpen(true)}
+                  style={{
+                    height: 34, padding: '0 12px', borderRadius: 10,
+                    background: 'rgba(255,255,255,0.04)',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    color: 'var(--text-2)', fontSize: 12, fontWeight: 500,
+                    display: 'inline-flex', alignItems: 'center', gap: 6,
+                    cursor: 'pointer',
+                  }}
+                >
+                  <ReorderIcon />
+                  Reorder
+                </button>
+              )}
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {exerciseList.map((ex, i) => {
@@ -575,8 +681,10 @@ export default function Workout() {
               background: 'transparent',
               cursor: 'pointer',
               opacity: skipSessionMutation.isPending ? 0.6 : 1,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
             }}
           >
+            <SkipIcon />
             Skip this workout
           </button>
         )}
@@ -634,58 +742,16 @@ export default function Workout() {
         />
       )}
 
-      {/* ── Header dots menu — exercise-level actions only ── */}
-      {currentEx && (() => {
-        const close = () => setMenuOpen(false)
-        return (
-          <BottomSheet
-            open={menuOpen}
-            onClose={close}
-            title={canLog ? currentEx.exercise_name : template.session_name}
-            actions={canLog ? [
-              { label: 'Add note', onClick: () => { close(); setNoteModal({ exerciseId: currentEx.exercise_id, exerciseName: currentEx.exercise_name }) } },
-              { label: 'View mesocycle', onClick: () => { close(); navigate(`/mesocycles/${mesocycleId}`) } },
-              { label: 'Replace exercise', onClick: () => { close(); setReplaceModal({ exerciseId: currentEx.exercise_id, exerciseIndex: currentEx.exerciseIndex, muscleGroup: currentEx.muscle_group, equipmentType: currentEx.equipment_type }) } },
-              { label: 'Add a set', onClick: () => { close(); handleAddSet(currentEx.exercise_id) } },
-              ...(curIdx > 0 ? [{ label: 'Move up', onClick: () => { close(); handleReorderExercise(currentEx.exerciseIndex, 'up', curIdx) } }] : []),
-              ...(curIdx < exerciseList.length - 1 ? [{ label: 'Move down', onClick: () => { close(); handleReorderExercise(currentEx.exerciseIndex, 'down', curIdx) } }] : []),
-              {
-                label: currentEx.skipped ? 'Unskip exercise' : 'Skip exercise',
-                onClick: () => {
-                  close()
-                  toggleSkip(currentEx.exercise_id)
-                  if (!currentEx.skipped) setCurIdxOverride(null)
-                },
-              },
-              { label: 'Remove from workout', variant: 'danger', onClick: () => { close(); handleRemoveExercise(currentEx.exercise_id) } },
-            ] : [
-              // Preview / skipped sessions: no exercise edits, nothing would be saved.
-              { label: 'View mesocycle', onClick: () => { close(); navigate(`/mesocycles/${mesocycleId}`) } },
-            ]}
-          />
-        )
-      })()}
-
-      {/* ── Per-set sheet — opens from the "..." button on the active chip ── */}
-      {currentEx && activeSet && (() => {
-        const close = () => setPerSetSheetOpen(false)
-        const currentSetType: SetType = (activeSet.set_type as SetType | undefined) ?? 'straight'
-        const canRemoveSet = currentEx.workingSets.length > 1
-        return (
-          <BottomSheet
-            open={perSetSheetOpen}
-            onClose={close}
-            title={`Set ${activeSetIdx + 1} · ${currentEx.exercise_name}`}
-            actions={[
-              { label: currentSetType === 'straight' ? '✓ Straight set' : 'Straight set', onClick: () => { close(); updateSet(currentEx.exercise_id, activeSet.set_num, 'set_type', 'straight') } },
-              { label: currentSetType === 'myorep' ? '✓ Myorep' : 'Myorep', onClick: () => { close(); updateSet(currentEx.exercise_id, activeSet.set_num, 'set_type', 'myorep') } },
-              // myorep_match is meaningless on the first set — it must reference a prior set.
-              ...(activeSet.set_num > 1 ? [{ label: currentSetType === 'myorep_match' ? '✓ Myorep match' : 'Myorep match', onClick: () => { close(); updateSet(currentEx.exercise_id, activeSet.set_num, 'set_type', 'myorep_match') } }] : []),
-              ...(canRemoveSet ? [{ label: `Remove this set`, variant: 'danger' as const, onClick: () => { close(); handleRemoveSet(currentEx.exercise_id, activeSet.set_num) } }] : []),
-            ]}
-          />
-        )
-      })()}
+      {/* ── Reorder sheet (opened from the list header) ── */}
+      {reorderOpen && (
+        <ReorderSheet
+          subtitle={`${template.session_name} · Week ${template.week_number}`}
+          exercises={exerciseList}
+          saving={reorderExercisesMutation.isPending}
+          onSave={(ids) => handleReorderExercises(ids, currentEx?.exercise_id ?? null)}
+          onClose={() => setReorderOpen(false)}
+        />
+      )}
 
       {/* ── Exercise history popup ── */}
       {historyOpen && currentEx && (
@@ -719,28 +785,77 @@ export default function Workout() {
 /*  STATE A — logging                                                  */
 /* ─────────────────────────────────────────────────────────────────── */
 
+type SetTypeOption = { value: SetType; label: string; badge: string; color: string; bg: string; border: string }
+
+const SET_TYPE_NAMES: Record<SetType, string> = {
+  straight: 'Straight',
+  myorep: 'Myorep',
+  myorep_match: 'Myorep match',
+}
+
+function setTypeOptions(setNum: number): SetTypeOption[] {
+  // myorep_match is meaningless on the first set — it must reference a prior set.
+  const types: SetType[] = setNum > 1 ? ['straight', 'myorep', 'myorep_match'] : ['straight', 'myorep']
+  return types.map(value => {
+    const info = SET_TYPE_LABELS[value]
+    return {
+      value,
+      label: SET_TYPE_NAMES[value],
+      badge: info?.label ?? 'ST',
+      color: info?.color ?? STRAIGHT_PILL.color,
+      bg: info?.bg ?? STRAIGHT_PILL.bg,
+      border: info?.border ?? STRAIGHT_PILL.border,
+    }
+  })
+}
+
 interface LoggingStateProps {
   currentEx: MesoExercise & { workingSets: WorkingSet[] }
   activeSet: WorkingSet
   activeSetIdx: number
   skippedSets: Set<string>
+  note: string | null
+  onEditNote: () => void
   onUpdateSet: (exerciseId: string, setNum: number, field: keyof WorkingSet, value: number | boolean | string) => void
   onCompleteSet: (exerciseId: string, setNum: number) => void
   onAddSet: (exerciseId: string) => void
   onChipTap: (setIdx: number) => void
-  onChipMore: () => void
+  onSetType: (type: SetType) => void
+  onSkipSet: () => void
+  /** Omitted when the exercise is down to its last set. */
+  onRemoveSet?: () => void
   onOpenHistory: () => void
   onAdvanceExercise: () => void
   hasNextExercise: boolean
+  onSwapExercise: () => void
+  onSkipExercise: () => void
+  onRemoveExercise: () => void
   isSaving: boolean
 }
 
 function LoggingState({
-  currentEx, activeSet, activeSetIdx, skippedSets,
-  onUpdateSet, onCompleteSet, onAddSet, onChipTap, onChipMore,
-  onOpenHistory, onAdvanceExercise, hasNextExercise, isSaving,
+  currentEx, activeSet, activeSetIdx, skippedSets, note, onEditNote,
+  onUpdateSet, onCompleteSet, onAddSet, onChipTap, onSetType, onSkipSet, onRemoveSet,
+  onOpenHistory, onAdvanceExercise, hasNextExercise,
+  onSwapExercise, onSkipExercise, onRemoveExercise, isSaving,
 }: LoggingStateProps) {
   const c = getMuscleColor(currentEx.muscle_group)
+
+  // Set-type menu: opened by tapping the already-selected chip. Keyed by
+  // exercise + set so it closes on its own when the selection moves.
+  const activeKey = `${currentEx.exercise_id}:${activeSet.set_num}`
+  const [typeMenuFor, setTypeMenuFor] = useState<string | null>(null)
+  const typeMenuOpen = typeMenuFor === activeKey
+
+  // Remove exercise carries over to the rest of the mesocycle, so it needs a
+  // second tap within a few seconds.
+  const [confirmRemoveFor, setConfirmRemoveFor] = useState<string | null>(null)
+  const confirmRemove = confirmRemoveFor === currentEx.exercise_id
+  useEffect(() => {
+    if (!confirmRemoveFor) return
+    const t = setTimeout(() => setConfirmRemoveFor(null), 3000)
+    return () => clearTimeout(t)
+  }, [confirmRemoveFor])
 
   // Cross-meso "last session" reference (Commit 2's history endpoint).
   const { data: history } = useExerciseHistory(currentEx.exercise_id)
@@ -751,12 +866,26 @@ function LoggingState({
   const reps = activeSet.reps ?? 0
   const isLogValid = weight > 0 && reps > 0
   const isActiveLogged = !!activeSet.completed
+  const isActiveSkipped = skippedSets.has(activeKey)
   const allDone = currentEx.workingSets.every(
     s => s.completed || skippedSets.has(`${currentEx.exercise_id}:${s.set_num}`),
   )
+  const currentSetType: SetType = activeSet.set_type ?? 'straight'
+  const lastChipIdx = currentEx.workingSets.length - 1
 
   // LOG button label adapts to what the user is doing.
   const logLabel = isActiveLogged ? 'UPDATE' : 'LOG'
+
+  const stripButton: React.CSSProperties = {
+    height: 56,
+    background: 'transparent',
+    border: 'none',
+    borderRight: '1px solid rgba(255,255,255,0.07)',
+    color: 'var(--text-2)',
+    display: 'grid', placeItems: 'center',
+    padding: 0,
+    cursor: 'pointer',
+  }
 
   return (
     <div style={{ marginTop: 28, textAlign: 'center' }}>
@@ -786,7 +915,32 @@ function LoggingState({
         </div>
       )}
 
-      <div style={{ marginTop: 24 }}>
+      {/* Exercise note — shown inline, tap to edit */}
+      <button
+        type="button"
+        onClick={onEditNote}
+        style={{
+          marginTop: 8, maxWidth: '100%',
+          display: 'inline-flex', alignItems: 'center', gap: 7,
+          minHeight: 36, padding: '4px 10px',
+          background: 'transparent', border: 'none',
+          color: note ? 'var(--text-2)' : 'var(--text-m)',
+          fontSize: 13, fontStyle: note ? 'italic' : 'normal',
+          cursor: 'pointer',
+        }}
+      >
+        <NoteIcon />
+        <span
+          style={{
+            borderBottom: '1px dotted rgba(148,163,184,0.4)',
+            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+          }}
+        >
+          {note ?? 'Add note'}
+        </span>
+      </button>
+
+      <div style={{ marginTop: 16 }}>
         <NumeralsCard
           group={currentEx.muscle_group}
           weight={weight}
@@ -800,10 +954,14 @@ function LoggingState({
           onLog={() => onCompleteSet(currentEx.exercise_id, activeSet.set_num)}
           disabled={isSaving || !isLogValid}
           logLabel={logLabel}
+          // A logged set can't be skipped; a skipped one can always be unskipped.
+          onSkipSet={!isActiveLogged || isActiveSkipped ? onSkipSet : undefined}
+          setSkipped={isActiveSkipped}
+          onRemoveSet={onRemoveSet}
         />
       </div>
 
-      {/* Set chips ─ persistent set_type badge + "..." on active chip ─── */}
+      {/* Set chips — tap to select, tap the selected one again for its type */}
       <div style={{ marginTop: 12, display: 'flex', gap: 6 }}>
         {currentEx.workingSets.map((s, i) => {
           const key = `${currentEx.exercise_id}:${s.set_num}`
@@ -819,7 +977,12 @@ function LoggingState({
             >
               <button
                 type="button"
-                onClick={() => onChipTap(i)}
+                onClick={() => {
+                  if (isActive) setTypeMenuFor(typeMenuOpen ? null : activeKey)
+                  else onChipTap(i)
+                }}
+                aria-label={isActive ? `Set ${i + 1}, selected. Tap for set type` : `Set ${i + 1}`}
+                aria-expanded={isActive ? typeMenuOpen : undefined}
                 style={{
                   width: '100%',
                   padding: '10px 4px',
@@ -845,9 +1008,15 @@ function LoggingState({
                   style={{
                     fontSize: 8, color: 'var(--text-m)', letterSpacing: '0.15em',
                     fontFamily: 'JetBrains Mono, ui-monospace, monospace',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3,
                   }}
                 >
                   SET {i + 1}
+                  {isActive && (
+                    <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke={c.light} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points={typeMenuOpen ? '18 15 12 9 6 15' : '6 9 12 15 18 9'} />
+                    </svg>
+                  )}
                 </div>
                 <div
                   style={{
@@ -881,26 +1050,88 @@ function LoggingState({
                 </span>
               )}
 
-              {/* "..." button on the active chip → opens per-set sheet */}
-              {isActive && (
-                <button
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); onChipMore() }}
-                  aria-label="Set options"
-                  style={{
-                    position: 'absolute',
-                    top: 1, right: 1,
-                    width: 22, height: 22,
-                    background: 'transparent',
-                    border: 'none',
-                    color: c.light,
-                    display: 'grid', placeItems: 'center',
-                    cursor: 'pointer',
-                    fontSize: 14,
-                  }}
-                >
-                  ⋯
-                </button>
+              {/* Set-type menu, anchored under the selected chip */}
+              {isActive && typeMenuOpen && (
+                <>
+                  <button
+                    type="button"
+                    aria-label="Close set type menu"
+                    onClick={() => setTypeMenuFor(null)}
+                    style={{
+                      position: 'fixed', inset: 0, zIndex: 5,
+                      background: 'transparent', border: 'none', cursor: 'default',
+                    }}
+                  />
+                  <div
+                    role="menu"
+                    aria-label={`Set ${i + 1} type`}
+                    style={{
+                      position: 'absolute', zIndex: 6,
+                      top: 'calc(100% + 8px)',
+                      ...(i === 0
+                        ? { left: 0 }
+                        : i === lastChipIdx
+                        ? { right: 0 }
+                        : { left: '50%', transform: 'translateX(-50%)' }),
+                      width: 220, padding: 6, borderRadius: 14,
+                      background: 'var(--panel)',
+                      border: '1px solid rgba(255,255,255,0.10)',
+                      boxShadow: '0 24px 50px -10px rgba(0,0,0,0.85)',
+                      textAlign: 'left',
+                    }}
+                  >
+                    <div
+                      style={{
+                        padding: '6px 10px 4px',
+                        fontSize: 9, letterSpacing: '0.18em', color: 'var(--text-m)', fontWeight: 600,
+                        fontFamily: 'JetBrains Mono, ui-monospace, monospace',
+                      }}
+                    >
+                      SET {i + 1} TYPE
+                    </div>
+                    {setTypeOptions(s.set_num).map(opt => {
+                      const checked = opt.value === currentSetType
+                      return (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          role="menuitemradio"
+                          aria-checked={checked}
+                          onClick={() => {
+                            setTypeMenuFor(null)
+                            if (!checked) onSetType(opt.value)
+                          }}
+                          style={{
+                            width: '100%', height: 44, padding: '0 10px', borderRadius: 10,
+                            background: checked ? 'rgba(255,255,255,0.06)' : 'transparent',
+                            border: 'none',
+                            color: checked ? 'var(--text-1)' : 'var(--text-2)',
+                            display: 'flex', alignItems: 'center', gap: 10,
+                            fontSize: 13, fontWeight: checked ? 600 : 500,
+                            textAlign: 'left', cursor: 'pointer',
+                          }}
+                        >
+                          <span
+                            style={{
+                              width: 22, padding: '1px 0', textAlign: 'center', borderRadius: 4,
+                              fontSize: 8, fontWeight: 700,
+                              fontFamily: 'JetBrains Mono, ui-monospace, monospace',
+                              background: opt.bg, border: `1px solid ${opt.border}`, color: opt.color,
+                            }}
+                          >
+                            {opt.badge}
+                          </span>
+                          <span style={{ flex: 1 }}>{opt.label}</span>
+                          {checked && (
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={c.light} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                              <polyline points="20 6 9 17 4 12" />
+                            </svg>
+                          )}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </>
               )}
             </div>
           )
@@ -938,6 +1169,48 @@ function LoggingState({
           NEXT EXERCISE →
         </button>
       )}
+
+      {/* Exercise actions — swap, skip, remove (remove asks for a second tap) */}
+      <div
+        style={{
+          marginTop: 18,
+          display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+          borderRadius: 16,
+          background: 'rgba(255,255,255,0.03)',
+          border: '1px solid rgba(255,255,255,0.08)',
+          overflow: 'hidden',
+        }}
+      >
+        <button type="button" aria-label="Swap exercise" onClick={onSwapExercise} style={stripButton}>
+          <SwapIcon />
+        </button>
+        <button type="button" aria-label="Skip exercise" onClick={onSkipExercise} style={stripButton}>
+          <SkipIcon size={23} />
+        </button>
+        <button
+          type="button"
+          aria-label={confirmRemove ? 'Tap again to remove exercise' : 'Remove exercise'}
+          onClick={() => {
+            if (confirmRemove) {
+              setConfirmRemoveFor(null)
+              onRemoveExercise()
+            } else {
+              setConfirmRemoveFor(currentEx.exercise_id)
+            }
+          }}
+          style={{
+            ...stripButton,
+            borderRight: 'none',
+            color: '#fb7185',
+            background: confirmRemove ? 'rgba(251,113,133,0.14)' : 'transparent',
+            transition: 'background 0.15s',
+          }}
+        >
+          {confirmRemove
+            ? <span style={{ fontSize: 13, fontWeight: 600 }}>Remove?</span>
+            : <RemoveIcon />}
+        </button>
+      </div>
     </div>
   )
 }

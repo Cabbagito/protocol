@@ -5,7 +5,11 @@ from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.attributes import flag_modified
 
-from app.domain.propagation import find_exercise_in_session, iter_future_sessions
+from app.domain.propagation import (
+    apply_relative_order,
+    find_exercise_in_session,
+    iter_future_sessions,
+)
 from app.models.exercise import Exercise
 from app.services.common import get_user_mesocycle
 from app.services.workout_service._helpers import get_session_from_structure
@@ -297,40 +301,35 @@ async def add_exercise(
     return {"status": "ok", "exercise": new_entry}
 
 
-async def reorder_exercise(
+async def reorder_exercises(
     db: AsyncSession,
     user_id: str,
     *,
     mesocycle_id: str,
     week_index: int,
     session_index: int,
-    exercise_index: int,
-    direction: str,
+    exercise_ids: list[str],
     apply_to_future: bool,
 ) -> dict:
-    """Move an exercise up or down within a session."""
+    """Set the full exercise order of a session.
+
+    ``exercise_ids`` must be a permutation of the session's exercises. With
+    ``apply_to_future``, matching future sessions adopt the same relative order
+    for the exercises they share (others keep their slots).
+    """
     mesocycle = await get_user_mesocycle(db, mesocycle_id, user_id, for_update=True)
 
     structure = mesocycle.structure
     week, session = get_session_from_structure(structure, week_index, session_index)
     exercises = session.get("exercises", [])
 
-    if exercise_index >= len(exercises):
-        raise HTTPException(status_code=400, detail="Invalid exercise index")
+    current_ids = [e["exercise_id"] for e in exercises]
+    if sorted(current_ids) != sorted(exercise_ids):
+        raise HTTPException(
+            status_code=400, detail="exercise_ids must list every exercise in the session"
+        )
 
-    swap_index = exercise_index - 1 if direction == "up" else exercise_index + 1
-    if swap_index < 0 or swap_index >= len(exercises):
-        raise HTTPException(status_code=400, detail="Cannot move exercise further")
-
-    # Remember the two exercise IDs for future-week matching
-    moving_id = exercises[exercise_index]["exercise_id"]
-    swapping_id = exercises[swap_index]["exercise_id"]
-
-    # Swap in current session
-    exercises[exercise_index], exercises[swap_index] = (
-        exercises[swap_index],
-        exercises[exercise_index],
-    )
+    session["exercises"] = apply_relative_order(exercises, exercise_ids)
 
     if apply_to_future:
         session_name = session["session_name"]
@@ -338,16 +337,9 @@ async def reorder_exercise(
         for _wi, future_session in iter_future_sessions(
             structure, week_index, session_name, day_order
         ):
-            fex = future_session.get("exercises", [])
-            idx_a = None
-            idx_b = None
-            for i, e in enumerate(fex):
-                if e["exercise_id"] == moving_id:
-                    idx_a = i
-                elif e["exercise_id"] == swapping_id:
-                    idx_b = i
-            if idx_a is not None and idx_b is not None:
-                fex[idx_a], fex[idx_b] = fex[idx_b], fex[idx_a]
+            future_session["exercises"] = apply_relative_order(
+                future_session.get("exercises", []), exercise_ids
+            )
 
     flag_modified(mesocycle, "structure")
     await db.commit()

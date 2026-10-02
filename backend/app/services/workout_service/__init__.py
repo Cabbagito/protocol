@@ -4,7 +4,7 @@ from app.services.workout_service.exercise_ops import (
     add_exercise,
     modify_sets,
     remove_exercise,
-    reorder_exercise,
+    reorder_exercises,
     replace_exercise,
     update_exercise_note,
 )
@@ -27,7 +27,7 @@ __all__ = [
     "log_sets",
     "modify_sets",
     "remove_exercise",
-    "reorder_exercise",
+    "reorder_exercises",
     "replace_exercise",
     "set_session_skipped",
     "update_exercise_note",

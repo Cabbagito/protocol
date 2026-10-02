@@ -49,3 +49,21 @@ def iter_future_exercise_instances(
             if exercise is None or exercise.get("skipped", False):
                 continue
             yield wi, si, exercise
+
+
+def apply_relative_order(exercises: list[dict], ordered_ids: list[str]) -> list[dict]:
+    """Return ``exercises`` re-sequenced so the ones named in ``ordered_ids``
+    follow that relative order.
+
+    Only the slots occupied by listed exercises are refilled; exercises not in
+    ``ordered_ids`` keep their positions, and listed ids that are missing from
+    ``exercises`` are ignored. This lets one order chosen for the current
+    session be carried onto future sessions whose exercise lists differ.
+    """
+    rank = {eid: i for i, eid in enumerate(ordered_ids)}
+    movable = sorted(
+        (e for e in exercises if e["exercise_id"] in rank),
+        key=lambda e: rank[e["exercise_id"]],
+    )
+    it = iter(movable)
+    return [next(it) if e["exercise_id"] in rank else e for e in exercises]

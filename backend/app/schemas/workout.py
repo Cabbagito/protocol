@@ -76,12 +76,11 @@ class AddExerciseRequest(BaseModel):
     apply_to_future: bool = True
 
 
-class ReorderExerciseRequest(BaseModel):
+class ReorderExercisesRequest(BaseModel):
     mesocycle_id: str
     week_index: int = Field(ge=0)
     session_index: int = Field(ge=0)
-    exercise_index: int = Field(ge=0)
-    direction: str = Field(pattern=r"^(up|down)$")
+    exercise_ids: list[str] = Field(min_length=1)
     apply_to_future: bool = True
 
 

@@ -1,6 +1,7 @@
 """Tests for domain propagation helpers."""
 
 from app.domain.propagation import (
+    apply_relative_order,
     find_exercise_in_session,
     iter_future_exercise_instances,
     iter_future_sessions,
@@ -151,3 +152,30 @@ class TestIterFutureExerciseInstances:
         )
         results = list(iter_future_exercise_instances(structure, 0, 0, "ex1"))
         assert [(wi, si) for wi, si, _ in results] == [(2, 0)]
+
+
+class TestApplyRelativeOrder:
+    @staticmethod
+    def _ids(exercises):
+        return [e["exercise_id"] for e in exercises]
+
+    def test_full_permutation(self):
+        exs = [_make_exercise(i) for i in ["a", "b", "c", "d"]]
+        result = apply_relative_order(exs, ["c", "a", "d", "b"])
+        assert self._ids(result) == ["c", "a", "d", "b"]
+
+    def test_unlisted_exercises_keep_their_slots(self):
+        exs = [_make_exercise(i) for i in ["a", "x", "b", "c"]]
+        result = apply_relative_order(exs, ["c", "b", "a"])
+        assert self._ids(result) == ["c", "x", "b", "a"]
+
+    def test_listed_ids_missing_from_session_are_ignored(self):
+        exs = [_make_exercise(i) for i in ["a", "b"]]
+        result = apply_relative_order(exs, ["b", "zzz", "a"])
+        assert self._ids(result) == ["b", "a"]
+
+    def test_keeps_exercise_dicts_intact(self):
+        exs = [_make_exercise("a"), _make_exercise("b", skipped=True)]
+        result = apply_relative_order(exs, ["b", "a"])
+        assert result[0] is exs[1]
+        assert result[0]["skipped"] is True

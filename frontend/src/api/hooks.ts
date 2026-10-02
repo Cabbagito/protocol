@@ -331,17 +331,17 @@ export function useAddExercise() {
   })
 }
 
-export function useReorderExercise() {
+export function useReorderExercises() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (data: {
       mesocycle_id: string
       week_index: number
       session_index: number
-      exercise_index: number
-      direction: 'up' | 'down'
+      /** Full new order of the session's exercises. */
+      exercise_ids: string[]
       apply_to_future: boolean
-    }) => api.post('/workouts/reorder-exercise', data),
+    }) => api.post('/workouts/reorder-exercises', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.workouts.all })
       queryClient.invalidateQueries({ queryKey: queryKeys.mesocycles.all })

@@ -18,6 +18,11 @@ interface NumeralsCardProps {
   disabled?: boolean
   /** Override the LOG label (e.g. "UPDATE" for a re-log). */
   logLabel?: string
+  /** Per-set secondary actions under LOG. Each is hidden when omitted. */
+  onSkipSet?: () => void
+  onRemoveSet?: () => void
+  /** The active set is skipped: header says so and Skip becomes Unskip. */
+  setSkipped?: boolean
 }
 
 /**
@@ -40,6 +45,9 @@ export default function NumeralsCard({
   onLog,
   disabled = false,
   logLabel = 'LOG',
+  onSkipSet,
+  onRemoveSet,
+  setSkipped = false,
 }: NumeralsCardProps) {
   const c = getMuscleColor(group)
   // CSS keyframe names use lowercase + hyphens; muscle groups in the data
@@ -77,7 +85,7 @@ export default function NumeralsCard({
             fontWeight: 500,
           }}
         >
-          SET {setNum} OF {totalSets}
+          SET {setNum} OF {totalSets}{setSkipped ? ' · SKIPPED' : ''}
         </div>
         {lastSummary && (
           onLastClick ? (
@@ -198,7 +206,63 @@ export default function NumeralsCard({
       >
         {logLabel}
       </button>
+
+      {(onSkipSet || onRemoveSet) && (
+        <div
+          style={{
+            position: 'relative',
+            marginTop: 8,
+            display: 'grid',
+            gridTemplateColumns: onSkipSet && onRemoveSet ? '1fr 1fr' : '1fr',
+            gap: 8,
+          }}
+        >
+          {onSkipSet && (
+            <SecondaryButton onClick={onSkipSet} color="var(--text-2)">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polygon points="5 4 15 12 5 20 5 4" />
+                <line x1="19" y1="5" x2="19" y2="19" />
+              </svg>
+              {setSkipped ? 'Unskip set' : 'Skip set'}
+            </SecondaryButton>
+          )}
+          {onRemoveSet && (
+            <SecondaryButton onClick={onRemoveSet} color="#fb7185">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="3 6 5 6 21 6" />
+                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+              </svg>
+              Remove set
+            </SecondaryButton>
+          )}
+        </div>
+      )}
     </div>
+  )
+}
+
+function SecondaryButton({ onClick, color, children }: { onClick: () => void; color: string; children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        height: 40,
+        borderRadius: 12,
+        background: 'transparent',
+        border: 'none',
+        color,
+        fontSize: 12,
+        fontWeight: 500,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 6,
+        cursor: 'pointer',
+      }}
+    >
+      {children}
+    </button>
   )
 }
 

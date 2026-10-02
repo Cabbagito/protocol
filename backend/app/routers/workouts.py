@@ -10,7 +10,7 @@ from app.schemas.workout import (
     LogSetsRequest,
     ModifySetsRequest,
     RemoveExerciseRequest,
-    ReorderExerciseRequest,
+    ReorderExercisesRequest,
     ReplaceExerciseRequest,
     SkipSessionRequest,
 )
@@ -123,20 +123,19 @@ async def add_exercise(
     )
 
 
-@router.post("/reorder-exercise")
-async def reorder_exercise(
-    data: ReorderExerciseRequest,
+@router.post("/reorder-exercises")
+async def reorder_exercises(
+    data: ReorderExercisesRequest,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    return await workout_service.reorder_exercise(
+    return await workout_service.reorder_exercises(
         db,
         current_user.id,
         mesocycle_id=data.mesocycle_id,
         week_index=data.week_index,
         session_index=data.session_index,
-        exercise_index=data.exercise_index,
-        direction=data.direction,
+        exercise_ids=data.exercise_ids,
         apply_to_future=data.apply_to_future,
     )
 
