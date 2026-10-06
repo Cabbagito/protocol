@@ -45,13 +45,18 @@ export default function SplitEditor() {
   const [expandedDay, setExpandedDay] = useState<number>(1)
   const [searchOpenDay, setSearchOpenDay] = useState<number | null>(null)
   const [editingNameDay, setEditingNameDay] = useState<number | null>(1)
-  const [initialized, setInitialized] = useState(!isEdit)
+  // Id of the split loaded into the form; the route can switch to another
+  // split (Duplicate opens the copy) without remounting this component.
+  const [loadedId, setLoadedId] = useState<string | null>(null)
   const nextTempId = useRef(2)
   const [dirty, setDirty] = useState(false)
   const nameInputRef = useRef<HTMLInputElement>(null)
 
+  // Seeded templates are shared by everyone: view-only, duplicate to change.
+  const isSeeded = isEdit && existingSplit?.user_id === null
+
   useEffect(() => {
-    if (isEdit && existingSplit && !initialized) {
+    if (isEdit && existingSplit && existingSplit.id === id && loadedId !== id) {
       setName(existingSplit.name)
       setColor(existingSplit.color || SPLIT_COLORS[0]!)
       const loadedDays = existingSplit.days.map((d, i) => ({
@@ -69,9 +74,12 @@ export default function SplitEditor() {
         setEditingNameDay(null)
         nextTempId.current = loadedDays.length + 1
       }
-      setInitialized(true)
+      setEditingName(false)
+      setSearchOpenDay(null)
+      setDirty(false)
+      setLoadedId(id)
     }
-  }, [isEdit, existingSplit, initialized])
+  }, [isEdit, existingSplit, id, loadedId])
 
   useEffect(() => {
     if (editingName) {
@@ -135,19 +143,23 @@ export default function SplitEditor() {
     markDirty()
   }, [])
 
-  async function handleSave() {
-    if (!name.trim()) {
-      toast.showError('Split name is required')
-      return
-    }
-    const payload = {
-      name: name.trim(),
+  function buildPayload(splitName: string) {
+    return {
+      name: splitName,
       color,
       days: days.map((d, idx) => ({
         name: d.name || `Day ${idx + 1}`,
         exercises: d.exercises.map((ex) => ({ exercise_id: ex.exercise_id })),
       })),
     }
+  }
+
+  async function handleSave() {
+    if (!name.trim()) {
+      toast.showError('Split name is required')
+      return
+    }
+    const payload = buildPayload(name.trim())
     try {
       if (isEdit) await updateSplit.mutateAsync(payload)
       else await createSplit.mutateAsync(payload)
@@ -157,8 +169,18 @@ export default function SplitEditor() {
     }
   }
 
+  async function handleDuplicate() {
+    try {
+      const copy = await createSplit.mutateAsync(buildPayload(`${name} (copy)`))
+      toast.showSuccess('Copy created — it\'s yours to edit')
+      navigate(`/splits/${copy.id}`, { replace: true })
+    } catch {
+      toast.showError('Failed to duplicate split')
+    }
+  }
+
   async function handleDelete() {
-    if (!id || !confirm('Delete this split? This cannot be undone.')) return
+    if (!id || !confirm('Delete this split? Mesocycles created from it are kept.')) return
     try {
       await deleteSplit.mutateAsync(id)
       navigate('/splits')
@@ -167,6 +189,7 @@ export default function SplitEditor() {
     }
   }
 
+  // Back arrow and Discard both leave the editor: confirm unsaved changes.
   function handleDiscard() {
     if (dirty && !confirm('Discard your changes?')) return
     navigate('/splits')
@@ -182,11 +205,13 @@ export default function SplitEditor() {
     )
   }
 
-  const eyebrow = isEdit
-    ? dirty
-      ? 'EDIT SPLIT · UNSAVED'
-      : 'EDIT SPLIT'
-    : 'NEW SPLIT'
+  const eyebrow = isSeeded
+    ? 'TEMPLATE · READ ONLY'
+    : isEdit
+      ? dirty
+        ? 'EDIT SPLIT · UNSAVED'
+        : 'EDIT SPLIT'
+      : 'NEW SPLIT'
 
   const accentLight = `color-mix(in oklab, ${color} 70%, white)`
 
@@ -204,8 +229,26 @@ export default function SplitEditor() {
         <Chrome
           title={name || 'Untitled split'}
           sub={eyebrow}
-          onBack={() => navigate('/splits')}
+          onBack={handleDiscard}
         />
+
+        {isSeeded && (
+          <div
+            style={{
+              marginBottom: 12,
+              padding: '10px 14px',
+              borderRadius: 12,
+              fontSize: 12,
+              lineHeight: 1.45,
+              color: 'var(--text-2)',
+              background: 'rgba(var(--accent-rgb),0.08)',
+              border: '1px solid rgba(var(--accent-rgb),0.22)',
+            }}
+          >
+            This is a built-in template. Duplicate it to rename it, change its days or swap
+            exercises.
+          </div>
+        )}
 
         {/* Name + color swatch row */}
         <div
@@ -241,7 +284,7 @@ export default function SplitEditor() {
             >
               SPLIT NAME
             </div>
-            {editingName ? (
+            {editingName && !isSeeded ? (
               <input
                 ref={nameInputRef}
                 type="text"
@@ -267,6 +310,7 @@ export default function SplitEditor() {
               <button
                 type="button"
                 onClick={() => setEditingName(true)}
+                disabled={isSeeded}
                 style={{
                   background: 'transparent',
                   border: 'none',
@@ -275,7 +319,7 @@ export default function SplitEditor() {
                   color: 'var(--text-1)',
                   fontSize: 15,
                   fontWeight: 600,
-                  cursor: 'text',
+                  cursor: isSeeded ? 'default' : 'text',
                   marginTop: 2,
                   whiteSpace: 'nowrap',
                   overflow: 'hidden',
@@ -288,56 +332,60 @@ export default function SplitEditor() {
               </button>
             )}
           </div>
-          <button
-            type="button"
-            onClick={() => setEditingName(true)}
-            aria-label="Edit name"
-            style={{
-              width: 28,
-              height: 28,
-              borderRadius: 8,
-              background: 'transparent',
-              border: 'none',
-              color: 'var(--text-m)',
-              cursor: 'pointer',
-              display: 'grid',
-              placeItems: 'center',
-            }}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round">
-              <path d="M12 20h9" />
-              <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z" />
-            </svg>
-          </button>
+          {!isSeeded && (
+            <button
+              type="button"
+              onClick={() => setEditingName(true)}
+              aria-label="Edit name"
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: 8,
+                background: 'transparent',
+                border: 'none',
+                color: 'var(--text-m)',
+                cursor: 'pointer',
+                display: 'grid',
+                placeItems: 'center',
+              }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round">
+                <path d="M12 20h9" />
+                <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z" />
+              </svg>
+            </button>
+          )}
         </div>
 
         {/* Color picker row */}
-        <div style={{ marginTop: 10, display: 'flex', gap: 6 }}>
-          {SPLIT_COLORS.map((c) => {
-            const selected = c === color
-            const light = `color-mix(in oklab, ${c} 70%, white)`
-            return (
-              <button
-                key={c}
-                type="button"
-                onClick={() => { setColor(c); markDirty() }}
-                aria-label={`Select color ${c}`}
-                style={{
-                  width: 30,
-                  height: 30,
-                  borderRadius: 10,
-                  background: `linear-gradient(135deg, ${c}, ${light})`,
-                  border: selected ? '2px solid var(--text-1)' : '1px solid rgba(255,255,255,0.05)',
-                  outline: selected ? '2px solid rgba(255,255,255,0.1)' : 'none',
-                  outlineOffset: 2,
-                  boxShadow: selected ? `0 0 10px ${c}` : 'none',
-                  cursor: 'pointer',
-                  padding: 0,
-                }}
-              />
-            )
-          })}
-        </div>
+        {!isSeeded && (
+          <div style={{ marginTop: 10, display: 'flex', gap: 6 }}>
+            {SPLIT_COLORS.map((c) => {
+              const selected = c === color
+              const light = `color-mix(in oklab, ${c} 70%, white)`
+              return (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => { setColor(c); markDirty() }}
+                  aria-label={`Select color ${c}`}
+                  style={{
+                    width: 30,
+                    height: 30,
+                    borderRadius: 10,
+                    background: `linear-gradient(135deg, ${c}, ${light})`,
+                    border: selected ? '2px solid var(--text-1)' : '1px solid rgba(255,255,255,0.05)',
+                    outline: selected ? '2px solid rgba(255,255,255,0.1)' : 'none',
+                    outlineOffset: 2,
+                    boxShadow: selected ? `0 0 10px ${c}` : 'none',
+                    cursor: 'pointer',
+                    padding: 0,
+                  }}
+                />
+              )
+            })}
+          </div>
+        )}
 
         {/* Days section */}
         <div style={{ marginTop: 22 }}>
@@ -362,6 +410,7 @@ export default function SplitEditor() {
                 isSearchOpen={searchOpenDay === day.tempId}
                 isEditingName={editingNameDay === day.tempId}
                 canDelete={days.length > 1}
+                readOnly={isSeeded}
                 allExercises={allExercises}
                 onToggle={() => {
                   setExpandedDay(expandedDay === day.tempId ? -1 : day.tempId)
@@ -378,34 +427,36 @@ export default function SplitEditor() {
               />
             ))}
 
-            <button
-              type="button"
-              onClick={handleAddDay}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 6,
-                padding: '12px 12px',
-                borderRadius: 12,
-                marginTop: 4,
-                background: 'transparent',
-                border: '1px dashed rgba(255,255,255,0.08)',
-                color: 'var(--text-m)',
-                fontSize: 12,
-                fontWeight: 500,
-                cursor: 'pointer',
-              }}
-            >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round">
-                <path d="M12 5v14M5 12h14" />
-              </svg>
-              Add day
-            </button>
+            {!isSeeded && (
+              <button
+                type="button"
+                onClick={handleAddDay}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
+                  padding: '12px 12px',
+                  borderRadius: 12,
+                  marginTop: 4,
+                  background: 'transparent',
+                  border: '1px dashed rgba(255,255,255,0.08)',
+                  color: 'var(--text-m)',
+                  fontSize: 12,
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                }}
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round">
+                  <path d="M12 5v14M5 12h14" />
+                </svg>
+                Add day
+              </button>
+            )}
           </div>
         </div>
 
-        {isEdit && (
+        {isEdit && !isSeeded && (
           <button
             onClick={handleDelete}
             style={{
@@ -448,45 +499,72 @@ export default function SplitEditor() {
           boxShadow: '0 12px 40px -10px rgba(0,0,0,0.6)',
         }}
       >
-        <button
-          type="button"
-          onClick={handleDiscard}
-          style={{
-            flex: 1,
-            height: 42,
-            borderRadius: 12,
-            background: 'rgba(255,255,255,0.04)',
-            border: '1px solid rgba(255,255,255,0.05)',
-            color: 'var(--text-2)',
-            fontSize: 13,
-            fontWeight: 500,
-            cursor: 'pointer',
-          }}
-        >
-          Discard
-        </button>
-        <button
-          type="button"
-          onClick={handleSave}
-          disabled={isSaving || !name.trim()}
-          style={{
-            flex: 2,
-            height: 42,
-            borderRadius: 12,
-            background: 'var(--p-grad-cta)',
-            color: 'var(--btn-text)',
-            fontSize: 13,
-            fontWeight: 500,
-            letterSpacing: '0.18em',
-            fontFamily: MONO,
-            border: 'none',
-            cursor: 'pointer',
-            opacity: isSaving || !name.trim() ? 0.5 : 1,
-            boxShadow: '0 6px 20px -6px rgba(var(--accent-rgb),0.6)',
-          }}
-        >
-          {isSaving ? 'SAVING…' : 'SAVE SPLIT'}
-        </button>
+        {isSeeded ? (
+          <button
+            type="button"
+            onClick={handleDuplicate}
+            disabled={isSaving}
+            style={{
+              flex: 1,
+              height: 42,
+              borderRadius: 12,
+              background: 'var(--p-grad-cta)',
+              color: 'var(--btn-text)',
+              fontSize: 13,
+              fontWeight: 500,
+              letterSpacing: '0.12em',
+              fontFamily: MONO,
+              border: 'none',
+              cursor: 'pointer',
+              opacity: isSaving ? 0.5 : 1,
+              boxShadow: '0 6px 20px -6px rgba(var(--accent-rgb),0.6)',
+            }}
+          >
+            {isSaving ? 'DUPLICATING…' : 'DUPLICATE TO CUSTOMIZE'}
+          </button>
+        ) : (
+          <>
+            <button
+              type="button"
+              onClick={handleDiscard}
+              style={{
+                flex: 1,
+                height: 42,
+                borderRadius: 12,
+                background: 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(255,255,255,0.05)',
+                color: 'var(--text-2)',
+                fontSize: 13,
+                fontWeight: 500,
+                cursor: 'pointer',
+              }}
+            >
+              Discard
+            </button>
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={isSaving || !name.trim()}
+              style={{
+                flex: 2,
+                height: 42,
+                borderRadius: 12,
+                background: 'var(--p-grad-cta)',
+                color: 'var(--btn-text)',
+                fontSize: 13,
+                fontWeight: 500,
+                letterSpacing: '0.18em',
+                fontFamily: MONO,
+                border: 'none',
+                cursor: 'pointer',
+                opacity: isSaving || !name.trim() ? 0.5 : 1,
+                boxShadow: '0 6px 20px -6px rgba(var(--accent-rgb),0.6)',
+              }}
+            >
+              {isSaving ? 'SAVING…' : 'SAVE SPLIT'}
+            </button>
+          </>
+        )}
       </div>
     </div>
   )

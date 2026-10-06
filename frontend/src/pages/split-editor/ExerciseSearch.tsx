@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { getMuscleColor } from '../../lib/muscleColors'
+import CreateExerciseSheet from '../../components/CreateExerciseSheet'
 import type { Exercise } from '../../types'
 
 export default function ExerciseSearch({
@@ -14,7 +15,9 @@ export default function ExerciseSearch({
   onDone: () => void
 }) {
   const [query, setQuery] = useState('')
+  const [createOpen, setCreateOpen] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+  const trimmedQuery = query.trim()
 
   useEffect(() => {
     setTimeout(() => inputRef.current?.focus(), 50)
@@ -118,6 +121,34 @@ export default function ExerciseSearch({
           })
         )}
       </div>
+
+      {/* Create a custom exercise (prefilled with the search text) */}
+      <button
+        type="button"
+        onClick={() => setCreateOpen(true)}
+        className="flex items-center justify-center gap-1.5 w-full py-2 mt-1.5 rounded-lg text-[12px] font-medium"
+        style={{
+          border: '1px dashed rgba(var(--accent-rgb),0.35)',
+          color: 'var(--accent-l)',
+          background: 'transparent',
+        }}
+      >
+        {trimmedQuery ? (
+          <span className="truncate">Can&rsquo;t find it? Create &ldquo;{trimmedQuery}&rdquo;</span>
+        ) : (
+          '+ Create custom exercise'
+        )}
+      </button>
+
+      <CreateExerciseSheet
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        initialName={trimmedQuery}
+        onSaved={(ex) => {
+          onAdd(ex)
+          setQuery('')
+        }}
+      />
 
       {/* Done button */}
       <button

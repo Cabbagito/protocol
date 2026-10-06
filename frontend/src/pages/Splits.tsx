@@ -164,6 +164,23 @@ function SplitCard({ split, isLive }: { split: SplitListItem; isLive: boolean })
             >
               {split.name}
             </div>
+            {split.user_id === null && (
+              <span
+                style={{
+                  fontSize: 8,
+                  color: 'var(--text-m)',
+                  letterSpacing: '0.22em',
+                  padding: '2px 7px',
+                  borderRadius: 100,
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  fontFamily: MONO,
+                  fontWeight: 700,
+                  flexShrink: 0,
+                }}
+              >
+                TEMPLATE
+              </span>
+            )}
             {isLive && (
               <span
                 style={{

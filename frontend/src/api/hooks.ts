@@ -142,7 +142,7 @@ export function useCreateSplit() {
       name: string
       color?: string | null
       days: { name: string; exercises: { exercise_id: string }[] }[]
-    }) => api.post('/splits', data),
+    }) => api.post<Split>('/splits', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.splits.all })
     },
@@ -170,6 +170,8 @@ export function useDeleteSplit() {
     mutationFn: (id: string) => api.delete(`/splits/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.splits.all })
+      // Mesocycles built from the split survive but their list items show its name.
+      queryClient.invalidateQueries({ queryKey: queryKeys.mesocycles.all })
     },
   })
 }

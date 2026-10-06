@@ -36,6 +36,8 @@ export interface Split {
   id: string
   name: string
   color: string | null
+  /** Owner; null for the seeded templates shared by everyone (read-only). */
+  user_id: string | null
   days: SplitDay[]
 }
 
@@ -43,6 +45,8 @@ export interface SplitListItem {
   id: string
   name: string
   color: string | null
+  /** Owner; null for the seeded templates shared by everyone (read-only). */
+  user_id: string | null
   day_count: number
   exercise_count: number
 }
