@@ -169,7 +169,7 @@ export default function MesocycleDetail() {
               textTransform: 'uppercase',
             }}
           >
-            {mesocycle.split_name} · {sessionsPerWeek}× WEEK
+            {mesocycle.split_name ?? 'Deleted split'} · {sessionsPerWeek}× WEEK
           </div>
         </div>
 

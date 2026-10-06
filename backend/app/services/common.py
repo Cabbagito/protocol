@@ -82,8 +82,27 @@ async def get_visible_entity(
     result = await db.execute(query)
     entity = result.scalar_one_or_none()
     if not entity:
-        name = model.__tablename__.rstrip("s").title()
+        name = model.__tablename__.removesuffix("s").replace("_", " ").capitalize()
         raise HTTPException(status_code=404, detail=f"{name} not found")
+    return entity
+
+
+async def get_writable_entity(
+    db: AsyncSession,
+    model: type,
+    entity_id: str,
+    user_id: str,
+    *,
+    shared_detail: str,
+) -> Any:
+    """Fetch an entity for modification by its owner.
+
+    Shared/system rows (user_id NULL) are visible to everyone but writable by
+    no one: 403. Rows owned by someone else are invisible: 404.
+    """
+    entity = await get_visible_entity(db, model, entity_id, user_id)
+    if entity.user_id is None:
+        raise HTTPException(status_code=403, detail=shared_detail)
     return entity
 
 
@@ -103,6 +122,6 @@ async def get_owned_entity(
     result = await db.execute(query)
     entity = result.scalar_one_or_none()
     if not entity:
-        name = model.__tablename__.rstrip("s").title()
+        name = model.__tablename__.removesuffix("s").replace("_", " ").capitalize()
         raise HTTPException(status_code=404, detail=f"{name} not found")
     return entity

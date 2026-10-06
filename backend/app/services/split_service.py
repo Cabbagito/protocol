@@ -52,8 +52,13 @@ def _selectinload_split():
 
 
 async def _reload_split(db: AsyncSession, split_id: str) -> dict:
+    # populate_existing: after an update the identity map still holds the
+    # split with its old (deleted) days, whose exercises aren't loaded.
     result = await db.execute(
-        select(Split).options(_selectinload_split()).where(Split.id == split_id)
+        select(Split)
+        .options(_selectinload_split())
+        .where(Split.id == split_id)
+        .execution_options(populate_existing=True)
     )
     return _split_to_response(result.scalar_one())
 

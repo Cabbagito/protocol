@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.core.config import settings
+from app.core.config import check_startup_settings, settings
 from app.core.database import async_session, engine
 from app.core.migrations import check_needs_stamp, run_stamp, run_upgrade
 from app.core.seed import ensure_bootstrap_user, seed_default_splits, seed_exercises, seed_foods
@@ -24,6 +24,8 @@ from app.routers import (
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    check_startup_settings(settings)
+
     # Run Alembic migrations (sync — needs its own event loop in a thread)
     if await check_needs_stamp():
         await asyncio.to_thread(run_stamp)

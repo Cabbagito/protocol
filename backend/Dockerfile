@@ -12,4 +12,9 @@ COPY app ./app
 COPY scripts ./scripts
 ENV PATH="/app/.venv/bin:$PATH"
 EXPOSE 8000
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Caddy is the only client (the backend publishes no ports) and replaces any
+# client-supplied X-Forwarded-For with the real peer address, so trust it.
+# Without this, request.client.host is Caddy's container IP for every request
+# and the per-IP login throttle would lock everyone out together.
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", \
+     "--proxy-headers", "--forwarded-allow-ips", "*"]

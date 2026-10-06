@@ -50,7 +50,8 @@ export interface SplitListItem {
 export interface MesocycleListItem {
   id: string
   name: string
-  split_name: string
+  // null once the source split has been deleted
+  split_name: string | null
   split_color: string | null
   total_weeks: number
   current_week: number
@@ -105,8 +106,9 @@ export interface MesoStructure {
 export interface Mesocycle {
   id: string
   name: string
-  split_id: string
-  split_name: string
+  // null once the source split has been deleted
+  split_id: string | null
+  split_name: string | null
   split_color: string | null
   total_weeks: number
   current_week: number
@@ -152,6 +154,9 @@ export interface FoodItem {
   fat_per_100g: number
   default_serving_g: number | null
   barcode: string | null
+  // Owner of a custom food; null for seeded and barcode (shared) foods,
+  // which the API refuses to modify (403).
+  user_id: string | null
   seeded: boolean
 }
 

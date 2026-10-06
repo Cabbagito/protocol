@@ -33,10 +33,15 @@ async def fetch_product(barcode: str) -> dict | None:
 
     if response.status_code != 200:
         return None
-    body = response.json()
-    if body.get("status") != 1:
+    try:
+        body = response.json()
+    except ValueError as exc:
+        logger.warning("OFF returned a non-JSON body for %s: %s", barcode, exc)
         return None
-    return body.get("product") or None
+    if not isinstance(body, dict) or body.get("status") != 1:
+        return None
+    product = body.get("product")
+    return product if isinstance(product, dict) and product else None
 
 
 def _as_float(value: object) -> float | None:

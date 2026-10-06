@@ -35,9 +35,7 @@ def upgrade() -> None:
     # Backfill: for fully-logged mesocycles, infer a completion timestamp
     # from started_at + (weeks * 7 days). Approximate but good for sorting.
     conn = op.get_bind()
-    rows = conn.execute(
-        sa.text("SELECT id, structure, started_at FROM mesocycles")
-    ).fetchall()
+    rows = conn.execute(sa.text("SELECT id, structure, started_at FROM mesocycles")).fetchall()
     for row in rows:
         structure = row.structure or {}
         weeks = structure.get("weeks") or []

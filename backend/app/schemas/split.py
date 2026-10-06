@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class DayExerciseInput(BaseModel):
@@ -17,42 +17,38 @@ class SplitCreate(BaseModel):
 
 
 class DayExerciseResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: str
     exercise_id: str
     exercise_name: str
     muscle_group: str
     order: int
 
-    class Config:
-        from_attributes = True
-
 
 class DayResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: str
     name: str
     day_order: int
     exercises: list[DayExerciseResponse]
 
-    class Config:
-        from_attributes = True
-
 
 class SplitResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: str
     name: str
     color: str | None
     days: list[DayResponse]
 
-    class Config:
-        from_attributes = True
-
 
 class SplitListItem(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: str
     name: str
     color: str | None
     day_count: int
     exercise_count: int
-
-    class Config:
-        from_attributes = True

@@ -14,12 +14,25 @@ ALGORITHM = "HS256"
 
 security = HTTPBearer()
 
+# bcrypt only reads the first 72 bytes of a password, and bcrypt>=5 raises
+# ValueError for anything longer instead of silently truncating.
+BCRYPT_MAX_PASSWORD_BYTES = 72
+
+
+def password_too_long(password: str) -> bool:
+    return len(password.encode()) > BCRYPT_MAX_PASSWORD_BYTES
+
 
 def hash_password(password: str) -> str:
+    """Hash a password. Raises ValueError if it is longer than 72 bytes."""
     return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
 
 
 def verify_password(plain: str, hashed: str) -> bool:
+    """Check a password against a bcrypt hash. Blocking (~0.25s at the
+    default cost): call it from a worker thread in request handlers."""
+    if password_too_long(plain):
+        return False
     return bcrypt.checkpw(plain.encode(), hashed.encode())
 
 

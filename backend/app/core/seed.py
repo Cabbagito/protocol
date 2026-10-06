@@ -7,7 +7,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.exercise import Exercise
 from app.models.food_item import FoodItem
-from app.models.food_log import FoodLog
 from app.models.mesocycle import Mesocycle
 from app.models.split import Split, SplitDay, SplitDayExercise
 from app.models.user import User
@@ -213,16 +212,16 @@ async def ensure_bootstrap_user(session: AsyncSession) -> None:
         update(Mesocycle).where(Mesocycle.user_id.is_(None)).values(user_id=admin.id)
     )
 
-    # Assign orphan non-seed food items to admin
+    # Assign orphan custom food items to admin. Barcode foods are shared by
+    # design (user_id NULL) and stay that way.
     await session.execute(
         update(FoodItem)
-        .where(FoodItem.seed_key.is_(None), FoodItem.user_id.is_(None))
+        .where(
+            FoodItem.seed_key.is_(None),
+            FoodItem.barcode.is_(None),
+            FoodItem.user_id.is_(None),
+        )
         .values(user_id=admin.id)
-    )
-
-    # Assign orphan food logs to admin (user_id is NOT NULL, but kept for parity)
-    await session.execute(
-        update(FoodLog).where(FoodLog.user_id.is_(None)).values(user_id=admin.id)
     )
 
     await session.commit()

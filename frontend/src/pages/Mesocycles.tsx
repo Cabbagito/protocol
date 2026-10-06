@@ -257,7 +257,7 @@ function PrimaryActiveCard({ meso }: { meso: MesocycleListItem | Mesocycle }) {
               textTransform: 'uppercase',
             }}
           >
-            {meso.split_name} · {meso.total_weeks} WEEKS
+            {meso.split_name ?? 'Deleted split'} · {meso.total_weeks} WEEKS
           </div>
         </div>
         <div style={{ textAlign: 'right', flexShrink: 0 }}>
@@ -346,7 +346,7 @@ function buildTicks(meso: MesocycleListItem | Mesocycle): ('done' | 'current' | 
 /* ─── Secondary active (compact) ────────────────────────────────── */
 
 function SecondaryActiveCard({ meso }: { meso: MesocycleListItem }) {
-  const color = getMuscleColor(meso.split_name.toLowerCase().includes('run') ? 'quads' : 'back')
+  const color = getMuscleColor((meso.split_name ?? '').toLowerCase().includes('run') ? 'quads' : 'back')
   const accent = meso.split_color || color.primary
   const accentLight = color.light
   const pct =
@@ -413,7 +413,7 @@ function SecondaryActiveCard({ meso }: { meso: MesocycleListItem }) {
             textTransform: 'uppercase',
           }}
         >
-          {meso.split_name} · {meso.total_weeks} WEEKS · {pct}%
+          {meso.split_name ?? 'Deleted split'} · {meso.total_weeks} WEEKS · {pct}%
         </div>
       </div>
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-m)" strokeWidth={2} strokeLinecap="round">

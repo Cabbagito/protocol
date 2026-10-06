@@ -7,7 +7,7 @@ from sqlalchemy import text
 from app.core.database import engine
 
 
-def _alembic_cfg() -> Config:
+def alembic_config() -> Config:
     """Build Alembic Config pointing at the backend root."""
     # In production: /app/alembic.ini  In dev: backend/alembic.ini
     ini_path = os.path.join(os.path.dirname(__file__), "..", "..", "alembic.ini")
@@ -55,9 +55,9 @@ async def check_needs_stamp() -> bool:
 def run_stamp() -> None:
     """Stamp the database at head without running migrations."""
     print("Pre-Alembic database detected — stamping current revision as head")
-    command.stamp(_alembic_cfg(), "head")
+    command.stamp(alembic_config(), "head")
 
 
 def run_upgrade() -> None:
     """Run Alembic upgrade head."""
-    command.upgrade(_alembic_cfg(), "head")
+    command.upgrade(alembic_config(), "head")
