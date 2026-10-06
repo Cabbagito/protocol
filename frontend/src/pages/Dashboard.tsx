@@ -120,7 +120,7 @@ export default function Dashboard() {
     <div
       style={{
         position: 'relative',
-        minHeight: '100dvh',
+        minHeight: 'var(--app-h)',
         overflow: 'hidden',
       }}
     >
@@ -130,8 +130,10 @@ export default function Dashboard() {
         style={{
           position: 'relative',
           zIndex: 1,
-          padding: '12px 22px calc(env(safe-area-inset-bottom) + 180px)',
-          minHeight: '100dvh',
+          // body already pads the home-indicator inset; 130px clears the
+          // floating nav (64px + 18px offset) with a 48px gap.
+          padding: '12px 22px 130px',
+          minHeight: 'var(--app-h)',
           display: 'flex',
           flexDirection: 'column',
         }}

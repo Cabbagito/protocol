@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import AuroraBackground from '../components/AuroraBackground'
 import PageLoader from '../components/PageLoader'
 import { useToast } from '../components/Toast'
+import { useScrollLock } from '../hooks/useScrollLock'
 import {
   useMesocycles,
   useActiveMesocycle,
@@ -30,7 +31,6 @@ export default function Mesocycles() {
     <div
       style={{
         position: 'relative',
-        minHeight: '100vh',
         background: 'var(--deep)',
         overflow: 'hidden',
       }}
@@ -495,6 +495,7 @@ function CreateMesoDialog({
   const [name, setName] = useState('')
   const [splitId, setSplitId] = useState<string>('')
   const [weeks, setWeeks] = useState(4)
+  useScrollLock(true)
 
   useEffect(() => {
     if (!splitId && splits.length > 0) setSplitId(splits[0]!.id)

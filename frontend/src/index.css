@@ -3,6 +3,14 @@
 @tailwind utilities;
 
 @layer base {
+  /* The document is the app's only scroll container. The body pads itself
+     out of the notch / home-indicator areas (standalone PWA with
+     viewport-fit=cover), so a full-height page must be --app-h tall, not
+     100vh/100dvh — otherwise it overflows by the two insets and scrolls. */
+  :root {
+    --app-h: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  }
+
   html {
     background: var(--deep);
     -webkit-tap-highlight-color: transparent;

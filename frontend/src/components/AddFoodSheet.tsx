@@ -8,6 +8,7 @@ import {
   type FoodItemPayload,
 } from '../api/hooks'
 import { useToast } from './Toast'
+import { useScrollLock } from '../hooks/useScrollLock'
 import SearchInput from './SearchInput'
 import PageLoader from './PageLoader'
 import { round1 } from '../lib/formatters'
@@ -26,17 +27,7 @@ type Tab = 'search' | 'scan' | 'custom'
 export default function AddFoodSheet({ open, onClose, date }: AddFoodSheetProps) {
   const [tab, setTab] = useState<Tab>('search')
 
-  useEffect(() => {
-    const scrollEl = document.querySelector<HTMLElement>('[data-main-scroll]')
-    if (open) {
-      if (scrollEl) scrollEl.style.overflow = 'hidden'
-    } else {
-      if (scrollEl) scrollEl.style.overflow = ''
-    }
-    return () => {
-      if (scrollEl) scrollEl.style.overflow = ''
-    }
-  }, [open])
+  useScrollLock(open)
 
   useEffect(() => {
     if (!open) setTab('search')
@@ -58,7 +49,7 @@ export default function AddFoodSheet({ open, onClose, date }: AddFoodSheetProps)
           background: 'var(--base)',
           border: '1px solid var(--border)',
           borderBottom: 'none',
-          maxHeight: 'calc(100vh - env(safe-area-inset-top) - 24px)',
+          maxHeight: 'calc(100dvh - env(safe-area-inset-top) - 24px)',
           paddingBottom: 'env(safe-area-inset-bottom)',
         }}
       >
@@ -87,7 +78,7 @@ export default function AddFoodSheet({ open, onClose, date }: AddFoodSheetProps)
         </div>
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto px-4 py-4">
+        <div className="flex-1 overflow-y-auto overscroll-contain px-4 py-4">
           {tab === 'search' ? (
             <SearchTab date={date} onLogged={onClose} />
           ) : tab === 'scan' ? (

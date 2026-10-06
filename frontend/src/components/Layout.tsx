@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom'
-import { useEffect, useRef } from 'react'
+import { useLayoutEffect } from 'react'
 import { HomeIcon, DumbbellIcon, AppleIcon } from './Icons'
 import { useKeyboardVisible } from '../lib/useKeyboardVisible'
 
@@ -12,19 +12,16 @@ const navItems = [
 export default function Layout({ children }: { children: React.ReactNode }) {
   const { pathname } = useLocation()
   const keyboardOpen = useKeyboardVisible()
-  const mainRef = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
-    mainRef.current?.scrollTo(0, 0)
+  // The document is the scroll container: open every route at the top
+  // instead of at the previous page's offset.
+  useLayoutEffect(() => {
+    window.scrollTo(0, 0)
   }, [pathname])
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <main
-        ref={mainRef}
-        data-main-scroll
-        className="flex-1 max-w-lg mx-auto w-full"
-      >
+    <div>
+      <main className="max-w-lg mx-auto w-full">
         {children}
       </main>
 

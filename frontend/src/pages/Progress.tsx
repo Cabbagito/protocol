@@ -40,7 +40,7 @@ export default function Progress() {
 
   if (isLoading) {
     return (
-      <div style={{ minHeight: '100vh', background: 'var(--deep)' }}>
+      <div style={{ background: 'var(--deep)' }}>
         <PageLoader className="min-h-[60vh]" />
       </div>
     )
@@ -50,7 +50,6 @@ export default function Progress() {
     <div
       style={{
         position: 'relative',
-        minHeight: '100vh',
         background: 'var(--deep)',
         overflow: 'hidden',
       }}

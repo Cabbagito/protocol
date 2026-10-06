@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useScrollLock } from '../hooks/useScrollLock'
 
 interface BottomSheetAction {
   label: string
@@ -15,17 +15,7 @@ interface BottomSheetProps {
 }
 
 export default function BottomSheet({ open, onClose, title, actions }: BottomSheetProps) {
-  const sheetRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    const scrollEl = document.querySelector<HTMLElement>('[data-main-scroll]')
-    if (open) {
-      if (scrollEl) scrollEl.style.overflow = 'hidden'
-    } else {
-      if (scrollEl) scrollEl.style.overflow = ''
-    }
-    return () => { if (scrollEl) scrollEl.style.overflow = '' }
-  }, [open])
+  useScrollLock(open)
 
   if (!open) return null
 
@@ -39,7 +29,6 @@ export default function BottomSheet({ open, onClose, title, actions }: BottomShe
 
       {/* Popup */}
       <div
-        ref={sheetRef}
         className="relative w-full max-w-sm rounded-2xl flex flex-col slide-up"
         style={{
           background: 'var(--card)',

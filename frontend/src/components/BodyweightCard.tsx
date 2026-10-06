@@ -1,6 +1,7 @@
 import { useEffect, useId, useState } from 'react'
 import { useLogWeight, useWeightLogs } from '../api/hooks'
 import { useToast } from './Toast'
+import { useScrollLock } from '../hooks/useScrollLock'
 import { todayIso, parseIso } from '../lib/dates'
 import { round1 } from '../lib/formatters'
 
@@ -214,6 +215,7 @@ function WeighInSheet({
   const [value, setValue] = useState('')
   const logWeight = useLogWeight()
   const toast = useToast()
+  useScrollLock(open)
 
   useEffect(() => {
     if (open) setValue(initialWeight !== null ? String(round1(initialWeight)) : '')

@@ -176,7 +176,7 @@ export default function SplitEditor() {
 
   if (isEdit && splitLoading) {
     return (
-      <div style={{ minHeight: '100vh', background: 'var(--deep)' }}>
+      <div style={{ background: 'var(--deep)' }}>
         <PageLoader className="min-h-[60vh]" />
       </div>
     )
@@ -194,7 +194,6 @@ export default function SplitEditor() {
     <div
       style={{
         position: 'relative',
-        minHeight: '100vh',
         background: 'var(--deep)',
         overflow: 'hidden',
       }}

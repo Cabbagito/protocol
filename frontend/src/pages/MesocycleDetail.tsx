@@ -26,7 +26,7 @@ export default function MesocycleDetail() {
 
   if (isLoading) {
     return (
-      <div style={{ minHeight: '100vh', background: 'var(--deep)' }}>
+      <div style={{ background: 'var(--deep)' }}>
         <PageLoader className="min-h-[60vh]" />
       </div>
     )
@@ -35,7 +35,6 @@ export default function MesocycleDetail() {
     return (
       <div
         style={{
-          minHeight: '100vh',
           background: 'var(--deep)',
           color: 'var(--text-2)',
           padding: 32,
@@ -95,7 +94,6 @@ export default function MesocycleDetail() {
     <div
       style={{
         position: 'relative',
-        minHeight: '100vh',
         background: 'var(--deep)',
         overflow: 'hidden',
       }}
