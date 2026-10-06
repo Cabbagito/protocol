@@ -74,3 +74,16 @@ async def test_seeded_splits_are_read_only(client, user):
     assert resp.status_code == 200
     resp = await client.delete(f"/api/splits/{seeded['id']}", headers=user.headers)
     assert resp.status_code == 404
+
+
+async def test_responses_tell_templates_from_own_splits(client, user):
+    from tests.api.helpers import create_split, seeded_exercise_ids
+
+    ids = await seeded_exercise_ids(client, user.headers, 1)
+    own = await create_split(client, user.headers, days=[ids])
+    assert own["user_id"] == user.id
+
+    listing = (await client.get("/api/splits", headers=user.headers)).json()
+    owners = {s["id"]: s["user_id"] for s in listing}
+    assert owners[own["id"]] == user.id
+    assert any(uid is None for uid in owners.values())  # seeded templates

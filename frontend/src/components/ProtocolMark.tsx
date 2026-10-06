@@ -31,13 +31,13 @@ export default function ProtocolMark({ mode = 'idle', className }: ProtocolMarkP
     )
   }
 
-  // Idle mode — cascade shimmer
+  // Idle mode — static mark
   return (
     <svg className={className} viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
       <defs>
         <linearGradient id="idle-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" className="cascade-fs" stopColor="#0ea5e9" />
-          <stop offset="100%" className="cascade-fe" stopColor="#8b5cf6" />
+          <stop offset="0%" stopColor="#0ea5e9" />
+          <stop offset="100%" stopColor="#8b5cf6" />
         </linearGradient>
         <radialGradient id="idle-vig" cx="42%" cy="38%" r="62%">
           <stop offset="0%" stopColor="#0f172a" stopOpacity="0" />
@@ -46,8 +46,8 @@ export default function ProtocolMark({ mode = 'idle', className }: ProtocolMarkP
       </defs>
       <rect width="100" height="100" rx="22" fill="var(--logo-bg)" />
       <rect width="100" height="100" rx="22" fill="url(#idle-vig)" />
-      <path className="cascade-back" d="M36 80 L36 24 L58 24 C69 24 76 31 76 40 C76 49 69 56 58 56 L48 56 L48 80 Z M48 34 L56 34 C62 34 64 37 64 40 C64 43 62 46 56 46 L48 46 Z" fill="#0ea5e9" opacity="0.15" />
-      <path className="cascade-mid" d="M33 78 L33 22 L55 22 C66 22 73 29 73 38 C73 47 66 54 55 54 L45 54 L45 78 Z M45 32 L53 32 C59 32 61 35 61 38 C61 41 59 44 53 44 L45 44 Z" fill="#0ea5e9" opacity="0.4" />
+      <path d="M36 80 L36 24 L58 24 C69 24 76 31 76 40 C76 49 69 56 58 56 L48 56 L48 80 Z M48 34 L56 34 C62 34 64 37 64 40 C64 43 62 46 56 46 L48 46 Z" fill="#0ea5e9" opacity="0.15" />
+      <path d="M33 78 L33 22 L55 22 C66 22 73 29 73 38 C73 47 66 54 55 54 L45 54 L45 78 Z M45 32 L53 32 C59 32 61 35 61 38 C61 41 59 44 53 44 L45 44 Z" fill="#0ea5e9" opacity="0.4" />
       <path d="M30 76 L30 20 L52 20 C63 20 70 27 70 36 C70 45 63 52 52 52 L42 52 L42 76 Z M42 30 L50 30 C56 30 58 33 58 36 C58 39 56 42 50 42 L42 42 Z" fill="url(#idle-grad)" />
     </svg>
   )

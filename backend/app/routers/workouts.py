@@ -27,15 +27,6 @@ async def save_session(
     return await workout_service.save_session(db, current_user.id, data)
 
 
-@router.get("/progress/{exercise_id}")
-async def get_exercise_progress(
-    exercise_id: str,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    return await workout_service.get_exercise_progress(db, current_user.id, exercise_id)
-
-
 @router.patch("/exercise-note")
 async def update_exercise_note(
     data: ExerciseNoteRequest,
@@ -135,12 +126,3 @@ async def skip_session(
         session_index=data.session_index,
         skipped=data.skipped,
     )
-
-
-@router.get("/history/{mesocycle_id}")
-async def get_workout_history(
-    mesocycle_id: str,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    return await workout_service.get_workout_history(db, mesocycle_id, current_user.id)

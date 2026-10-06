@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useExercises } from '../../api/hooks'
+import CreateExerciseSheet from '../../components/CreateExerciseSheet'
 import { MuscleGroupChips, EquipmentTypeToggles } from '../../components/ExerciseFilters'
 import { getMuscleColor } from '../../lib/muscleColors'
 
@@ -20,6 +21,7 @@ export function ExercisePicker({ mode = 'replace', initialMuscleGroup, initialEq
   const [selectedEquipmentTypes, setSelectedEquipmentTypes] = useState<Set<string>>(() => initialEquipmentType ? new Set([initialEquipmentType]) : new Set())
   const [applyToFuture, setApplyToFuture] = useState(true)
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [createOpen, setCreateOpen] = useState(false)
 
   const toggleMuscleGroup = (mg: string) => {
     setSelectedMuscleGroups(prev => {
@@ -63,7 +65,7 @@ export function ExercisePicker({ mode = 'replace', initialMuscleGroup, initialEq
     >
       {/* Header */}
       <div className="flex items-center gap-3 px-4 pt-4 pb-3">
-        <button onClick={onClose} className="text-[var(--text-2)] p-1">
+        <button onClick={onClose} aria-label="Close" className="text-[var(--text-2)] p-2 -m-1">
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
           </svg>
@@ -138,7 +140,27 @@ export function ExercisePicker({ mode = 'replace', initialMuscleGroup, initialEq
         {filtered.length === 0 && (
           <div className="text-center text-[var(--text-m)] py-8 text-sm">No exercises found</div>
         )}
+        <button
+          type="button"
+          onClick={() => setCreateOpen(true)}
+          className="w-full my-3 py-3 rounded-xl text-sm font-medium"
+          style={{ border: '1.5px dashed rgba(255,255,255,0.1)', color: 'var(--text-2)' }}
+        >
+          {search.trim() ? `Can't find it? Create “${search.trim()}”` : '+ Create custom exercise'}
+        </button>
       </div>
+
+      <CreateExerciseSheet
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        initialName={search.trim()}
+        onSaved={(ex) => {
+          setSearch('')
+          setSelectedMuscleGroups(new Set())
+          setSelectedEquipmentTypes(new Set())
+          setSelectedId(ex.id)
+        }}
+      />
 
       {/* Footer */}
       <div className="px-4 pt-3 pb-safe" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>

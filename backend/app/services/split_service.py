@@ -23,6 +23,7 @@ async def list_splits(db: AsyncSession, user_id: str) -> list[dict]:
             Split.id,
             Split.name,
             Split.color,
+            Split.user_id,
             func.count(SplitDay.id).label("day_count"),
             exercise_count_subq,
         )
@@ -36,6 +37,7 @@ async def list_splits(db: AsyncSession, user_id: str) -> list[dict]:
             "id": s.id,
             "name": s.name,
             "color": s.color,
+            "user_id": s.user_id,
             "day_count": s.day_count,
             "exercise_count": s.exercise_count or 0,
         }
@@ -146,5 +148,6 @@ def _split_to_response(split: Split) -> dict:
         "id": split.id,
         "name": split.name,
         "color": split.color,
+        "user_id": split.user_id,
         "days": [_day_to_response(d) for d in split.days],
     }

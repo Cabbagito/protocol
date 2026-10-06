@@ -5,6 +5,8 @@ export interface Exercise {
   name: string
   muscle_group: string
   equipment_type: EquipmentType
+  /** Owner; null for the shared, seeded exercises. */
+  user_id: string | null
 }
 
 export type EquipmentType = 'barbell' | 'dumbbell' | 'machine' | 'cable' | 'bodyweight'
@@ -34,6 +36,8 @@ export interface Split {
   id: string
   name: string
   color: string | null
+  /** Owner; null for the seeded templates shared by everyone (read-only). */
+  user_id: string | null
   days: SplitDay[]
 }
 
@@ -41,6 +45,8 @@ export interface SplitListItem {
   id: string
   name: string
   color: string | null
+  /** Owner; null for the seeded templates shared by everyone (read-only). */
+  user_id: string | null
   day_count: number
   exercise_count: number
 }
@@ -116,30 +122,6 @@ export interface Mesocycle {
   started_at: string
   workouts_completed: number
   structure: MesoStructure
-}
-
-// Workout history item
-
-export interface WorkoutHistoryItem {
-  week_index: number
-  session_index: number
-  session_name: string
-  week_number: number
-  date: string | null
-  total_sets: number
-  total_volume: number
-}
-
-// Exercise progress
-
-export interface ProgressEntry {
-  date: string
-  week_number: number
-  max_weight: number
-  best_e1rm: number
-  total_reps: number
-  total_sets: number
-  volume: number
 }
 
 // Diet

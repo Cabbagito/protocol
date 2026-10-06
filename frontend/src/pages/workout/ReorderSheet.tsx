@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
+import { useScrollLock } from '../../hooks/useScrollLock'
 import { getMuscleColor } from '../../lib/muscleColors'
 
 export interface ReorderItem {
@@ -26,11 +27,7 @@ export function ReorderSheet({ subtitle, exercises, saving, onSave, onClose }: R
   const [order, setOrder] = useState(exercises)
   const [lastMoved, setLastMoved] = useState<string | null>(null)
 
-  useEffect(() => {
-    const scrollEl = document.querySelector<HTMLElement>('[data-main-scroll]')
-    if (scrollEl) scrollEl.style.overflow = 'hidden'
-    return () => { if (scrollEl) scrollEl.style.overflow = '' }
-  }, [])
+  useScrollLock(true)
 
   const move = (index: number, delta: -1 | 1) => {
     const target = index + delta

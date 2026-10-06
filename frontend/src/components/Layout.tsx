@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom'
-import { useEffect, useRef } from 'react'
+import { useLayoutEffect } from 'react'
 import { HomeIcon, DumbbellIcon, AppleIcon } from './Icons'
 import { useKeyboardVisible } from '../lib/useKeyboardVisible'
 
@@ -12,25 +12,23 @@ const navItems = [
 export default function Layout({ children }: { children: React.ReactNode }) {
   const { pathname } = useLocation()
   const keyboardOpen = useKeyboardVisible()
-  const mainRef = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
-    mainRef.current?.scrollTo(0, 0)
+  // The document is the scroll container: open every route at the top
+  // instead of at the previous page's offset.
+  useLayoutEffect(() => {
+    window.scrollTo(0, 0)
   }, [pathname])
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <main
-        ref={mainRef}
-        data-main-scroll
-        className="flex-1 max-w-lg mx-auto w-full"
-      >
+    <div>
+      <main className="max-w-lg mx-auto w-full">
         {children}
       </main>
 
       {/* BottomNavV3 — floating glass capsule with gradient pill on active item. */}
       {!keyboardOpen && (
         <nav
+          aria-label="Main"
           className="fixed z-[101]"
           style={{
             left: 18,
@@ -61,6 +59,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               <Link
                 key={item.path}
                 to={item.path}
+                aria-label={item.label}
+                aria-current={isActive ? 'page' : undefined}
                 style={{
                   position: 'relative',
                   flex: 1,
@@ -83,7 +83,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 }}
               >
                 <item.icon className="w-5 h-5" />
-                {isActive && <span>{item.label}</span>}
+                {isActive && <span aria-hidden="true">{item.label}</span>}
               </Link>
             )
           })}

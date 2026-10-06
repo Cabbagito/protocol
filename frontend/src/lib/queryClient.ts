@@ -20,7 +20,7 @@ const CACHE_KEY = 'protocol_query_cache'
 
 // Workout data is persisted so the app opens with the last-known state
 // even with no signal (deep inside the gym).
-const PERSISTED_ROOTS = new Set(['mesocycles', 'exercises', 'workouts', 'weight-logs', 'daily-targets'])
+const PERSISTED_ROOTS = new Set(['mesocycles', 'exercises', 'weight-logs', 'daily-targets'])
 
 export const persistOptions: Omit<PersistQueryClientOptions, 'queryClient'> = {
   persister: createSyncStoragePersister({

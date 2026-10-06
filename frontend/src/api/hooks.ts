@@ -1,14 +1,13 @@
 import { useCallback } from 'react'
-import { queryOptions, useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { queryOptions, useQuery, useQueries, useMutation, useQueryClient, type UseQueryResult } from '@tanstack/react-query'
 import { api } from './client'
 import type {
   Exercise,
+  EquipmentType,
   Split,
   SplitListItem,
   Mesocycle,
   MesocycleListItem,
-  WorkoutHistoryItem,
-  ProgressEntry,
   BarcodeLookup,
   FoodItem,
   FoodLog,
@@ -39,11 +38,6 @@ export const queryKeys = {
     all: ['mesocycles'] as const,
     active: ['mesocycles', 'active'] as const,
     detail: (id: string) => ['mesocycles', id] as const,
-  },
-  workouts: {
-    all: ['workouts'] as const,
-    history: (mesocycleId: string) => ['workouts', 'history', mesocycleId] as const,
-    progress: (exerciseId: string) => ['workouts', 'progress', exerciseId] as const,
   },
   foods: {
     all: ['foods'] as const,
@@ -87,11 +81,40 @@ export function mesocycleQuery(id: string) {
   })
 }
 
+export interface ExercisePayload {
+  name: string
+  muscle_group: string
+  equipment_type: EquipmentType
+}
+
 export function useCreateExercise() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (data: { name: string; muscle_group: string; equipment_type: string }) =>
-      api.post('/exercises', data),
+    mutationFn: (data: ExercisePayload) => api.post<Exercise>('/exercises', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.exercises.all })
+    },
+  })
+}
+
+export function useUpdateExercise() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: ExercisePayload }) =>
+      api.put<Exercise>(`/exercises/${id}`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.exercises.all })
+      // Split details join the exercise name / muscle group.
+      queryClient.invalidateQueries({ queryKey: queryKeys.splits.all })
+    },
+  })
+}
+
+/** Rejected with status 409 while a split or mesocycle still uses the exercise. */
+export function useDeleteExercise() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => api.delete(`/exercises/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.exercises.all })
     },
@@ -122,7 +145,7 @@ export function useCreateSplit() {
       name: string
       color?: string | null
       days: { name: string; exercises: { exercise_id: string }[] }[]
-    }) => api.post('/splits', data),
+    }) => api.post<Split>('/splits', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.splits.all })
     },
@@ -150,6 +173,8 @@ export function useDeleteSplit() {
     mutationFn: (id: string) => api.delete(`/splits/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.splits.all })
+      // Mesocycles built from the split survive but their list items show its name.
+      queryClient.invalidateQueries({ queryKey: queryKeys.mesocycles.all })
     },
   })
 }
@@ -195,6 +220,22 @@ export function useMesocycle(id: string) {
   })
 }
 
+/** Full details (incl. structure) of several mesocycles, e.g. all of them for Progress. */
+export function useMesocycleDetails(ids: string[]) {
+  return useQueries({
+    queries: ids.map((id) => mesocycleQuery(id)),
+    combine: combineMesocycleDetails,
+  })
+}
+
+// Module-level so useQueries can memoize the combined result between renders.
+function combineMesocycleDetails(results: UseQueryResult<Mesocycle>[]) {
+  return {
+    data: results.flatMap((r) => (r.data ? [r.data] : [])),
+    isLoading: results.some((r) => r.isLoading),
+  }
+}
+
 export function useCreateMesocycle() {
   const queryClient = useQueryClient()
   return useMutation({
@@ -233,29 +274,12 @@ export function useDeleteMesocycle() {
 
 // --- Workout Hooks ---
 
-export function useWorkoutHistory(mesocycleId: string) {
-  return useQuery({
-    queryKey: queryKeys.workouts.history(mesocycleId),
-    queryFn: () => api.get<WorkoutHistoryItem[]>(`/workouts/history/${mesocycleId}`),
-    enabled: !!mesocycleId,
-  })
-}
-
-export function useExerciseProgress(exerciseId: string) {
-  return useQuery({
-    queryKey: queryKeys.workouts.progress(exerciseId),
-    queryFn: () => api.get<ProgressEntry[]>(`/workouts/progress/${exerciseId}`),
-    enabled: !!exerciseId,
-  })
-}
-
 export function useUpdateExerciseNote() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (data: { mesocycle_id: string; exercise_id: string; note: string | null }) =>
       api.patch('/workouts/exercise-note', data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.workouts.all })
       queryClient.invalidateQueries({ queryKey: queryKeys.mesocycles.all })
     },
   })
@@ -274,7 +298,6 @@ export function useReplaceExercise() {
       apply_to_future: boolean
     }) => api.post('/workouts/replace-exercise', data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.workouts.all })
       queryClient.invalidateQueries({ queryKey: queryKeys.mesocycles.all })
     },
   })
@@ -291,7 +314,6 @@ export function useAddExercise() {
       apply_to_future: boolean
     }) => api.post('/workouts/add-exercise', data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.workouts.all })
       queryClient.invalidateQueries({ queryKey: queryKeys.mesocycles.all })
     },
   })
@@ -309,7 +331,6 @@ export function useReorderExercises() {
       apply_to_future: boolean
     }) => api.post('/workouts/reorder-exercises', data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.workouts.all })
       queryClient.invalidateQueries({ queryKey: queryKeys.mesocycles.all })
     },
   })
@@ -325,7 +346,6 @@ export function useSkipSession() {
       skipped: boolean
     }) => api.post('/workouts/skip-session', data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.workouts.all })
       queryClient.invalidateQueries({ queryKey: queryKeys.mesocycles.all })
     },
   })
@@ -342,7 +362,6 @@ export function useRemoveExerciseFromSession() {
       apply_to_future: boolean
     }) => api.post('/workouts/remove-exercise', data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.workouts.all })
       queryClient.invalidateQueries({ queryKey: queryKeys.mesocycles.all })
     },
   })

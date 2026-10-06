@@ -275,7 +275,7 @@ export function WorkoutSession({ mesocycle, weekIndex, sessionIndex }: WorkoutSe
   const mesoExercises = useMemo(() => toMesoExercises(exercises), [exercises])
 
   return (
-    <div style={{ position: 'relative', minHeight: '100dvh', background: 'var(--deep)', overflow: 'hidden' }}>
+    <div style={{ position: 'relative', minHeight: 'var(--app-h)', background: 'var(--deep)', overflow: 'hidden' }}>
       <AuroraBackground />
       <MuscleSpotlight group={currentEx?.muscle_group ?? 'chest'} />
 

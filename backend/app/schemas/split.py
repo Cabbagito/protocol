@@ -41,6 +41,8 @@ class SplitResponse(BaseModel):
     id: str
     name: str
     color: str | None
+    # Owner; None for the shared seeded templates (read-only).
+    user_id: str | None
     days: list[DayResponse]
 
 
@@ -50,5 +52,6 @@ class SplitListItem(BaseModel):
     id: str
     name: str
     color: str | None
+    user_id: str | None
     day_count: int
     exercise_count: int

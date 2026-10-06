@@ -227,7 +227,6 @@ export function LoggingState({
                   boxShadow: isActive
                     ? `0 0 14px -4px color-mix(in oklab, ${c.primary} 55%, transparent)`
                     : 'none',
-                  backdropFilter: 'blur(20px)',
                   cursor: 'pointer',
                   opacity: isSkipped ? 0.4 : 1,
                 }}

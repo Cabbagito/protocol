@@ -1,13 +1,17 @@
 import { useEffect, useId, useState } from 'react'
 import { useLogWeight, useWeightLogs } from '../api/hooks'
 import { useToast } from './Toast'
-import { todayIso, parseIso } from '../lib/dates'
+import { useScrollLock } from '../hooks/useScrollLock'
+import { parseIso } from '../lib/dates'
+import { parseDecimal } from '../lib/decimal'
+import DecimalInput from './DecimalInput'
 import { round1 } from '../lib/formatters'
 
 const MONO = 'JetBrains Mono, ui-monospace, monospace'
 const MAX_CHART_POINTS = 60
 
-export default function BodyweightCard() {
+/** `date` is the day the Diet page is showing; weigh-ins are logged to it. */
+export default function BodyweightCard({ date, today }: { date: string; today: string }) {
   const { data: logs } = useWeightLogs()
   const [sheetOpen, setSheetOpen] = useState(false)
 
@@ -15,7 +19,11 @@ export default function BodyweightCard() {
   const latest = entries.length > 0 ? entries[entries.length - 1] : null
   const previous = entries.length > 1 ? entries[entries.length - 2] : null
   const delta = latest && previous ? latest.weight_kg - previous.weight_kg : null
-  const weighedToday = latest?.logged_on === todayIso()
+  const onDate = entries.find((e) => e.logged_on === date) ?? null
+  // Prefill: that day's weigh-in, else the closest earlier one, else the latest.
+  const prefill =
+    onDate ?? [...entries].reverse().find((e) => e.logged_on <= date) ?? latest
+  const dayLabel = date === today ? '' : ` · ${formatLogDate(date, today)}`
 
   return (
     <div style={{ marginTop: 22 }}>
@@ -39,8 +47,6 @@ export default function BodyweightCard() {
           borderRadius: 20,
           background: 'color-mix(in oklab, var(--card) 70%, transparent)',
           border: '1px solid rgba(255,255,255,0.05)',
-          backdropFilter: 'blur(20px)',
-          WebkitBackdropFilter: 'blur(20px)',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
@@ -78,7 +84,7 @@ export default function BodyweightCard() {
                       {delta > 0 ? '▲' : delta < 0 ? '▼' : '·'} {round1(Math.abs(delta))} kg
                     </span>
                   )}
-                  {formatLogDate(latest.logged_on)}
+                  {formatLogDate(latest.logged_on, today)}
                 </div>
               </>
             ) : (
@@ -93,9 +99,9 @@ export default function BodyweightCard() {
             style={{
               padding: '9px 14px',
               borderRadius: 999,
-              background: weighedToday ? 'rgba(255,255,255,0.06)' : 'var(--p-grad-cta)',
-              color: weighedToday ? 'var(--text-2)' : 'var(--btn-text)',
-              border: weighedToday ? '1px solid rgba(255,255,255,0.08)' : 'none',
+              background: onDate ? 'rgba(255,255,255,0.06)' : 'var(--p-grad-cta)',
+              color: onDate ? 'var(--text-2)' : 'var(--btn-text)',
+              border: onDate ? '1px solid rgba(255,255,255,0.08)' : 'none',
               fontFamily: MONO,
               fontWeight: 500,
               fontSize: 11,
@@ -104,13 +110,13 @@ export default function BodyweightCard() {
               whiteSpace: 'nowrap',
             }}
           >
-            {weighedToday ? 'Update' : 'Weigh in'}
+            {onDate ? 'Update' : 'Weigh in'}{dayLabel}
           </button>
         </div>
 
         {entries.length >= 2 && (
           <div style={{ marginTop: 16 }}>
-            <WeightChart logs={entries.slice(-MAX_CHART_POINTS)} />
+            <WeightChart logs={entries.slice(-MAX_CHART_POINTS)} today={today} />
           </div>
         )}
       </div>
@@ -118,14 +124,16 @@ export default function BodyweightCard() {
       <WeighInSheet
         open={sheetOpen}
         onClose={() => setSheetOpen(false)}
-        initialWeight={latest?.weight_kg ?? null}
+        date={date}
+        title={`Weigh in${dayLabel}`}
+        initialWeight={prefill?.weight_kg ?? null}
       />
     </div>
   )
 }
 
-function formatLogDate(iso: string): string {
-  if (iso === todayIso()) return 'TODAY'
+function formatLogDate(iso: string, today: string): string {
+  if (iso === today) return 'TODAY'
   return parseIso(iso)
     .toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
     .toUpperCase()
@@ -133,7 +141,13 @@ function formatLogDate(iso: string): string {
 
 /* ─── Weight chart ─────────────────────────────────────────────── */
 
-function WeightChart({ logs }: { logs: { logged_on: string; weight_kg: number }[] }) {
+function WeightChart({
+  logs,
+  today,
+}: {
+  logs: { logged_on: string; weight_kg: number }[]
+  today: string
+}) {
   const id = useId().replace(/:/g, '')
   const w = 312
   const h = 90
@@ -192,11 +206,11 @@ function WeightChart({ logs }: { logs: { logged_on: string; weight_kg: number }[
           letterSpacing: '0.1em',
         }}
       >
-        <span>{formatLogDate(logs[0]!.logged_on)}</span>
+        <span>{formatLogDate(logs[0]!.logged_on, today)}</span>
         <span>
           {round1(min)}–{round1(max)} KG
         </span>
-        <span>{formatLogDate(logs[logs.length - 1]!.logged_on)}</span>
+        <span>{formatLogDate(logs[logs.length - 1]!.logged_on, today)}</span>
       </div>
     </div>
   )
@@ -207,15 +221,20 @@ function WeightChart({ logs }: { logs: { logged_on: string; weight_kg: number }[
 function WeighInSheet({
   open,
   onClose,
+  date,
+  title,
   initialWeight,
 }: {
   open: boolean
   onClose: () => void
+  date: string
+  title: string
   initialWeight: number | null
 }) {
   const [value, setValue] = useState('')
   const logWeight = useLogWeight()
   const toast = useToast()
+  useScrollLock(open)
 
   useEffect(() => {
     if (open) setValue(initialWeight !== null ? String(round1(initialWeight)) : '')
@@ -223,13 +242,13 @@ function WeighInSheet({
 
   if (!open) return null
 
-  const parsed = parseFloat(value.replace(',', '.'))
-  const valid = !isNaN(parsed) && parsed > 0 && parsed < 500
+  const parsed = parseDecimal(value)
+  const valid = Number.isFinite(parsed) && parsed > 0 && parsed < 500
 
   async function handleSave() {
     if (!valid) return
     try {
-      await logWeight.mutateAsync({ logged_on: todayIso(), weight_kg: parsed })
+      await logWeight.mutateAsync({ logged_on: date, weight_kg: parsed })
       onClose()
     } catch {
       toast.showError('Failed to log weight')
@@ -243,6 +262,9 @@ function WeighInSheet({
         style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(2px)' }}
       />
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
         className="relative w-full max-w-sm rounded-2xl slide-up"
         style={{
           background: 'var(--card)',
@@ -262,18 +284,15 @@ function WeighInSheet({
             fontFamily: MONO,
           }}
         >
-          Weigh in
+          {title}
         </div>
 
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 16 }}>
-          <input
-            type="number"
-            inputMode="decimal"
-            step="0.1"
-            min="0"
+          <DecimalInput
             autoFocus
+            aria-label="Bodyweight in kg"
             value={value}
-            onChange={(e) => setValue(e.target.value)}
+            onChange={setValue}
             onKeyDown={(e) => e.key === 'Enter' && handleSave()}
             placeholder="0.0"
             style={{

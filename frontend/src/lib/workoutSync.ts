@@ -271,7 +271,6 @@ class WorkoutSync {
     queryClient.setQueryData<Mesocycle | null>(['mesocycles', 'active'], patch)
     // Set-count changes also reshape future weeks server-side; refetch lazily.
     void queryClient.invalidateQueries({ queryKey: ['mesocycles'], refetchType: 'none' })
-    void queryClient.invalidateQueries({ queryKey: ['workouts'], refetchType: 'none' })
     for (const e of d.exercises) {
       void queryClient.invalidateQueries({ queryKey: ['exercises', 'history', e.exercise_id], refetchType: 'none' })
     }

@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import AuroraBackground from '../components/AuroraBackground'
 import PageLoader from '../components/PageLoader'
 import { useToast } from '../components/Toast'
+import { useScrollLock } from '../hooks/useScrollLock'
 import {
   useMesocycles,
   useActiveMesocycle,
@@ -10,7 +11,6 @@ import {
   useSplits,
 } from '../api/hooks'
 import { getCurrentPosition, isSessionDone, isSessionSkipped } from '../lib/mesoUtils'
-import { getMuscleColor } from '../lib/muscleColors'
 import type { MesocycleListItem, Mesocycle } from '../types'
 
 const MONO = 'JetBrains Mono, ui-monospace, monospace'
@@ -23,14 +23,13 @@ export default function Mesocycles() {
 
   const activeMesos = mesocycles.filter((m) => m.is_active)
   const archived = mesocycles.filter((m) => !m.is_active)
+  // The backend keeps at most one mesocycle active per user.
   const primaryActive = activeMeso ?? activeMesos[0] ?? null
-  const secondaryActive = activeMesos.filter((m) => m.id !== primaryActive?.id)
 
   return (
     <div
       style={{
         position: 'relative',
-        minHeight: '100vh',
         background: 'var(--deep)',
         overflow: 'hidden',
       }}
@@ -51,10 +50,6 @@ export default function Mesocycles() {
         ) : (
           <>
             {primaryActive && <PrimaryActiveCard meso={primaryActive} />}
-
-            {secondaryActive.map((m) => (
-              <SecondaryActiveCard key={m.id} meso={m} />
-            ))}
 
             {archived.length > 0 && (
               <div style={{ marginTop: 22 }}>
@@ -134,7 +129,6 @@ function Chrome({ title, sub, onBack }: { title: string; sub: string; onBack: ()
           borderRadius: 12,
           background: 'rgba(255,255,255,0.04)',
           border: '1px solid rgba(255,255,255,0.05)',
-          backdropFilter: 'blur(20px)',
           color: 'var(--text-2)',
           display: 'grid',
           placeItems: 'center',
@@ -216,8 +210,6 @@ function PrimaryActiveCard({ meso }: { meso: MesocycleListItem | Mesocycle }) {
         background:
           'linear-gradient(180deg, rgba(var(--accent-rgb),0.14), rgba(15,29,46,0.6))',
         border: '1px solid rgba(var(--accent-rgb),0.30)',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
       }}
     >
       <div
@@ -343,86 +335,6 @@ function buildTicks(meso: MesocycleListItem | Mesocycle): ('done' | 'current' | 
   return ticks
 }
 
-/* ─── Secondary active (compact) ────────────────────────────────── */
-
-function SecondaryActiveCard({ meso }: { meso: MesocycleListItem }) {
-  const color = getMuscleColor((meso.split_name ?? '').toLowerCase().includes('run') ? 'quads' : 'back')
-  const accent = meso.split_color || color.primary
-  const accentLight = color.light
-  const pct =
-    meso.total_workouts > 0 ? Math.round((meso.workouts_completed / meso.total_workouts) * 100) : 0
-
-  return (
-    <Link
-      to={`/mesocycles/${meso.id}`}
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 14,
-        marginTop: 12,
-        padding: 16,
-        borderRadius: 14,
-        background: 'rgba(15,29,46,0.5)',
-        border: '1px solid rgba(255,255,255,0.05)',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
-        textDecoration: 'none',
-        color: 'inherit',
-      }}
-    >
-      <div
-        style={{
-          width: 3,
-          height: 46,
-          borderRadius: 2,
-          background: `linear-gradient(180deg, ${accent}, ${accentLight})`,
-        }}
-      />
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div
-          style={{
-            fontSize: 9,
-            color: accentLight,
-            letterSpacing: '0.22em',
-            fontFamily: MONO,
-            fontWeight: 600,
-          }}
-        >
-          ACTIVE · WEEK {meso.current_week}
-        </div>
-        <div
-          style={{
-            fontSize: 15,
-            fontWeight: 600,
-            color: 'var(--text-1)',
-            marginTop: 2,
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-          }}
-        >
-          {meso.name}
-        </div>
-        <div
-          style={{
-            fontSize: 10,
-            color: 'var(--text-m)',
-            marginTop: 2,
-            letterSpacing: '0.15em',
-            fontFamily: MONO,
-            textTransform: 'uppercase',
-          }}
-        >
-          {meso.split_name ?? 'Deleted split'} · {meso.total_weeks} WEEKS · {pct}%
-        </div>
-      </div>
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-m)" strokeWidth={2} strokeLinecap="round">
-        <path d="M9 18l6-6-6-6" />
-      </svg>
-    </Link>
-  )
-}
-
 /* ─── Archived row ──────────────────────────────────────────────── */
 
 function ArchivedRow({ meso }: { meso: MesocycleListItem }) {
@@ -440,8 +352,6 @@ function ArchivedRow({ meso }: { meso: MesocycleListItem }) {
         gap: 12,
         background: 'rgba(15,29,46,0.4)',
         border: '1px solid rgba(255,255,255,0.05)',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
         textDecoration: 'none',
         color: 'inherit',
       }}
@@ -502,6 +412,7 @@ function CreateMesoDialog({
   const [name, setName] = useState('')
   const [splitId, setSplitId] = useState<string>('')
   const [weeks, setWeeks] = useState(4)
+  useScrollLock(true)
 
   useEffect(() => {
     if (!splitId && splits.length > 0) setSplitId(splits[0]!.id)

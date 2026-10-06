@@ -1,12 +1,13 @@
 import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { useActiveMesocycle } from '../api/hooks'
-import { countTotalWorkouts, getCurrentPosition } from '../lib/mesoUtils'
+import { countCompletedWorkouts, countTotalWorkouts, getCurrentPosition } from '../lib/mesoUtils'
 import { GearIcon } from '../components/Icons'
 import PageLoader from '../components/PageLoader'
 import AuroraBackground from '../components/AuroraBackground'
 import { getUserInfo } from '../lib/auth'
-import { localDateKey } from '../lib/dates'
+import { localDateKey, parseIso } from '../lib/dates'
+import { useToday } from '../hooks/useToday'
 
 function ArrowIcon({ size = 18 }: { size?: number }) {
   return (
@@ -30,6 +31,8 @@ function mondayIndex(d: Date): number {
 
 export default function Dashboard() {
   const { data: mesocycle, isLoading } = useActiveMesocycle()
+  // Re-renders when the date rolls over (e.g. the PWA resumed next morning).
+  const todayKey = useToday()
 
   const currentPos = useMemo(
     () => (mesocycle ? getCurrentPosition(mesocycle.structure) : null),
@@ -39,14 +42,10 @@ export default function Dashboard() {
   const trainedKeys = useMemo(() => {
     const out = new Set<string>()
     if (!mesocycle) return out
+    // A session's date is the day its first set was logged.
     for (const w of mesocycle.structure.weeks) {
       for (const s of w.sessions) {
-        if (!s.date) continue
-        const nonSkipped = s.exercises.filter(e => !e.skipped)
-        const allLogged =
-          nonSkipped.length > 0 &&
-          nonSkipped.every(e => e.sets.every(st => st.logged))
-        if (allLogged) out.add(s.date)
+        if (s.date && s.exercises.some(e => e.sets.some(st => st.logged))) out.add(s.date)
       }
     }
     return out
@@ -57,7 +56,7 @@ export default function Dashboard() {
   }
 
   // ── Compose this Monday→Sunday strip from the user's local week.
-  const today = new Date()
+  const today = parseIso(todayKey)
   const todayMon = mondayIndex(today)
   const weekStart = new Date(today)
   weekStart.setDate(today.getDate() - todayMon)
@@ -76,7 +75,7 @@ export default function Dashboard() {
 
   const userInfo = getUserInfo()
   const firstName = userInfo?.name?.split(/\s+/)[0] ?? ''
-  const hour = today.getHours()
+  const hour = new Date().getHours()
   const partOfDay =
     hour < 5 ? 'Late night' :
     hour < 12 ? 'Good morning' :
@@ -102,6 +101,9 @@ export default function Dashboard() {
   const heroGroups = uniqueGroups.slice(0, 3)
 
   const dayTitle = session?.session_name ?? 'Workout'
+  // 130px fits ~6 characters per line; longer names (e.g. "Full Body A")
+  // would wrap to three giant lines and push the CTA under the nav.
+  const dayTitleSize = Math.round(Math.max(64, Math.min(130, 780 / Math.max(dayTitle.length, 1))))
   const dayOrdinal = ORDINAL_WORDS[si] ?? String(si + 1)
 
   // Continue CTA destination
@@ -113,14 +115,14 @@ export default function Dashboard() {
   const totalWorkouts = mesocycle ? countTotalWorkouts(mesocycle.structure) : 0
   const progressPct =
     mesocycle && totalWorkouts > 0
-      ? Math.round((mesocycle.workouts_completed / totalWorkouts) * 100)
+      ? Math.round((countCompletedWorkouts(mesocycle.structure) / totalWorkouts) * 100)
       : 0
 
   return (
     <div
       style={{
         position: 'relative',
-        minHeight: '100dvh',
+        minHeight: 'var(--app-h)',
         overflow: 'hidden',
       }}
     >
@@ -130,8 +132,10 @@ export default function Dashboard() {
         style={{
           position: 'relative',
           zIndex: 1,
-          padding: '12px 22px calc(env(safe-area-inset-bottom) + 180px)',
-          minHeight: '100dvh',
+          // body already pads the home-indicator inset; 130px clears the
+          // floating nav (64px + 18px offset) with a 48px gap.
+          padding: '12px 22px 130px',
+          minHeight: 'var(--app-h)',
           display: 'flex',
           flexDirection: 'column',
         }}
@@ -159,8 +163,6 @@ export default function Dashboard() {
               borderRadius: 12,
               background: 'rgba(255,255,255,0.04)',
               border: '1px solid rgba(255,255,255,0.05)',
-              backdropFilter: 'blur(20px)',
-              WebkitBackdropFilter: 'blur(20px)',
               color: 'var(--text-2)',
               display: 'grid',
               placeItems: 'center',
@@ -242,7 +244,7 @@ export default function Dashboard() {
         >
           {mesocycle && heroGroups.length > 0 && (
             <div style={{ display: 'flex', gap: 16, marginBottom: 22 }}>
-              {heroGroups.map((g, i) => (
+              {heroGroups.map((g) => (
                 <div key={g} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                   <span
                     style={{
@@ -251,7 +253,6 @@ export default function Dashboard() {
                       borderRadius: '50%',
                       background: `var(--m-${g.replace(/\s+/g, '-')}, var(--accent))`,
                       boxShadow: `0 0 22px var(--m-${g.replace(/\s+/g, '-')}, var(--accent)), 0 0 8px var(--m-${g.replace(/\s+/g, '-')}, var(--accent)), 0 0 2px white`,
-                      animation: `p-pulse-dot 2.6s ease-in-out infinite ${i * 0.4}s`,
                     }}
                   />
                   <span
@@ -276,7 +277,7 @@ export default function Dashboard() {
               <div
                 className="p-grad-text"
                 style={{
-                  fontSize: 130,
+                  fontSize: dayTitleSize,
                   fontWeight: 700,
                   letterSpacing: '-0.06em',
                   lineHeight: 1.05,
