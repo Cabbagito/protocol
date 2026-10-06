@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, createContext, useContext } from 'react'
+import { useState, useEffect, useCallback, useMemo, createContext, useContext } from 'react'
 
 interface Toast {
   id: number
@@ -29,9 +29,12 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 
   const showError = useCallback((message: string) => addToast(message, 'error'), [addToast])
   const showSuccess = useCallback((message: string) => addToast(message, 'success'), [addToast])
+  // Stable value: consumers (e.g. the barcode scanner's effects) must not
+  // re-run every time a toast appears or disappears.
+  const value = useMemo(() => ({ showError, showSuccess }), [showError, showSuccess])
 
   return (
-    <ToastContext.Provider value={{ showError, showSuccess }}>
+    <ToastContext.Provider value={value}>
       {children}
       <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[110] flex flex-col gap-2 w-full max-w-sm px-4">
         {toasts.map((toast) => (

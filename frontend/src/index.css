@@ -317,8 +317,10 @@
     from { transform: translateY(100%); }
     to   { transform: translateY(0); }
   }
+  /* backwards, not both: a transform left on the sheet after the animation
+     would make it the containing block for any position:fixed descendant. */
   .slide-up {
-    animation: slide-up 0.25s cubic-bezier(0.33, 1, 0.68, 1) both;
+    animation: slide-up 0.25s cubic-bezier(0.33, 1, 0.68, 1) backwards;
   }
 
   .meso-grid-scroll::-webkit-scrollbar { display: none; }
