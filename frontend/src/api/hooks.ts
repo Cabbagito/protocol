@@ -11,7 +11,6 @@ import type {
   WorkoutTemplate,
   WorkoutHistoryItem,
   WorkoutDetailResponse,
-  ProgressEntry,
   BarcodeLookup,
   FoodItem,
   FoodLog,
@@ -47,7 +46,6 @@ export const queryKeys = {
     history: (mesocycleId: string) => ['workouts', 'history', mesocycleId] as const,
     detail: (mesocycleId: string, weekIndex: number, sessionIndex: number) =>
       ['workouts', 'detail', mesocycleId, weekIndex, sessionIndex] as const,
-    progress: (exerciseId: string) => ['workouts', 'progress', exerciseId] as const,
   },
   foods: {
     all: ['foods'] as const,
@@ -288,14 +286,6 @@ export function useWorkoutDetail(mesocycleId: string, weekIndex: number, session
     queryFn: () =>
       api.get<WorkoutDetailResponse>(`/workouts/detail/${mesocycleId}/${weekIndex}/${sessionIndex}`),
     enabled: !!mesocycleId,
-  })
-}
-
-export function useExerciseProgress(exerciseId: string) {
-  return useQuery({
-    queryKey: queryKeys.workouts.progress(exerciseId),
-    queryFn: () => api.get<ProgressEntry[]>(`/workouts/progress/${exerciseId}`),
-    enabled: !!exerciseId,
   })
 }
 

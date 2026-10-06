@@ -166,18 +166,6 @@ export interface WorkingSet extends MesoSet {
   completed: boolean
 }
 
-// Exercise progress
-
-export interface ProgressEntry {
-  date: string
-  week_number: number
-  max_weight: number
-  best_e1rm: number
-  total_reps: number
-  total_sets: number
-  volume: number
-}
-
 // Diet
 
 export interface FoodItem {

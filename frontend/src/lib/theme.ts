@@ -37,7 +37,3 @@ export function applyTheme(id: ThemeId): void {
     // localStorage blocked
   }
 }
-
-export function initTheme(): void {
-  applyTheme(getSavedTheme())
-}
