@@ -8,14 +8,17 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'autoUpdate',
+      // New versions wait until main.tsx applies them (on cold start or when
+      // the app is backgrounded) instead of force-reloading mid-task.
+      registerType: 'prompt',
       includeAssets: ['favicon.svg'],
       manifest: {
         name: 'Protocol',
         short_name: 'Protocol',
-        description: 'Personal fitness tracking - gym, nutrition, glucose',
-        theme_color: '#0f172a',
-        background_color: '#0f172a',
+        description: 'Personal fitness tracking - gym and nutrition',
+        // Default (dark) theme's page background, --deep
+        theme_color: '#070d15',
+        background_color: '#070d15',
         display: 'standalone',
         orientation: 'portrait',
         scope: '/',
@@ -40,11 +43,21 @@ export default defineConfig({
         ]
       },
       workbox: {
-        skipWaiting: true,
-        clientsClaim: true,
         cleanupOutdatedCaches: true,
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,wasm}'],
+        // The ~1 MB ZXing barcode wasm is not precached for everyone; it is
+        // cached on first use of the scanner instead (runtimeCaching below).
+        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
         navigateFallback: 'index.html',
+        runtimeCaching: [
+          {
+            urlPattern: ({ url }) => url.pathname.endsWith('.wasm'),
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'wasm',
+              expiration: { maxEntries: 4 },
+            },
+          },
+        ],
       }
     })
   ],
