@@ -27,7 +27,7 @@ class SplitDay(Base, TimestampMixin):
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
     split_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("splits.id", ondelete="CASCADE"), nullable=False
+        String(36), ForeignKey("splits.id", ondelete="CASCADE"), nullable=False, index=True
     )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     day_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
@@ -45,10 +45,13 @@ class SplitDayExercise(Base, TimestampMixin):
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
     day_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("split_days.id", ondelete="CASCADE"), nullable=False
+        String(36), ForeignKey("split_days.id", ondelete="CASCADE"), nullable=False, index=True
     )
+    # No ON DELETE action: an exercise still used by a split can't be deleted
+    # (the service reports it as 409). Deleting the whole user still works,
+    # since the split rows go in the same statement.
     exercise_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("exercises.id", ondelete="CASCADE"), nullable=False
+        String(36), ForeignKey("exercises.id"), nullable=False, index=True
     )
     order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 

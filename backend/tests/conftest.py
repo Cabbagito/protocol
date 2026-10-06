@@ -16,23 +16,23 @@ import asyncio
 import os
 import secrets
 from collections.abc import AsyncIterator, Awaitable, Callable
-from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 
 import pytest
 from sqlalchemy.engine import make_url
 
+from tests.db_utils import CONNECT_TIMEOUT_S, recreate_database, run_outside_event_loop
+
 DEFAULT_TEST_DATABASE_URL = "postgresql+asyncpg://postgres:postgres@localhost:5432/protocol_test"
 TEST_DATABASE_URL = os.environ.get("TEST_DATABASE_URL") or DEFAULT_TEST_DATABASE_URL
-_TEST_URL = make_url(TEST_DATABASE_URL)
-CONNECT_TIMEOUT_S = 5
+TEST_URL = make_url(TEST_DATABASE_URL)
 
 # The test database is dropped and recreated every session, so refuse to
 # point at anything that doesn't look like a throwaway test database.
-if not (_TEST_URL.database or "").startswith("protocol_test"):
+if not (TEST_URL.database or "").startswith("protocol_test"):
     raise pytest.UsageError(
         f"TEST_DATABASE_URL must name a database starting with 'protocol_test' "
-        f"(got {_TEST_URL.database!r}); it is dropped and recreated on every run."
+        f"(got {TEST_URL.database!r}); it is dropped and recreated on every run."
     )
 
 # app.core.config reads the environment at import time, so this must run
@@ -40,29 +40,6 @@ if not (_TEST_URL.database or "").startswith("protocol_test"):
 os.environ["DATABASE_URL"] = TEST_DATABASE_URL
 os.environ["SECRET_KEY"] = "test-secret-key-not-for-production"
 os.environ["APP_PASSWORD"] = ""
-
-
-def _maintenance_dsn() -> str:
-    url = _TEST_URL.set(drivername="postgresql", database="postgres")
-    return url.render_as_string(hide_password=False)
-
-
-async def _recreate_database() -> None:
-    import asyncpg
-
-    try:
-        conn = await asyncpg.connect(_maintenance_dsn(), timeout=CONNECT_TIMEOUT_S)
-    except (OSError, TimeoutError, asyncpg.PostgresError) as exc:
-        raise RuntimeError(
-            f"Cannot reach the test PostgreSQL server at {_TEST_URL.host}:{_TEST_URL.port} "
-            f"({type(exc).__name__}: {exc}). Start Postgres or set TEST_DATABASE_URL."
-        ) from exc
-    try:
-        name = _TEST_URL.database
-        await conn.execute(f'DROP DATABASE IF EXISTS "{name}" WITH (FORCE)')
-        await conn.execute(f'CREATE DATABASE "{name}"')
-    finally:
-        await conn.close()
 
 
 async def _seed() -> None:
@@ -86,16 +63,10 @@ def _prepare_database() -> None:
 
     from app.core.migrations import alembic_config
 
-    asyncio.run(_recreate_database())
+    asyncio.run(recreate_database(TEST_URL))
     # env.py drives the async engine with asyncio.run, so call it outside a loop.
     command.upgrade(alembic_config(), "head")
     asyncio.run(_seed())
-
-
-def run_outside_event_loop(fn: Callable[..., object], *args: object) -> object:
-    """Run blocking/asyncio.run-based code in a fresh thread with no running loop."""
-    with ThreadPoolExecutor(max_workers=1) as pool:
-        return pool.submit(fn, *args).result()
 
 
 @pytest.fixture(scope="session")
