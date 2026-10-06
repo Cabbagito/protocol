@@ -377,7 +377,7 @@ export default function Exercises() {
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                     {section.items.map((ex) => (
-                      <ExerciseRow key={ex.id} exercise={ex} onClick={() => navigate('/progress')} />
+                      <ExerciseRow key={ex.id} exercise={ex} onClick={() => navigate(`/progress?exercise=${ex.id}`)} />
                     ))}
                   </div>
                 </div>

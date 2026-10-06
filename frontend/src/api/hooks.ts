@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueries, useMutation, useQueryClient, type UseQueryResult } from '@tanstack/react-query'
 import { api } from './client'
 import type {
   Exercise,
@@ -166,6 +166,25 @@ export function useMesocycle(id: string) {
     queryFn: () => api.get<Mesocycle>(`/mesocycles/${id}`),
     enabled: !!id,
   })
+}
+
+/** Full details (incl. structure) of several mesocycles, e.g. all of them for Progress. */
+export function useMesocycleDetails(ids: string[]) {
+  return useQueries({
+    queries: ids.map((id) => ({
+      queryKey: queryKeys.mesocycles.detail(id),
+      queryFn: () => api.get<Mesocycle>(`/mesocycles/${id}`),
+    })),
+    combine: combineMesocycleDetails,
+  })
+}
+
+// Module-level so useQueries can memoize the combined result between renders.
+function combineMesocycleDetails(results: UseQueryResult<Mesocycle>[]) {
+  return {
+    data: results.flatMap((r) => (r.data ? [r.data] : [])),
+    isLoading: results.some((r) => r.isLoading),
+  }
 }
 
 export function useCreateMesocycle() {
