@@ -69,6 +69,15 @@ def _prepare_database() -> None:
     asyncio.run(_seed())
 
 
+@pytest.fixture(autouse=True)
+def _reset_login_limiter():
+    """The failed-login limiter is process-global; don't let tests share it."""
+    yield
+    from app.core.rate_limit import login_limiter
+
+    login_limiter.clear()
+
+
 @pytest.fixture(scope="session")
 def database() -> str:
     """Create, migrate and seed the test database once per session."""

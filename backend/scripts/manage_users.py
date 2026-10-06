@@ -10,6 +10,7 @@ Docker (prod image has no uv; the venv's python is on PATH):
 
 Creating without a password generates a random one and prints it once —
 passwords identify users at login, so they must be unique across users.
+Explicit passwords must be non-empty and at most 72 bytes (bcrypt's limit).
 Deleting a user removes all their data via FK cascades.
 """
 
@@ -32,7 +33,7 @@ async def cmd_create(name: str, password: str | None) -> None:
     async with async_session() as db:
         try:
             user, plaintext = await user_service.create_user(db, name, password)
-        except user_service.PasswordCollisionError as exc:
+        except user_service.InvalidUserError as exc:
             sys.exit(f"Error: {exc}")
     print(f"Created user: {user.name} ({user.id})")
     print(f"Password:     {plaintext}")
