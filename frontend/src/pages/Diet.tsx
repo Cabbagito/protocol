@@ -7,7 +7,8 @@ import AuroraBackground from '../components/AuroraBackground'
 import { useToast } from '../components/Toast'
 import { ChevronLeftIcon, ChevronRightIcon, TrashIcon } from '../components/Icons'
 import { useDailyLog, useDailyTargets, useDeleteLog } from '../api/hooks'
-import { todayIso, parseIso, localDateKey } from '../lib/dates'
+import { parseIso, localDateKey } from '../lib/dates'
+import { useToday } from '../hooks/useToday'
 import { round1 } from '../lib/formatters'
 import type { FoodLog } from '../types'
 
@@ -26,8 +27,8 @@ function shiftDate(iso: string, delta: number): string {
   return localDateKey(date)
 }
 
-function formatDateLabel(iso: string): string {
-  if (iso === todayIso()) return 'TODAY'
+function formatDateLabel(iso: string, today: string): string {
+  if (iso === today) return 'TODAY'
   return parseIso(iso)
     .toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })
     .toUpperCase()
@@ -35,7 +36,11 @@ function formatDateLabel(iso: string): string {
 }
 
 export default function Diet() {
-  const [date, setDate] = useState(todayIso())
+  // null = follow "today", so a PWA resumed the next morning logs to the
+  // new day instead of the one it was opened on.
+  const today = useToday()
+  const [pickedDate, setPickedDate] = useState<string | null>(null)
+  const date = pickedDate !== null && pickedDate < today ? pickedDate : today
   const [sheetOpen, setSheetOpen] = useState(false)
   const [logToDelete, setLogToDelete] = useState<FoodLog | null>(null)
   const { data, isLoading } = useDailyLog(date)
@@ -46,7 +51,12 @@ export default function Diet() {
   const totals = data?.totals ?? { kcal: 0, protein_g: 0, carbs_g: 0, fat_g: 0 }
   const entries = data?.entries ?? []
   const goals = targets ?? FALLBACK_TARGETS
-  const dateLabel = useMemo(() => formatDateLabel(date), [date])
+  const dateLabel = useMemo(() => formatDateLabel(date, today), [date, today])
+  const isToday = date === today
+
+  function goToDay(next: string) {
+    setPickedDate(next >= today ? null : next)
+  }
 
   async function handleDelete() {
     if (!logToDelete) return
@@ -79,7 +89,7 @@ export default function Diet() {
         {/* Top bar — date pager */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
           <button
-            onClick={() => setDate(shiftDate(date, -1))}
+            onClick={() => goToDay(shiftDate(date, -1))}
             aria-label="Previous day"
             style={{
               width: 32, height: 32, borderRadius: 10,
@@ -102,8 +112,8 @@ export default function Diet() {
             {dateLabel}
           </div>
           <button
-            onClick={() => setDate(shiftDate(date, 1))}
-            disabled={date === todayIso()}
+            onClick={() => goToDay(shiftDate(date, 1))}
+            disabled={isToday}
             aria-label="Next day"
             style={{
               width: 32, height: 32, borderRadius: 10,
@@ -111,7 +121,7 @@ export default function Diet() {
               border: '1px solid rgba(255,255,255,0.06)',
               color: 'var(--text-2)',
               display: 'grid', placeItems: 'center',
-              opacity: date === todayIso() ? 0.3 : 1,
+              opacity: isToday ? 0.3 : 1,
               cursor: 'pointer',
             }}
           >
@@ -209,7 +219,7 @@ export default function Diet() {
           )}
         </div>
 
-        <BodyweightCard />
+        <BodyweightCard date={date} today={today} />
       </div>
 
       {/* Floating add button */}

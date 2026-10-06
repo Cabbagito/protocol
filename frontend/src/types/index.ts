@@ -185,6 +185,8 @@ export interface FoodItem {
   default_serving_g: number | null
   barcode: string | null
   seeded: boolean
+  /** Owner; null for shared foods (seeded, or barcoded — those are shared by all users). */
+  user_id: string | null
 }
 
 export interface FoodDraft {

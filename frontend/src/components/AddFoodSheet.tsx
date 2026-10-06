@@ -12,6 +12,8 @@ import { useScrollLock } from '../hooks/useScrollLock'
 import SearchInput from './SearchInput'
 import PageLoader from './PageLoader'
 import { round1 } from '../lib/formatters'
+import { parseDecimal } from '../lib/decimal'
+import DecimalInput from './DecimalInput'
 import type { FoodItem, FoodDraft } from '../types'
 
 const BarcodeScanner = lazy(() => import('./BarcodeScanner'))
@@ -152,36 +154,36 @@ function SearchTab({ date, onLogged }: { date: string; onLogged: () => void }) {
       ) : (
         <div style={{ background: 'var(--card)', borderRadius: 12, border: '1px solid var(--border)', overflow: 'hidden' }}>
           {foods.map((food, idx) => (
-            <button
+            <div
               key={food.id}
-              onClick={() => setSelected(food)}
-              className="list-row w-full text-left flex items-center gap-3 px-4 py-3"
+              className="flex items-center"
               style={{ borderBottom: idx === foods.length - 1 ? 'none' : '1px solid var(--border)' }}
             >
-              <div className="flex-1 min-w-0">
+              <button
+                type="button"
+                onClick={() => setSelected(food)}
+                className="list-row flex-1 min-w-0 text-left px-4 py-3"
+              >
                 <div className="text-[13px] font-medium text-[var(--text-1)] truncate">{food.name}</div>
                 <div className="mono text-[11px] text-[var(--text-m)] mt-0.5">
                   {Math.round(food.kcal_per_100g)} kcal · {food.protein_per_100g}P · {food.carbs_per_100g}C · {food.fat_per_100g}F
                   <span className="ml-1">/ 100g</span>
                 </div>
-              </div>
-              {!food.seeded && (
-                <span
-                  role="button"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    setEditing(food)
-                  }}
-                  className="shrink-0 w-7 h-7 flex items-center justify-center rounded-full text-[var(--text-m)]"
+              </button>
+              {canEditFood(food) && (
+                <button
+                  type="button"
+                  onClick={() => setEditing(food)}
+                  className="shrink-0 w-9 h-9 mr-2 flex items-center justify-center rounded-full text-[var(--text-m)]"
                   style={{ background: 'rgba(255,255,255,0.06)' }}
                   aria-label={`Edit ${food.name}`}
                 >
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
                   </svg>
-                </span>
+                </button>
               )}
-            </button>
+            </div>
           ))}
         </div>
       )}
@@ -205,7 +207,7 @@ function SelectedFoodForm({
   const [quantity, setQuantity] = useState<string>(String(food.default_serving_g ?? 100))
 
   const grams = useMemo(() => {
-    const n = parseFloat(quantity)
+    const n = parseDecimal(quantity)
     return Number.isFinite(n) && n > 0 ? n : 0
   }, [quantity])
 
@@ -263,13 +265,9 @@ function SelectedFoodForm({
         <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-m)]">
           Quantity (g)
         </span>
-        <input
-          type="number"
-          inputMode="decimal"
-          step="any"
-          min="0"
+        <DecimalInput
           value={quantity}
-          onChange={(e) => setQuantity(e.target.value)}
+          onChange={setQuantity}
           className="input mt-1"
           autoFocus
         />
@@ -497,18 +495,17 @@ function FoodItemForm({
   const set = (key: keyof FoodFormValues) => (v: string) =>
     setValues((prev) => ({ ...prev, [key]: v }))
 
-  const p = parseNum(values.protein)
-  const c = parseNum(values.carbs)
-  const f = parseNum(values.fat)
+  const p = parseMacro(values.protein)
+  const c = parseMacro(values.carbs)
+  const f = parseMacro(values.fat)
   const macrosValid = [p, c, f].every((n) => Number.isFinite(n) && n >= 0)
   // Blank kcal derives from macros (4/4/9); an explicit label value wins.
-  const kcalInput = parseNum(values.kcal)
   const kcal = values.kcal.trim()
-    ? kcalInput
+    ? parseDecimal(values.kcal)
     : macrosValid
       ? round1(p * 4 + c * 4 + f * 9)
       : NaN
-  const serving = values.serving.trim() ? parseNum(values.serving) : null
+  const serving = values.serving.trim() ? parseDecimal(values.serving) : null
 
   const canSubmit =
     values.name.trim().length > 0 &&
@@ -574,11 +571,16 @@ function FoodItemForm({
         <MacroField label="Fat (g)" value={values.fat} onChange={set('fat')} />
       </div>
       <div className="grid grid-cols-2 gap-2">
-        <MacroField label="Kcal / 100g" value={values.kcal} onChange={set('kcal')} />
-        <MacroField label="Serving (g)" value={values.serving} onChange={set('serving')} />
+        <MacroField
+          label="Kcal / 100g"
+          value={values.kcal}
+          onChange={set('kcal')}
+          placeholder={macrosValid ? String(round1(p * 4 + c * 4 + f * 9)) : ''}
+        />
+        <MacroField label="Serving (g)" value={values.serving} onChange={set('serving')} placeholder="—" />
       </div>
       <div className="text-[10px] text-[var(--text-m)]">
-        Values per 100g. Leave kcal blank to derive 4·P + 4·C + 9·F.
+        Values per 100g. Blank macros count as 0; leave kcal blank to derive 4·P + 4·C + 9·F.
       </div>
 
       <button
@@ -602,9 +604,10 @@ function CustomTab({ date, onLogged }: { date: string; onLogged: () => void }) {
   const [carbs, setCarbs] = useState('')
   const [fat, setFat] = useState('')
 
-  const p = parseNum(protein)
-  const c = parseNum(carbs)
-  const f = parseNum(fat)
+  // Blank macro fields count as 0 (a shake with no fat shouldn't need "0" typed).
+  const p = parseMacro(protein)
+  const c = parseMacro(carbs)
+  const f = parseMacro(fat)
   const kcal = (Number.isFinite(p) ? p : 0) * 4 + (Number.isFinite(c) ? c : 0) * 4 + (Number.isFinite(f) ? f : 0) * 9
 
   const canSubmit =
@@ -656,8 +659,10 @@ function CustomTab({ date, onLogged }: { date: string; onLogged: () => void }) {
           </div>
           <div className="text-[10px] uppercase tracking-wider text-[var(--text-m)]">kcal</div>
         </div>
-        <div className="text-[10px] text-[var(--text-m)]">
+        <div className="text-[10px] text-[var(--text-m)] text-right">
           4·P + 4·C + 9·F
+          <br />
+          blank = 0
         </div>
       </div>
       <button
@@ -675,30 +680,34 @@ function MacroField({
   label,
   value,
   onChange,
+  placeholder = '0',
 }: {
   label: string
   value: string
   onChange: (v: string) => void
+  placeholder?: string
 }) {
   return (
     <label className="block">
       <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-m)]">
         {label}
       </span>
-      <input
-        type="number"
-        inputMode="decimal"
-        step="any"
-        min="0"
+      <DecimalInput
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={onChange}
+        placeholder={placeholder}
         className="input mt-1"
       />
     </label>
   )
 }
 
-function parseNum(s: string): number {
-  const n = parseFloat(s)
-  return Number.isFinite(n) ? n : NaN
+/** Macro grams: blank means 0, anything else must parse. */
+function parseMacro(s: string): number {
+  return s.trim() === '' ? 0 : parseDecimal(s)
+}
+
+/** Only the owner may edit a food; shared (seeded / barcoded) foods have no owner. */
+function canEditFood(food: FoodItem): boolean {
+  return food.user_id != null && !food.seeded
 }

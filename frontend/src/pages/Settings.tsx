@@ -12,6 +12,8 @@ import {
   useUpdateDailyTargets,
 } from '../api/hooks'
 import { clearToken, getUserInfo } from '../lib/auth'
+import { parseDecimal } from '../lib/decimal'
+import DecimalInput from '../components/DecimalInput'
 
 export default function Settings() {
   const navigate = useNavigate()
@@ -268,9 +270,9 @@ function DietTargetsEditor() {
     setFat(String(Math.round(targets.fat_g)))
   }, [targets])
 
-  const proteinN = Number(protein)
-  const carbsN = Number(carbs)
-  const fatN = Number(fat)
+  const proteinN = parseDecimal(protein)
+  const carbsN = parseDecimal(carbs)
+  const fatN = parseDecimal(fat)
   const valid =
     Number.isFinite(proteinN) && proteinN > 0 &&
     Number.isFinite(carbsN) && carbsN > 0 &&
@@ -364,12 +366,9 @@ function TargetRow({
   return (
     <label style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
       <span style={{ flex: 1, fontSize: 14, color: 'var(--text-1)' }}>{label}</span>
-      <input
-        type="number"
-        inputMode="decimal"
-        min={0}
+      <DecimalInput
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={onChange}
         className="input"
         style={{ width: 90, textAlign: 'right' }}
       />

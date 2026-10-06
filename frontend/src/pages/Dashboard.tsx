@@ -6,7 +6,8 @@ import { GearIcon } from '../components/Icons'
 import PageLoader from '../components/PageLoader'
 import AuroraBackground from '../components/AuroraBackground'
 import { getUserInfo } from '../lib/auth'
-import { localDateKey } from '../lib/dates'
+import { localDateKey, parseIso } from '../lib/dates'
+import { useToday } from '../hooks/useToday'
 
 function ArrowIcon({ size = 18 }: { size?: number }) {
   return (
@@ -30,6 +31,8 @@ function mondayIndex(d: Date): number {
 
 export default function Dashboard() {
   const { data: mesocycle, isLoading } = useActiveMesocycle()
+  // Re-renders when the date rolls over (e.g. the PWA resumed next morning).
+  const todayKey = useToday()
 
   const currentPos = useMemo(
     () => (mesocycle ? getCurrentPosition(mesocycle.structure) : null),
@@ -57,7 +60,7 @@ export default function Dashboard() {
   }
 
   // ── Compose this Monday→Sunday strip from the user's local week.
-  const today = new Date()
+  const today = parseIso(todayKey)
   const todayMon = mondayIndex(today)
   const weekStart = new Date(today)
   weekStart.setDate(today.getDate() - todayMon)
@@ -76,7 +79,7 @@ export default function Dashboard() {
 
   const userInfo = getUserInfo()
   const firstName = userInfo?.name?.split(/\s+/)[0] ?? ''
-  const hour = today.getHours()
+  const hour = new Date().getHours()
   const partOfDay =
     hour < 5 ? 'Late night' :
     hour < 12 ? 'Good morning' :
