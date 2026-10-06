@@ -46,6 +46,9 @@ export default function AddFoodSheet({ open, onClose, date }: AddFoodSheetProps)
       />
 
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="add-food-title"
         className="relative flex flex-col ml-auto mr-auto w-full max-w-lg mt-auto rounded-t-2xl slide-up"
         style={{
           background: 'var(--base)',
@@ -57,13 +60,14 @@ export default function AddFoodSheet({ open, onClose, date }: AddFoodSheetProps)
       >
         {/* Header */}
         <div className="px-5 pt-4 pb-3 flex items-center justify-between border-b border-[var(--border)]">
-          <div className="text-sm font-semibold text-[var(--text-1)]">Log food</div>
+          <div id="add-food-title" className="text-sm font-semibold text-[var(--text-1)]">Log food</div>
           <button
             onClick={onClose}
-            className="w-7 h-7 flex items-center justify-center rounded-full"
+            aria-label="Close"
+            className="w-8 h-8 flex items-center justify-center rounded-full"
             style={{ background: 'rgba(255,255,255,0.08)' }}
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true">
               <line x1="18" y1="6" x2="6" y2="18" />
               <line x1="6" y1="6" x2="18" y2="18" />
             </svg>
@@ -97,6 +101,8 @@ export default function AddFoodSheet({ open, onClose, date }: AddFoodSheetProps)
 function TabButton({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
   return (
     <button
+      type="button"
+      aria-pressed={active}
       onClick={onClick}
       className="flex-1 py-2 text-[12px] font-semibold uppercase tracking-wider rounded-md transition-all"
       style={{

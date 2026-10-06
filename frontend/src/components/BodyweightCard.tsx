@@ -262,6 +262,9 @@ function WeighInSheet({
         style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(2px)' }}
       />
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
         className="relative w-full max-w-sm rounded-2xl slide-up"
         style={{
           background: 'var(--card)',

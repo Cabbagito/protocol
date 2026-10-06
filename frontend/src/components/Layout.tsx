@@ -28,6 +28,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       {/* BottomNavV3 — floating glass capsule with gradient pill on active item. */}
       {!keyboardOpen && (
         <nav
+          aria-label="Main"
           className="fixed z-[101]"
           style={{
             left: 18,
@@ -58,6 +59,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               <Link
                 key={item.path}
                 to={item.path}
+                aria-label={item.label}
+                aria-current={isActive ? 'page' : undefined}
                 style={{
                   position: 'relative',
                   flex: 1,
@@ -80,7 +83,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 }}
               >
                 <item.icon className="w-5 h-5" />
-                {isActive && <span>{item.label}</span>}
+                {isActive && <span aria-hidden="true">{item.label}</span>}
               </Link>
             )
           })}
