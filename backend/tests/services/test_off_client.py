@@ -133,3 +133,21 @@ async def test_fetch_product_network_failure(patch_client):
 
     patch_client(handler)
     assert await fetch_product(BARCODE) is None
+
+
+async def test_fetch_product_non_json_body(patch_client):
+    # e.g. an HTML maintenance page served with 200
+    def handler(request):
+        return httpx.Response(200, text="<html>down for maintenance</html>")
+
+    patch_client(handler)
+    assert await fetch_product(BARCODE) is None
+
+
+@pytest.mark.parametrize("body", [[1, 2], "product", {"status": 1, "product": "nope"}])
+async def test_fetch_product_unexpected_json_shape(patch_client, body):
+    def handler(request):
+        return httpx.Response(200, json=body)
+
+    patch_client(handler)
+    assert await fetch_product(BARCODE) is None
