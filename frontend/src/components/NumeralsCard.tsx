@@ -1,10 +1,17 @@
 import { useState, useEffect } from 'react'
 import { getMuscleColor } from '../lib/muscleColors'
+import './NumeralsCard.css'
 
 interface NumeralsCardProps {
   group: string
-  weight: number
-  reps: number
+  /** Typed/logged values; null shows the target as a grey placeholder. */
+  weight: number | null
+  reps: number | null
+  /** What to aim for (last time's set). Shown greyed until the user types. */
+  weightTarget?: number | null
+  repsTarget?: number | null
+  /** Overrides the WEIGHT label, e.g. for bodyweight exercises. */
+  weightLabel?: string
   setNum: number
   totalSets: number
   /** Previous-session reference, e.g. "22.5×10". Optional. */
@@ -27,15 +34,17 @@ interface NumeralsCardProps {
 
 /**
  * Hero weight/reps card on the v5 workout screen. The 56px mono numerals
- * are tap-editable native number inputs. -/+ nudges step by 0.5kg for
- * weight and 1 for reps (whole-number coverage with the 0.5 in between).
- * The LOG button uses the muscle gradient and a per-muscle breathing
- * keyframe.
+ * are tap-editable text inputs (decimal comma accepted). -/+ nudges step by
+ * 0.5kg for weight and 1 for reps. Untouched fields show last time's value
+ * as a grey placeholder; LOG accepts whatever is shown.
  */
 export default function NumeralsCard({
   group,
   weight,
   reps,
+  weightTarget = null,
+  repsTarget = null,
+  weightLabel = 'WEIGHT',
   setNum,
   totalSets,
   lastSummary,
@@ -50,9 +59,6 @@ export default function NumeralsCard({
   setSkipped = false,
 }: NumeralsCardProps) {
   const c = getMuscleColor(group)
-  // CSS keyframe names use lowercase + hyphens; muscle groups in the data
-  // may contain spaces ("front delt"). Translate.
-  const breatheKey = group.toLowerCase().replace(/\s+/g, '-')
 
   return (
     <div
@@ -156,8 +162,9 @@ export default function NumeralsCard({
         }}
       >
         <Column
-          label="WEIGHT"
+          label={weightLabel}
           value={weight}
+          placeholder={weightTarget}
           step={0.5}
           minValue={0}
           onChange={onWeightChange}
@@ -172,6 +179,7 @@ export default function NumeralsCard({
         <Column
           label="REPS"
           value={reps}
+          placeholder={repsTarget}
           step={1}
           minValue={0}
           onChange={onRepsChange}
@@ -201,7 +209,6 @@ export default function NumeralsCard({
           cursor: disabled ? 'not-allowed' : 'pointer',
           opacity: disabled ? 0.6 : 1,
           boxShadow: `0 14px 40px -10px color-mix(in oklab, ${c.primary} 65%, transparent), inset 0 1px 0 rgba(255,255,255,0.25)`,
-          animation: disabled ? 'none' : `p-btn-breathe-${breatheKey} 3.2s ease-in-out infinite`,
         }}
       >
         {logLabel}
@@ -268,7 +275,8 @@ function SecondaryButton({ onClick, color, children }: { onClick: () => void; co
 
 interface ColumnProps {
   label: string
-  value: number
+  value: number | null
+  placeholder: number | null
   step: number
   minValue: number
   onChange: (n: number) => void
@@ -277,8 +285,13 @@ interface ColumnProps {
   integerOnly?: boolean
 }
 
+function fmt(n: number | null): string {
+  if (n === null) return ''
+  return Number.isInteger(n) ? String(n) : String(+n.toFixed(2))
+}
+
 function Column({
-  label, value, step, minValue, onChange, color, integerOnly,
+  label, value, placeholder, step, minValue, onChange, color, integerOnly,
 }: ColumnProps) {
   // Local text state lets the input go through transient invalid states
   // (e.g. trailing "." while typing 22.5) without snapping back.
@@ -288,15 +301,11 @@ function Column({
     setText(fmt(value))
   }, [value])
 
-  function fmt(n: number): string {
-    return Number.isInteger(n) ? String(n) : String(+n.toFixed(2))
-  }
-
   function commit(raw: string) {
     const normalized = raw.replace(',', '.')
     if (normalized === '' || normalized === '.' || normalized === '-') {
-      onChange(minValue)
-      setText(fmt(minValue))
+      // Clearing the field goes back to the target placeholder.
+      setText(fmt(value))
       return
     }
     let n = Number(normalized)
@@ -309,6 +318,8 @@ function Column({
     onChange(n)
     setText(fmt(n))
   }
+
+  const base = value ?? placeholder ?? 0
 
   return (
     <div style={{ textAlign: 'center' }}>
@@ -328,7 +339,9 @@ function Column({
         type="text"
         className="p-num-input"
         inputMode={integerOnly ? 'numeric' : 'decimal'}
+        aria-label={label}
         value={text}
+        placeholder={placeholder != null ? fmt(placeholder) : '0'}
         onChange={(e) => setText(
           integerOnly
             ? e.target.value.replace(/\D/g, '')
@@ -349,7 +362,7 @@ function Column({
           lineHeight: 1,
           marginTop: 8,
           color: 'var(--text-1)',
-          textShadow: `0 0 30px color-mix(in oklab, ${color.primary} 50%, transparent)`,
+          textShadow: value === null ? 'none' : `0 0 30px color-mix(in oklab, ${color.primary} 50%, transparent)`,
           letterSpacing: '-0.03em',
           fontFamily: 'JetBrains Mono, ui-monospace, monospace',
           textAlign: 'center',
@@ -359,31 +372,32 @@ function Column({
       <div
         style={{
           display: 'flex',
-          gap: 6,
+          gap: 8,
           justifyContent: 'center',
           marginTop: 10,
         }}
       >
-        <NudgeButton color={color} onClick={() => commit(String(Math.max(minValue, +(value - step).toFixed(2))))}>−</NudgeButton>
-        <NudgeButton color={color} onClick={() => commit(String(+(value + step).toFixed(2)))}>+</NudgeButton>
+        <NudgeButton label={`Decrease ${label.toLowerCase()}`} color={color} onClick={() => commit(String(Math.max(minValue, +(base - step).toFixed(2))))}>−</NudgeButton>
+        <NudgeButton label={`Increase ${label.toLowerCase()}`} color={color} onClick={() => commit(String(+(base + step).toFixed(2)))}>+</NudgeButton>
       </div>
     </div>
   )
 }
 
-function NudgeButton({ color, onClick, children }: { color: { primary: string; light: string }; onClick: () => void; children: React.ReactNode }) {
+function NudgeButton({ label, color, onClick, children }: { label: string; color: { primary: string; light: string }; onClick: () => void; children: React.ReactNode }) {
   return (
     <button
       type="button"
+      aria-label={label}
       onClick={onClick}
       style={{
-        width: 32,
-        height: 28,
-        borderRadius: 8,
+        width: 48,
+        height: 40,
+        borderRadius: 10,
         background: 'rgba(255,255,255,0.05)',
         border: `1px solid color-mix(in oklab, ${color.primary} 25%, var(--border))`,
         color: color.light,
-        fontSize: 14,
+        fontSize: 18,
         cursor: 'pointer',
       }}
     >

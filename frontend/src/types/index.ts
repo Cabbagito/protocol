@@ -66,11 +66,11 @@ export type SetType = 'straight' | 'myorep' | 'myorep_match'
 
 export interface MesoSet {
   set_num: number
+  /** Logged value, or a value typed in but not logged yet. */
   weight: number | null
   reps: number | null
-  suggested_weight: number | null
   logged: boolean
-  set_type?: SetType
+  set_type?: SetType | null
   skipped?: boolean
 }
 
@@ -116,18 +116,6 @@ export interface Mesocycle {
   structure: MesoStructure
 }
 
-// Workout template (from /workouts/template endpoint)
-
-export interface WorkoutTemplate {
-  session_name: string
-  week_number: number
-  week_index: number
-  session_index: number
-  skipped: boolean
-  exercises: MesoExercise[]
-  exercise_notes?: Record<string, string>
-}
-
 // Workout history item
 
 export interface WorkoutHistoryItem {
@@ -138,26 +126,6 @@ export interface WorkoutHistoryItem {
   date: string | null
   total_sets: number
   total_volume: number
-}
-
-// Workout detail (viewing a logged session)
-
-export interface WorkoutDetailResponse {
-  session_name: string
-  week_number: number
-  date: string | null
-  notes: string | null
-  skipped: boolean
-  exercises: MesoExercise[]
-  exercise_notes?: Record<string, string>
-}
-
-// Working set (extends MesoSet with workout-specific fields)
-
-export interface WorkingSet extends MesoSet {
-  exercise_id: string
-  exercise_name: string
-  completed: boolean
 }
 
 // Exercise progress

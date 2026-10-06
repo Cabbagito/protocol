@@ -1,10 +1,12 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useState, useEffect, lazy, Suspense, Component, type ReactNode } from 'react'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client'
 import Layout from './components/Layout'
 import PageLoader from './components/PageLoader'
 import SplashScreen from './components/SplashScreen'
 import { getToken } from './lib/auth'
+import { persistOptions, queryClient } from './lib/queryClient'
+import { workoutSync } from './lib/workoutSync'
 
 // Clear all service worker caches and unregister SWs so a reload fetches fresh assets
 async function clearServiceWorkerCaches() {
@@ -16,26 +18,26 @@ async function clearServiceWorkerCaches() {
   }
 }
 
-// Wrap React.lazy to auto-reload on chunk load errors (stale deploys)
+// Wrap React.lazy to recover from chunk load errors after a deploy (the
+// page references chunks the server no longer has): reload once with fresh
+// assets. Offline, a failed chunk is not a stale deploy — keep the caches.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function lazyWithRetry(importFn: () => Promise<{ default: React.ComponentType<any> }>) {
   return lazy(() =>
-    importFn().catch(async () => {
-      const hasReloaded = sessionStorage.getItem('chunk_reload')
-      if (!hasReloaded) {
+    importFn()
+      .then((mod) => {
+        sessionStorage.removeItem('chunk_reload')
+        return mod
+      })
+      .catch(async (err) => {
+        if (!navigator.onLine || sessionStorage.getItem('chunk_reload')) throw err
         sessionStorage.setItem('chunk_reload', '1')
         await clearServiceWorkerCaches()
         window.location.reload()
-        return new Promise(() => {}) // never resolves — page is reloading
-      }
-      sessionStorage.removeItem('chunk_reload')
-      return Promise.reject(new Error('Failed to load page after reload'))
-    })
+        return new Promise<never>(() => {}) // page is reloading
+      })
   )
 }
-
-// Clear reload flag on successful page loads
-sessionStorage.removeItem('chunk_reload')
 
 const Login = lazyWithRetry(() => import('./pages/Login'))
 const Dashboard = lazyWithRetry(() => import('./pages/Dashboard'))
@@ -75,16 +77,8 @@ class ChunkErrorBoundary extends Component<{ children: ReactNode }, { hasError: 
   }
 }
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 1000 * 60 * 2, // Data is fresh for 2 minutes
-      gcTime: 1000 * 60 * 10, // Cache kept for 10 minutes
-      refetchOnWindowFocus: false,
-      retry: 1,
-    },
-  },
-})
+// Push any workout changes saved on this phone but not yet on the server.
+workoutSync.start()
 
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -107,7 +101,7 @@ export default function App() {
   }
 
   return (
-    <QueryClientProvider client={queryClient}>
+    <PersistQueryClientProvider client={queryClient} persistOptions={persistOptions}>
       <ChunkErrorBoundary>
       <Suspense fallback={<PageLoader className="min-h-[60vh]" />}>
         <Routes>
@@ -143,6 +137,6 @@ export default function App() {
         </Routes>
       </Suspense>
       </ChunkErrorBoundary>
-    </QueryClientProvider>
+    </PersistQueryClientProvider>
   )
 }
