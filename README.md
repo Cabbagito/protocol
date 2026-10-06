@@ -31,46 +31,48 @@ Built mobile-first with a dark navy UI, animated transitions, and offline-ready 
 | **Backend** | FastAPI + SQLAlchemy async + Alembic migrations (via uv) |
 | **Database** | PostgreSQL 16 |
 | **Proxy** | Caddy (auto-HTTPS via Let's Encrypt) |
-| **Infra** | Docker Compose — 3 containers (dev & prod) |
+| **Infra** | Docker Compose — Caddy, API and Postgres in prod; Postgres and API in dev (Vite on the host) |
 
 ## Development
 
-### One Command Start
+### Start
+
+**Prerequisites:** Docker, [bun](https://bun.sh/) (and [uv](https://docs.astral.sh/uv/) to run backend tools on the host)
 
 ```bash
+# Terminal 1: PostgreSQL + API with hot reload
 docker compose up
-```
 
-That's it. This starts:
+# Terminal 2: frontend on the host
+cd frontend && bun install && bun run dev
+```
 
 | Service | URL | Details |
 |---------|-----|---------|
 | **PostgreSQL** | `localhost:5432` | Data persisted in Docker volume |
-| **FastAPI** | `http://localhost:8000` | Hot reload via volume mount |
-| **Vite** | `http://localhost:5173` | HMR, proxies `/api` to backend |
+| **FastAPI** | `http://localhost:8000` | Hot reload via bind mount; venv in the `backend_venv` volume at `/venv` |
+| **Vite** | `http://localhost:5173` | Runs on the host, HMR, proxies `/api` to `localhost:8000` |
 
 Login with password: `devpassword`
 
-### Without Docker
+The frontend is not containerized: on Docker Desktop for Mac a `node_modules` volume nested inside the `./frontend` bind mount is shared with the host, so host and container installs overwrite each other's native binaries. The backend container keeps its virtualenv at `/venv`, outside the `./backend` bind mount, for the same reason, so `uv sync` on the host and in the container no longer interfere.
 
-**Prerequisites:** [uv](https://docs.astral.sh/uv/), [bun](https://bun.sh/), Docker (for Postgres)
+Coming from the old setup? Run `docker compose up --remove-orphans` once to drop the old frontend container, reinstall host deps (`rm -rf frontend/node_modules && bun install`, plus `uv sync` in `backend/`), and optionally `docker volume rm protocol_backend_cache protocol_frontend_node_modules`.
+
+### Backend on the host
 
 ```bash
-# Start just the database
-docker compose up db
-
-# Backend (terminal 1)
+docker compose up db                     # just the database
+cp .env.example backend/.env             # APP_ENV=dev, local DATABASE_URL
 cd backend && uv sync && uv run uvicorn app.main:app --reload
-
-# Frontend (terminal 2)
-cd frontend && bun install && bun run dev
 ```
 
 ### Useful Commands
 
 ```bash
-# Backend
+# Backend (tests need PostgreSQL; the protocol_test* database is dropped and recreated)
 uv run pytest                                            # Run tests
+TEST_DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/protocol_test uv run pytest
 uv run ruff check . && uv run ruff format .              # Lint + format
 uv run alembic revision --autogenerate -m "description"  # New migration
 uv run alembic upgrade head                              # Apply migrations
@@ -97,7 +99,7 @@ bun run lint           # ESLint
                     │                   └───────────────┘  │
                     └──────────────────────────────────────┘
 
-  Dev:  Vite serves frontend, proxies /api → backend
+  Dev:  Vite (on the host) serves frontend, proxies /api → backend
   Prod: Caddy serves built React, reverse-proxies /api → backend
 ```
 

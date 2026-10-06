@@ -1,4 +1,10 @@
-# Development compose - full stack with hot reload
+# Development compose: PostgreSQL + FastAPI with hot reload.
+#
+# The frontend runs on the host (`cd frontend && bun install && bun run dev`);
+# Vite proxies /api to http://localhost:8000. It is not containerized because
+# a node_modules volume nested inside a ./frontend bind mount does not isolate
+# anything on Docker Desktop for Mac: host and container installs overwrite
+# each other's platform-specific binaries (e.g. @rollup/rollup-*).
 services:
   db:
     image: postgres:16-alpine
@@ -19,14 +25,23 @@ services:
   backend:
     image: ghcr.io/astral-sh/uv:python3.12-alpine
     working_dir: /app
-    command: sh -c "uv sync && uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+    # Reload only on source changes: the host's backend/.venv is visible
+    # under /app through the bind mount and must not trigger reloads.
+    command: >-
+      sh -c "uv sync && uv run uvicorn app.main:app --host 0.0.0.0 --port 8000
+      --reload --reload-dir app --reload-dir migrations"
     volumes:
       - ./backend:/app
-      - backend_cache:/app/.venv
+      # The venv lives outside the bind mount (a volume nested at /app/.venv
+      # would be shared with the host's backend/.venv on Docker Desktop).
+      - backend_venv:/venv
     ports:
       - "8000:8000"
     environment:
-      APP_ENV: dev  # allows the placeholder SECRET_KEY below
+      UV_PROJECT_ENVIRONMENT: /venv
+      UV_PYTHON_DOWNLOADS: never # always build the venv on the image's Python
+      UV_LINK_MODE: copy # uv's cache and /venv are on different filesystems
+      APP_ENV: dev # allows the placeholder SECRET_KEY below
       DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/protocol
       APP_PASSWORD: devpassword
       SECRET_KEY: dev-secret-key-change-in-production
@@ -36,22 +51,6 @@ services:
       db:
         condition: service_healthy
 
-  frontend:
-    image: oven/bun:1-alpine
-    working_dir: /app
-    command: sh -c "bun install && bun run dev --host 0.0.0.0"
-    volumes:
-      - ./frontend:/app
-      - frontend_node_modules:/app/node_modules
-    ports:
-      - "5173:5173"
-    environment:
-      - CHOKIDAR_USEPOLLING=true
-      - API_URL=http://backend:8000
-    depends_on:
-      - backend
-
 volumes:
   postgres_data:
-  backend_cache:
-  frontend_node_modules:
+  backend_venv:
