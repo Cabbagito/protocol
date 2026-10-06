@@ -2,6 +2,7 @@ import { useQuery, useQueries, useMutation, useQueryClient, type UseQueryResult 
 import { api } from './client'
 import type {
   Exercise,
+  EquipmentType,
   Split,
   SplitListItem,
   Mesocycle,
@@ -77,11 +78,40 @@ export function useExerciseHistory(exerciseId: string | undefined) {
   })
 }
 
+export interface ExercisePayload {
+  name: string
+  muscle_group: string
+  equipment_type: EquipmentType
+}
+
 export function useCreateExercise() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (data: { name: string; muscle_group: string; equipment_type: string }) =>
-      api.post('/exercises', data),
+    mutationFn: (data: ExercisePayload) => api.post<Exercise>('/exercises', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.exercises.all })
+    },
+  })
+}
+
+export function useUpdateExercise() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: ExercisePayload }) =>
+      api.put<Exercise>(`/exercises/${id}`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.exercises.all })
+      // Split details join the exercise name / muscle group.
+      queryClient.invalidateQueries({ queryKey: queryKeys.splits.all })
+    },
+  })
+}
+
+/** Rejected with status 409 while a split or mesocycle still uses the exercise. */
+export function useDeleteExercise() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => api.delete(`/exercises/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.exercises.all })
     },

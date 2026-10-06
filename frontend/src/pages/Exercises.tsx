@@ -2,6 +2,8 @@ import { useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AuroraBackground from '../components/AuroraBackground'
 import PageLoader from '../components/PageLoader'
+import CreateExerciseSheet from '../components/CreateExerciseSheet'
+import { useToast } from '../components/Toast'
 import { useExercises } from '../api/hooks'
 import { getMuscleColor } from '../lib/muscleColors'
 import { MUSCLE_GROUP_ROWS, EQUIPMENT_TYPES } from '../components/exerciseConstants'
@@ -47,6 +49,9 @@ export default function Exercises() {
   const [query, setQuery] = useState('')
   const [muscleSel, setMuscleSel] = useState<Set<string>>(new Set())
   const [gearSel, setGearSel] = useState<Set<string>>(new Set())
+  const [createOpen, setCreateOpen] = useState(false)
+  const [editing, setEditing] = useState<Exercise | null>(null)
+  const toast = useToast()
   const inputRef = useRef<HTMLInputElement>(null)
 
   const filtered = useMemo(() => {
@@ -121,6 +126,7 @@ export default function Exercises() {
           title="Exercises"
           sub={`${exercises.length} LIFTS · ${totalGroupCount} GROUPS`}
           onBack={() => navigate(-1)}
+          onAdd={() => setCreateOpen(true)}
         />
 
         {/* Search */}
@@ -333,6 +339,26 @@ export default function Exercises() {
             }}
           >
             No exercises match your filters.
+            {query.trim() && (
+              <button
+                type="button"
+                onClick={() => setCreateOpen(true)}
+                style={{
+                  display: 'block',
+                  margin: '14px auto 0',
+                  padding: '9px 16px',
+                  borderRadius: 10,
+                  background: 'rgba(var(--accent-rgb),0.14)',
+                  border: '1px solid rgba(var(--accent-rgb),0.35)',
+                  color: 'var(--accent-l)',
+                  fontSize: 12,
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                }}
+              >
+                Create “{query.trim()}”
+              </button>
+            )}
           </div>
         ) : (
           <div style={{ marginTop: 20 }}>
@@ -377,7 +403,12 @@ export default function Exercises() {
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                     {section.items.map((ex) => (
-                      <ExerciseRow key={ex.id} exercise={ex} onClick={() => navigate(`/progress?exercise=${ex.id}`)} />
+                      <ExerciseRow
+                        key={ex.id}
+                        exercise={ex}
+                        onClick={() => navigate(`/progress?exercise=${ex.id}`)}
+                        onEdit={ex.user_id != null ? () => setEditing(ex) : undefined}
+                      />
                     ))}
                   </div>
                 </div>
@@ -386,77 +417,162 @@ export default function Exercises() {
           </div>
         )}
       </div>
+
+      <CreateExerciseSheet
+        open={createOpen || editing !== null}
+        onClose={() => {
+          setCreateOpen(false)
+          setEditing(null)
+        }}
+        exercise={editing}
+        initialName={query}
+        onSaved={(ex) => toast.showSuccess(`${editing ? 'Saved' : 'Created'} ${ex.name}`)}
+      />
     </div>
   )
 }
 
 /* ─── Exercise row ─────────────────────────────────────────────── */
 
-function ExerciseRow({ exercise, onClick }: { exercise: Exercise; onClick: () => void }) {
+/** `onEdit` is set for the user's own (custom) exercises. */
+function ExerciseRow({
+  exercise,
+  onClick,
+  onEdit,
+}: {
+  exercise: Exercise
+  onClick: () => void
+  onEdit?: () => void
+}) {
   const color = getMuscleColor(exercise.muscle_group)
   return (
-    <button
-      type="button"
-      onClick={onClick}
+    <div
       style={{
-        padding: '12px 14px',
-        borderRadius: 12,
         display: 'flex',
         alignItems: 'center',
-        gap: 12,
+        borderRadius: 12,
         background: 'rgba(15,29,46,0.4)',
         border: '1px solid rgba(255,255,255,0.05)',
-        cursor: 'pointer',
-        textAlign: 'left',
-        width: '100%',
-        color: 'inherit',
       }}
     >
-      <div
+      <button
+        type="button"
+        onClick={onClick}
         style={{
-          width: 2,
-          height: 30,
-          borderRadius: 1,
-          background: `linear-gradient(180deg, ${color.primary}, ${color.light})`,
-          opacity: 0.85,
+          padding: '12px 14px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+          background: 'transparent',
+          border: 'none',
+          cursor: 'pointer',
+          textAlign: 'left',
+          flex: 1,
+          minWidth: 0,
+          color: 'inherit',
         }}
-      />
-      <div style={{ flex: 1, minWidth: 0 }}>
+      >
         <div
           style={{
-            fontSize: 14,
-            color: 'var(--text-1)',
-            fontWeight: 500,
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
+            width: 2,
+            height: 30,
+            borderRadius: 1,
+            background: `linear-gradient(180deg, ${color.primary}, ${color.light})`,
+            opacity: 0.85,
           }}
-        >
-          {exercise.name}
+        />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div
+            style={{
+              fontSize: 14,
+              color: 'var(--text-1)',
+              fontWeight: 500,
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+            }}
+          >
+            {exercise.name}
+          </div>
+          <div
+            style={{
+              fontSize: 10,
+              color: 'var(--text-m)',
+              marginTop: 2,
+              letterSpacing: '0.15em',
+              textTransform: 'uppercase',
+              fontFamily: MONO,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+            }}
+          >
+            {exercise.equipment_type}
+            {onEdit && (
+              <span
+                style={{
+                  fontSize: 8,
+                  fontWeight: 700,
+                  letterSpacing: '0.18em',
+                  padding: '1px 6px',
+                  borderRadius: 100,
+                  color: 'var(--accent-l)',
+                  background: 'rgba(var(--accent-rgb),0.12)',
+                  border: '1px solid rgba(var(--accent-rgb),0.3)',
+                }}
+              >
+                CUSTOM
+              </span>
+            )}
+          </div>
         </div>
-        <div
+        {!onEdit && (
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-m)" strokeWidth={2} strokeLinecap="round" aria-hidden="true">
+            <path d="M9 18l6-6-6-6" />
+          </svg>
+        )}
+      </button>
+      {onEdit && (
+        <button
+          type="button"
+          onClick={onEdit}
+          aria-label={`Edit ${exercise.name}`}
           style={{
-            fontSize: 10,
-            color: 'var(--text-m)',
-            marginTop: 2,
-            letterSpacing: '0.15em',
-            textTransform: 'uppercase',
-            fontFamily: MONO,
+            width: 36,
+            height: 36,
+            marginRight: 8,
+            borderRadius: 10,
+            background: 'rgba(255,255,255,0.05)',
+            border: 'none',
+            color: 'var(--text-2)',
+            display: 'grid',
+            placeItems: 'center',
+            cursor: 'pointer',
+            flexShrink: 0,
           }}
         >
-          {exercise.equipment_type}
-        </div>
-      </div>
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-m)" strokeWidth={2} strokeLinecap="round">
-        <path d="M9 18l6-6-6-6" />
-      </svg>
-    </button>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+          </svg>
+        </button>
+      )}
+    </div>
   )
 }
 
 /* ─── Chrome ───────────────────────────────────────────────────── */
 
-function Chrome({ title, sub, onBack }: { title: string; sub: string; onBack: () => void }) {
+function Chrome({
+  title,
+  sub,
+  onBack,
+  onAdd,
+}: {
+  title: string
+  sub: string
+  onBack: () => void
+  onAdd: () => void
+}) {
   return (
     <div
       style={{
@@ -504,7 +620,26 @@ function Chrome({ title, sub, onBack }: { title: string; sub: string; onBack: ()
           {title}
         </div>
       </div>
-      <div style={{ width: 36 }} />
+      <button
+        type="button"
+        onClick={onAdd}
+        aria-label="Create exercise"
+        style={{
+          width: 36,
+          height: 36,
+          borderRadius: 12,
+          background: 'rgba(var(--accent-rgb),0.14)',
+          border: '1px solid rgba(var(--accent-rgb),0.35)',
+          color: 'var(--accent-l)',
+          display: 'grid',
+          placeItems: 'center',
+          cursor: 'pointer',
+        }}
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" aria-hidden="true">
+          <path d="M12 5v14M5 12h14" />
+        </svg>
+      </button>
     </div>
   )
 }

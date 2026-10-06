@@ -5,6 +5,8 @@ export interface Exercise {
   name: string
   muscle_group: string
   equipment_type: EquipmentType
+  /** Owner; null for the shared, seeded exercises. */
+  user_id: string | null
 }
 
 export type EquipmentType = 'barbell' | 'dumbbell' | 'machine' | 'cable' | 'bodyweight'
