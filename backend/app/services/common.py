@@ -82,7 +82,7 @@ async def get_visible_entity(
     result = await db.execute(query)
     entity = result.scalar_one_or_none()
     if not entity:
-        name = model.__tablename__.rstrip("s").title()
+        name = model.__tablename__.removesuffix("s").replace("_", " ").capitalize()
         raise HTTPException(status_code=404, detail=f"{name} not found")
     return entity
 
@@ -122,6 +122,6 @@ async def get_owned_entity(
     result = await db.execute(query)
     entity = result.scalar_one_or_none()
     if not entity:
-        name = model.__tablename__.rstrip("s").title()
+        name = model.__tablename__.removesuffix("s").replace("_", " ").capitalize()
         raise HTTPException(status_code=404, detail=f"{name} not found")
     return entity

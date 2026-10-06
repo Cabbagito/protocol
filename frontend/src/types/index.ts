@@ -186,6 +186,9 @@ export interface FoodItem {
   fat_per_100g: number
   default_serving_g: number | null
   barcode: string | null
+  // Owner of a custom food; null for seeded and barcode (shared) foods,
+  // which the API refuses to modify (403).
+  user_id: string | null
   seeded: boolean
 }
 

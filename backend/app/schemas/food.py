@@ -35,6 +35,9 @@ class FoodItemResponse(BaseModel):
     fat_per_100g: float
     default_serving_g: float | None
     barcode: str | None
+    # Owner of a custom food; None for seeded and barcode (shared) foods,
+    # which nobody can modify.
+    user_id: str | None
     seed_key: str | None = Field(exclude=True)
 
     @computed_field
