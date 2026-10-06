@@ -105,6 +105,9 @@ export default function Dashboard() {
   const heroGroups = uniqueGroups.slice(0, 3)
 
   const dayTitle = session?.session_name ?? 'Workout'
+  // 130px fits ~6 characters per line; longer names (e.g. "Full Body A")
+  // would wrap to three giant lines and push the CTA under the nav.
+  const dayTitleSize = Math.round(Math.max(64, Math.min(130, 780 / Math.max(dayTitle.length, 1))))
   const dayOrdinal = ORDINAL_WORDS[si] ?? String(si + 1)
 
   // Continue CTA destination
@@ -278,7 +281,7 @@ export default function Dashboard() {
               <div
                 className="p-grad-text"
                 style={{
-                  fontSize: 130,
+                  fontSize: dayTitleSize,
                   fontWeight: 700,
                   letterSpacing: '-0.06em',
                   lineHeight: 1.05,
