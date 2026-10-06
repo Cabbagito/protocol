@@ -7,7 +7,7 @@ from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.domain.progression import (
+from app.domain.mesocycle_structure import (
     build_mesocycle_structure,
     count_total_workouts,
     derive_fields,

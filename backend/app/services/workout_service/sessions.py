@@ -1,13 +1,11 @@
 """Session-level operations — skip / unskip a whole workout."""
 
-from datetime import UTC, datetime
-
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.attributes import flag_modified
 
-from app.domain.progression import get_current_position
 from app.services.common import get_user_mesocycle
 from app.services.workout_service._helpers import get_session_from_structure
+from app.services.workout_service.logging import sync_completed_at
 
 
 async def set_session_skipped(
@@ -31,14 +29,9 @@ async def set_session_skipped(
     _, session = get_session_from_structure(structure, week_index, session_index)
 
     session["skipped"] = skipped
-
     # Skipping the last open session can finish the mesocycle; un-skipping
     # can reopen it.
-    if get_current_position(structure).get("completed"):
-        if mesocycle.completed_at is None:
-            mesocycle.completed_at = datetime.now(UTC)
-    else:
-        mesocycle.completed_at = None
+    sync_completed_at(mesocycle)
 
     flag_modified(mesocycle, "structure")
     await db.commit()

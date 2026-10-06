@@ -1,11 +1,10 @@
-"""Read-only workout queries — history, detail, exercise progress."""
+"""Read-only workout queries — history, exercise progress."""
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.mesocycle import Mesocycle
 from app.services.common import get_user_mesocycle
-from app.services.workout_service._helpers import get_session_from_structure
 
 
 async def get_exercise_progress(db: AsyncSession, user_id: str, exercise_id: str) -> list[dict]:
@@ -22,7 +21,11 @@ async def get_exercise_progress(db: AsyncSession, user_id: str, exercise_id: str
                 for exercise in session.get("exercises", []):
                     if exercise["exercise_id"] != exercise_id:
                         continue
-                    logged_sets = [s for s in exercise.get("sets", []) if s.get("logged")]
+                    logged_sets = [
+                        s
+                        for s in exercise.get("sets", [])
+                        if s.get("logged") and not s.get("skipped")
+                    ]
                     if not logged_sets:
                         continue
                     max_weight = max(s.get("weight", 0) or 0 for s in logged_sets)
@@ -81,21 +84,3 @@ async def get_workout_history(db: AsyncSession, mesocycle_id: str, user_id: str)
             )
 
     return workouts
-
-
-async def get_workout_detail(
-    db: AsyncSession, mesocycle_id: str, user_id: str, week_index: int, session_index: int
-) -> dict:
-    """Get detailed workout data for a specific session in the structure."""
-    mesocycle = await get_user_mesocycle(db, mesocycle_id, user_id)
-    week, session = get_session_from_structure(mesocycle.structure, week_index, session_index)
-
-    return {
-        "session_name": session["session_name"],
-        "week_number": week["week_number"],
-        "date": session.get("date"),
-        "notes": session.get("notes"),
-        "skipped": session.get("skipped", False),
-        "exercises": session["exercises"],
-        "exercise_notes": mesocycle.structure.get("exercise_notes", {}),
-    }

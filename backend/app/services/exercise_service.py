@@ -54,18 +54,24 @@ async def delete_exercise(db: AsyncSession, exercise_id: str, user_id: str) -> N
 
 
 def collect_exercise_history(mesocycles: list, exercise_id: str) -> list[dict]:
-    """Pure helper: walk mesocycle structures and gather logged sessions for
-    one exercise, sorted newest first."""
+    """Pure helper: walk mesocycle structures and gather every session where
+    this exercise has logged sets, newest first.
+
+    Logged sets count even if the exercise was later skipped (the work was
+    done). Ordering is by session date, then by position (mesocycle start,
+    week, session), so undated or same-day sessions still sort sensibly.
+    """
     entries: list[dict] = []
     for meso in mesocycles:
         weeks = (meso.structure or {}).get("weeks") or []
-        for week in weeks:
-            for session in week.get("sessions") or []:
+        for wi, week in enumerate(weeks):
+            for si, session in enumerate(week.get("sessions") or []):
                 for ex in session.get("exercises") or []:
-                    if ex.get("exercise_id") != exercise_id or ex.get("skipped"):
+                    if ex.get("exercise_id") != exercise_id:
                         continue
                     logged = [
-                        s for s in (ex.get("sets") or [])
+                        s
+                        for s in (ex.get("sets") or [])
                         if s.get("logged") and not s.get("skipped")
                     ]
                     if not logged:
@@ -74,6 +80,8 @@ def collect_exercise_history(mesocycles: list, exercise_id: str) -> list[dict]:
                         {
                             "meso_id": meso.id,
                             "meso_name": meso.name,
+                            "week_index": wi,
+                            "session_index": si,
                             "week_number": week.get("week_number"),
                             "session_name": session.get("session_name"),
                             "date": session.get("date"),
@@ -83,22 +91,23 @@ def collect_exercise_history(mesocycles: list, exercise_id: str) -> list[dict]:
                     )
 
     entries.sort(
-        key=lambda e: (e["date"] or e["meso_started_at"]),
+        key=lambda e: (
+            e["date"] or e["meso_started_at"],
+            e["meso_started_at"],
+            e["week_index"],
+            e["session_index"],
+        ),
         reverse=True,
     )
     return entries
 
 
-async def get_exercise_history(
-    db: AsyncSession, exercise_id: str, user_id: str
-) -> list[dict]:
+async def get_exercise_history(db: AsyncSession, exercise_id: str, user_id: str) -> list[dict]:
     """Every (meso, week, session) where this exercise has logged sets, newest first.
 
     Walks every user-owned mesocycle's JSONB structure. Each result entry is one
     session's worth of logged sets for the exercise, with meso/week/session
     metadata so the frontend can group by day.
     """
-    result = await db.execute(
-        select(Mesocycle).where(Mesocycle.user_id == user_id)
-    )
+    result = await db.execute(select(Mesocycle).where(Mesocycle.user_id == user_id))
     return collect_exercise_history(list(result.scalars().all()), exercise_id)

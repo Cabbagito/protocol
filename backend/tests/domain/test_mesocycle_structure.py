@@ -1,14 +1,17 @@
-"""Tests for pure domain functions in progression.py.
+"""Tests for pure domain functions in mesocycle_structure.py.
 
 All functions operate on plain dicts (the JSONB structure). No DB, no async.
 """
 
-from app.domain.progression import (
+from datetime import date
+
+from app.domain.mesocycle_structure import (
+    apply_session_snapshot,
     build_mesocycle_structure,
-    carry_weight_forward,
     count_total_workouts,
     derive_fields,
     get_current_position,
+    is_session_done,
 )
 
 # ---------------------------------------------------------------------------
@@ -20,7 +23,6 @@ def _make_set(
     set_num=1,
     weight=None,
     reps=None,
-    suggested_weight=None,
     logged=False,
     skipped=False,
     set_type=None,
@@ -29,7 +31,6 @@ def _make_set(
         "set_num": set_num,
         "weight": weight,
         "reps": reps,
-        "suggested_weight": suggested_weight,
         "logged": logged,
     }
     if skipped:
@@ -81,7 +82,7 @@ def _two_week_structure(
     session_name="Push",
     day_order=0,
 ):
-    """Build a minimal 2-week structure with one exercise for testing carry-forward."""
+    """Build a minimal 2-week structure with one exercise."""
     w1 = _make_week(
         1,
         [
@@ -183,156 +184,229 @@ class TestGetCurrentPosition:
 
 
 # ---------------------------------------------------------------------------
-# carry_weight_forward
+# is_session_done
 # ---------------------------------------------------------------------------
 
 
-class TestCarryWeightForward:
-    def test_copies_weight_to_next_week(self):
-        w1_sets = [_make_set(1, weight=100, reps=10, logged=True)]
-        w2_sets = [_make_set(1)]
-        structure = _two_week_structure(w1_sets, w2_sets)
+class TestIsSessionDone:
+    def test_skipped_set_counts_as_done(self):
+        sets = [
+            _make_set(1, weight=100, reps=10, logged=True),
+            _make_set(2, skipped=True),
+            _make_set(3, weight=100, reps=8, logged=True),
+        ]
+        assert is_session_done(_make_session(exercises=[_make_exercise(sets=sets)]))
 
-        carry_weight_forward(structure, 0, 0)
+    def test_open_set_keeps_session_open(self):
+        sets = [_make_set(1, weight=100, reps=10, logged=True), _make_set(2)]
+        assert not is_session_done(_make_session(exercises=[_make_exercise(sets=sets)]))
 
-        next_set = structure["weeks"][1]["sessions"][0]["exercises"][0]["sets"][0]
-        assert next_set["suggested_weight"] == 100
-        assert next_set["weight"] is None
-        assert next_set["reps"] is None
+    def test_skipped_exercise_with_open_sets_is_done(self):
+        sets = [_make_set(1, weight=100, reps=10, logged=True), _make_set(2)]
+        session = _make_session(exercises=[_make_exercise(sets=sets, skipped=True)])
+        assert is_session_done(session)
 
-    def test_does_not_carry_reps(self):
-        """Reps always start blank on the next instance — only weight carries."""
-        w1_sets = [_make_set(1, weight=100, reps=12, logged=True)]
-        w2_sets = [_make_set(1)]
-        structure = _two_week_structure(w1_sets, w2_sets)
+    def test_skipped_session_is_not_done(self):
+        assert not is_session_done(_make_session(skipped=True))
 
-        carry_weight_forward(structure, 0, 0)
+    def test_set_skip_does_not_block_next_session(self):
+        sets = [_make_set(1, weight=100, reps=10, logged=True), _make_set(2, skipped=True)]
+        w1 = _make_week(1, [_make_session(exercises=[_make_exercise(sets=sets)])])
+        w2 = _make_week(2, [_make_session()])
+        assert get_current_position(_make_structure([w1, w2]))["week_index"] == 1
 
-        next_set = structure["weeks"][1]["sessions"][0]["exercises"][0]["sets"][0]
-        assert next_set["reps"] is None
 
-    def test_does_not_overwrite_logged_future_sets(self):
-        w1_sets = [_make_set(1, weight=110, reps=10, logged=True)]
-        w2_sets = [_make_set(1, weight=90, reps=8, suggested_weight=100, logged=True)]
-        structure = _two_week_structure(w1_sets, w2_sets)
+# ---------------------------------------------------------------------------
+# apply_session_snapshot
+# ---------------------------------------------------------------------------
 
-        carry_weight_forward(structure, 0, 0)
+DAY = date(2026, 10, 6)
 
-        next_set = structure["weeks"][1]["sessions"][0]["exercises"][0]["sets"][0]
-        assert next_set["weight"] == 90
-        assert next_set["reps"] == 8
-        assert next_set["suggested_weight"] == 100
 
-    def test_no_next_instance_is_noop(self):
-        w1_sets = [_make_set(1, weight=100, reps=10, logged=True)]
-        structure = _make_structure(
-            [_make_week(sessions=[_make_session(exercises=[_make_exercise(sets=w1_sets)])])]
+def _snap_set(weight=None, reps=None, logged=False, skipped=False, set_type=None):
+    return {
+        "weight": weight,
+        "reps": reps,
+        "logged": logged,
+        "skipped": skipped,
+        "set_type": set_type,
+    }
+
+
+def _snap(exercise_id="ex1", sets=None, skipped=False):
+    return {"exercise_id": exercise_id, "skipped": skipped, "sets": sets or [_snap_set()]}
+
+
+class TestApplySessionSnapshot:
+    def test_logs_sets_and_stamps_date(self):
+        structure = _two_week_structure()
+        apply_session_snapshot(
+            structure,
+            0,
+            0,
+            exercises=[
+                _snap(
+                    sets=[
+                        _snap_set(100, 10, logged=True),
+                        _snap_set(100, None),
+                        _snap_set(),
+                    ]
+                )
+            ],
+            logged_on=DAY,
         )
-        carry_weight_forward(structure, 0, 0)  # no raise
+        session = structure["weeks"][0]["sessions"][0]
+        sets = session["exercises"][0]["sets"]
+        assert sets[0] == {
+            "set_num": 1,
+            "weight": 100,
+            "reps": 10,
+            "logged": True,
+            "skipped": False,
+        }
+        assert sets[1]["weight"] == 100 and sets[1]["logged"] is False
+        assert session["date"] == "2026-10-06"
 
-    def test_skipped_exercise_ignored(self):
-        w1_sets = [_make_set(1, weight=100, reps=10, logged=True)]
-        w2_sets = [_make_set(1)]
-
-        w1 = _make_week(
-            1, [_make_session(exercises=[_make_exercise(sets=w1_sets, skipped=True)])]
+    def test_date_is_kept_when_editing_a_logged_session(self):
+        structure = _two_week_structure(
+            w1_sets=[_make_set(n, weight=100, reps=10, logged=True) for n in range(1, 4)]
         )
-        w2 = _make_week(2, [_make_session(exercises=[_make_exercise(sets=w2_sets)])])
-        structure = _make_structure([w1, w2])
+        structure["weeks"][0]["sessions"][0]["date"] = "2026-09-01"
+        apply_session_snapshot(
+            structure,
+            0,
+            0,
+            exercises=[_snap(sets=[_snap_set(105, 10, logged=True)] * 3)],
+            logged_on=DAY,
+        )
+        assert structure["weeks"][0]["sessions"][0]["date"] == "2026-09-01"
 
-        carry_weight_forward(structure, 0, 0)
+    def test_date_cleared_when_nothing_logged(self):
+        structure = _two_week_structure()
+        structure["weeks"][0]["sessions"][0]["date"] = "2026-09-01"  # stale "opened" date
+        apply_session_snapshot(
+            structure, 0, 0, exercises=[_snap(sets=[_snap_set(100, None)])], logged_on=DAY
+        )
+        assert structure["weeks"][0]["sessions"][0]["date"] is None
 
-        next_set = structure["weeks"][1]["sessions"][0]["exercises"][0]["sets"][0]
-        assert next_set["suggested_weight"] is None
+    def test_stale_date_replaced_by_first_log(self):
+        structure = _two_week_structure()
+        structure["weeks"][0]["sessions"][0]["date"] = "2026-09-01"
+        apply_session_snapshot(
+            structure,
+            0,
+            0,
+            exercises=[_snap(sets=[_snap_set(100, 8, logged=True)])],
+            logged_on=DAY,
+        )
+        assert structure["weeks"][0]["sessions"][0]["date"] == "2026-10-06"
 
-    def test_skipped_set_ignored(self):
-        w1_sets = [_make_set(1, weight=100, reps=10, logged=True, skipped=True)]
-        w2_sets = [_make_set(1)]
-        structure = _two_week_structure(w1_sets, w2_sets)
-
-        carry_weight_forward(structure, 0, 0)
-
-        next_set = structure["weeks"][1]["sessions"][0]["exercises"][0]["sets"][0]
-        assert next_set["suggested_weight"] is None
-
-    def test_zero_weight_not_carried(self):
-        w1_sets = [_make_set(1, weight=0, reps=10, logged=True)]
-        w2_sets = [_make_set(1)]
-        structure = _two_week_structure(w1_sets, w2_sets)
-
-        carry_weight_forward(structure, 0, 0)
-
-        next_set = structure["weeks"][1]["sessions"][0]["exercises"][0]["sets"][0]
-        assert next_set["suggested_weight"] is None
-
-    def test_carries_to_next_instance_same_week(self):
-        """When the same exercise appears later in the same week, that's the next target."""
-        w1_push_sets = [_make_set(1, weight=100, reps=10, logged=True)]
-        w1_pull_sets = [_make_set(1)]
-        w2_push_sets = [_make_set(1)]
-        w2_pull_sets = [_make_set(1)]
-
+    def test_unnamed_exercises_are_untouched(self):
         w1 = _make_week(
             1,
             [
-                _make_session("Push", 0, [_make_exercise(sets=w1_push_sets)]),
-                _make_session("Pull", 1, [_make_exercise(sets=w1_pull_sets)]),
+                _make_session(
+                    exercises=[
+                        _make_exercise("ex1"),
+                        _make_exercise("ex2", sets=[_make_set(1, weight=50, reps=12, logged=True)]),
+                    ]
+                )
             ],
         )
-        w2 = _make_week(
-            2,
-            [
-                _make_session("Push", 0, [_make_exercise(sets=w2_push_sets)]),
-                _make_session("Pull", 1, [_make_exercise(sets=w2_pull_sets)]),
-            ],
+        structure = _make_structure([w1])
+        apply_session_snapshot(
+            structure,
+            0,
+            0,
+            exercises=[_snap("ex1", [_snap_set(100, 5, logged=True)])],
+            logged_on=DAY,
         )
-        structure = _make_structure([w1, w2])
+        ex2 = structure["weeks"][0]["sessions"][0]["exercises"][1]
+        assert ex2["sets"][0]["logged"] is True and ex2["sets"][0]["weight"] == 50
 
-        carry_weight_forward(structure, 0, 0)
+    def test_unknown_exercise_in_snapshot_is_ignored(self):
+        structure = _two_week_structure()
+        apply_session_snapshot(
+            structure,
+            0,
+            0,
+            exercises=[_snap("gone", [_snap_set(1, 1, logged=True)])],
+            logged_on=DAY,
+        )
+        assert structure["weeks"][0]["sessions"][0]["date"] is None
 
-        w1_pull_set = structure["weeks"][0]["sessions"][1]["exercises"][0]["sets"][0]
-        assert w1_pull_set["suggested_weight"] == 100
+    def test_skipped_exercise_keeps_logged_sets(self):
+        structure = _two_week_structure()
+        apply_session_snapshot(
+            structure,
+            0,
+            0,
+            exercises=[
+                _snap(
+                    skipped=True,
+                    sets=[
+                        _snap_set(100, 10, logged=True),
+                        _snap_set(),
+                        _snap_set(),
+                    ],
+                )
+            ],
+            logged_on=DAY,
+        )
+        ex = structure["weeks"][0]["sessions"][0]["exercises"][0]
+        assert ex["skipped"] is True
+        assert ex["sets"][0]["logged"] is True
 
-        # Only the next instance gets updated; later weeks stay untouched
-        w2_push_set = structure["weeks"][1]["sessions"][0]["exercises"][0]["sets"][0]
-        w2_pull_set = structure["weeks"][1]["sessions"][1]["exercises"][0]["sets"][0]
-        assert w2_push_set["suggested_weight"] is None
-        assert w2_pull_set["suggested_weight"] is None
+    def test_logged_set_is_never_skipped(self):
+        structure = _two_week_structure()
+        apply_session_snapshot(
+            structure,
+            0,
+            0,
+            exercises=[_snap(sets=[_snap_set(100, 10, logged=True, skipped=True)])],
+            logged_on=DAY,
+        )
+        assert structure["weeks"][0]["sessions"][0]["exercises"][0]["sets"][0]["skipped"] is False
 
-    def test_per_set_carryover(self):
-        w1_sets = [
-            _make_set(1, weight=100, reps=10, logged=True),
-            _make_set(2, weight=95, reps=9, logged=True),
-            _make_set(3, weight=90, reps=8, logged=True),
-        ]
-        w2_sets = [_make_set(1), _make_set(2), _make_set(3)]
-        structure = _two_week_structure(w1_sets, w2_sets)
+    def test_set_type_kept_only_when_given(self):
+        structure = _two_week_structure()
+        apply_session_snapshot(
+            structure,
+            0,
+            0,
+            exercises=[
+                _snap(sets=[_snap_set(100, 10, logged=True, set_type="myorep"), _snap_set()])
+            ],
+            logged_on=DAY,
+        )
+        sets = structure["weeks"][0]["sessions"][0]["exercises"][0]["sets"]
+        assert sets[0]["set_type"] == "myorep"
+        assert "set_type" not in sets[1]
 
-        carry_weight_forward(structure, 0, 0)
-
-        w2_ex = structure["weeks"][1]["sessions"][0]["exercises"][0]
-        assert w2_ex["sets"][0]["suggested_weight"] == 100
-        assert w2_ex["sets"][1]["suggested_weight"] == 95
-        assert w2_ex["sets"][2]["suggested_weight"] == 90
-
-    def test_skipped_session_is_not_a_carry_target(self):
-        """Weight jumps over a skipped week to the next session that will be done."""
-        w1_sets = [_make_set(n, weight=100, reps=10, logged=True) for n in range(1, 4)]
-        w1 = _make_week(1, [_make_session("Push", 0, [_make_exercise(sets=w1_sets)])])
-        w2 = _make_week(2, [_make_session("Push", 0, [_make_exercise()], skipped=True)])
-        w3 = _make_week(3, [_make_session("Push", 0, [_make_exercise()])])
-        structure = _make_structure([w1, w2, w3])
-
-        carry_weight_forward(structure, 0, 0)
-
+    def test_added_set_propagates_to_unstarted_future_week(self):
+        structure = _two_week_structure()
+        apply_session_snapshot(
+            structure, 0, 0, exercises=[_snap(sets=[_snap_set()] * 4)], logged_on=DAY
+        )
         w2_sets = structure["weeks"][1]["sessions"][0]["exercises"][0]["sets"]
-        w3_sets = structure["weeks"][2]["sessions"][0]["exercises"][0]["sets"]
-        assert all(s["suggested_weight"] is None for s in w2_sets)
-        assert all(s["suggested_weight"] == 100 for s in w3_sets)
+        assert [s["set_num"] for s in w2_sets] == [1, 2, 3, 4]
 
-    def test_out_of_bounds_week_index_is_noop(self):
-        structure = _make_structure([_make_week()])
-        carry_weight_forward(structure, 5, 0)  # no raise
+    def test_removed_set_propagates_but_not_onto_started_weeks(self):
+        w2_started = [_make_set(1, weight=100, reps=10, logged=True), _make_set(2), _make_set(3)]
+        structure = _two_week_structure(w2_sets=w2_started)
+        apply_session_snapshot(
+            structure, 0, 0, exercises=[_snap(sets=[_snap_set()] * 2)], logged_on=DAY
+        )
+        assert len(structure["weeks"][0]["sessions"][0]["exercises"][0]["sets"]) == 2
+        assert len(structure["weeks"][1]["sessions"][0]["exercises"][0]["sets"]) == 3
+
+    def test_sets_are_renumbered(self):
+        structure = _two_week_structure()
+        apply_session_snapshot(
+            structure, 0, 0, exercises=[_snap(sets=[_snap_set(), _snap_set()])], logged_on=DAY
+        )
+        sets = structure["weeks"][0]["sessions"][0]["exercises"][0]["sets"]
+        assert [s["set_num"] for s in sets] == [1, 2]
 
 
 # ---------------------------------------------------------------------------
@@ -347,9 +421,7 @@ class TestDeriveFields:
         assert result["workouts_completed"] == 0
 
     def test_basic_derive(self):
-        structure = _make_structure(
-            [_make_week(1), _make_week(2), _make_week(3), _make_week(4)]
-        )
+        structure = _make_structure([_make_week(1), _make_week(2), _make_week(3), _make_week(4)])
         result = derive_fields(structure)
         assert result["total_weeks"] == 4
         assert result["current_week"] == 1
@@ -457,8 +529,8 @@ class TestBuildMesocycleStructure:
             for s in week["sessions"][0]["exercises"][0]["sets"]:
                 assert s["weight"] is None
                 assert s["reps"] is None
-                assert s["suggested_weight"] is None
                 assert s["logged"] is False
+                assert "suggested_weight" not in s
                 assert "target_reps" not in s
 
     def test_sets_per_exercise_override(self):

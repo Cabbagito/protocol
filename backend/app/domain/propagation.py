@@ -1,6 +1,6 @@
 """Shared helpers for propagating changes to future weeks in a mesocycle structure.
 
-Pure functions — no DB, no async. Used by both domain logic (progression.py)
+Pure functions — no DB, no async. Used by both domain logic (mesocycle_structure.py)
 and service layer (workout_service.py).
 """
 
