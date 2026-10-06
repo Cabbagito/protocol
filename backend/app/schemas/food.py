@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from typing import Literal
 
-from pydantic import BaseModel, Field, computed_field
+from pydantic import BaseModel, ConfigDict, Field, computed_field
 
 
 class FoodItemCreate(BaseModel):
@@ -26,6 +26,8 @@ class FoodItemUpdate(BaseModel):
 
 
 class FoodItemResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: str
     name: str
     brand: str | None
@@ -44,9 +46,6 @@ class FoodItemResponse(BaseModel):
     @property
     def seeded(self) -> bool:
         return self.seed_key is not None
-
-    class Config:
-        from_attributes = True
 
 
 class FoodDraft(BaseModel):
@@ -78,6 +77,8 @@ class FoodLogCreate(BaseModel):
 
 
 class FoodLogResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: str
     logged_on: date
     food_item_id: str | None
@@ -88,9 +89,6 @@ class FoodLogResponse(BaseModel):
     carbs_g: float
     fat_g: float
     created_at: datetime
-
-    class Config:
-        from_attributes = True
 
 
 class DailyTotals(BaseModel):

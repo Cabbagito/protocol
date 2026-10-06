@@ -24,6 +24,4 @@ async def update_daily_targets(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    return await daily_targets_service.update_targets(
-        db, current_user.id, data=payload
-    )
+    return await daily_targets_service.update_targets(db, current_user.id, data=payload)

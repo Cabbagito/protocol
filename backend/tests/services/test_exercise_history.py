@@ -42,14 +42,27 @@ def test_returns_empty_for_unknown_exercise():
 
 def test_collects_logged_sessions_from_one_meso():
     meso = _meso(
-        "m1", "Block 1", date(2026, 1, 1),
-        {"weeks": [
-            _week(1, [
-                _session("Push", "2026-01-05", [
-                    _exercise("bench", [_logged_set(1, 100, 10), _logged_set(2, 100, 9)]),
-                ]),
-            ]),
-        ]},
+        "m1",
+        "Block 1",
+        date(2026, 1, 1),
+        {
+            "weeks": [
+                _week(
+                    1,
+                    [
+                        _session(
+                            "Push",
+                            "2026-01-05",
+                            [
+                                _exercise(
+                                    "bench", [_logged_set(1, 100, 10), _logged_set(2, 100, 9)]
+                                ),
+                            ],
+                        ),
+                    ],
+                ),
+            ]
+        },
     )
     out = collect_exercise_history([meso], "bench")
     assert len(out) == 1
@@ -62,16 +75,46 @@ def test_collects_logged_sessions_from_one_meso():
 
 def test_orders_newest_first_across_mesocycles():
     meso_old = _meso(
-        "old", "Block 1", date(2026, 1, 1),
-        {"weeks": [_week(1, [_session("Push", "2026-01-05", [
-            _exercise("bench", [_logged_set(1, 100, 10)]),
-        ])])]},
+        "old",
+        "Block 1",
+        date(2026, 1, 1),
+        {
+            "weeks": [
+                _week(
+                    1,
+                    [
+                        _session(
+                            "Push",
+                            "2026-01-05",
+                            [
+                                _exercise("bench", [_logged_set(1, 100, 10)]),
+                            ],
+                        )
+                    ],
+                )
+            ]
+        },
     )
     meso_new = _meso(
-        "new", "Block 2", date(2026, 2, 1),
-        {"weeks": [_week(1, [_session("Push", "2026-02-10", [
-            _exercise("bench", [_logged_set(1, 110, 8)]),
-        ])])]},
+        "new",
+        "Block 2",
+        date(2026, 2, 1),
+        {
+            "weeks": [
+                _week(
+                    1,
+                    [
+                        _session(
+                            "Push",
+                            "2026-02-10",
+                            [
+                                _exercise("bench", [_logged_set(1, 110, 8)]),
+                            ],
+                        )
+                    ],
+                )
+            ]
+        },
     )
     out = collect_exercise_history([meso_old, meso_new], "bench")
     assert [e["meso_name"] for e in out] == ["Block 2", "Block 1"]
@@ -79,10 +122,25 @@ def test_orders_newest_first_across_mesocycles():
 
 def test_falls_back_to_meso_started_at_when_session_date_null():
     meso = _meso(
-        "m1", "Block 1", date(2026, 3, 1),
-        {"weeks": [_week(1, [_session("Push", None, [
-            _exercise("bench", [_logged_set(1, 100, 10)]),
-        ])])]},
+        "m1",
+        "Block 1",
+        date(2026, 3, 1),
+        {
+            "weeks": [
+                _week(
+                    1,
+                    [
+                        _session(
+                            "Push",
+                            None,
+                            [
+                                _exercise("bench", [_logged_set(1, 100, 10)]),
+                            ],
+                        )
+                    ],
+                )
+            ]
+        },
     )
     out = collect_exercise_history([meso], "bench")
     assert out[0]["date"] is None
@@ -91,36 +149,92 @@ def test_falls_back_to_meso_started_at_when_session_date_null():
 
 def test_skipped_exercise_excluded():
     meso = _meso(
-        "m1", "Block 1", date(2026, 1, 1),
-        {"weeks": [_week(1, [_session("Push", "2026-01-05", [
-            _exercise("bench", [_logged_set(1, 100, 10)], skipped=True),
-        ])])]},
+        "m1",
+        "Block 1",
+        date(2026, 1, 1),
+        {
+            "weeks": [
+                _week(
+                    1,
+                    [
+                        _session(
+                            "Push",
+                            "2026-01-05",
+                            [
+                                _exercise("bench", [_logged_set(1, 100, 10)], skipped=True),
+                            ],
+                        )
+                    ],
+                )
+            ]
+        },
     )
     assert collect_exercise_history([meso], "bench") == []
 
 
 def test_session_with_no_logged_sets_excluded():
     meso = _meso(
-        "m1", "Block 1", date(2026, 1, 1),
-        {"weeks": [_week(1, [_session("Push", None, [
-            _exercise("bench", [
-                {"set_num": 1, "weight": None, "reps": None, "logged": False},
-            ]),
-        ])])]},
+        "m1",
+        "Block 1",
+        date(2026, 1, 1),
+        {
+            "weeks": [
+                _week(
+                    1,
+                    [
+                        _session(
+                            "Push",
+                            None,
+                            [
+                                _exercise(
+                                    "bench",
+                                    [
+                                        {
+                                            "set_num": 1,
+                                            "weight": None,
+                                            "reps": None,
+                                            "logged": False,
+                                        },
+                                    ],
+                                ),
+                            ],
+                        )
+                    ],
+                )
+            ]
+        },
     )
     assert collect_exercise_history([meso], "bench") == []
 
 
 def test_skipped_set_excluded_from_logged_list():
     meso = _meso(
-        "m1", "Block 1", date(2026, 1, 1),
-        {"weeks": [_week(1, [_session("Push", "2026-01-05", [
-            _exercise("bench", [
-                _logged_set(1, 100, 10),
-                {**_logged_set(2, 100, 0), "skipped": True},
-                _logged_set(3, 100, 8),
-            ]),
-        ])])]},
+        "m1",
+        "Block 1",
+        date(2026, 1, 1),
+        {
+            "weeks": [
+                _week(
+                    1,
+                    [
+                        _session(
+                            "Push",
+                            "2026-01-05",
+                            [
+                                _exercise(
+                                    "bench",
+                                    [
+                                        _logged_set(1, 100, 10),
+                                        {**_logged_set(2, 100, 0), "skipped": True},
+                                        _logged_set(3, 100, 8),
+                                    ],
+                                ),
+                            ],
+                        )
+                    ],
+                )
+            ]
+        },
     )
     out = collect_exercise_history([meso], "bench")
     assert [s["set_num"] for s in out[0]["sets"]] == [1, 3]

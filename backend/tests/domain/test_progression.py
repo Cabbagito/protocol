@@ -234,9 +234,7 @@ class TestCarryWeightForward:
         w1_sets = [_make_set(1, weight=100, reps=10, logged=True)]
         w2_sets = [_make_set(1)]
 
-        w1 = _make_week(
-            1, [_make_session(exercises=[_make_exercise(sets=w1_sets, skipped=True)])]
-        )
+        w1 = _make_week(1, [_make_session(exercises=[_make_exercise(sets=w1_sets, skipped=True)])])
         w2 = _make_week(2, [_make_session(exercises=[_make_exercise(sets=w2_sets)])])
         structure = _make_structure([w1, w2])
 
@@ -347,9 +345,7 @@ class TestDeriveFields:
         assert result["workouts_completed"] == 0
 
     def test_basic_derive(self):
-        structure = _make_structure(
-            [_make_week(1), _make_week(2), _make_week(3), _make_week(4)]
-        )
+        structure = _make_structure([_make_week(1), _make_week(2), _make_week(3), _make_week(4)])
         result = derive_fields(structure)
         assert result["total_weeks"] == 4
         assert result["current_week"] == 1
