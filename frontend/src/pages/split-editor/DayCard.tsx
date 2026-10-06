@@ -13,6 +13,8 @@ interface DayCardProps {
   isSearchOpen: boolean
   isEditingName: boolean
   canDelete: boolean
+  /** Seeded template: view only — no renaming, adding, removing or deleting. */
+  readOnly?: boolean
   allExercises: Exercise[]
   onToggle: () => void
   onDelete: () => void
@@ -31,6 +33,7 @@ export default function DayCard({
   isSearchOpen,
   isEditingName,
   canDelete,
+  readOnly = false,
   allExercises,
   onToggle,
   onDelete,
@@ -67,8 +70,6 @@ export default function DayCard({
         border: isExpanded
           ? '1px solid rgba(var(--accent-rgb),0.30)'
           : '1px solid rgba(255,255,255,0.05)',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
         overflow: 'hidden',
       }}
     >
@@ -134,6 +135,7 @@ export default function DayCard({
         ) : (
           <span
             onDoubleClick={(e) => {
+              if (readOnly) return
               e.stopPropagation()
               onStartRename()
             }}
@@ -166,7 +168,7 @@ export default function DayCard({
           {day.exercises.length} {day.exercises.length === 1 ? 'lift' : 'lifts'}
         </span>
 
-        {canDelete && (
+        {canDelete && !readOnly && (
           <button
             type="button"
             className="day-delete"
@@ -271,26 +273,28 @@ export default function DayCard({
                       {ex.muscle_group}
                     </div>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => onRemoveExercise(i)}
-                    aria-label="Remove exercise"
-                    style={{
-                      width: 24,
-                      height: 24,
-                      borderRadius: 6,
-                      background: 'transparent',
-                      border: 'none',
-                      color: 'var(--text-m)',
-                      cursor: 'pointer',
-                      display: 'grid',
-                      placeItems: 'center',
-                    }}
-                  >
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round">
-                      <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                    </svg>
-                  </button>
+                  {!readOnly && (
+                    <button
+                      type="button"
+                      onClick={() => onRemoveExercise(i)}
+                      aria-label={`Remove ${ex.exercise_name}`}
+                      style={{
+                        width: 24,
+                        height: 24,
+                        borderRadius: 6,
+                        background: 'transparent',
+                        border: 'none',
+                        color: 'var(--text-m)',
+                        cursor: 'pointer',
+                        display: 'grid',
+                        placeItems: 'center',
+                      }}
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round">
+                        <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                      </svg>
+                    </button>
+                  )}
                 </div>
               )
             })}
@@ -318,7 +322,7 @@ export default function DayCard({
               </div>
             )}
 
-            {isSearchOpen ? (
+            {readOnly ? null : isSearchOpen ? (
               <ExerciseSearch
                 allExercises={allExercises}
                 addedExerciseIds={day.exercises.map((e) => e.exercise_id)}

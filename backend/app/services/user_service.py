@@ -3,7 +3,12 @@ import secrets
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.security import hash_password, verify_password
+from app.core.security import (
+    BCRYPT_MAX_PASSWORD_BYTES,
+    hash_password,
+    password_too_long,
+    verify_password,
+)
 from app.models.user import User
 
 # Unambiguous alphabet (no 0/O, 1/l/I) so passwords are easy to read aloud.
@@ -11,8 +16,19 @@ _PASSWORD_ALPHABET = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789"
 _PASSWORD_LENGTH = 12
 
 
-class PasswordCollisionError(ValueError):
+_NAME_MAX_LENGTH = 100  # users.name is VARCHAR(100)
+
+
+class InvalidUserError(ValueError):
+    """The requested user can't be created; the message says why."""
+
+
+class PasswordCollisionError(InvalidUserError):
     """The password already belongs to another user."""
+
+
+class PasswordTooLongError(InvalidUserError):
+    """bcrypt can't hash passwords over 72 bytes."""
 
 
 def generate_password() -> str:
@@ -30,7 +46,21 @@ async def list_users(db: AsyncSession) -> list[User]:
 
 
 async def create_user(db: AsyncSession, name: str, password: str | None) -> tuple[User, str]:
-    """Create a user, returning it with the plaintext password (shown once)."""
+    """Create a user, returning it with the plaintext password (shown once).
+
+    Raises an ``InvalidUserError`` subclass for an unusable name or password.
+    """
+    name = name.strip()
+    if not name or len(name) > _NAME_MAX_LENGTH:
+        raise InvalidUserError(f"Name must be 1-{_NAME_MAX_LENGTH} characters")
+    if password is not None and password_too_long(password):
+        raise PasswordTooLongError(
+            f"Password is {len(password.encode())} bytes; the maximum is "
+            f"{BCRYPT_MAX_PASSWORD_BYTES} bytes (bcrypt ignores anything beyond)"
+        )
+    if password is not None and not password:
+        raise InvalidUserError("Password must not be empty")
+
     users = await list_users(db)
 
     if password is None:

@@ -18,7 +18,6 @@ export default function Splits() {
     <div
       style={{
         position: 'relative',
-        minHeight: '100vh',
         background: 'var(--deep)',
         overflow: 'hidden',
       }}
@@ -123,8 +122,6 @@ function SplitCard({ split, isLive }: { split: SplitListItem; isLive: boolean })
         border: isLive
           ? `1px solid color-mix(in oklab, ${accent} 35%, rgba(255,255,255,0.05))`
           : '1px solid rgba(255,255,255,0.05)',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
         textDecoration: 'none',
         color: 'inherit',
         display: 'block',
@@ -167,6 +164,23 @@ function SplitCard({ split, isLive }: { split: SplitListItem; isLive: boolean })
             >
               {split.name}
             </div>
+            {split.user_id === null && (
+              <span
+                style={{
+                  fontSize: 8,
+                  color: 'var(--text-m)',
+                  letterSpacing: '0.22em',
+                  padding: '2px 7px',
+                  borderRadius: 100,
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  fontFamily: MONO,
+                  fontWeight: 700,
+                  flexShrink: 0,
+                }}
+              >
+                TEMPLATE
+              </span>
+            )}
             {isLive && (
               <span
                 style={{
@@ -309,7 +323,6 @@ function Chrome({ title, sub, onBack }: { title: string; sub: string; onBack: ()
           borderRadius: 12,
           background: 'rgba(255,255,255,0.04)',
           border: '1px solid rgba(255,255,255,0.05)',
-          backdropFilter: 'blur(20px)',
           color: 'var(--text-2)',
           display: 'grid',
           placeItems: 'center',

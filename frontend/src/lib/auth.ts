@@ -31,3 +31,17 @@ export function clearToken(): void {
   localStorage.removeItem(TOKEN_KEY)
   localStorage.removeItem(USER_KEY)
 }
+
+/** The user id (`sub`) from the stored JWT, or null if absent/unreadable. */
+export function getUserId(): string | null {
+  const token = getToken()
+  const payload = token?.split('.')[1]
+  if (!payload) return null
+  try {
+    const json = atob(payload.replace(/-/g, '+').replace(/_/g, '/'))
+    const sub = (JSON.parse(json) as { sub?: unknown }).sub
+    return typeof sub === 'string' ? sub : null
+  } catch {
+    return null
+  }
+}

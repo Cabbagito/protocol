@@ -48,8 +48,6 @@ export default function ExercisePeekCard({
           : isSkipped
           ? '1px dashed rgba(255,255,255,0.10)'
           : '1px solid rgba(255,255,255,0.05)',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
         display: 'flex',
         alignItems: 'center',
         gap: 12,

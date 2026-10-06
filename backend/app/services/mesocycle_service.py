@@ -2,12 +2,13 @@
 
 from datetime import date as date_type
 
-from fastapi import HTTPException
+from fastapi import HTTPException, status
 from sqlalchemy import or_, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.domain.progression import (
+from app.domain.mesocycle_structure import (
     build_mesocycle_structure,
     count_total_workouts,
     derive_fields,
@@ -16,6 +17,23 @@ from app.models.exercise import Exercise
 from app.models.mesocycle import Mesocycle
 from app.models.split import Split, SplitDay, SplitDayExercise
 from app.services.common import deactivate_user_mesos
+
+
+async def _commit_activation(db: AsyncSession) -> None:
+    """Commit a change that activates a mesocycle.
+
+    The partial unique index allows one active mesocycle per user. Callers
+    deactivate the others first in the same transaction, so a violation here
+    means a concurrent request activated another one in between.
+    """
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Another mesocycle was activated at the same time; reload and retry",
+        )
 
 
 async def list_mesocycles(
@@ -60,8 +78,6 @@ async def create_mesocycle(
     if not split:
         raise HTTPException(status_code=404, detail="Split not found")
 
-    await deactivate_user_mesos(db, user_id)
-
     # Build exercise lookup by id
     exercise_ids = [de.exercise_id for d in split.days for de in d.exercises]
     if exercise_ids:
@@ -72,8 +88,10 @@ async def create_mesocycle(
 
     structure = build_mesocycle_structure(split.days, exercises_by_id, total_weeks)
 
+    # Deactivate-then-insert in one transaction.
+    await deactivate_user_mesos(db, user_id)
     mesocycle = Mesocycle(
-        split_id=split_id,
+        split_id=split.id,
         user_id=user_id,
         name=name,
         started_at=started_at or date_type.today(),
@@ -81,10 +99,10 @@ async def create_mesocycle(
         structure=structure,
     )
     db.add(mesocycle)
-    await db.commit()
+    await _commit_activation(db)
     await db.refresh(mesocycle)
 
-    return mesocycle_to_response(mesocycle, split.name, split.color)
+    return mesocycle_to_response(mesocycle, split)
 
 
 async def get_active(db: AsyncSession, user_id: str) -> dict | None:
@@ -96,10 +114,10 @@ async def get_active(db: AsyncSession, user_id: str) -> dict | None:
     mesocycle = result.scalar_one_or_none()
     if not mesocycle:
         return None
-    return mesocycle_to_response(mesocycle, mesocycle.split.name, mesocycle.split.color)
+    return mesocycle_to_response(mesocycle, mesocycle.split)
 
 
-async def get_detail(db: AsyncSession, mesocycle_id: str, user_id: str) -> dict:
+async def _get_with_split(db: AsyncSession, mesocycle_id: str, user_id: str) -> Mesocycle:
     result = await db.execute(
         select(Mesocycle)
         .options(selectinload(Mesocycle.split))
@@ -108,7 +126,12 @@ async def get_detail(db: AsyncSession, mesocycle_id: str, user_id: str) -> dict:
     mesocycle = result.scalar_one_or_none()
     if not mesocycle:
         raise HTTPException(status_code=404, detail="Mesocycle not found")
-    return mesocycle_to_response(mesocycle, mesocycle.split.name, mesocycle.split.color)
+    return mesocycle
+
+
+async def get_detail(db: AsyncSession, mesocycle_id: str, user_id: str) -> dict:
+    mesocycle = await _get_with_split(db, mesocycle_id, user_id)
+    return mesocycle_to_response(mesocycle, mesocycle.split)
 
 
 async def update_mesocycle(
@@ -119,14 +142,8 @@ async def update_mesocycle(
     name: str | None = None,
     is_active: bool | None = None,
 ) -> dict:
-    result = await db.execute(
-        select(Mesocycle)
-        .options(selectinload(Mesocycle.split))
-        .where(Mesocycle.id == mesocycle_id, Mesocycle.user_id == user_id)
-    )
-    mesocycle = result.scalar_one_or_none()
-    if not mesocycle:
-        raise HTTPException(status_code=404, detail="Mesocycle not found")
+    mesocycle = await _get_with_split(db, mesocycle_id, user_id)
+    split = mesocycle.split
 
     if name is not None:
         mesocycle.name = name
@@ -136,10 +153,10 @@ async def update_mesocycle(
             await deactivate_user_mesos(db, user_id, exclude_id=mesocycle_id)
         mesocycle.is_active = is_active
 
-    await db.commit()
+    await _commit_activation(db)
     await db.refresh(mesocycle)
 
-    return mesocycle_to_response(mesocycle, mesocycle.split.name, mesocycle.split.color)
+    return mesocycle_to_response(mesocycle, split)
 
 
 async def delete_mesocycle(db: AsyncSession, mesocycle_id: str, user_id: str) -> None:
@@ -155,18 +172,17 @@ async def delete_mesocycle(db: AsyncSession, mesocycle_id: str, user_id: str) ->
 
 
 # --- Response formatting ---
+# The split is optional: deleting a split keeps its mesocycles (split_id NULL).
 
 
-def mesocycle_to_response(
-    mesocycle: Mesocycle, split_name: str, split_color: str | None = None
-) -> dict:
+def mesocycle_to_response(mesocycle: Mesocycle, split: Split | None) -> dict:
     derived = derive_fields(mesocycle.structure)
     return {
         "id": mesocycle.id,
         "name": mesocycle.name,
         "split_id": mesocycle.split_id,
-        "split_name": split_name,
-        "split_color": split_color,
+        "split_name": split.name if split else None,
+        "split_color": split.color if split else None,
         "total_weeks": derived["total_weeks"],
         "current_week": derived["current_week"],
         "is_active": mesocycle.is_active,
@@ -179,11 +195,12 @@ def mesocycle_to_response(
 def mesocycle_to_list_item(mesocycle: Mesocycle) -> dict:
     derived = derive_fields(mesocycle.structure)
     total_workouts = count_total_workouts(mesocycle.structure)
+    split = mesocycle.split
     return {
         "id": mesocycle.id,
         "name": mesocycle.name,
-        "split_name": mesocycle.split.name,
-        "split_color": mesocycle.split.color if mesocycle.split else None,
+        "split_name": split.name if split else None,
+        "split_color": split.color if split else None,
         "total_weeks": derived["total_weeks"],
         "current_week": derived["current_week"],
         "is_active": mesocycle.is_active,

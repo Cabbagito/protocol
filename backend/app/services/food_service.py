@@ -3,7 +3,6 @@
 from collections.abc import Sequence
 from datetime import date
 
-from fastapi import HTTPException, status
 from sqlalchemy import or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -21,7 +20,7 @@ from app.schemas.food import (
     FoodLogCreate,
 )
 from app.services import off_client
-from app.services.common import get_owned_entity, get_visible_entity
+from app.services.common import get_owned_entity, get_visible_entity, get_writable_entity
 
 _SEARCH_LIMIT = 50
 
@@ -29,7 +28,7 @@ _SEARCH_LIMIT = 50
 async def list_foods(db: AsyncSession, user_id: str, q: str | None = None) -> Sequence[FoodItem]:
     query = select(FoodItem).where(or_(FoodItem.user_id == user_id, FoodItem.user_id.is_(None)))
     if q:
-        query = query.where(FoodItem.name.ilike(f"%{q}%"))
+        query = query.where(FoodItem.name.icontains(q, autoescape=True))
     query = query.order_by(FoodItem.name).limit(_SEARCH_LIMIT)
     result = await db.execute(query)
     return result.scalars().all()
@@ -40,9 +39,22 @@ async def _get_by_barcode(db: AsyncSession, barcode: str) -> FoodItem | None:
     return result.scalar_one_or_none()
 
 
-async def create_food(db: AsyncSession, user_id: str, *, data: FoodItemCreate) -> FoodItem:
-    # A barcode identifies an objective product, so barcode foods are shared
-    # across all users (user_id NULL) rather than owned by their creator.
+async def create_food(
+    db: AsyncSession, user_id: str, *, data: FoodItemCreate
+) -> tuple[FoodItem, bool]:
+    """Create a food, returning ``(food, created)``.
+
+    A barcode identifies an objective product, so barcode foods are shared
+    across all users (user_id NULL) rather than owned by their creator, and
+    the first submission wins: if the barcode already exists (or another
+    user creates it concurrently) the existing food is returned unchanged
+    with ``created=False`` and the submitted values are ignored.
+    """
+    if data.barcode:
+        existing = await _get_by_barcode(db, data.barcode)
+        if existing is not None:
+            return existing, False
+
     food = FoodItem(
         name=data.name,
         brand=data.brand,
@@ -58,26 +70,27 @@ async def create_food(db: AsyncSession, user_id: str, *, data: FoodItemCreate) -
     try:
         await db.commit()
     except IntegrityError:
-        # Another user created the same barcode concurrently — use their row.
         await db.rollback()
         existing = await _get_by_barcode(db, data.barcode) if data.barcode else None
         if existing is None:
             raise
-        return existing
+        return existing, False
     await db.refresh(food)
-    return food
+    return food, True
 
 
-async def update_food(db: AsyncSession, food_id: str, *, data: FoodItemUpdate) -> FoodItem:
-    result = await db.execute(select(FoodItem).where(FoodItem.id == food_id))
-    food = result.scalar_one_or_none()
-    if food is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Food not found")
-    if food.seed_key is not None:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Seeded foods cannot be edited",
-        )
+async def _get_editable(db: AsyncSession, food_id: str, user_id: str) -> FoodItem:
+    # Seeded and barcode (shared) foods are visible to everyone and editable by
+    # no one (403); other users' custom foods are invisible (404).
+    return await get_writable_entity(
+        db, FoodItem, food_id, user_id, shared_detail="Shared foods cannot be modified"
+    )
+
+
+async def update_food(
+    db: AsyncSession, food_id: str, user_id: str, *, data: FoodItemUpdate
+) -> FoodItem:
+    food = await _get_editable(db, food_id, user_id)
     food.name = data.name
     food.brand = data.brand
     food.kcal_per_100g = data.kcal_per_100g
@@ -90,12 +103,23 @@ async def update_food(db: AsyncSession, food_id: str, *, data: FoodItemUpdate) -
     return food
 
 
+async def delete_food(db: AsyncSession, food_id: str, user_id: str) -> None:
+    """Delete one of the user's custom foods. Its log entries keep their
+    denormalized name and macros; food_item_id becomes NULL (FK SET NULL)."""
+    food = await _get_editable(db, food_id, user_id)
+    await db.delete(food)
+    await db.commit()
+
+
 async def lookup_barcode(db: AsyncSession, barcode: str) -> BarcodeLookupResponse:
     """Resolve a scanned barcode: local DB, then Open Food Facts, else a draft."""
     food = await _get_by_barcode(db, barcode)
     if food is not None:
         return BarcodeLookupResponse(status="found", food=FoodItemResponse.model_validate(food))
 
+    # End the read transaction so no pooled connection sits idle in a
+    # transaction during the (up to 5s) Open Food Facts request.
+    await db.commit()
     product = await off_client.fetch_product(barcode)
     if product is None:
         return BarcodeLookupResponse(status="draft", draft=FoodDraft(barcode=barcode))

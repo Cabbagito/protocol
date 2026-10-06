@@ -38,10 +38,7 @@ def upgrade() -> None:
         return
 
     conn.execute(
-        sa.text(
-            "UPDATE split_day_exercises SET exercise_id = :new_id "
-            "WHERE exercise_id = :old_id"
-        ),
+        sa.text("UPDATE split_day_exercises SET exercise_id = :new_id WHERE exercise_id = :old_id"),
         {"new_id": replacement_id, "old_id": orphan_id},
     )
 

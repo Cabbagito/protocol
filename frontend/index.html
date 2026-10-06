@@ -5,7 +5,7 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
-    <meta name="theme-color" content="#0d1b2a" />
+    <meta name="theme-color" content="#070d15" />
     <meta name="description" content="Protocol - Personal fitness tracking" />
     <link rel="apple-touch-icon" href="/favicon.svg" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -42,18 +42,7 @@
         r.setAttribute('data-theme',id);
         for(k in t)r.style.setProperty(k,t[k]);
         var m=document.querySelector('meta[name="theme-color"]');
-        if(m)m.setAttribute('content',t['--base']);
-      })();
-    </script>
-    <!-- Blocking motion script — applies data-motion before first paint.
-         Keep in sync with src/lib/motion.ts -->
-    <script>
-      ;(function(){
-        var modes=['aurora','pulse','still'];
-        var m;try{m=localStorage.getItem('protocol_motion')}catch(e){}
-        if(!m||modes.indexOf(m)===-1)m='aurora';
-        if(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches)m='still';
-        document.documentElement.setAttribute('data-motion',m);
+        if(m)m.setAttribute('content',t['--deep']);
       })();
     </script>
   </head>

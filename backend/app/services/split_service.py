@@ -23,6 +23,7 @@ async def list_splits(db: AsyncSession, user_id: str) -> list[dict]:
             Split.id,
             Split.name,
             Split.color,
+            Split.user_id,
             func.count(SplitDay.id).label("day_count"),
             exercise_count_subq,
         )
@@ -36,6 +37,7 @@ async def list_splits(db: AsyncSession, user_id: str) -> list[dict]:
             "id": s.id,
             "name": s.name,
             "color": s.color,
+            "user_id": s.user_id,
             "day_count": s.day_count,
             "exercise_count": s.exercise_count or 0,
         }
@@ -52,8 +54,13 @@ def _selectinload_split():
 
 
 async def _reload_split(db: AsyncSession, split_id: str) -> dict:
+    # populate_existing: after an update the identity map still holds the
+    # split with its old (deleted) days, whose exercises aren't loaded.
     result = await db.execute(
-        select(Split).options(_selectinload_split()).where(Split.id == split_id)
+        select(Split)
+        .options(_selectinload_split())
+        .where(Split.id == split_id)
+        .execution_options(populate_existing=True)
     )
     return _split_to_response(result.scalar_one())
 
@@ -141,5 +148,6 @@ def _split_to_response(split: Split) -> dict:
         "id": split.id,
         "name": split.name,
         "color": split.color,
+        "user_id": split.user_id,
         "days": [_day_to_response(d) for d in split.days],
     }

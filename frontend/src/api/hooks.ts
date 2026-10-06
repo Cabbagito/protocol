@@ -1,16 +1,13 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useCallback } from 'react'
+import { queryOptions, useQuery, useQueries, useMutation, useQueryClient, type UseQueryResult } from '@tanstack/react-query'
 import { api } from './client'
 import type {
   Exercise,
+  EquipmentType,
   Split,
   SplitListItem,
   Mesocycle,
   MesocycleListItem,
-  MesoSet,
-  WorkoutTemplate,
-  WorkoutHistoryItem,
-  WorkoutDetailResponse,
-  ProgressEntry,
   BarcodeLookup,
   FoodItem,
   FoodLog,
@@ -21,6 +18,10 @@ import type {
   WeightLog,
 } from '../types'
 import type { ExerciseSessionHistory } from '../lib/exerciseHistory'
+import { getUserId } from '../lib/auth'
+import { todayIso } from '../lib/dates'
+import { overlayDrafts } from '../lib/workoutSession'
+import { useSyncStatus, workoutSync } from '../lib/workoutSync'
 
 // --- Query Keys ---
 
@@ -37,16 +38,6 @@ export const queryKeys = {
     all: ['mesocycles'] as const,
     active: ['mesocycles', 'active'] as const,
     detail: (id: string) => ['mesocycles', id] as const,
-  },
-  workouts: {
-    all: ['workouts'] as const,
-    template: (mesocycleId: string) => ['workouts', 'template', mesocycleId] as const,
-    specificTemplate: (mesocycleId: string, weekIndex: number, sessionIndex: number) =>
-      ['workouts', 'template', mesocycleId, weekIndex, sessionIndex] as const,
-    history: (mesocycleId: string) => ['workouts', 'history', mesocycleId] as const,
-    detail: (mesocycleId: string, weekIndex: number, sessionIndex: number) =>
-      ['workouts', 'detail', mesocycleId, weekIndex, sessionIndex] as const,
-    progress: (exerciseId: string) => ['workouts', 'progress', exerciseId] as const,
   },
   foods: {
     all: ['foods'] as const,
@@ -69,19 +60,61 @@ export function useExercises() {
   })
 }
 
+export function exerciseHistoryQuery(exerciseId: string) {
+  return queryOptions({
+    queryKey: queryKeys.exercises.history(exerciseId),
+    queryFn: () => api.get<ExerciseSessionHistory[]>(`/exercises/${exerciseId}/history`),
+  })
+}
+
 export function useExerciseHistory(exerciseId: string | undefined) {
   return useQuery({
-    queryKey: exerciseId ? queryKeys.exercises.history(exerciseId) : ['exercises', 'history', 'none'],
-    queryFn: () => api.get<ExerciseSessionHistory[]>(`/exercises/${exerciseId}/history`),
+    ...exerciseHistoryQuery(exerciseId ?? 'none'),
     enabled: !!exerciseId,
   })
+}
+
+export function mesocycleQuery(id: string) {
+  return queryOptions({
+    queryKey: queryKeys.mesocycles.detail(id),
+    queryFn: () => api.get<Mesocycle>(`/mesocycles/${id}`),
+  })
+}
+
+export interface ExercisePayload {
+  name: string
+  muscle_group: string
+  equipment_type: EquipmentType
 }
 
 export function useCreateExercise() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (data: { name: string; muscle_group: string; equipment_type: string }) =>
-      api.post('/exercises', data),
+    mutationFn: (data: ExercisePayload) => api.post<Exercise>('/exercises', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.exercises.all })
+    },
+  })
+}
+
+export function useUpdateExercise() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: ExercisePayload }) =>
+      api.put<Exercise>(`/exercises/${id}`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.exercises.all })
+      // Split details join the exercise name / muscle group.
+      queryClient.invalidateQueries({ queryKey: queryKeys.splits.all })
+    },
+  })
+}
+
+/** Rejected with status 409 while a split or mesocycle still uses the exercise. */
+export function useDeleteExercise() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => api.delete(`/exercises/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.exercises.all })
     },
@@ -112,7 +145,7 @@ export function useCreateSplit() {
       name: string
       color?: string | null
       days: { name: string; exercises: { exercise_id: string }[] }[]
-    }) => api.post('/splits', data),
+    }) => api.post<Split>('/splits', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.splits.all })
     },
@@ -140,6 +173,8 @@ export function useDeleteSplit() {
     mutationFn: (id: string) => api.delete(`/splits/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.splits.all })
+      // Mesocycles built from the split survive but their list items show its name.
+      queryClient.invalidateQueries({ queryKey: queryKeys.mesocycles.all })
     },
   })
 }
@@ -153,19 +188,52 @@ export function useMesocycles() {
   })
 }
 
+/**
+ * Mesocycle data as the user should see it: server state plus any workout
+ * changes still waiting to sync from this phone.
+ */
+function useDraftOverlay() {
+  const { version } = useSyncStatus()
+  return useCallback(<T extends Mesocycle | null>(m: T): T => {
+    void version // re-run when local drafts change
+    const userId = getUserId()
+    if (!m || !userId) return m
+    return overlayDrafts(m, workoutSync.drafts(userId), todayIso()) as T
+  }, [version])
+}
+
 export function useActiveMesocycle() {
+  const select = useDraftOverlay()
   return useQuery({
     queryKey: queryKeys.mesocycles.active,
     queryFn: () => api.get<Mesocycle | null>('/mesocycles/active'),
+    select,
   })
 }
 
 export function useMesocycle(id: string) {
+  const select = useDraftOverlay()
   return useQuery({
-    queryKey: queryKeys.mesocycles.detail(id),
-    queryFn: () => api.get<Mesocycle>(`/mesocycles/${id}`),
+    ...mesocycleQuery(id),
     enabled: !!id,
+    select,
   })
+}
+
+/** Full details (incl. structure) of several mesocycles, e.g. all of them for Progress. */
+export function useMesocycleDetails(ids: string[]) {
+  return useQueries({
+    queries: ids.map((id) => mesocycleQuery(id)),
+    combine: combineMesocycleDetails,
+  })
+}
+
+// Module-level so useQueries can memoize the combined result between renders.
+function combineMesocycleDetails(results: UseQueryResult<Mesocycle>[]) {
+  return {
+    data: results.flatMap((r) => (r.data ? [r.data] : [])),
+    isLoading: results.some((r) => r.isLoading),
+  }
 }
 
 export function useCreateMesocycle() {
@@ -206,90 +274,12 @@ export function useDeleteMesocycle() {
 
 // --- Workout Hooks ---
 
-export function useWorkoutTemplate(mesocycleId: string) {
-  return useQuery({
-    queryKey: queryKeys.workouts.template(mesocycleId),
-    queryFn: () => api.get<WorkoutTemplate>(`/workouts/template/${mesocycleId}`),
-    enabled: !!mesocycleId,
-  })
-}
-
-export function useSpecificTemplate(mesocycleId: string, weekIndex: number, sessionIndex: number) {
-  return useQuery({
-    queryKey: queryKeys.workouts.specificTemplate(mesocycleId, weekIndex, sessionIndex),
-    queryFn: () =>
-      api.get<WorkoutTemplate>(`/workouts/template/${mesocycleId}/${weekIndex}/${sessionIndex}`),
-    enabled: !!mesocycleId,
-  })
-}
-
-export function useWorkoutHistory(mesocycleId: string) {
-  return useQuery({
-    queryKey: queryKeys.workouts.history(mesocycleId),
-    queryFn: () => api.get<WorkoutHistoryItem[]>(`/workouts/history/${mesocycleId}`),
-    enabled: !!mesocycleId,
-  })
-}
-
-export function useWorkoutDetail(mesocycleId: string, weekIndex: number, sessionIndex: number) {
-  return useQuery({
-    queryKey: queryKeys.workouts.detail(mesocycleId, weekIndex, sessionIndex),
-    queryFn: () =>
-      api.get<WorkoutDetailResponse>(`/workouts/detail/${mesocycleId}/${weekIndex}/${sessionIndex}`),
-    enabled: !!mesocycleId,
-  })
-}
-
-export function useExerciseProgress(exerciseId: string) {
-  return useQuery({
-    queryKey: queryKeys.workouts.progress(exerciseId),
-    queryFn: () => api.get<ProgressEntry[]>(`/workouts/progress/${exerciseId}`),
-    enabled: !!exerciseId,
-  })
-}
-
-export function useLogSets() {
-  return useMutation({
-    mutationFn: (data: {
-      mesocycle_id: string
-      week_index: number
-      session_index: number
-      logged_on?: string
-      sets: { exercise_id: string; set_num: number; weight: number; reps: number; set_type?: string | null }[]
-      notes?: string | null
-      exercise_updates?: { exercise_id: string; skipped?: boolean }[] | null
-      skipped_sets?: { exercise_id: string; set_num: number }[] | null
-      draft_sets?: { exercise_id: string; set_num: number; weight?: number | null; reps?: number | null }[] | null
-      complete?: boolean
-    }) => api.post('/workouts/log', data),
-  })
-}
-
-export function useModifySets() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: (data: {
-      mesocycle_id: string
-      week_index: number
-      session_index: number
-      exercise_id: string
-      action: 'add' | 'remove'
-      set_num?: number
-    }) => api.post<{ status: string; sets: MesoSet[]; exercise_id: string }>('/workouts/modify-sets', data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.workouts.all })
-      queryClient.invalidateQueries({ queryKey: queryKeys.mesocycles.all })
-    },
-  })
-}
-
 export function useUpdateExerciseNote() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (data: { mesocycle_id: string; exercise_id: string; note: string | null }) =>
       api.patch('/workouts/exercise-note', data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.workouts.all })
       queryClient.invalidateQueries({ queryKey: queryKeys.mesocycles.all })
     },
   })
@@ -308,7 +298,6 @@ export function useReplaceExercise() {
       apply_to_future: boolean
     }) => api.post('/workouts/replace-exercise', data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.workouts.all })
       queryClient.invalidateQueries({ queryKey: queryKeys.mesocycles.all })
     },
   })
@@ -325,7 +314,6 @@ export function useAddExercise() {
       apply_to_future: boolean
     }) => api.post('/workouts/add-exercise', data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.workouts.all })
       queryClient.invalidateQueries({ queryKey: queryKeys.mesocycles.all })
     },
   })
@@ -343,7 +331,6 @@ export function useReorderExercises() {
       apply_to_future: boolean
     }) => api.post('/workouts/reorder-exercises', data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.workouts.all })
       queryClient.invalidateQueries({ queryKey: queryKeys.mesocycles.all })
     },
   })
@@ -359,7 +346,6 @@ export function useSkipSession() {
       skipped: boolean
     }) => api.post('/workouts/skip-session', data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.workouts.all })
       queryClient.invalidateQueries({ queryKey: queryKeys.mesocycles.all })
     },
   })
@@ -376,7 +362,6 @@ export function useRemoveExerciseFromSession() {
       apply_to_future: boolean
     }) => api.post('/workouts/remove-exercise', data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.workouts.all })
       queryClient.invalidateQueries({ queryKey: queryKeys.mesocycles.all })
     },
   })

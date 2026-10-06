@@ -26,9 +26,9 @@ export function applyTheme(id: ThemeId): void {
     root.style.setProperty(prop, value)
   }
 
-  // Update <meta theme-color> for mobile browser chrome
+  // Update <meta theme-color> for mobile browser chrome (matches the page bg)
   const meta = document.querySelector('meta[name="theme-color"]')
-  if (meta) meta.setAttribute('content', t['--base'])
+  if (meta) meta.setAttribute('content', t['--deep'])
 
   // Persist
   try {
@@ -36,8 +36,4 @@ export function applyTheme(id: ThemeId): void {
   } catch {
     // localStorage blocked
   }
-}
-
-export function initTheme(): void {
-  applyTheme(getSavedTheme())
 }

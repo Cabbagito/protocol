@@ -1,18 +1,24 @@
 import { useId, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import AuroraBackground from '../components/AuroraBackground'
 import PageLoader from '../components/PageLoader'
-import {
-  useExercises,
-  useActiveMesocycle,
-  useWorkoutHistory,
-  useExerciseProgress,
-} from '../api/hooks'
+import { useExercises, useMesocycles, useMesocycleDetails } from '../api/hooks'
 import { getMuscleColor } from '../lib/muscleColors'
-import { localDateKey, todayIso } from '../lib/dates'
-import type { Exercise, ProgressEntry } from '../types'
+import { formatWeight } from '../lib/weightUtils'
+import { isSessionDone, isSessionSkipped } from '../lib/mesoUtils'
+import {
+  bestSet,
+  buildTrainingLog,
+  sessionBestE1rm,
+  sessionsInPeriod,
+  sessionsPerWeek,
+  type TrainedExercise,
+} from '../lib/trainingLog'
+import { useToday } from '../hooks/useToday'
+import type { Mesocycle } from '../types'
 
 const MONO = 'JetBrains Mono, ui-monospace, monospace'
+const OTHER_LIFTS_PREVIEW = 6
 
 type PeriodId = '4w' | '8w' | '12w' | 'all'
 const PERIODS: { id: PeriodId; label: string; weeks: number | null }[] = [
@@ -22,35 +28,87 @@ const PERIODS: { id: PeriodId; label: string; weeks: number | null }[] = [
   { id: 'all', label: 'ALL', weeks: null },
 ]
 
+/** What the hero shows: an exercise, with its history if it was ever trained. */
+interface Selected {
+  id: string
+  name: string
+  muscleGroup: string
+  trained: TrainedExercise | null
+}
+
 export default function Progress() {
   const navigate = useNavigate()
-  const { data: exercises = [], isLoading } = useExercises()
-  const { data: meso } = useActiveMesocycle()
-  const { data: history = [] } = useWorkoutHistory(meso?.id ?? '')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const today = useToday()
+  const { data: exercises = [], isLoading: exercisesLoading } = useExercises()
+  const { data: mesoList = [], isLoading: listLoading } = useMesocycles()
+  const mesoIds = useMemo(() => mesoList.map((m) => m.id), [mesoList])
+  const { data: mesos, isLoading: detailsLoading } = useMesocycleDetails(mesoIds)
 
   const [period, setPeriod] = useState<PeriodId>('8w')
-  const [selectedId, setSelectedId] = useState<string>('')
+  const [showAllLifts, setShowAllLifts] = useState(false)
 
-  const selected = useMemo(() => {
-    if (selectedId) return exercises.find((e) => e.id === selectedId) ?? null
-    return exercises[0] ?? null
-  }, [exercises, selectedId])
+  const log = useMemo(() => buildTrainingLog(mesos), [mesos])
 
-  const subText = period === 'all' ? 'ALL TIME' : `LAST ${PERIODS.find((p) => p.id === period)?.weeks} WEEKS`
+  // Trained lifts, most frequently trained first.
+  const trained = useMemo(
+    () =>
+      [...log.values()].sort(
+        (a, b) => b.sessions.length - a.sessions.length || b.lastDate.localeCompare(a.lastDate),
+      ),
+    [log],
+  )
 
-  if (isLoading) {
+  const requestedId = searchParams.get('exercise')
+  const selected = useMemo<Selected | null>(() => {
+    const requested = requestedId ? exercises.find((e) => e.id === requestedId) : undefined
+    if (requested) {
+      return {
+        id: requested.id,
+        name: requested.name,
+        muscleGroup: requested.muscle_group,
+        trained: log.get(requested.id) ?? null,
+      }
+    }
+    // Default: the most recently trained lift.
+    const recent = trained.reduce<TrainedExercise | null>(
+      (best, t) => (!best || t.lastDate > best.lastDate ? t : best),
+      null,
+    )
+    if (!recent) return null
+    const ex = exercises.find((e) => e.id === recent.exerciseId)
+    return {
+      id: recent.exerciseId,
+      name: ex?.name ?? recent.name,
+      muscleGroup: ex?.muscle_group ?? recent.muscleGroup,
+      trained: recent,
+    }
+  }, [requestedId, exercises, log, trained])
+
+  const activeMeso = mesos.find((m) => m.is_active) ?? null
+  const periodWeeks = PERIODS.find((p) => p.id === period)?.weeks ?? null
+  const subText = periodWeeks === null ? 'ALL TIME' : `LAST ${periodWeeks} WEEKS`
+
+  function selectExercise(id: string) {
+    setSearchParams({ exercise: id }, { replace: true })
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  if (exercisesLoading || listLoading || detailsLoading) {
     return (
-      <div style={{ minHeight: '100vh', background: 'var(--deep)' }}>
+      <div style={{ background: 'var(--deep)' }}>
         <PageLoader className="min-h-[60vh]" />
       </div>
     )
   }
 
+  const otherLifts = trained.filter((t) => t.exerciseId !== selected?.id)
+  const visibleOther = showAllLifts ? otherLifts : otherLifts.slice(0, OTHER_LIFTS_PREVIEW)
+
   return (
     <div
       style={{
         position: 'relative',
-        minHeight: '100vh',
         background: 'var(--deep)',
         overflow: 'hidden',
       }}
@@ -58,104 +116,190 @@ export default function Progress() {
       <AuroraBackground />
 
       <div style={{ position: 'relative', zIndex: 1, padding: '12px 22px 130px' }}>
-        <Chrome title="Progress" sub={subText} onBack={() => navigate(-1)} />
+        <Chrome title="Progress" sub={selected ? subText : 'NO DATA YET'} onBack={() => navigate(-1)} />
 
-        {selected ? (
-          <SelectedHero exercise={selected} period={period} />
+        {!selected ? (
+          <EmptyState />
         ) : (
-          <div
-            style={{
-              padding: '40px 22px',
-              textAlign: 'center',
-              color: 'var(--text-m)',
-              fontSize: 13,
-            }}
-          >
-            No exercises yet.
-          </div>
-        )}
+          <>
+            <SelectedHero selected={selected} periodWeeks={periodWeeks} today={today} />
 
-        {/* Period toggle */}
-        <div
-          style={{
-            marginTop: 18,
-            display: 'flex',
-            gap: 4,
-            padding: 4,
-            borderRadius: 12,
-            background: 'rgba(15,29,46,0.5)',
-            border: '1px solid rgba(255,255,255,0.05)',
-            backdropFilter: 'blur(20px)',
-            WebkitBackdropFilter: 'blur(20px)',
-          }}
-        >
-          {PERIODS.map((p) => {
-            const isActive = period === p.id
-            return (
-              <button
-                key={p.id}
-                type="button"
-                onClick={() => setPeriod(p.id)}
-                style={{
-                  flex: 1,
-                  height: 32,
-                  borderRadius: 8,
-                  background: isActive ? 'rgba(var(--accent-rgb),0.18)' : 'transparent',
-                  border: isActive
-                    ? '1px solid rgba(var(--accent-rgb),0.35)'
-                    : '1px solid transparent',
-                  color: isActive ? 'var(--accent-l)' : 'var(--text-m)',
-                  cursor: 'pointer',
-                  fontSize: 10,
-                  fontFamily: MONO,
-                  fontWeight: 600,
-                  letterSpacing: '0.15em',
-                }}
-              >
-                {p.label}
-              </button>
-            )
-          })}
-        </div>
+            {/* Period toggle */}
+            <div
+              role="group"
+              aria-label="Period"
+              style={{
+                marginTop: 18,
+                display: 'flex',
+                gap: 4,
+                padding: 4,
+                borderRadius: 12,
+                background: 'rgba(15,29,46,0.5)',
+                border: '1px solid rgba(255,255,255,0.05)',
+              }}
+            >
+              {PERIODS.map((p) => {
+                const isActive = period === p.id
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    aria-pressed={isActive}
+                    onClick={() => setPeriod(p.id)}
+                    style={{
+                      flex: 1,
+                      height: 32,
+                      borderRadius: 8,
+                      background: isActive ? 'rgba(var(--accent-rgb),0.18)' : 'transparent',
+                      border: isActive
+                        ? '1px solid rgba(var(--accent-rgb),0.35)'
+                        : '1px solid transparent',
+                      color: isActive ? 'var(--accent-l)' : 'var(--text-m)',
+                      cursor: 'pointer',
+                      fontSize: 10,
+                      fontFamily: MONO,
+                      fontWeight: 600,
+                      letterSpacing: '0.15em',
+                    }}
+                  >
+                    {p.label}
+                  </button>
+                )
+              })}
+            </div>
 
-        {/* Weekly volume */}
-        {meso && history.length > 0 && (
-          <WeeklyVolume history={history} />
-        )}
+            {activeMeso && <WeeklyVolume meso={activeMeso} />}
 
-        {/* Other lifts */}
-        {selected && exercises.length > 1 && (
-          <OtherLifts
-            exercises={exercises.filter((e) => e.id !== selected.id).slice(0, 4)}
-            period={period}
-            onSelect={setSelectedId}
-          />
+            {otherLifts.length > 0 && (
+              <div style={{ marginTop: 22 }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+                  <Eyebrow>{selected.trained ? 'Other lifts' : 'Your lifts'}</Eyebrow>
+                  <span
+                    style={{
+                      fontSize: 9,
+                      color: 'var(--text-m)',
+                      letterSpacing: '0.18em',
+                      fontFamily: MONO,
+                      fontWeight: 600,
+                    }}
+                  >
+                    BY FREQUENCY
+                  </span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10 }}>
+                  {visibleOther.map((t) => (
+                    <OtherRow
+                      key={t.exerciseId}
+                      lift={t}
+                      name={exercises.find((e) => e.id === t.exerciseId)?.name ?? t.name}
+                      periodWeeks={periodWeeks}
+                      today={today}
+                      onClick={() => selectExercise(t.exerciseId)}
+                    />
+                  ))}
+                </div>
+                {otherLifts.length > OTHER_LIFTS_PREVIEW && (
+                  <button
+                    type="button"
+                    onClick={() => setShowAllLifts((v) => !v)}
+                    style={{
+                      width: '100%',
+                      marginTop: 8,
+                      padding: '10px 12px',
+                      borderRadius: 12,
+                      background: 'transparent',
+                      border: '1px dashed rgba(255,255,255,0.08)',
+                      color: 'var(--text-2)',
+                      fontSize: 12,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {showAllLifts ? 'Show fewer' : `Show all ${otherLifts.length}`}
+                  </button>
+                )}
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
   )
 }
 
+/* ─── Empty state ──────────────────────────────────────────────── */
+
+function EmptyState() {
+  return (
+    <div
+      style={{
+        marginTop: 24,
+        padding: '40px 22px',
+        borderRadius: 18,
+        textAlign: 'center',
+        background: 'rgba(15,29,46,0.4)',
+        border: '1px dashed rgba(255,255,255,0.08)',
+      }}
+    >
+      <div className="p-display" style={{ fontSize: 22, color: 'var(--text-1)' }}>
+        Nothing to chart yet
+      </div>
+      <div style={{ fontSize: 13, color: 'var(--text-2)', marginTop: 8, lineHeight: 1.5 }}>
+        Log a workout to see progress — estimated 1RM, best sets and training frequency for every lift
+        you train.
+      </div>
+      <Link
+        to="/workout"
+        style={{
+          display: 'inline-block',
+          marginTop: 18,
+          padding: '10px 20px',
+          borderRadius: 12,
+          background: 'var(--p-grad-cta)',
+          color: 'var(--btn-text)',
+          fontFamily: MONO,
+          fontWeight: 500,
+          fontSize: 13,
+          textDecoration: 'none',
+        }}
+      >
+        Go to workout
+      </Link>
+    </div>
+  )
+}
+
 /* ─── Selected hero card ───────────────────────────────────────── */
 
-function SelectedHero({ exercise, period }: { exercise: Exercise; period: PeriodId }) {
-  const { data: entries = [] } = useExerciseProgress(exercise.id)
-  const color = getMuscleColor(exercise.muscle_group)
-  const periodWeeks = PERIODS.find((p) => p.id === period)?.weeks ?? null
-  const sliced = sliceByPeriod(entries, periodWeeks)
-  const series = sliced.map((e) => e.best_e1rm).filter((n) => n > 0)
+function SelectedHero({
+  selected,
+  periodWeeks,
+  today,
+}: {
+  selected: Selected
+  periodWeeks: number | null
+  today: string
+}) {
+  const color = getMuscleColor(selected.muscleGroup)
+  const all = selected.trained?.sessions ?? []
+  const sessions = sessionsInPeriod(all, periodWeeks, today)
+  const series = sessions.map(sessionBestE1rm).filter((n) => n > 0)
 
-  const latest = sliced.length > 0 ? sliced[sliced.length - 1] : undefined
-  const first = sliced[0]
-  const best1RM = sliced.length > 0 ? Math.max(...sliced.map((e) => e.best_e1rm)) : 0
-  const bestEntry = sliced.find((e) => e.best_e1rm === best1RM) ?? null
+  const best = bestSet(sessions)
+  const firstE1rm = series[0]
+  const lastE1rm = series[series.length - 1]
   const trendPct =
-    first && latest && first.best_e1rm > 0
-      ? Math.round(((latest.best_e1rm - first.best_e1rm) / first.best_e1rm) * 100)
-      : 0
-  const consistencyPct = computeConsistency(sliced, periodWeeks)
-  const firstDate = first?.date
-  const lastDate = latest?.date
+    series.length >= 2 && firstE1rm && lastE1rm
+      ? Math.round(((lastE1rm - firstE1rm) / firstE1rm) * 100)
+      : null
+  const perWeek = sessionsPerWeek(all, sessions, periodWeeks, today)
+  const firstDate = sessions[0]?.date
+  const lastDate = sessions[sessions.length - 1]?.date
+
+  const emptyMessage = !selected.trained
+    ? 'No sets logged for this lift yet'
+    : sessions.length === 0
+      ? 'Not trained in this period'
+      : 'Not enough data yet'
 
   return (
     <>
@@ -167,8 +311,6 @@ function SelectedHero({ exercise, period }: { exercise: Exercise; period: Period
           overflow: 'hidden',
           background: `linear-gradient(180deg, color-mix(in oklab, ${color.primary} 12%, rgba(15,29,46,0.6)), rgba(15,29,46,0.6))`,
           border: `1px solid color-mix(in oklab, ${color.primary} 28%, rgba(255,255,255,0.05))`,
-          backdropFilter: 'blur(24px)',
-          WebkitBackdropFilter: 'blur(24px)',
         }}
       >
         <div
@@ -210,7 +352,7 @@ function SelectedHero({ exercise, period }: { exercise: Exercise; period: Period
                   textTransform: 'uppercase',
                 }}
               >
-                {exercise.muscle_group}
+                {selected.muscleGroup}
               </span>
             </div>
             <div
@@ -225,7 +367,7 @@ function SelectedHero({ exercise, period }: { exercise: Exercise; period: Period
                 textOverflow: 'ellipsis',
               }}
             >
-              {exercise.name}
+              {selected.name}
             </div>
           </div>
           <div style={{ textAlign: 'right', flexShrink: 0 }}>
@@ -251,8 +393,14 @@ function SelectedHero({ exercise, period }: { exercise: Exercise; period: Period
                 fontFamily: MONO,
               }}
             >
-              {best1RM > 0 ? Math.round(best1RM) : '—'}
-              <span style={{ fontSize: 11, color: 'var(--text-m)', fontWeight: 500 }}>kg</span>
+              {best && best.e1rm > 0 ? (
+                <>
+                  {Math.round(best.e1rm)}
+                  <span style={{ fontSize: 11, color: 'var(--text-m)', fontWeight: 500 }}>kg</span>
+                </>
+              ) : (
+                '—'
+              )}
             </div>
           </div>
         </div>
@@ -270,7 +418,7 @@ function SelectedHero({ exercise, period }: { exercise: Exercise; period: Period
                 fontSize: 12,
               }}
             >
-              Not enough data yet
+              {emptyMessage}
             </div>
           )}
         </div>
@@ -287,7 +435,7 @@ function SelectedHero({ exercise, period }: { exercise: Exercise; period: Period
             {firstDate ? formatShortDate(firstDate) : '—'}
           </span>
           <span style={{ fontSize: 9, color: 'var(--text-m)', letterSpacing: '0.18em', fontFamily: MONO, fontWeight: 600 }}>
-            {lastDate && isToday(lastDate) ? 'NOW' : lastDate ? formatShortDate(lastDate) : '—'}
+            {lastDate === today ? 'TODAY' : lastDate ? formatShortDate(lastDate) : '—'}
           </span>
         </div>
       </div>
@@ -296,20 +444,20 @@ function SelectedHero({ exercise, period }: { exercise: Exercise; period: Period
       <div style={{ marginTop: 10, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
         <StatCard
           label="BEST SET"
-          value={bestEntry ? `${Math.round(bestEntry.max_weight)}×${Math.round(bestEntry.total_reps / Math.max(1, bestEntry.total_sets))}` : '—'}
-          sub={bestEntry ? `${Math.round(bestEntry.best_e1rm)}kg 1RM` : ''}
+          value={best ? `${formatWeight(best.weight)}×${best.reps}` : '—'}
+          sub={best && best.e1rm > 0 ? `≈${Math.round(best.e1rm)}KG 1RM` : ''}
           subColor={color.light}
         />
         <StatCard
           label="TREND"
-          value={trendPct >= 0 ? `+${trendPct}%` : `${trendPct}%`}
-          sub={period === 'all' ? 'ALL TIME' : `${PERIODS.find((p) => p.id === period)?.weeks} WK`}
+          value={trendPct === null ? '—' : trendPct >= 0 ? `+${trendPct}%` : `${trendPct}%`}
+          sub={trendPct === null ? '' : 'EST 1RM'}
           subColor={color.light}
         />
         <StatCard
-          label="CONSISTENCY"
-          value={`${consistencyPct}%`}
-          sub={`${sliced.length} SESS`}
+          label="FREQUENCY"
+          value={sessions.length > 0 ? `${perWeek.toFixed(1)}/wk` : '—'}
+          sub={`${sessions.length} ${sessions.length === 1 ? 'SESSION' : 'SESSIONS'}`}
           subColor={color.light}
         />
       </div>
@@ -335,8 +483,7 @@ function StatCard({
         borderRadius: 13,
         background: 'rgba(15,29,46,0.45)',
         border: '1px solid rgba(255,255,255,0.05)',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
+        minWidth: 0,
       }}
     >
       <div
@@ -358,6 +505,9 @@ function StatCard({
           marginTop: 4,
           letterSpacing: '-0.01em',
           fontFamily: MONO,
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
         }}
       >
         {value}
@@ -367,9 +517,13 @@ function StatCard({
           fontSize: 9,
           color: subColor,
           marginTop: 2,
-          letterSpacing: '0.15em',
+          minHeight: 11,
+          letterSpacing: '0.12em',
           fontFamily: MONO,
           fontWeight: 600,
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
         }}
       >
         {sub}
@@ -385,13 +539,11 @@ function Sparkline({
   color,
   colorLight,
   height = 70,
-  fill = true,
 }: {
   pts: number[]
   color: string
   colorLight: string
   height?: number
-  fill?: boolean
 }) {
   const id = useId().replace(/:/g, '')
   const w = 312
@@ -407,16 +559,18 @@ function Sparkline({
     `M${xs[0]!.toFixed(1)},${h} L${xs[0]!.toFixed(1)},${ys[0]!.toFixed(1)} ` +
     xs.slice(1).map((x, i) => `L${x.toFixed(1)},${ys[i + 1]!.toFixed(1)}`).join(' ') +
     ` L${xs[xs.length - 1]!.toFixed(1)},${h} Z`
+  const lastX = xs[xs.length - 1]!
+  const lastY = ys[ys.length - 1]!
 
   return (
-    <svg width="100%" viewBox={`0 0 ${w} ${h}`} style={{ display: 'block', overflow: 'visible' }}>
+    <svg width="100%" viewBox={`0 0 ${w} ${h}`} style={{ display: 'block', overflow: 'visible' }} aria-hidden="true">
       <defs>
         <linearGradient id={`sp-${id}`} x1="0%" y1="0%" x2="0%" y2="100%">
           <stop offset="0%" stopColor={color} stopOpacity="0.35" />
           <stop offset="100%" stopColor={color} stopOpacity="0" />
         </linearGradient>
       </defs>
-      {fill && <path d={dFill} fill={`url(#sp-${id})`} />}
+      <path d={dFill} fill={`url(#sp-${id})`} />
       <path
         d={d}
         fill="none"
@@ -426,48 +580,64 @@ function Sparkline({
         strokeLinejoin="round"
         style={{ filter: `drop-shadow(0 0 6px ${color})` }}
       />
-      {pts.map((_, i) => {
-        const isLast = i === pts.length - 1
-        return (
-          <circle
-            key={i}
-            cx={xs[i]!}
-            cy={ys[i]!}
-            r={isLast ? 3.5 : 0}
-            fill={colorLight}
-            stroke={isLast ? 'white' : 'none'}
-            strokeWidth={isLast ? 1.5 : 0}
-            style={isLast ? { filter: `drop-shadow(0 0 8px ${color})` } : undefined}
-          />
-        )
-      })}
+      <circle
+        cx={lastX}
+        cy={lastY}
+        r={3.5}
+        fill={colorLight}
+        stroke="white"
+        strokeWidth={1.5}
+        style={{ filter: `drop-shadow(0 0 8px ${color})` }}
+      />
     </svg>
   )
 }
 
-/* ─── Weekly volume ────────────────────────────────────────────── */
+/* ─── Weekly volume (active mesocycle) ─────────────────────────── */
 
-function WeeklyVolume({
-  history,
-}: {
-  history: { week_number: number; total_volume: number }[]
-}) {
-  const weekly = useMemo(() => {
-    const map = new Map<number, number>()
-    for (const h of history) {
-      map.set(h.week_number, (map.get(h.week_number) ?? 0) + h.total_volume)
+interface WeekVolume {
+  week: number
+  volume: number
+  /** All sessions done/skipped, or the user has already trained a later week. */
+  complete: boolean
+}
+
+function weeklyVolumes(meso: Mesocycle): WeekVolume[] {
+  const weeks = meso.structure.weeks
+  const hasLogged = (wi: number) =>
+    weeks[wi]!.sessions.some((s) => s.exercises.some((e) => e.sets.some((st) => st.logged)))
+  let lastTrained = -1
+  for (let wi = 0; wi < weeks.length; wi++) if (hasLogged(wi)) lastTrained = wi
+
+  return weeks.slice(0, lastTrained + 1).map((w, wi) => {
+    let volume = 0
+    for (const s of w.sessions) {
+      for (const ex of s.exercises) {
+        if (ex.skipped) continue
+        for (const st of ex.sets) {
+          if (st.logged && !st.skipped) volume += (st.weight ?? 0) * (st.reps ?? 0)
+        }
+      }
     }
-    return [...map.entries()]
-      .sort((a, b) => a[0] - b[0])
-      .map(([week, v]) => ({ week, v }))
-  }, [history])
+    const finished = w.sessions.every((s) => isSessionSkipped(s) || isSessionDone(s))
+    return { week: w.week_number, volume, complete: finished || wi < lastTrained }
+  })
+}
 
-  if (weekly.length === 0) return null
+function WeeklyVolume({ meso }: { meso: Mesocycle }) {
+  const weekly = useMemo(() => weeklyVolumes(meso), [meso])
+  if (weekly.length === 0 || weekly.every((w) => w.volume === 0)) return null
 
-  const maxV = Math.max(...weekly.map((w) => w.v))
-  const first = weekly[0]?.v ?? 0
-  const last = weekly.length > 0 ? weekly[weekly.length - 1]!.v : 0
-  const trend = first > 0 ? Math.round(((last - first) / first) * 100) : 0
+  // Trend over complete weeks only — a half-done current week would read as a drop.
+  const complete = weekly.filter((w) => w.complete && w.volume > 0)
+  const first = complete[0]
+  const last = complete[complete.length - 1]
+  const trend =
+    complete.length >= 2 && first && last
+      ? Math.round(((last.volume - first.volume) / first.volume) * 100)
+      : null
+  const lastCompleteWeek = last?.week
+  const maxV = Math.max(...weekly.map((w) => w.volume))
 
   return (
     <div style={{ marginTop: 22 }}>
@@ -489,7 +659,11 @@ function WeeklyVolume({
             fontWeight: 600,
           }}
         >
-          {trend >= 0 ? `+${trend}%` : `${trend}%`} · {weekly.length}WK
+          {trend !== null
+            ? `${trend >= 0 ? '+' : ''}${trend}% · W${first!.week}→W${last!.week}`
+            : complete.length === 0
+              ? 'WEEK IN PROGRESS'
+              : '1 FULL WEEK'}
         </span>
       </div>
       <div
@@ -498,8 +672,6 @@ function WeeklyVolume({
           borderRadius: 14,
           background: 'rgba(15,29,46,0.4)',
           border: '1px solid rgba(255,255,255,0.05)',
-          backdropFilter: 'blur(20px)',
-          WebkitBackdropFilter: 'blur(20px)',
         }}
       >
         <div
@@ -511,20 +683,22 @@ function WeeklyVolume({
             height: 96,
           }}
         >
-          {weekly.map((d, i) => {
-            const h = maxV > 0 ? (d.v / maxV) * 92 : 0
-            const isLast = i === weekly.length - 1
+          {weekly.map((d) => {
+            const h = maxV > 0 ? (d.volume / maxV) * 92 : 0
+            const highlight = d.week === lastCompleteWeek
             return (
               <div
                 key={d.week}
+                title={d.complete ? undefined : 'In progress'}
                 style={{
                   width: '100%',
-                  height: h,
+                  height: Math.max(h, d.volume > 0 ? 2 : 0),
                   borderRadius: '3px 3px 0 0',
-                  background: isLast
+                  background: highlight
                     ? 'linear-gradient(180deg, var(--accent-l), var(--accent))'
                     : 'linear-gradient(180deg, color-mix(in oklab, var(--accent) 30%, rgba(255,255,255,0.08)), rgba(255,255,255,0.03))',
-                  boxShadow: isLast ? '0 0 10px rgba(var(--accent-rgb),0.5)' : 'none',
+                  boxShadow: highlight ? '0 0 10px rgba(var(--accent-rgb),0.5)' : 'none',
+                  opacity: d.complete ? 1 : 0.45,
                 }}
               />
             )
@@ -551,6 +725,7 @@ function WeeklyVolume({
               }}
             >
               W{d.week}
+              {d.complete ? '' : '…'}
             </div>
           ))}
         </div>
@@ -561,45 +736,26 @@ function WeeklyVolume({
 
 /* ─── Other lifts ──────────────────────────────────────────────── */
 
-function OtherLifts({
-  exercises,
-  period,
-  onSelect,
-}: {
-  exercises: Exercise[]
-  period: PeriodId
-  onSelect: (id: string) => void
-}) {
-  return (
-    <div style={{ marginTop: 22 }}>
-      <Eyebrow>Other lifts</Eyebrow>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10 }}>
-        {exercises.map((ex) => (
-          <OtherRow key={ex.id} exercise={ex} period={period} onClick={() => onSelect(ex.id)} />
-        ))}
-      </div>
-    </div>
-  )
-}
-
 function OtherRow({
-  exercise,
-  period,
+  lift,
+  name,
+  periodWeeks,
+  today,
   onClick,
 }: {
-  exercise: Exercise
-  period: PeriodId
+  lift: TrainedExercise
+  name: string
+  periodWeeks: number | null
+  today: string
   onClick: () => void
 }) {
-  const { data: entries = [] } = useExerciseProgress(exercise.id)
-  const color = getMuscleColor(exercise.muscle_group)
-  const periodWeeks = PERIODS.find((p) => p.id === period)?.weeks ?? null
-  const sliced = sliceByPeriod(entries, periodWeeks)
-  const series = sliced.map((e) => e.best_e1rm).filter((n) => n > 0)
+  const color = getMuscleColor(lift.muscleGroup)
+  const series = sessionsInPeriod(lift.sessions, periodWeeks, today)
+    .map(sessionBestE1rm)
+    .filter((n) => n > 0)
   const first = series[0]
-  const last = series.length > 0 ? series[series.length - 1] : undefined
-  const delta =
-    first && last && first > 0 ? Math.round(((last - first) / first) * 100) : 0
+  const last = series[series.length - 1]
+  const delta = series.length >= 2 && first && last ? Math.round(((last - first) / first) * 100) : null
 
   return (
     <button
@@ -614,8 +770,6 @@ function OtherRow({
         alignItems: 'center',
         background: 'rgba(15,29,46,0.45)',
         border: '1px solid rgba(255,255,255,0.05)',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
         cursor: 'pointer',
         textAlign: 'left',
         color: 'inherit',
@@ -642,7 +796,7 @@ function OtherRow({
               textTransform: 'uppercase',
             }}
           >
-            {exercise.muscle_group}
+            {lift.muscleGroup} · {lift.sessions.length}×
           </span>
         </div>
         <div
@@ -656,7 +810,7 @@ function OtherRow({
             textOverflow: 'ellipsis',
           }}
         >
-          {exercise.name}
+          {name}
         </div>
       </div>
       <div style={{ width: 110, height: 28 }}>
@@ -672,7 +826,7 @@ function OtherRow({
           fontFamily: MONO,
         }}
       >
-        {series.length >= 2 ? (delta >= 0 ? `+${delta}%` : `${delta}%`) : '—'}
+        {delta === null ? '—' : delta >= 0 ? `+${delta}%` : `${delta}%`}
       </div>
     </button>
   )
@@ -694,7 +848,7 @@ function MiniSparkline({
     .map((v, i) => `${i === 0 ? 'M' : 'L'}${(i * 110 / (pts.length - 1)).toFixed(1)},${(24 - ((v - min) / r) * 22).toFixed(1)}`)
     .join(' ')
   return (
-    <svg width="100%" height="100%" viewBox="0 0 110 28" preserveAspectRatio="none">
+    <svg width="100%" height="100%" viewBox="0 0 110 28" preserveAspectRatio="none" aria-hidden="true">
       <path
         d={d}
         fill="none"
@@ -709,31 +863,10 @@ function MiniSparkline({
 
 /* ─── Helpers ──────────────────────────────────────────────────── */
 
-function sliceByPeriod(entries: ProgressEntry[], weeks: number | null): ProgressEntry[] {
-  if (!weeks) return entries
-  if (entries.length === 0) return entries
-  const sorted = [...entries].sort((a, b) => a.date.localeCompare(b.date))
-  const cutoff = new Date()
-  cutoff.setDate(cutoff.getDate() - weeks * 7)
-  const iso = localDateKey(cutoff)
-  return sorted.filter((e) => e.date >= iso)
-}
-
-function computeConsistency(entries: ProgressEntry[], weeks: number | null): number {
-  if (entries.length === 0) return 0
-  const weekSet = new Set(entries.map((e) => e.week_number))
-  const expected = weeks ?? Math.max(weekSet.size, 1)
-  return Math.min(100, Math.round((weekSet.size / expected) * 100))
-}
-
 function formatShortDate(iso: string): string {
   const d = new Date(iso + 'T00:00:00')
   if (Number.isNaN(d.getTime())) return iso
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase()
-}
-
-function isToday(iso: string): boolean {
-  return iso === todayIso()
 }
 
 /* ─── Chrome ───────────────────────────────────────────────────── */
@@ -757,7 +890,6 @@ function Chrome({ title, sub, onBack }: { title: string; sub: string; onBack: ()
           borderRadius: 12,
           background: 'rgba(255,255,255,0.04)',
           border: '1px solid rgba(255,255,255,0.05)',
-          backdropFilter: 'blur(20px)',
           color: 'var(--text-2)',
           display: 'grid',
           placeItems: 'center',

@@ -4,15 +4,41 @@
     {
       "name": "frontend",
       "runtimeExecutable": "sh",
-      "runtimeArgs": ["-c", "cd frontend && bun run dev -- --port ${PORT:-5173} --strictPort"],
+      "runtimeArgs": [
+        "-c",
+        "cd frontend && bun run dev -- --port ${PORT:-5173} --strictPort"
+      ],
       "port": 5173,
       "autoPort": true
     },
     {
       "name": "backend",
       "runtimeExecutable": "sh",
-      "runtimeArgs": ["-c", "cd backend && uv run uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --reload"],
+      "runtimeArgs": [
+        "-c",
+        "cd backend && uv run uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --reload"
+      ],
       "port": 8000,
+      "autoPort": true
+    },
+    {
+      "name": "frontend-docker-api",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "cd frontend && API_URL=http://localhost:${API_PORT:-8001} bun run dev -- --port ${PORT:-5173} --strictPort"
+      ],
+      "port": 5173,
+      "autoPort": true
+    },
+    {
+      "name": "frontend-preview",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "cd frontend && bun run build && API_URL=http://localhost:${API_PORT:-8001} bunx vite preview --port ${PORT:-4173} --strictPort"
+      ],
+      "port": 4173,
       "autoPort": true
     }
   ]

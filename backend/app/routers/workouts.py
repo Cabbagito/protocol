@@ -7,11 +7,10 @@ from app.models.user import User
 from app.schemas.workout import (
     AddExerciseRequest,
     ExerciseNoteRequest,
-    LogSetsRequest,
-    ModifySetsRequest,
     RemoveExerciseRequest,
     ReorderExercisesRequest,
     ReplaceExerciseRequest,
+    SaveSessionRequest,
     SkipSessionRequest,
 )
 from app.services import workout_service
@@ -19,57 +18,13 @@ from app.services import workout_service
 router = APIRouter()
 
 
-@router.get("/template/{mesocycle_id}")
-async def get_workout_template(
-    mesocycle_id: str,
+@router.put("/session")
+async def save_session(
+    data: SaveSessionRequest,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    return await workout_service.get_next_template(db, mesocycle_id, current_user.id)
-
-
-@router.get("/template/{mesocycle_id}/{week_index}/{session_index}")
-async def get_specific_template(
-    mesocycle_id: str,
-    week_index: int,
-    session_index: int,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    return await workout_service.get_specific_template(
-        db, mesocycle_id, current_user.id, week_index, session_index
-    )
-
-
-@router.post("/log")
-async def log_sets(
-    data: LogSetsRequest,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    return await workout_service.log_sets(
-        db,
-        current_user.id,
-        mesocycle_id=data.mesocycle_id,
-        week_index=data.week_index,
-        session_index=data.session_index,
-        logged_on=data.logged_on,
-        sets=data.sets,
-        notes=data.notes,
-        exercise_updates=data.exercise_updates,
-        skipped_sets=data.skipped_sets,
-        draft_sets=data.draft_sets,
-        complete=data.complete,
-    )
-
-
-@router.get("/progress/{exercise_id}")
-async def get_exercise_progress(
-    exercise_id: str,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    return await workout_service.get_exercise_progress(db, current_user.id, exercise_id)
+    return await workout_service.save_session(db, current_user.id, data)
 
 
 @router.patch("/exercise-note")
@@ -170,44 +125,4 @@ async def skip_session(
         week_index=data.week_index,
         session_index=data.session_index,
         skipped=data.skipped,
-    )
-
-
-@router.post("/modify-sets")
-async def modify_sets(
-    data: ModifySetsRequest,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    return await workout_service.modify_sets(
-        db,
-        current_user.id,
-        mesocycle_id=data.mesocycle_id,
-        week_index=data.week_index,
-        session_index=data.session_index,
-        exercise_id=data.exercise_id,
-        action=data.action,
-        set_num=data.set_num,
-    )
-
-
-@router.get("/history/{mesocycle_id}")
-async def get_workout_history(
-    mesocycle_id: str,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    return await workout_service.get_workout_history(db, mesocycle_id, current_user.id)
-
-
-@router.get("/detail/{mesocycle_id}/{week_index}/{session_index}")
-async def get_workout_detail(
-    mesocycle_id: str,
-    week_index: int,
-    session_index: int,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    return await workout_service.get_workout_detail(
-        db, mesocycle_id, current_user.id, week_index, session_index
     )

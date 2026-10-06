@@ -26,7 +26,7 @@ export default function MesocycleDetail() {
 
   if (isLoading) {
     return (
-      <div style={{ minHeight: '100vh', background: 'var(--deep)' }}>
+      <div style={{ background: 'var(--deep)' }}>
         <PageLoader className="min-h-[60vh]" />
       </div>
     )
@@ -35,7 +35,6 @@ export default function MesocycleDetail() {
     return (
       <div
         style={{
-          minHeight: '100vh',
           background: 'var(--deep)',
           color: 'var(--text-2)',
           padding: 32,
@@ -95,7 +94,6 @@ export default function MesocycleDetail() {
     <div
       style={{
         position: 'relative',
-        minHeight: '100vh',
         background: 'var(--deep)',
         overflow: 'hidden',
       }}
@@ -169,7 +167,7 @@ export default function MesocycleDetail() {
               textTransform: 'uppercase',
             }}
           >
-            {mesocycle.split_name} · {sessionsPerWeek}× WEEK
+            {mesocycle.split_name ?? 'Deleted split'} · {sessionsPerWeek}× WEEK
           </div>
         </div>
 
@@ -180,8 +178,6 @@ export default function MesocycleDetail() {
             borderRadius: 18,
             background: 'rgba(15,29,46,0.5)',
             border: '1px solid rgba(255,255,255,0.05)',
-            backdropFilter: 'blur(20px)',
-            WebkitBackdropFilter: 'blur(20px)',
           }}
         >
           {/* Header row */}
@@ -262,8 +258,6 @@ export default function MesocycleDetail() {
                 background:
                   'linear-gradient(180deg, rgba(var(--accent-rgb),0.12), rgba(15,29,46,0.6))',
                 border: '1px solid rgba(var(--accent-rgb),0.30)',
-                backdropFilter: 'blur(24px)',
-                WebkitBackdropFilter: 'blur(24px)',
                 boxShadow: '0 20px 50px -22px rgba(var(--accent-rgb),0.45)',
               }}
             >
@@ -381,8 +375,6 @@ export default function MesocycleDetail() {
                 borderRadius: 14,
                 background: 'rgba(15,29,46,0.4)',
                 border: '1px solid rgba(255,255,255,0.05)',
-                backdropFilter: 'blur(20px)',
-                WebkitBackdropFilter: 'blur(20px)',
               }}
             >
               {volume.map((v) => {
@@ -473,7 +465,6 @@ export default function MesocycleDetail() {
               borderRadius: 13,
               background: 'rgba(15,29,46,0.5)',
               border: '1px solid rgba(255,255,255,0.05)',
-              backdropFilter: 'blur(20px)',
               color: 'var(--text-1)',
               fontSize: 13,
               fontWeight: 500,
@@ -490,7 +481,6 @@ export default function MesocycleDetail() {
               borderRadius: 13,
               background: 'rgba(15,29,46,0.5)',
               border: '1px solid rgba(248,113,113,0.18)',
-              backdropFilter: 'blur(20px)',
               color: 'rgba(248,113,113,0.85)',
               fontSize: 13,
               fontWeight: 500,
@@ -622,7 +612,6 @@ function Chrome({ title, sub, onBack }: { title: string; sub: string; onBack: ()
           borderRadius: 12,
           background: 'rgba(255,255,255,0.04)',
           border: '1px solid rgba(255,255,255,0.05)',
-          backdropFilter: 'blur(20px)',
           color: 'var(--text-2)',
           display: 'grid',
           placeItems: 'center',

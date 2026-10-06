@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { api } from '../api/client'
+import { api, ApiError, NetworkError } from '../api/client'
+import { resetLocalData } from '../lib/queryClient'
 import { setToken, setUserInfo } from '../lib/auth'
 import { SPLASH_STORAGE_KEY } from '../components/SplashScreen'
 
@@ -34,6 +35,7 @@ export default function Login({ onLogin }: LoginProps) {
 
     try {
       const response = await api.post<LoginResponse>('/auth/login', { password })
+      resetLocalData()
       setToken(response.access_token)
       setUserInfo({ name: response.user_name })
 
@@ -46,8 +48,13 @@ export default function Login({ onLogin }: LoginProps) {
         onLogin()
         navigate('/', { replace: true })
       }, 300)
-    } catch {
-      setError('Invalid password')
+    } catch (err) {
+      setError(
+        err instanceof ApiError && err.status === 401 ? 'Invalid password'
+          : err instanceof ApiError && err.status === 429 ? 'Too many attempts — wait a minute'
+          : err instanceof NetworkError ? 'No connection — try again'
+          : 'Something went wrong — try again',
+      )
       setLoading(false)
     }
   }

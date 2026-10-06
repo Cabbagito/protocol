@@ -1,7 +1,7 @@
 import { useParams } from 'react-router-dom'
 import AppHeader from '../components/AppHeader'
 import PageLoader from '../components/PageLoader'
-import { useWorkoutDetail } from '../api/hooks'
+import { useMesocycle } from '../api/hooks'
 import MuscleGroupBadge from '../components/MuscleGroupBadge'
 import { getMuscleColor } from '../lib/muscleColors'
 import { formatWeight } from '../lib/weightUtils'
@@ -26,16 +26,10 @@ function computeExerciseSummary(exercise: MesoExercise) {
     }
   }
 
-  // Weight gain: compare actual weight used vs suggested_weight on first set
-  const actualWeight = bestSet.weight ?? 0
-  const suggested = logged[0]!.suggested_weight
-  const weightGain = suggested != null && actualWeight > suggested ? actualWeight - suggested : null
-
   return {
     bestWeight: bestSet.weight ?? 0,
     bestReps: bestSet.reps ?? 0,
     totalVolume,
-    weightGain,
   }
 }
 
@@ -47,20 +41,24 @@ export default function WorkoutDetail() {
   }>()
   const weekIndex = parseInt(weekStr ?? '0')
   const sessionIndex = parseInt(sessionStr ?? '0')
-  const { data: workout, isLoading } = useWorkoutDetail(mesocycleId!, weekIndex, sessionIndex)
+  // Read from the mesocycle (incl. sets not yet synced from this phone).
+  const { data: mesocycle, isLoading } = useMesocycle(mesocycleId!)
 
   if (isLoading) {
     return <PageLoader className="min-h-[60vh]" />
   }
 
-  if (!workout) {
+  const week = mesocycle?.structure.weeks[weekIndex]
+  const session = week?.sessions[sessionIndex]
+  if (!mesocycle || !week || !session) {
     return <div className="text-[var(--text-2)] text-center py-8">Workout not found</div>
   }
+  const workout = { ...session, week_number: week.week_number }
 
-  const exerciseNotes = workout.exercise_notes ?? {}
+  const exerciseNotes = mesocycle.structure.exercise_notes ?? {}
 
-  // Collect all logged sets across non-skipped exercises
-  const activeExercises = workout.exercises.filter(ex => !ex.skipped)
+  // Logged sets count even if the rest of the exercise was skipped.
+  const activeExercises = workout.exercises.filter(ex => ex.sets.some(s => s.logged))
   const allLoggedSets = activeExercises.flatMap((ex) =>
     ex.sets.filter((s) => s.logged)
   )
@@ -137,8 +135,9 @@ export default function WorkoutDetail() {
 
         {/* Exercise Cards */}
         {workout.exercises.map((exercise) => {
-          // Skipped exercise — compact row
-          if (exercise.skipped) {
+          const loggedSets = exercise.sets.filter((s) => s.logged)
+          // Skipped before anything was logged — compact row
+          if (exercise.skipped && loggedSets.length === 0) {
             return (
               <div
                 key={exercise.exercise_id}
@@ -159,7 +158,6 @@ export default function WorkoutDetail() {
             )
           }
 
-          const loggedSets = exercise.sets.filter((s) => s.logged)
           if (loggedSets.length === 0) return null
 
           const color = getMuscleColor(exercise.muscle_group)
@@ -263,16 +261,6 @@ export default function WorkoutDetail() {
                       </div>
                     </div>
                   </div>
-                  {summary.weightGain != null && (
-                    <div className="flex items-center gap-1">
-                      <svg className="w-3 h-3" style={{ color: '#22c55e' }} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" />
-                      </svg>
-                      <span className="mono text-[11px] font-semibold" style={{ color: '#22c55e' }}>
-                        +{formatWeight(summary.weightGain)}
-                      </span>
-                    </div>
-                  )}
                 </div>
               )}
             </div>

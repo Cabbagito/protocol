@@ -1,10 +1,11 @@
-"""Exercise management — replace, add, remove, reorder, modify_sets, update_note."""
+"""Exercise management — replace, add, remove, reorder, update_note."""
 
 from fastapi import HTTPException
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.attributes import flag_modified
 
+from app.domain.mesocycle_structure import blank_set
 from app.domain.propagation import (
     apply_relative_order,
     find_exercise_in_session,
@@ -41,6 +42,37 @@ async def update_exercise_note(
     return {"status": "ok"}
 
 
+async def _get_visible_exercise(db: AsyncSession, exercise_id: str, user_id: str) -> Exercise:
+    result = await db.execute(
+        select(Exercise).where(
+            Exercise.id == exercise_id,
+            or_(Exercise.user_id == user_id, Exercise.user_id.is_(None)),
+        )
+    )
+    exercise = result.scalar_one_or_none()
+    if not exercise:
+        raise HTTPException(status_code=404, detail="Exercise not found")
+    return exercise
+
+
+def _exercise_entry(exercise: Exercise, num_sets: int) -> dict:
+    return {
+        "exercise_id": exercise.id,
+        "exercise_name": exercise.name,
+        "muscle_group": exercise.muscle_group,
+        "equipment_type": exercise.equipment_type,
+        "sets": [blank_set(n) for n in range(1, num_sets + 1)],
+    }
+
+
+def _session_has_exercise(session: dict, exercise_id: str) -> bool:
+    return find_exercise_in_session(session, exercise_id) is not None
+
+
+def _session_started(session: dict) -> bool:
+    return any(s.get("logged") for e in session.get("exercises", []) for s in e.get("sets", []))
+
+
 async def replace_exercise(
     db: AsyncSession,
     user_id: str,
@@ -53,184 +85,62 @@ async def replace_exercise(
     new_exercise_id: str,
     apply_to_future: bool,
 ) -> dict:
-    """Replace an exercise in the mesocycle structure."""
-    mesocycle = await get_user_mesocycle(db, mesocycle_id, user_id, for_update=True)
+    """Swap an exercise for another one.
 
-    # Look up new exercise (scoped to visible exercises)
-    ex_result = await db.execute(
-        select(Exercise).where(
-            Exercise.id == new_exercise_id,
-            or_(Exercise.user_id == user_id, Exercise.user_id.is_(None)),
-        )
-    )
-    new_exercise = ex_result.scalar_one_or_none()
-    if not new_exercise:
-        raise HTTPException(status_code=404, detail="New exercise not found")
+    Logged sets stay attributed to the exercise they were done on: if the
+    exercise already has logged sets in this session, it keeps them and the
+    new exercise is inserted right after it with the remaining (unlogged)
+    set slots. Otherwise it is replaced in place. With ``apply_to_future``,
+    the swap carries onto matching future sessions where the old exercise
+    has nothing logged yet.
+    """
+    mesocycle = await get_user_mesocycle(db, mesocycle_id, user_id, for_update=True)
+    new_exercise = await _get_visible_exercise(db, new_exercise_id, user_id)
 
     structure = mesocycle.structure
-    week, session = get_session_from_structure(structure, week_index, session_index)
+    _, session = get_session_from_structure(structure, week_index, session_index)
     exercises = session.get("exercises", [])
 
     if exercise_index >= len(exercises):
         raise HTTPException(status_code=400, detail="Invalid exercise index")
-
     target_ex = exercises[exercise_index]
     if target_ex["exercise_id"] != old_exercise_id:
         raise HTTPException(status_code=400, detail="Exercise ID mismatch")
+    if _session_has_exercise(session, new_exercise.id):
+        raise HTTPException(status_code=409, detail="That exercise is already in this workout")
 
-    session_name = session["session_name"]
-    day_order = session["day_order"]
+    def swap_in_place(ex_data: dict) -> None:
+        num_sets = len(ex_data.get("sets", [])) or 3
+        ex_data.clear()
+        ex_data.update(_exercise_entry(new_exercise, num_sets))
 
-    def replace_in_exercise(ex_data: dict) -> None:
-        ex_data["exercise_id"] = new_exercise.id
-        ex_data["exercise_name"] = new_exercise.name
-        ex_data["muscle_group"] = new_exercise.muscle_group
-        ex_data["equipment_type"] = new_exercise.equipment_type
+    logged = [s for s in target_ex.get("sets", []) if s.get("logged")]
+    if logged:
+        remaining = len(target_ex["sets"]) - len(logged)
+        target_ex["sets"] = logged
+        for i, s in enumerate(logged, start=1):
+            s["set_num"] = i
+        exercises.insert(exercise_index + 1, _exercise_entry(new_exercise, max(remaining, 1)))
+    else:
+        swap_in_place(target_ex)
 
-        for s in ex_data.get("sets", []):
-            if not s.get("logged"):
-                s["weight"] = None
-                s["reps"] = None
-                s["suggested_weight"] = None
-
-    # Replace in current week
-    replace_in_exercise(target_ex)
-
-    # If apply_to_future, replace in all subsequent weeks
     if apply_to_future:
         for _wi, future_session in iter_future_sessions(
-            structure, week_index, session_name, day_order
+            structure, week_index, session["session_name"], session["day_order"]
         ):
             fe = find_exercise_in_session(future_session, old_exercise_id)
-            if fe:
-                replace_in_exercise(fe)
+            if (
+                fe is None
+                or any(s.get("logged") for s in fe.get("sets", []))
+                or _session_has_exercise(future_session, new_exercise.id)
+            ):
+                continue
+            swap_in_place(fe)
 
     flag_modified(mesocycle, "structure")
     await db.commit()
 
     return {"status": "ok"}
-
-
-async def modify_sets(
-    db: AsyncSession,
-    user_id: str,
-    *,
-    mesocycle_id: str,
-    week_index: int,
-    session_index: int,
-    exercise_id: str,
-    action: str,
-    set_num: int | None,
-) -> dict:
-    """Add or remove a set from an exercise, propagating to future unlogged weeks."""
-    mesocycle = await get_user_mesocycle(db, mesocycle_id, user_id, for_update=True)
-
-    structure = mesocycle.structure
-    week, session = get_session_from_structure(structure, week_index, session_index)
-
-    session_name = session["session_name"]
-    day_order = session["day_order"]
-
-    # Find the target exercise
-    target_exercise = None
-    for ex in session.get("exercises", []):
-        if ex["exercise_id"] == exercise_id:
-            target_exercise = ex
-            break
-
-    if not target_exercise:
-        raise HTTPException(status_code=404, detail="Exercise not found in session")
-
-    sets_list = target_exercise.get("sets", [])
-
-    if action == "add":
-        # Clone from last set
-        last_set = sets_list[-1] if sets_list else {}
-        new_set = {
-            "set_num": len(sets_list) + 1,
-            "weight": None,
-            "reps": None,
-            "suggested_weight": last_set.get("suggested_weight"),
-            "logged": False,
-            "set_type": None,
-        }
-        sets_list.append(new_set)
-        target_exercise["sets"] = sets_list
-        new_set_count = len(sets_list)
-
-        # Propagate to future weeks
-        for _wi, future_session in iter_future_sessions(
-            structure, week_index, session_name, day_order
-        ):
-            fe = find_exercise_in_session(future_session, exercise_id)
-            if not fe:
-                continue
-            future_sets = fe.get("sets", [])
-            has_logged = any(s.get("logged") for s in future_sets)
-            if not has_logged and len(future_sets) < new_set_count:
-                last_fs = future_sets[-1] if future_sets else {}
-                future_sets.append(
-                    {
-                        "set_num": len(future_sets) + 1,
-                        "weight": None,
-                        "reps": None,
-                        "suggested_weight": last_fs.get("suggested_weight"),
-                        "logged": False,
-                        "set_type": None,
-                    }
-                )
-                fe["sets"] = future_sets
-
-    elif action == "remove":
-        if set_num is None:
-            raise HTTPException(status_code=400, detail="set_num required for remove action")
-
-        if len(sets_list) <= 1:
-            raise HTTPException(status_code=400, detail="Cannot remove the only set")
-
-        target_set = None
-        for s in sets_list:
-            if s["set_num"] == set_num:
-                target_set = s
-                break
-
-        if not target_set:
-            raise HTTPException(status_code=400, detail="Set not found")
-
-        if target_set.get("logged"):
-            raise HTTPException(status_code=400, detail="Cannot remove a logged set")
-
-        sets_list.remove(target_set)
-        # Renumber
-        for i, s in enumerate(sets_list):
-            s["set_num"] = i + 1
-        target_exercise["sets"] = sets_list
-        new_set_count = len(sets_list)
-
-        # Propagate to future weeks
-        for _wi, future_session in iter_future_sessions(
-            structure, week_index, session_name, day_order
-        ):
-            fe = find_exercise_in_session(future_session, exercise_id)
-            if not fe:
-                continue
-            future_sets = fe.get("sets", [])
-            has_logged = any(s.get("logged") for s in future_sets)
-            if not has_logged and len(future_sets) > new_set_count:
-                # Remove last unlogged set
-                future_sets.pop()
-                for i, s in enumerate(future_sets):
-                    s["set_num"] = i + 1
-                fe["sets"] = future_sets
-
-    flag_modified(mesocycle, "structure")
-    await db.commit()
-
-    return {
-        "status": "ok",
-        "exercise_id": exercise_id,
-        "sets": target_exercise["sets"],
-    }
 
 
 async def add_exercise(
@@ -243,57 +153,28 @@ async def add_exercise(
     exercise_id: str,
     apply_to_future: bool,
 ) -> dict:
-    """Add a new exercise to a session in the mesocycle structure."""
+    """Add an exercise to a session. With ``apply_to_future``, it is also
+    added to matching future sessions that haven't been started."""
     mesocycle = await get_user_mesocycle(db, mesocycle_id, user_id, for_update=True)
-
-    # Look up exercise (scoped to visible exercises)
-    ex_result = await db.execute(
-        select(Exercise).where(
-            Exercise.id == exercise_id,
-            or_(Exercise.user_id == user_id, Exercise.user_id.is_(None)),
-        )
-    )
-    exercise = ex_result.scalar_one_or_none()
-    if not exercise:
-        raise HTTPException(status_code=404, detail="Exercise not found")
-
-    num_sets = 3
-
-    def build_exercise_entry() -> dict:
-        sets = [
-            {
-                "set_num": i + 1,
-                "weight": None,
-                "reps": None,
-                "suggested_weight": None,
-                "logged": False,
-                "set_type": None,
-            }
-            for i in range(num_sets)
-        ]
-        return {
-            "exercise_id": exercise.id,
-            "exercise_name": exercise.name,
-            "muscle_group": exercise.muscle_group,
-            "equipment_type": exercise.equipment_type,
-            "sets": sets,
-        }
+    exercise = await _get_visible_exercise(db, exercise_id, user_id)
 
     structure = mesocycle.structure
-    week, session = get_session_from_structure(structure, week_index, session_index)
-    session_name = session["session_name"]
-    day_order = session["day_order"]
+    _, session = get_session_from_structure(structure, week_index, session_index)
+    if _session_has_exercise(session, exercise.id):
+        raise HTTPException(status_code=409, detail="That exercise is already in this workout")
 
-    new_entry = build_exercise_entry()
+    new_entry = _exercise_entry(exercise, 3)
     session.setdefault("exercises", []).append(new_entry)
 
     if apply_to_future:
         for _wi, future_session in iter_future_sessions(
-            structure, week_index, session_name, day_order
+            structure, week_index, session["session_name"], session["day_order"]
         ):
-            existing_ids = {e["exercise_id"] for e in future_session.get("exercises", [])}
-            if exercise_id not in existing_ids:
-                future_session.setdefault("exercises", []).append(build_exercise_entry())
+            if _session_started(future_session) or _session_has_exercise(
+                future_session, exercise.id
+            ):
+                continue
+            future_session.setdefault("exercises", []).append(_exercise_entry(exercise, 3))
 
     flag_modified(mesocycle, "structure")
     await db.commit()

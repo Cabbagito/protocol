@@ -8,7 +8,7 @@ interface MuscleAccentProps {
 /**
  * Two flavors of the muscle-group identifier used throughout v5:
  *   - "pill": solid uppercase chip, used in list rows + headers.
- *   - "dot":  glowing pulsing dot + uppercase label, used as hero accents.
+ *   - "dot":  glowing dot + uppercase label, used as hero accents.
  */
 export default function MuscleAccent({ group, variant = 'pill' }: MuscleAccentProps) {
   const c = getMuscleColor(group)
@@ -24,7 +24,6 @@ export default function MuscleAccent({ group, variant = 'pill' }: MuscleAccentPr
             borderRadius: '50%',
             background: c.primary,
             boxShadow: `0 0 16px ${c.primary}, 0 0 4px ${c.primary}`,
-            animation: 'p-pulse-dot 2.6s ease-in-out infinite',
           }}
         />
         <span

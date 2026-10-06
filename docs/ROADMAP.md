@@ -1,69 +1,64 @@
 # Protocol — Roadmap
 
-**Last Updated:** 2026-07-02
+**Last Updated:** 2026-10-06
 
-Next feature ideas, in rough priority order. These are intentionally beyond the
-original PRD scope (which is outdated — see the note at the top of `PRD.md`).
+## Recently shipped
 
----
+- **Local-first workout logging** — every set is saved on the phone first and
+  synced in the background with retries; the app opens offline
+  (see `docs/WORKOUT-LOGIC.md`).
+- **"Last time" targets** — untouched sets show the previous session's weight
+  and reps in grey; LOG accepts them. Replaces finish-time weight carry-forward.
+- **Bodyweight exercises** can be logged (0 kg / latest weigh-in).
+- **Custom exercises** — create, edit, delete (in-use ones are protected).
+- **Split templates** are read-only with "Duplicate to customize".
+- Bodyweight tracking, barcode scanner (Open Food Facts), per-user macro targets.
+- Backend hardening: DB-backed test suite, CI gate before deploy, food/exercise
+  ownership, login throttling, safer deletes (deleting a split keeps its
+  mesocycles).
 
-## 1. Weigh-ins (bodyweight tracking)
+## Next, in rough priority order
 
-Track and visualize bodyweight — no automatic target adjustment, just data.
+### 1. Food logging good enough to switch to
+The diet side is functional but doesn't yet beat a dedicated app. In order:
+- **Fast re-logging:** recent and favourite foods at the top of search,
+  "copy yesterday" / repeat a meal, edit a logged entry (today: delete only).
+- **Meals** (breakfast/lunch/…) and quick-add of kcal/macros without a food.
+- **AI meal logging** (text first, photo second) via Claude
+  (`ANTHROPIC_API_KEY` config stub exists): describe a meal → editable rows
+  with estimated macros → confirm.
+- Visual pass on Diet + AddFoodSheet.
 
-- New `weigh_ins` table: `user_id`, `date`, `weight_kg` (one entry per user per day, upsert).
-- Quick-entry UI (Diet page or Dashboard), plus a trend chart: raw points + a
-  smoothed weekly moving average so daily noise doesn't obscure the trend.
-- Unlocks later features for free: protein-per-kg, diet-phase context, and the
-  diet side of the analytics refresh.
+### 2. Progress / analysis redesign
+The Progress page works but is thin. Training: weekly sets per muscle group,
+e1RM trend per lift, PR detection, volume per session/week. Diet: calorie and
+protein trends, adherence to targets, bodyweight trend line (moving average),
+protein per kg.
 
-Small, self-contained, and everything else in the diet direction benefits from
-this data existing as early as possible.
+### 3. Workout history views
+"Review sets" (WorkoutDetail) and the exercise history popup still use the old
+visual language and a plain table; redesign them in the v5 style (per-set
+comparison with last time, PR markers, notes).
 
-## 2. AI meal creation / logging (text + photo)
+### 4. Split creation flow
+Faster and more fun: start from a template, add exercises by muscle group with
+a few taps, reorder days/exercises by drag, preview weekly volume per muscle.
 
-Use Claude (the `ANTHROPIC_API_KEY` config stub already exists) to turn a text
-description ("chicken wrap, a coke, handful of almonds") or a photo of a meal
-into one or more log entries with estimated macros, shown for confirmation
-before saving.
+### 5. Ready for other people
+- First-run onboarding: pick a template → create a mesocycle → first workout.
+- Change password / name in Settings; data export.
+- PNG app icons (iOS ignores the SVG icon for the home screen).
 
-- Backend endpoint that calls the Claude API with structured output
-  (name, quantity, kcal, protein, carbs, fat per item).
-- Frontend: a third tab in `AddFoodSheet` (text box + camera/photo picker),
-  results rendered as editable rows before confirming.
-- Start with text (cheap, fast, no upload plumbing); add photo second.
-
-Biggest logging-friction win by far — the current search/custom flow is the
-main reason a meal doesn't get logged.
-
-## 3. Barcode scanner + food database
-
-Scan a barcode to resolve a food, backed by Open Food Facts.
-
-- Frontend: camera-based scanner (e.g. `html5-qrcode` or the native
-  BarcodeDetector API where available) in `AddFoodSheet`.
-- Backend: lookup endpoint — check local `food_items` by barcode first, then
-  Open Food Facts API, caching hits as food items (needs a `barcode` column).
-- Complements AI logging: barcode for packaged foods, AI for everything else.
-
-## 4. Analytics refresh (mesocycles + diet)
-
-A rework of the Progress area once the data above is in place:
-
-- **Training:** weekly sets per muscle group, tonnage per session/week,
-  PR detection — all derivable from the existing mesocycle JSONB.
-- **Diet:** calorie/protein trend lines, adherence vs. daily targets
-  (streaks/weekly view), weight trend overlay from weigh-ins,
-  protein per kg bodyweight.
-
-Deliberately last: it gets much better once weigh-ins (1) and richer logging
-(2/3) have produced data worth visualizing.
-
----
+### 6. Small things
+- Rest timer between sets (often assumed, never built).
+- Cheap UI "life" now that animated backgrounds are gone: set-logged
+  confirmation, count-up numbers, ring fill transitions, staggered list
+  entrance on first mount, shared press feedback.
 
 ## Not planned right now
 
-- Offline-first logging (mutation queue / API caching in the service worker)
-- Glucose domain (still referenced in the PWA manifest copy; unbuilt)
+- Glucose domain.
 - Per-user identity / passkey auth — the single-password-per-user model is a
-  deliberate simplicity choice for a friends-and-family app
+  deliberate simplicity choice for a friends-and-family app.
+- Offline support for changing a workout's exercise list (add/swap/remove),
+  which still needs a connection; set logging is fully offline.

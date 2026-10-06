@@ -1,0 +1,6 @@
+/* Untouched weight/reps fields show last time's value as a grey target. */
+.p-num-input::placeholder {
+  color: var(--text-m);
+  opacity: 0.6;
+  text-shadow: none;
+}

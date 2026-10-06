@@ -5,6 +5,8 @@ export interface Exercise {
   name: string
   muscle_group: string
   equipment_type: EquipmentType
+  /** Owner; null for the shared, seeded exercises. */
+  user_id: string | null
 }
 
 export type EquipmentType = 'barbell' | 'dumbbell' | 'machine' | 'cable' | 'bodyweight'
@@ -34,6 +36,8 @@ export interface Split {
   id: string
   name: string
   color: string | null
+  /** Owner; null for the seeded templates shared by everyone (read-only). */
+  user_id: string | null
   days: SplitDay[]
 }
 
@@ -41,6 +45,8 @@ export interface SplitListItem {
   id: string
   name: string
   color: string | null
+  /** Owner; null for the seeded templates shared by everyone (read-only). */
+  user_id: string | null
   day_count: number
   exercise_count: number
 }
@@ -50,7 +56,8 @@ export interface SplitListItem {
 export interface MesocycleListItem {
   id: string
   name: string
-  split_name: string
+  // null once the source split has been deleted
+  split_name: string | null
   split_color: string | null
   total_weeks: number
   current_week: number
@@ -66,11 +73,11 @@ export type SetType = 'straight' | 'myorep' | 'myorep_match'
 
 export interface MesoSet {
   set_num: number
+  /** Logged value, or a value typed in but not logged yet. */
   weight: number | null
   reps: number | null
-  suggested_weight: number | null
   logged: boolean
-  set_type?: SetType
+  set_type?: SetType | null
   skipped?: boolean
 }
 
@@ -105,8 +112,9 @@ export interface MesoStructure {
 export interface Mesocycle {
   id: string
   name: string
-  split_id: string
-  split_name: string
+  // null once the source split has been deleted
+  split_id: string | null
+  split_name: string | null
   split_color: string | null
   total_weeks: number
   current_week: number
@@ -114,62 +122,6 @@ export interface Mesocycle {
   started_at: string
   workouts_completed: number
   structure: MesoStructure
-}
-
-// Workout template (from /workouts/template endpoint)
-
-export interface WorkoutTemplate {
-  session_name: string
-  week_number: number
-  week_index: number
-  session_index: number
-  skipped: boolean
-  exercises: MesoExercise[]
-  exercise_notes?: Record<string, string>
-}
-
-// Workout history item
-
-export interface WorkoutHistoryItem {
-  week_index: number
-  session_index: number
-  session_name: string
-  week_number: number
-  date: string | null
-  total_sets: number
-  total_volume: number
-}
-
-// Workout detail (viewing a logged session)
-
-export interface WorkoutDetailResponse {
-  session_name: string
-  week_number: number
-  date: string | null
-  notes: string | null
-  skipped: boolean
-  exercises: MesoExercise[]
-  exercise_notes?: Record<string, string>
-}
-
-// Working set (extends MesoSet with workout-specific fields)
-
-export interface WorkingSet extends MesoSet {
-  exercise_id: string
-  exercise_name: string
-  completed: boolean
-}
-
-// Exercise progress
-
-export interface ProgressEntry {
-  date: string
-  week_number: number
-  max_weight: number
-  best_e1rm: number
-  total_reps: number
-  total_sets: number
-  volume: number
 }
 
 // Diet
@@ -184,6 +136,9 @@ export interface FoodItem {
   fat_per_100g: number
   default_serving_g: number | null
   barcode: string | null
+  // Owner of a custom food; null for seeded and barcode (shared) foods,
+  // which the API refuses to modify (403).
+  user_id: string | null
   seeded: boolean
 }
 

@@ -1,6 +1,7 @@
 """Body weight tracking service."""
 
 from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.body_weight import BodyWeightLog
@@ -18,21 +19,21 @@ async def list_weights(db: AsyncSession, user_id: str) -> list[BodyWeightLog]:
 
 
 async def log_weight(db: AsyncSession, user_id: str, *, data: WeightLogCreate) -> BodyWeightLog:
-    """Upsert: one entry per user per day — weighing in again replaces it."""
-    result = await db.execute(
-        select(BodyWeightLog).where(
-            BodyWeightLog.user_id == user_id,
-            BodyWeightLog.logged_on == data.logged_on,
-        )
+    """Upsert: one entry per user per day — weighing in again replaces it.
+
+    A single INSERT ... ON CONFLICT, so two concurrent weigh-ins for the same
+    day can't both try to insert.
+    """
+    stmt = insert(BodyWeightLog).values(
+        user_id=user_id, logged_on=data.logged_on, weight_kg=data.weight_kg
     )
-    log = result.scalar_one_or_none()
-    if log is None:
-        log = BodyWeightLog(user_id=user_id, logged_on=data.logged_on, weight_kg=data.weight_kg)
-        db.add(log)
-    else:
-        log.weight_kg = data.weight_kg
+    stmt = stmt.on_conflict_do_update(
+        constraint="uq_body_weight_user_date",
+        set_={"weight_kg": stmt.excluded.weight_kg, "updated_at": stmt.excluded.updated_at},
+    ).returning(BodyWeightLog)
+    result = await db.scalars(stmt, execution_options={"populate_existing": True})
+    log = result.one()
     await db.commit()
-    await db.refresh(log)
     return log
 
 

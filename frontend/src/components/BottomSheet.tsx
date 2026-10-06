@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useScrollLock } from '../hooks/useScrollLock'
 
 interface BottomSheetAction {
   label: string
@@ -15,17 +15,7 @@ interface BottomSheetProps {
 }
 
 export default function BottomSheet({ open, onClose, title, actions }: BottomSheetProps) {
-  const sheetRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    const scrollEl = document.querySelector<HTMLElement>('[data-main-scroll]')
-    if (open) {
-      if (scrollEl) scrollEl.style.overflow = 'hidden'
-    } else {
-      if (scrollEl) scrollEl.style.overflow = ''
-    }
-    return () => { if (scrollEl) scrollEl.style.overflow = '' }
-  }, [open])
+  useScrollLock(open)
 
   if (!open) return null
 
@@ -39,7 +29,9 @@ export default function BottomSheet({ open, onClose, title, actions }: BottomShe
 
       {/* Popup */}
       <div
-        ref={sheetRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={title ?? 'Actions'}
         className="relative w-full max-w-sm rounded-2xl flex flex-col slide-up"
         style={{
           background: 'var(--card)',
@@ -58,10 +50,11 @@ export default function BottomSheet({ open, onClose, title, actions }: BottomShe
           {!title && <span />}
           <button
             onClick={onClose}
-            className="w-7 h-7 flex items-center justify-center rounded-full"
+            aria-label="Close"
+            className="w-8 h-8 flex items-center justify-center rounded-full"
             style={{ background: 'rgba(255,255,255,0.08)' }}
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true">
               <line x1="18" y1="6" x2="6" y2="18" />
               <line x1="6" y1="6" x2="18" y2="18" />
             </svg>
