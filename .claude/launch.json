@@ -30,6 +30,16 @@
       ],
       "port": 5173,
       "autoPort": true
+    },
+    {
+      "name": "frontend-preview",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "cd frontend && bun run build && API_URL=http://localhost:${API_PORT:-8001} bunx vite preview --port ${PORT:-4173} --strictPort"
+      ],
+      "port": 4173,
+      "autoPort": true
     }
   ]
 }

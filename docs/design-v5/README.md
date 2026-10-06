@@ -1,5 +1,13 @@
 # Handoff — Protocol Redesign
 
+> **Status (2026-10):** implemented, with these deviations — the animated
+> background / Motion system (aurora, pulse, grain, breathing LOG button,
+> pulsing dots) was **removed** for battery and frame rate; every screen uses
+> a static gradient background (`components/AuroraBackground.tsx`, now
+> static). Not built: midnight/forest themes, Settings Profile/Units/Density/
+> Export, split drag-reorder, Diet meal slots. Treat the rest as the visual
+> spec for new work.
+
 ## Overview
 
 This is a visual redesign of the Protocol fitness PWA. The redesign keeps the existing data model, routing, and feature set 1:1 — it touches **only** the visual layer.
@@ -468,7 +476,7 @@ For convenience the prototype exposes the muscle colors as CSS variables (`--m-c
 - Gaps in lists: **8px** standard.
 - Mono label / eyebrow letter-spacing: **0.15em – 0.22em**.
 
-### Motion system
+### Motion system (removed — see status note at the top)
 
 The most novel piece of the redesign. Three components, all in `protocol-tokens.css` (port to `index.css`):
 
