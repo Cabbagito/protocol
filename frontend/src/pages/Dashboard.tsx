@@ -159,8 +159,6 @@ export default function Dashboard() {
               borderRadius: 12,
               background: 'rgba(255,255,255,0.04)',
               border: '1px solid rgba(255,255,255,0.05)',
-              backdropFilter: 'blur(20px)',
-              WebkitBackdropFilter: 'blur(20px)',
               color: 'var(--text-2)',
               display: 'grid',
               placeItems: 'center',
@@ -242,7 +240,7 @@ export default function Dashboard() {
         >
           {mesocycle && heroGroups.length > 0 && (
             <div style={{ display: 'flex', gap: 16, marginBottom: 22 }}>
-              {heroGroups.map((g, i) => (
+              {heroGroups.map((g) => (
                 <div key={g} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                   <span
                     style={{
@@ -251,7 +249,6 @@ export default function Dashboard() {
                       borderRadius: '50%',
                       background: `var(--m-${g.replace(/\s+/g, '-')}, var(--accent))`,
                       boxShadow: `0 0 22px var(--m-${g.replace(/\s+/g, '-')}, var(--accent)), 0 0 8px var(--m-${g.replace(/\s+/g, '-')}, var(--accent)), 0 0 2px white`,
-                      animation: `p-pulse-dot 2.6s ease-in-out infinite ${i * 0.4}s`,
                     }}
                   />
                   <span

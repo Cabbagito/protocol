@@ -45,17 +45,6 @@
         if(m)m.setAttribute('content',t['--base']);
       })();
     </script>
-    <!-- Blocking motion script — applies data-motion before first paint.
-         Keep in sync with src/lib/motion.ts -->
-    <script>
-      ;(function(){
-        var modes=['aurora','pulse','still'];
-        var m;try{m=localStorage.getItem('protocol_motion')}catch(e){}
-        if(!m||modes.indexOf(m)===-1)m='aurora';
-        if(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches)m='still';
-        document.documentElement.setAttribute('data-motion',m);
-      })();
-    </script>
   </head>
   <body>
     <div id="root"></div>

@@ -123,8 +123,6 @@ function SplitCard({ split, isLive }: { split: SplitListItem; isLive: boolean })
         border: isLive
           ? `1px solid color-mix(in oklab, ${accent} 35%, rgba(255,255,255,0.05))`
           : '1px solid rgba(255,255,255,0.05)',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
         textDecoration: 'none',
         color: 'inherit',
         display: 'block',
@@ -309,7 +307,6 @@ function Chrome({ title, sub, onBack }: { title: string; sub: string; onBack: ()
           borderRadius: 12,
           background: 'rgba(255,255,255,0.04)',
           border: '1px solid rgba(255,255,255,0.05)',
-          backdropFilter: 'blur(20px)',
           color: 'var(--text-2)',
           display: 'grid',
           placeItems: 'center',

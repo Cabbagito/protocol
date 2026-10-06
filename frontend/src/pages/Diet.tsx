@@ -130,8 +130,6 @@ export default function Diet() {
             background:
               'linear-gradient(180deg, rgba(var(--accent-rgb),0.06), color-mix(in oklab, var(--card) 65%, transparent))',
             border: '1px solid rgba(255,255,255,0.05)',
-            backdropFilter: 'blur(20px)',
-            WebkitBackdropFilter: 'blur(20px)',
           }}
         >
           <CalorieRing kcal={totals.kcal} goal={goals.kcal} />
@@ -405,8 +403,6 @@ function MealRow({ entry, onDelete }: { entry: FoodLog; onDelete: () => void }) 
         borderRadius: 14,
         background: 'color-mix(in oklab, var(--card) 70%, transparent)',
         border: '1px solid rgba(255,255,255,0.05)',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
         display: 'flex',
         alignItems: 'center',
         gap: 12,

@@ -67,8 +67,6 @@ export default function DayCard({
         border: isExpanded
           ? '1px solid rgba(var(--accent-rgb),0.30)'
           : '1px solid rgba(255,255,255,0.05)',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
         overflow: 'hidden',
       }}
     >

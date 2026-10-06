@@ -39,8 +39,6 @@ export default function BodyweightCard() {
           borderRadius: 20,
           background: 'color-mix(in oklab, var(--card) 70%, transparent)',
           border: '1px solid rgba(255,255,255,0.05)',
-          backdropFilter: 'blur(20px)',
-          WebkitBackdropFilter: 'blur(20px)',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>

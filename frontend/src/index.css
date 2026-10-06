@@ -138,14 +138,6 @@
     animation: lock-jiggle 0.7s ease forwards;
   }
 
-  @keyframes lock-pulse {
-    0%, 100% { opacity: 0.35; }
-    50%      { opacity: 0.6; }
-  }
-  .lock-pulse {
-    animation: lock-pulse 2s ease-in-out infinite;
-  }
-
   /* Set logging: saving spinner */
   @keyframes set-saving-trace {
     from { stroke-dashoffset: 0; }
@@ -313,15 +305,6 @@
 
   .mono { font-family: 'JetBrains Mono', 'SF Mono', monospace; }
 
-  @keyframes pulse-current {
-    0%, 100% { opacity: 0.43; }
-    50%      { opacity: 1; }
-  }
-  @keyframes pulse-viewing {
-    0%, 100% { opacity: 0.43; }
-    50%      { opacity: 1; }
-  }
-
   @keyframes slide-up {
     from { transform: translateY(100%); }
     to   { transform: translateY(0); }
@@ -335,24 +318,6 @@
   .pb-safe {
     padding-bottom: max(12px, env(safe-area-inset-bottom));
   }
-
-  /* ===== TIER 1 — IDLE: CASCADE SHIMMER ===== */
-  @keyframes cascade-back {
-    0%, 100% { fill: #0ea5e9; } 33% { fill: #22d3ee; } 66% { fill: #8b5cf6; }
-  }
-  @keyframes cascade-mid {
-    0%, 100% { fill: #1d9dd8; } 33% { fill: #0ea5e9; } 66% { fill: #a78bfa; }
-  }
-  @keyframes cascade-fs {
-    0%, 100% { stop-color: #0ea5e9; } 25% { stop-color: #22d3ee; } 50% { stop-color: #6366f1; } 75% { stop-color: #8b5cf6; }
-  }
-  @keyframes cascade-fe {
-    0%, 100% { stop-color: #8b5cf6; } 25% { stop-color: #0ea5e9; } 50% { stop-color: #22d3ee; } 75% { stop-color: #6366f1; }
-  }
-  .cascade-back { animation: cascade-back 4s ease-in-out infinite; }
-  .cascade-mid { animation: cascade-mid 4s ease-in-out infinite 0.6s; }
-  .cascade-fs { animation: cascade-fs 4s ease-in-out infinite 1.2s; }
-  .cascade-fe { animation: cascade-fe 4s ease-in-out infinite 1.2s; }
 
   /* ===== TIER 2 — LOADING: BREATHE + SHIMMER + ORBIT ===== */
   @keyframes lb-back {
@@ -588,117 +553,11 @@
   }
   .pulse-glow { animation: pulse-glow 4s ease-in-out infinite; }
 
-/* ===== DASHBOARD ANIMATIONS ===== */
-
-  /* Hero ambient glow — larger pulse behind hero card */
-  @keyframes dash-hero-glow {
-    0%, 100% { opacity: 0.35; transform: translate(-50%, -50%) scale(0.95); }
-    50%      { opacity: 0.7;  transform: translate(-50%, -50%) scale(1.08); }
-  }
-  .dash-hero-glow {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 340px;
-    height: 260px;
-    background: radial-gradient(ellipse, rgba(var(--accent-rgb), 0.15) 0%, rgba(139,92,246,0.06) 40%, transparent 70%);
-    filter: blur(35px);
-    animation: dash-hero-glow 4s ease-in-out infinite;
-    pointer-events: none;
-    z-index: 0;
-  }
-
-  /* Hero card breathing border + glow */
-  @keyframes dash-breathe-border {
-    0%, 100% {
-      border-color: var(--border);
-      box-shadow: 0 4px 12px var(--shadow), 0 0 0 0 rgba(var(--accent-rgb), 0);
-    }
-    50% {
-      border-color: rgba(var(--accent-rgb), 0.45);
-      box-shadow: 0 4px 12px var(--shadow), 0 0 20px rgba(var(--accent-rgb), 0.08);
-    }
-  }
-
-  /* CTA shimmer sweep */
-  @keyframes dash-shimmer {
-    0%   { transform: translateX(-120%); opacity: 0; }
-    10%  { opacity: 1; }
-    90%  { opacity: 1; }
-    100% { transform: translateX(280%); opacity: 0; }
-  }
-
-  /* CTA ring pulse */
-  @keyframes dash-cta-pulse {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(var(--accent-rgb), 0), 0 2px 8px rgba(0,0,0,0.3); }
-    50%      { box-shadow: 0 0 0 6px rgba(var(--accent-rgb), 0.2), 0 0 16px rgba(var(--accent-rgb), 0.15), 0 2px 8px rgba(0,0,0,0.3); }
-  }
-
-  /* Progress bar glow — green (this week) */
-  @keyframes dash-bar-glow-green {
-    0%, 100% { box-shadow: 0 0 4px rgba(74,222,128,0.3), 0 0 1px rgba(74,222,128,0.6); }
-    50%      { box-shadow: 0 0 12px rgba(74,222,128,0.7), 0 0 4px rgba(74,222,128,0.9); }
-  }
-
-  /* Progress bar glow — blue (meso progress) */
-  @keyframes dash-bar-glow-blue {
-    0%, 100% { box-shadow: 0 0 4px rgba(var(--accent-rgb),0.3), 0 0 1px rgba(var(--accent-rgb),0.6); }
-    50%      { box-shadow: 0 0 12px rgba(var(--accent-rgb),0.7), 0 0 4px rgba(var(--accent-rgb),0.9); }
-  }
-
-  /* Quick access card glow sweep */
-  @keyframes dash-card-glow {
-    0%, 100% {
-      border-color: var(--border);
-      box-shadow: 0 4px 12px var(--shadow);
-    }
-    50% {
-      border-color: rgba(var(--accent-rgb), 0.35);
-      box-shadow: 0 4px 12px var(--shadow), 0 0 14px rgba(var(--accent-rgb), 0.1);
-    }
-  }
-
-  /* CTA button base */
-  .dash-cta-btn {
-    position: relative;
-    overflow: hidden;
-    transition: all 0.2s ease;
-  }
-  .dash-cta-btn:active {
-    transform: scale(0.97);
-  }
-  .dash-cta-btn .dash-shimmer {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 35%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.18), transparent);
-    animation: dash-shimmer 2.5s ease-in-out infinite;
-  }
-
-  /* Quick access card interaction */
-  .dash-qa-card {
-    transition: all 0.15s ease;
-    cursor: pointer;
-  }
-  .dash-qa-card:active {
-    transform: scale(0.96);
-    background: var(--panel) !important;
-  }
-
-  /* Stat card interaction */
-  .dash-stat-card {
-    transition: all 0.15s ease;
-  }
-  .dash-stat-card:active {
-    transform: scale(0.97);
-  }
 }
 
 /* ============================================================
-   v5 — Muscle color vars, aurora background, motion system,
-   per-muscle breathing keyframes.
+   v5 — Muscle color vars, static background, per-muscle
+   breathing keyframes.
    Ported from docs/design-v5/protocol-tokens.css.
    ============================================================ */
 
@@ -737,165 +596,71 @@
   letter-spacing: 0.02em;
 }
 
-/* ── Aurora background — four blobs + two panning stripes + grain ── */
+/* ── Static background ───────────────────────────────────────
+   Four soft color blobs + two diagonal aurora stripes, painted as layered
+   gradients on a single fixed element: no animation, no blur filters, no
+   compositing-heavy blend modes on the page. Colors come from the active
+   theme's --wave-c1..c4. Rendered by components/AuroraBackground.tsx. */
 
-.wave-bg {
+.app-bg {
+  --bg-blob-a: 75%;
+  --bg-blob3-a: 45%;
+  --bg-blob4-a: 40%;
+  --bg-aur1-a: 31%;
+  --bg-aur1b-a: 35%;
+  --bg-aur2-a: 22%;
+  --bg-aur2b-a: 25%;
+  --bg-blend: screen;
+  --bg-aur-blend: normal;
+
+  --bg-b1: color-mix(in oklab, var(--wave-c1, var(--accent)) var(--bg-blob-a), transparent);
+  --bg-b2: color-mix(in oklab, var(--wave-c2, var(--accent-d)) var(--bg-blob-a), transparent);
+  --bg-b3: color-mix(in oklab, var(--wave-c3, var(--accent-l)) var(--bg-blob3-a), transparent);
+  --bg-b4: color-mix(in oklab, var(--wave-c4, var(--accent)) var(--bg-blob4-a), transparent);
+
   position: fixed;
   inset: 0;
-  overflow: hidden;
   pointer-events: none;
-  contain: strict;
   z-index: 0;
-}
-.wave-bg .blob {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(40px);
-  mix-blend-mode: screen;
-  opacity: 0.85;
-  will-change: transform;
-  transform: translate3d(0, 0, 0);
-}
-.wave-bg .b1 {
-  width: 420px; height: 420px;
-  top: -10%; left: -25%;
-  background: radial-gradient(circle, var(--wave-c1, var(--accent)) 0%, transparent 60%);
-  animation: p-wave1 18s ease-in-out infinite;
-}
-.wave-bg .b2 {
-  width: 380px; height: 380px;
-  top: 5%; right: -30%;
-  background: radial-gradient(circle, var(--wave-c2, var(--accent-d)) 0%, transparent 60%);
-  animation: p-wave2 22s ease-in-out infinite;
-}
-.wave-bg .b3 {
-  width: 360px; height: 360px;
-  top: 35%; left: -10%;
-  background: radial-gradient(circle, var(--wave-c3, var(--accent-l)) 0%, transparent 60%);
-  animation: p-wave3 26s ease-in-out infinite;
-  opacity: 0.5;
-}
-.wave-bg .b4 {
-  width: 320px; height: 320px;
-  top: 45%; right: -20%;
-  background: radial-gradient(circle, var(--wave-c4, var(--accent)) 0%, transparent 60%);
-  animation: p-wave4 30s ease-in-out infinite;
-  opacity: 0.45;
+  /* Top layer first. Blob centers hold their color for the first 12% so the
+     unblurred gradients don't read as hard hot-spots. */
+  background-image:
+    linear-gradient(75deg,
+      transparent 10%,
+      color-mix(in oklab, var(--wave-c3, #22d3ee) var(--bg-aur2-a), transparent) 30%,
+      transparent 55%,
+      color-mix(in oklab, var(--wave-c4, #ec4899) var(--bg-aur2b-a), transparent) 75%,
+      transparent 95%),
+    linear-gradient(115deg,
+      transparent 0%,
+      color-mix(in oklab, var(--accent) var(--bg-aur1-a), transparent) 35%,
+      transparent 50%,
+      color-mix(in oklab, var(--wave-c2, var(--accent-d)) var(--bg-aur1b-a), transparent) 70%,
+      transparent 90%),
+    radial-gradient(circle 175px at calc(120% - 160px) calc(45% + 160px), var(--bg-b4) 12%, transparent),
+    radial-gradient(circle 195px at calc(-10% + 180px) calc(35% + 180px), var(--bg-b3) 12%, transparent),
+    radial-gradient(circle 205px at calc(130% - 190px) calc(5% + 190px), var(--bg-b2) 12%, transparent),
+    radial-gradient(circle 220px at calc(-25% + 210px) calc(-10% + 210px), var(--bg-b1) 12%, transparent);
+  background-size: 150% 150%, 150% 150%, 100% 100%, 100% 100%, 100% 100%, 100% 100%;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-blend-mode:
+    var(--bg-aur-blend), var(--bg-aur-blend),
+    var(--bg-blend), var(--bg-blend), var(--bg-blend), var(--bg-blend);
 }
 
-/* Two slow-drifting aurora stripe sheets.
-   Animated via transform only (GPU-compositable) — no background-position
-   or blend-mode, so the layer paints once and just composites each frame. */
-.wave-bg .aurora {
-  position: absolute; inset: -25%;
-  background: linear-gradient(115deg,
-    transparent 0%,
-    color-mix(in oklab, var(--accent) 45%, transparent) 35%,
-    transparent 50%,
-    color-mix(in oklab, var(--wave-c2, var(--accent-d)) 50%, transparent) 70%,
-    transparent 90%);
-  filter: blur(40px);
-  opacity: 0.7;
-  will-change: transform;
-  transform: translate3d(0, 0, 0);
-  animation: p-aurora-pan 24s ease-in-out infinite;
-}
-.wave-bg .aurora-2 {
-  position: absolute; inset: -25%;
-  background: linear-gradient(75deg,
-    transparent 10%,
-    color-mix(in oklab, var(--wave-c3, #22d3ee) 40%, transparent) 30%,
-    transparent 55%,
-    color-mix(in oklab, var(--wave-c4, #ec4899) 45%, transparent) 75%,
-    transparent 95%);
-  filter: blur(45px);
-  opacity: 0.55;
-  will-change: transform;
-  transform: translate3d(0, 0, 0);
-  animation: p-aurora-pan-r 32s ease-in-out infinite;
-}
-
-/* Muscle-color variant: recolors blobs from --mc / --mc-l set on the wrapper */
-.wave-bg.wave-muscle .b1 { background: radial-gradient(circle, var(--mc, var(--accent)) 0%, transparent 60%); opacity: 0.9; }
-.wave-bg.wave-muscle .b2 { background: radial-gradient(circle, var(--mc, var(--accent-d)) 0%, transparent 60%); opacity: 0.7; }
-.wave-bg.wave-muscle .b3 { background: radial-gradient(circle, var(--mc-l, var(--accent-l)) 0%, transparent 60%); opacity: 0.55; }
-.wave-bg.wave-muscle .b4 { background: radial-gradient(circle, var(--mc, var(--accent)) 0%, transparent 60%); opacity: 0.4; }
-
-@keyframes p-wave1 {
-  0%,100% { transform: translate3d(0, 0, 0) scale(1); }
-  33%     { transform: translate3d(60px, 40px, 0) scale(1.15); }
-  66%     { transform: translate3d(-30px, 80px, 0) scale(0.9); }
-}
-@keyframes p-wave2 {
-  0%,100% { transform: translate3d(0, 0, 0) scale(1); }
-  33%     { transform: translate3d(-50px, 60px, 0) scale(1.1); }
-  66%     { transform: translate3d(40px, -40px, 0) scale(0.95); }
-}
-@keyframes p-wave3 {
-  0%,100% { transform: translate3d(0, 0, 0) scale(1); }
-  50%     { transform: translate3d(80px, -60px, 0) scale(1.2); }
-}
-@keyframes p-wave4 {
-  0%,100% { transform: translate3d(0, 0, 0) scale(1); }
-  50%     { transform: translate3d(-70px, 40px, 0) scale(1.1); }
-}
-@keyframes p-aurora-pan {
-  0%,100% { transform: translate3d(-6%, -3%, 0); }
-  50%     { transform: translate3d(6%, 3%, 0); }
-}
-@keyframes p-aurora-pan-r {
-  0%,100% { transform: translate3d(6%, 3%, 0); }
-  50%     { transform: translate3d(-6%, -3%, 0); }
-}
-
-/* Light-theme: tone down the waves so the bg stays light */
-[data-theme="white"] .wave-bg .blob,
-[data-theme="linen"] .wave-bg .blob { opacity: 0.35 !important; mix-blend-mode: multiply; }
-[data-theme="white"] .wave-bg .aurora,
-[data-theme="white"] .wave-bg .aurora-2,
-[data-theme="linen"] .wave-bg .aurora,
-[data-theme="linen"] .wave-bg .aurora-2 { opacity: 0.25 !important; mix-blend-mode: multiply; }
-
-/* ── Film grain (static — no per-frame paint cost) ──────────── */
-.grain {
-  position: absolute; inset: 0;
-  pointer-events: none;
-  opacity: 0.12;
-  mix-blend-mode: overlay;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.5 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
-  background-size: 200px 200px;
-}
-[data-theme="white"] .grain,
-[data-theme="linen"] .grain { mix-blend-mode: multiply; opacity: 0.06; }
-
-/* ── Motion modes (data-motion on <html>) ─────────────────── */
-
-[data-motion="still"] .wave-bg .b1,
-[data-motion="still"] .wave-bg .b2,
-[data-motion="still"] .wave-bg .b3,
-[data-motion="still"] .wave-bg .b4,
-[data-motion="still"] .wave-bg .aurora,
-[data-motion="still"] .wave-bg .aurora-2 {
-  animation: none !important;
-}
-[data-motion="still"] .grain { display: none; }
-
-[data-motion="pulse"] .wave-bg .aurora,
-[data-motion="pulse"] .wave-bg .aurora-2 { display: none; }
-[data-motion="pulse"] .wave-bg .b1 { animation: p-pulse-blob 6s ease-in-out infinite; }
-[data-motion="pulse"] .wave-bg .b2 { animation: p-pulse-blob 6s ease-in-out infinite 1.5s; }
-[data-motion="pulse"] .wave-bg .b3 { animation: p-pulse-blob 6s ease-in-out infinite 3s; }
-[data-motion="pulse"] .wave-bg .b4 { animation: p-pulse-blob 6s ease-in-out infinite 4.5s; }
-@keyframes p-pulse-blob {
-  0%,100% { transform: translate3d(0, 0, 0) scale(1); opacity: var(--blob-op, 0.85); }
-  50%     { transform: translate3d(0, 0, 0) scale(1.1); opacity: calc(var(--blob-op, 0.85) * 1.2); }
-}
-
-/* Respect OS reduced-motion: forced-still (blocking script also handles this). */
-@media (prefers-reduced-motion: reduce) {
-  .wave-bg .b1, .wave-bg .b2, .wave-bg .b3, .wave-bg .b4,
-  .wave-bg .aurora, .wave-bg .aurora-2 { animation: none !important; }
-  .grain { display: none !important; }
+/* Light themes: tone the layers down and multiply so the bg stays light. */
+[data-theme="light"] .app-bg,
+[data-theme="linen"] .app-bg {
+  --bg-blob-a: 35%;
+  --bg-blob3-a: 35%;
+  --bg-blob4-a: 35%;
+  --bg-aur1-a: 11%;
+  --bg-aur1b-a: 12%;
+  --bg-aur2-a: 10%;
+  --bg-aur2b-a: 11%;
+  --bg-blend: multiply;
+  --bg-aur-blend: multiply;
 }
 
 /* ── Per-muscle breathing keyframes for the Log button ────── */
@@ -920,18 +685,6 @@
 .p-num-input:focus-visible {
   box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.45);
   border-radius: 6px;
-}
-
-/* Pulsing accent dot used by MuscleAccent (variant="dot") */
-@keyframes p-pulse-dot {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50%      { opacity: 0.6; transform: scale(0.85); }
-}
-
-/* Subtle inner-glow breathe for the numerals card */
-@keyframes p-card-breathe {
-  0%,100% { box-shadow: 0 1px 0 rgba(255,255,255,0.04) inset, 0 0 0 0 rgba(var(--accent-rgb),0); }
-  50%     { box-shadow: 0 1px 0 rgba(255,255,255,0.04) inset, 0 0 32px 0 rgba(var(--accent-rgb),0.18); }
 }
 
 /* ── Gradient-clipped text utility (for the v5 hero titles) ── */

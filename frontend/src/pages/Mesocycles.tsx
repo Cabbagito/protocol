@@ -134,7 +134,6 @@ function Chrome({ title, sub, onBack }: { title: string; sub: string; onBack: ()
           borderRadius: 12,
           background: 'rgba(255,255,255,0.04)',
           border: '1px solid rgba(255,255,255,0.05)',
-          backdropFilter: 'blur(20px)',
           color: 'var(--text-2)',
           display: 'grid',
           placeItems: 'center',
@@ -216,8 +215,6 @@ function PrimaryActiveCard({ meso }: { meso: MesocycleListItem | Mesocycle }) {
         background:
           'linear-gradient(180deg, rgba(var(--accent-rgb),0.14), rgba(15,29,46,0.6))',
         border: '1px solid rgba(var(--accent-rgb),0.30)',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
       }}
     >
       <div
@@ -364,8 +361,6 @@ function SecondaryActiveCard({ meso }: { meso: MesocycleListItem }) {
         borderRadius: 14,
         background: 'rgba(15,29,46,0.5)',
         border: '1px solid rgba(255,255,255,0.05)',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
         textDecoration: 'none',
         color: 'inherit',
       }}
@@ -440,8 +435,6 @@ function ArchivedRow({ meso }: { meso: MesocycleListItem }) {
         gap: 12,
         background: 'rgba(15,29,46,0.4)',
         border: '1px solid rgba(255,255,255,0.05)',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
         textDecoration: 'none',
         color: 'inherit',
       }}

@@ -134,8 +134,6 @@ export default function Exercises() {
             borderRadius: 14,
             background: 'rgba(15,29,46,0.5)',
             border: '1px solid rgba(255,255,255,0.05)',
-            backdropFilter: 'blur(20px)',
-            WebkitBackdropFilter: 'blur(20px)',
           }}
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-m)" strokeWidth="2" strokeLinecap="round">
@@ -190,8 +188,6 @@ export default function Exercises() {
             borderRadius: 14,
             background: 'rgba(15,29,46,0.4)',
             border: '1px solid rgba(255,255,255,0.05)',
-            backdropFilter: 'blur(20px)',
-            WebkitBackdropFilter: 'blur(20px)',
             display: 'flex',
             flexDirection: 'column',
             gap: 6,
@@ -411,8 +407,6 @@ function ExerciseRow({ exercise, onClick }: { exercise: Exercise; onClick: () =>
         gap: 12,
         background: 'rgba(15,29,46,0.4)',
         border: '1px solid rgba(255,255,255,0.05)',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
         cursor: 'pointer',
         textAlign: 'left',
         width: '100%',
@@ -482,7 +476,6 @@ function Chrome({ title, sub, onBack }: { title: string; sub: string; onBack: ()
           borderRadius: 12,
           background: 'rgba(255,255,255,0.04)',
           border: '1px solid rgba(255,255,255,0.05)',
-          backdropFilter: 'blur(20px)',
           color: 'var(--text-2)',
           display: 'grid',
           placeItems: 'center',

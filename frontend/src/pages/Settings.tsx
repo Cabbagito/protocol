@@ -12,15 +12,6 @@ import {
   useUpdateDailyTargets,
 } from '../api/hooks'
 import { clearToken, getUserInfo } from '../lib/auth'
-import {
-  applyMotion, getSavedMotion, MOTION_IDS, type MotionId,
-} from '../lib/motion'
-
-const MOTION_LABELS: Record<MotionId, string> = {
-  aurora: 'Aurora · full motion',
-  pulse: 'Pulse · subtle motion',
-  still: 'Still · no motion',
-}
 
 export default function Settings() {
   const navigate = useNavigate()
@@ -31,9 +22,7 @@ export default function Settings() {
   const { data: exercises = [] } = useExercises()
   const { data: splits = [] } = useSplits()
 
-  const [motion, setMotion] = useState<MotionId>(() => getSavedMotion())
   const [themeOpen, setThemeOpen] = useState(false)
-  const [motionOpen, setMotionOpen] = useState(false)
 
   // Stats: total workouts completed across all mesos + days since the
   // earliest mesocycle started.
@@ -55,11 +44,6 @@ export default function Settings() {
 
   const activeMesoCount = mesocycles.filter(m => m.is_active).length
   const archivedMesoCount = mesocycles.length - activeMesoCount
-
-  function handleMotionChange(next: MotionId) {
-    setMotion(next)
-    applyMotion(next)
-  }
 
   function handleLogout() {
     clearToken()
@@ -163,55 +147,6 @@ export default function Settings() {
               <ThemePicker />
             </div>
           )}
-          <Divider />
-          <button
-            type="button"
-            onClick={() => setMotionOpen(o => !o)}
-            style={rowButtonStyle}
-          >
-            <span style={rowLabelStyle}>Motion</span>
-            <span style={rowValueStyle}>{MOTION_LABELS[motion]}</span>
-            <Chevron rotated={motionOpen} />
-          </button>
-          {motionOpen && (
-            <div style={{ padding: '0 16px 16px', display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {MOTION_IDS.map((id) => {
-                const active = id === motion
-                return (
-                  <button
-                    key={id}
-                    type="button"
-                    onClick={() => handleMotionChange(id)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 10,
-                      padding: '10px 12px',
-                      borderRadius: 10,
-                      background: active ? 'rgba(var(--accent-rgb),0.12)' : 'rgba(255,255,255,0.03)',
-                      border: `1px solid ${active ? 'rgba(var(--accent-rgb),0.35)' : 'rgba(255,255,255,0.06)'}`,
-                      color: 'var(--text-1)',
-                      fontSize: 13,
-                      cursor: 'pointer',
-                      textAlign: 'left',
-                    }}
-                  >
-                    <span
-                      aria-hidden
-                      style={{
-                        width: 10,
-                        height: 10,
-                        borderRadius: 999,
-                        background: active ? 'var(--accent)' : 'transparent',
-                        border: `1.5px solid ${active ? 'var(--accent)' : 'rgba(255,255,255,0.2)'}`,
-                      }}
-                    />
-                    {MOTION_LABELS[id]}
-                  </button>
-                )
-              })}
-            </div>
-          )}
         </SectionCard>
 
         {/* Account */}
@@ -285,8 +220,6 @@ function SectionCard({ label, children }: { label: string; children: React.React
           overflow: 'hidden',
           border: '1px solid rgba(255,255,255,0.05)',
           background: 'color-mix(in oklab, var(--card) 65%, transparent)',
-          backdropFilter: 'blur(20px)',
-          WebkitBackdropFilter: 'blur(20px)',
         }}
       >
         {children}

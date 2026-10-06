@@ -85,8 +85,6 @@ export default function Progress() {
             borderRadius: 12,
             background: 'rgba(15,29,46,0.5)',
             border: '1px solid rgba(255,255,255,0.05)',
-            backdropFilter: 'blur(20px)',
-            WebkitBackdropFilter: 'blur(20px)',
           }}
         >
           {PERIODS.map((p) => {
@@ -167,8 +165,6 @@ function SelectedHero({ exercise, period }: { exercise: Exercise; period: Period
           overflow: 'hidden',
           background: `linear-gradient(180deg, color-mix(in oklab, ${color.primary} 12%, rgba(15,29,46,0.6)), rgba(15,29,46,0.6))`,
           border: `1px solid color-mix(in oklab, ${color.primary} 28%, rgba(255,255,255,0.05))`,
-          backdropFilter: 'blur(24px)',
-          WebkitBackdropFilter: 'blur(24px)',
         }}
       >
         <div
@@ -335,8 +331,6 @@ function StatCard({
         borderRadius: 13,
         background: 'rgba(15,29,46,0.45)',
         border: '1px solid rgba(255,255,255,0.05)',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
       }}
     >
       <div
@@ -498,8 +492,6 @@ function WeeklyVolume({
           borderRadius: 14,
           background: 'rgba(15,29,46,0.4)',
           border: '1px solid rgba(255,255,255,0.05)',
-          backdropFilter: 'blur(20px)',
-          WebkitBackdropFilter: 'blur(20px)',
         }}
       >
         <div
@@ -614,8 +606,6 @@ function OtherRow({
         alignItems: 'center',
         background: 'rgba(15,29,46,0.45)',
         border: '1px solid rgba(255,255,255,0.05)',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
         cursor: 'pointer',
         textAlign: 'left',
         color: 'inherit',
@@ -757,7 +747,6 @@ function Chrome({ title, sub, onBack }: { title: string; sub: string; onBack: ()
           borderRadius: 12,
           background: 'rgba(255,255,255,0.04)',
           border: '1px solid rgba(255,255,255,0.05)',
-          backdropFilter: 'blur(20px)',
           color: 'var(--text-2)',
           display: 'grid',
           placeItems: 'center',
