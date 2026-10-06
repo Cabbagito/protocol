@@ -26,6 +26,7 @@ services:
     ports:
       - "8000:8000"
     environment:
+      APP_ENV: dev  # allows the placeholder SECRET_KEY below
       DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/protocol
       APP_PASSWORD: devpassword
       SECRET_KEY: dev-secret-key-change-in-production

@@ -63,11 +63,11 @@ bun run lint
 
 ## Environment Variables
 
-**Backend:** `DATABASE_URL`, `APP_PASSWORD` (bootstrap admin password), `ADMIN_NAME` (admin user display name, default "Admin"), `SECRET_KEY`, `CORS_ORIGINS`, `ANTHROPIC_API_KEY` (future)
+**Backend:** `DATABASE_URL`, `APP_ENV` (`production` default; `dev` allows placeholder secrets), `APP_PASSWORD` (bootstrap admin password, only used while no user exists; default empty = no bootstrap), `ADMIN_NAME` (admin user display name, default "Admin"), `SECRET_KEY` (startup refuses an empty or placeholder key unless `APP_ENV=dev`), `CORS_ORIGINS`, `ANTHROPIC_API_KEY` (future)
 
 **Production (`.env` file):** `DOMAIN` (Caddy auto-SSL), `DB_PASSWORD`, `APP_PASSWORD`, `SECRET_KEY`, `ADMIN_NAME`. See `.env.prod.example`.
 
-**Docker compose dev:** Hardcoded dev values — `APP_PASSWORD=devpassword`, `ADMIN_NAME=Admin`, local PostgreSQL.
+**Docker compose dev:** Hardcoded dev values — `APP_ENV=dev`, `APP_PASSWORD=devpassword`, `ADMIN_NAME=Admin`, local PostgreSQL.
 
 ## Git Conventions
 

@@ -164,9 +164,11 @@ git pull && docker compose -f docker-compose.prod.yml up -d --build
 |----------|---------|
 | `DOMAIN` | Your domain (Caddy auto-SSL) |
 | `DB_PASSWORD` | PostgreSQL password |
-| `APP_PASSWORD` | Bootstrap admin user password |
-| `SECRET_KEY` | JWT signing key |
+| `APP_PASSWORD` | Bootstrap admin user password (only used while no user exists) |
+| `SECRET_KEY` | JWT signing key — required; the backend refuses to start if it is empty or a placeholder from this repo (`openssl rand -hex 32`) |
 | `ADMIN_NAME` | Admin display name (default: "Admin") |
+
+`docker-compose.prod.yml` refuses to start without `SECRET_KEY` and `DB_PASSWORD`. Locally, `APP_ENV=dev` (set in `docker-compose.yml` and `.env.example`) allows the placeholder secrets.
 
 ## Design System
 
