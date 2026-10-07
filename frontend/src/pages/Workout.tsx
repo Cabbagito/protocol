@@ -5,7 +5,7 @@ import { getCurrentPosition } from '../lib/mesoUtils'
 import { WorkoutSession } from './workout/WorkoutSession'
 
 /**
- * /workout/:mesocycleId[?week=&session=]
+ * /workout/:mesocycleId[?week=&session=[&edit=1]]
  *
  * Without a position, resolves "where we left off" on the client (so it
  * works offline, including sets not yet synced) and redirects. The session
@@ -17,6 +17,7 @@ export default function Workout() {
   const [searchParams] = useSearchParams()
   const weekParam = searchParams.get('week')
   const sessionParam = searchParams.get('session')
+  const editing = searchParams.get('edit') === '1'
   const { data: mesocycle, isLoading } = useMesocycle(mesocycleId)
 
   if (isLoading) return <PageLoader className="min-h-[60vh]" />
@@ -54,6 +55,7 @@ export default function Workout() {
       mesocycle={mesocycle}
       weekIndex={weekIndex}
       sessionIndex={sessionIndex}
+      editing={editing}
     />
   )
 }

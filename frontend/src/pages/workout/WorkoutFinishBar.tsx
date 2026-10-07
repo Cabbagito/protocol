@@ -1,17 +1,18 @@
 import type { SessionExercise } from '../../lib/workoutSession'
 
-/* Sticky finish bar — shown when every set is logged or skipped. */
+/* Sticky finish bar — shown when every set is logged or skipped, and
+   throughout an edit. */
 
 interface WorkoutFinishBarProps {
   exercises: SessionExercise[]
-  isLastSession: boolean
+  label: string
+  eyebrow: string
   busy: boolean
   onFinish: () => void
-  onReviewSets: () => void
 }
 
 export function WorkoutFinishBar({
-  exercises, isLastSession, busy, onFinish, onReviewSets,
+  exercises, label, eyebrow, busy, onFinish,
 }: WorkoutFinishBarProps) {
   const totalSets = exercises.reduce((n, ex) => n + ex.sets.filter(s => s.logged).length, 0)
   const exerciseCount = exercises.filter(ex => !ex.skipped).length
@@ -48,7 +49,7 @@ export function WorkoutFinishBar({
             fontWeight: 600, textTransform: 'uppercase',
           }}
         >
-          Session complete
+          {eyebrow}
         </span>
         <span
           style={{
@@ -77,19 +78,7 @@ export function WorkoutFinishBar({
             '0 14px 36px -10px rgba(var(--accent-rgb),0.55), inset 0 1px 0 rgba(255,255,255,0.18)',
         }}
       >
-        {isLastSession ? 'FINISH MESOCYCLE' : 'FINISH WORKOUT'}
-      </button>
-      <button
-        type="button"
-        onClick={onReviewSets}
-        style={{
-          marginTop: 8, width: '100%', height: 44, borderRadius: 12,
-          background: 'transparent', border: 'none',
-          color: 'var(--text-m)', fontSize: 12, letterSpacing: '0.05em',
-          cursor: 'pointer',
-        }}
-      >
-        Review sets
+        {label}
       </button>
     </div>
   )

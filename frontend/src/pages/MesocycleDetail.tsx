@@ -1,4 +1,4 @@
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 import PageLoader from '../components/PageLoader'
 import { useToast } from '../components/Toast'
 import {
@@ -9,6 +9,7 @@ import {
 import { countTotalWorkouts, findNextOpenSession, getCurrentPosition, isSessionDone, isSessionSkipped } from '../lib/mesoUtils'
 import { getVolumeByMuscleGroup } from '../lib/mesoAnalysis'
 import { getMuscleColor } from '../lib/muscleColors'
+import { useBack } from '../lib/navigation'
 import type { Mesocycle, MesoSession } from '../types'
 
 const MONO = 'JetBrains Mono, ui-monospace, monospace'
@@ -17,7 +18,7 @@ type CellState = 'done' | 'current' | 'queued' | 'skipped'
 
 export default function MesocycleDetail() {
   const { id } = useParams<{ id: string }>()
-  const navigate = useNavigate()
+  const back = useBack('/mesocycles')
   const toast = useToast()
   const { data: mesocycle, isLoading } = useMesocycle(id!)
   const updateMeso = useUpdateMesocycle(id!)
@@ -79,7 +80,7 @@ export default function MesocycleDetail() {
     if (!confirm('Delete this mesocycle and all its workout logs?')) return
     try {
       await deleteMeso.mutateAsync(mesocycle.id)
-      navigate('/mesocycles')
+      back()
     } catch {
       toast.showError('Failed to delete mesocycle')
     }
@@ -96,7 +97,7 @@ export default function MesocycleDetail() {
       }}
     >
       <div style={{ position: 'relative', zIndex: 1, padding: '12px 22px 0' }}>
-        <Chrome title={mesocycle.name} sub={eyebrow} onBack={() => navigate('/mesocycles')} />
+        <Chrome title={mesocycle.name} sub={eyebrow} onBack={back} />
 
         {/* Hero progress */}
         <div style={{ textAlign: 'center', padding: '4px 0 22px' }}>
@@ -229,9 +230,12 @@ export default function MesocycleDetail() {
               </div>
               {mesocycle.structure.weeks.map((_, wi) => {
                 const st = grid[wi]?.[ri] ?? 'queued'
-                // Every session is reachable: later sessions in the current
-                // week can be logged out of order; later weeks open as a preview.
-                const to = `/workout/${mesocycle.id}?week=${wi}&session=${ri}`
+                // Done sessions open their review; every other session opens
+                // the workout (later sessions in the current week can be logged
+                // out of order; later weeks open as a preview).
+                const to = st === 'done'
+                  ? `/workouts/${mesocycle.id}/${wi}/${ri}`
+                  : `/workout/${mesocycle.id}?week=${wi}&session=${ri}`
                 return <GridCell key={wi} state={st} to={to} />
               })}
             </div>

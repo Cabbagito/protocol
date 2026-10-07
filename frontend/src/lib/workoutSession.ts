@@ -43,6 +43,11 @@ export interface SessionDraft {
   updatedAt: number
   /** Set when the server rejected the snapshot (not retried until it changes). */
   error: string | null
+  /**
+   * Every unsynced change came from correcting a past session: set-count
+   * changes then stay in this session instead of resizing later ones.
+   */
+  editOnly?: boolean
 }
 
 export function isDraftDirty(d: SessionDraft): boolean {
@@ -81,6 +86,7 @@ export function snapshotPayload(d: SessionDraft, today: string) {
     week_index: d.weekIndex,
     session_index: d.sessionIndex,
     logged_on: d.loggedOn ?? today,
+    apply_to_future: !d.editOnly,
     exercises: d.exercises.map(e => ({
       exercise_id: e.exercise_id,
       skipped: e.skipped,

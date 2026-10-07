@@ -3,12 +3,15 @@ import { useLayoutEffect, useMemo } from 'react'
 import { HomeIcon, DumbbellIcon, AppleIcon } from './Icons'
 import { useActiveMesocycle } from '../api/hooks'
 import { getCurrentPosition } from '../lib/mesoUtils'
+import { recordLocation } from '../lib/navigation'
 import { useKeyboardVisible } from '../lib/useKeyboardVisible'
 
-const navItems = [
-  { path: '/', label: 'Home', icon: HomeIcon },
-  { path: '/workout', label: 'Workout', icon: DumbbellIcon },
-  { path: '/diet', label: 'Diet', icon: AppleIcon },
+type Section = 'home' | 'workout' | 'diet'
+
+const navItems: { section: Section; label: string; icon: typeof HomeIcon }[] = [
+  { section: 'home', label: 'Home', icon: HomeIcon },
+  { section: 'workout', label: 'Workout', icon: DumbbellIcon },
+  { section: 'diet', label: 'Diet', icon: AppleIcon },
 ]
 
 /**
@@ -17,15 +20,27 @@ const navItems = [
  * See the layout contract at the top of src/index.css.
  */
 export default function Layout({ children }: { children: React.ReactNode }) {
-  const { pathname } = useLocation()
+  const { pathname, key } = useLocation()
   const keyboardOpen = useKeyboardVisible()
-  const workoutHref = useWorkoutHref()
+  const { activeMesoPath, workoutHref } = useWorkoutTab()
+  const section = sectionOf(pathname, activeMesoPath)
 
   // The document is the scroll container: open every route at the top
   // instead of at the previous page's offset.
   useLayoutEffect(() => {
     window.scrollTo(0, 0)
   }, [pathname])
+
+  // Lets back buttons tell whether their parent page is right below in history.
+  useLayoutEffect(() => {
+    recordLocation(pathname)
+  }, [pathname, key])
+
+  const hrefs: Record<Section, string> = {
+    home: '/',
+    workout: workoutTabTarget(pathname, workoutHref),
+    diet: '/diet',
+  }
 
   return (
     <div className="app-shell">
@@ -63,14 +78,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           }}
         >
           {navItems.map((item) => {
-            const isActive =
-              item.path === '/'
-                ? pathname === '/'
-                : pathname.startsWith(item.path)
+            const isActive = item.section === section
             return (
               <Link
-                key={item.path}
-                to={item.path === '/workout' ? workoutHref : item.path}
+                key={item.section}
+                to={hrefs[item.section]}
                 aria-label={item.label}
                 aria-current={isActive ? 'page' : undefined}
                 style={{
@@ -106,16 +118,46 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 }
 
 /**
+ * The Workout tab covers the workout screens, workout reviews and the active
+ * mesocycle's page; Home covers Settings and everything under it.
+ */
+function sectionOf(pathname: string, activeMesoPath: string | null): Section {
+  if (pathname.startsWith('/diet')) return 'diet'
+  if (
+    pathname === '/workout' ||
+    pathname.startsWith('/workout/') ||
+    pathname.startsWith('/workouts/') ||
+    pathname === activeMesoPath
+  ) {
+    return 'workout'
+  }
+  return 'home'
+}
+
+/**
+ * Tapping Workout on a workout screen opens its mesocycle; tapping it on the
+ * active mesocycle's page goes back to the current workout.
+ */
+function workoutTabTarget(pathname: string, workoutHref: string): string {
+  const onWorkout = pathname.match(/^\/workout\/([^/]+)$/)
+  if (onWorkout) return `/mesocycles/${onWorkout[1]}`
+  return workoutHref
+}
+
+/**
  * The Workout tab opens the current session directly instead of hopping
  * through /workout → /workout/:id → ?week=&session= redirects.
  */
-function useWorkoutHref(): string {
+function useWorkoutTab(): { activeMesoPath: string | null; workoutHref: string } {
   const { data: mesocycle } = useActiveMesocycle()
   return useMemo(() => {
-    if (!mesocycle) return '/workout'
+    if (!mesocycle) return { activeMesoPath: null, workoutHref: '/workout' }
     const pos = getCurrentPosition(mesocycle.structure)
-    return pos
-      ? `/workout/${mesocycle.id}?week=${pos.weekIndex}&session=${pos.sessionIndex}`
-      : '/workout'
+    return {
+      activeMesoPath: `/mesocycles/${mesocycle.id}`,
+      workoutHref: pos
+        ? `/workout/${mesocycle.id}?week=${pos.weekIndex}&session=${pos.sessionIndex}`
+        : '/workout',
+    }
   }, [mesocycle])
 }

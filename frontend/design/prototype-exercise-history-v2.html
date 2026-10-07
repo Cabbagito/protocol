@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Exercise History — Directions</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Fraunces:ital,opsz,wght@0,9..144,400;1,9..144,400;1,9..144,500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --deep:#070d15; --card:#0f1d2e; --panel:#132438;
+    --text-1:#e2e8f0; --text-2:#cbd5e1; --text-m:#475569;
+    --label:color-mix(in oklab,var(--text-2) 55%,var(--text-m));
+    --ghost:color-mix(in oklab,var(--text-2) 45%,transparent);
+    --accent-l:#38bdf8; --accent:#0ea5e9; --accent-d:#0284c7; --accent-rgb:14,165,233;
+    --wave-c1:#0ea5e9; --wave-c2:#8b5cf6; --wave-c3:#22d3ee; --wave-c4:#ec4899;
+    --mc:#14b8a6; --mc-l:#2dd4bf; /* back */
+    --mono:'JetBrains Mono',ui-monospace,monospace;
+    --serif:'Fraunces',Georgia,serif;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:#04080d; color:var(--text-1); font-family:Inter,system-ui,sans-serif; -webkit-font-smoothing:antialiased; }
+  button { font:inherit; color:inherit; background:none; border:none; cursor:pointer; }
+
+  .page-head { max-width:1240px; margin:0 auto; padding:40px 16px 8px; }
+  .page-head h1 { font-family:var(--serif); font-style:italic; font-weight:400; font-size:30px; }
+  .page-head p { color:var(--text-2); font-size:14px; line-height:1.55; margin-top:8px; max-width:780px; }
+  .page-head .src { font-family:var(--mono); font-size:10px; letter-spacing:.18em; color:var(--label); margin-top:12px; text-transform:uppercase; }
+
+  .frames { display:flex; flex-wrap:wrap; justify-content:center; gap:36px; padding:28px 16px 40px; max-width:1240px; margin:0 auto; }
+  .col { width:375px; max-width:100%; }
+  .col-label { padding:0 4px 14px; }
+  .col-label .k { font-family:var(--mono); font-size:11px; letter-spacing:.2em; color:var(--accent-l); font-weight:600; }
+  .col-label .k .rec { color:var(--label); margin-left:8px; }
+  .col-label .d { color:var(--text-2); font-size:13px; line-height:1.5; margin-top:6px; min-height:58px; }
+
+  .phone { position:relative; width:100%; height:812px; border-radius:44px; overflow:hidden; background:var(--deep);
+           border:1px solid rgba(255,255,255,0.08); box-shadow:0 40px 80px -30px rgba(0,0,0,0.8); isolation:isolate; }
+  @media (max-width:420px){ .phone { border-radius:24px; } }
+  .app-bg { position:absolute; inset:0; z-index:-1; pointer-events:none;
+    background-image:
+      radial-gradient(circle 220px at 30% 20%, color-mix(in oklab,var(--mc) 55%,transparent) 12%, transparent),
+      radial-gradient(circle 205px at 85% 35%, color-mix(in oklab,var(--wave-c2) 55%,transparent) 12%, transparent),
+      radial-gradient(circle 195px at 20% 70%, color-mix(in oklab,var(--wave-c3) 35%,transparent) 12%, transparent); }
+  /* The workout behind the sheet */
+  .behind { padding:58px 20px 0; text-align:center; filter:blur(1px); opacity:.5; }
+  .behind .t { font-family:var(--serif); font-style:italic; font-size:18px; }
+  .behind .h { font-size:34px; font-weight:700; margin-top:40px; letter-spacing:-.02em; }
+  .scrim { position:absolute; inset:0; background:rgba(2,6,12,0.55); }
+
+  .sheet { position:absolute; left:0; right:0; bottom:0; top:64px; display:flex; flex-direction:column;
+           border-radius:26px 26px 0 0; background:color-mix(in oklab,var(--card) 94%,transparent);
+           border-top:1px solid rgba(255,255,255,0.08); box-shadow:0 -20px 60px -20px rgba(0,0,0,0.8); }
+  .grab { width:38px; height:4px; border-radius:2px; background:rgba(255,255,255,0.16); margin:8px auto 0; flex:none; }
+  .sh-head { padding:12px 20px 0; display:flex; justify-content:space-between; align-items:flex-start; flex:none; }
+  .mg { font-family:var(--mono); font-size:9px; font-weight:600; letter-spacing:.16em; text-transform:uppercase; color:var(--mc-l); display:flex; align-items:center; gap:6px; }
+  .mg i { width:7px; height:7px; border-radius:50%; background:var(--mc); box-shadow:0 0 10px var(--mc); }
+  .sh-title { font-size:20px; font-weight:600; letter-spacing:-.015em; margin-top:4px; }
+  .x { width:32px; height:32px; border-radius:10px; background:rgba(255,255,255,0.05); display:grid; place-items:center; color:var(--text-2); }
+  .scroll { flex:1; overflow-y:auto; padding:0 20px 28px; scrollbar-width:none; }
+  .scroll::-webkit-scrollbar { display:none; }
+
+  .eyebrow { font-family:var(--mono); font-size:9px; letter-spacing:.18em; color:var(--label); font-weight:600; text-transform:uppercase; }
+  .num { font-family:var(--mono); font-weight:600; letter-spacing:-.02em; }
+  .up { color:var(--accent-l); }
+  .times { color:var(--text-m); font-weight:400; margin:0 1px; }
+  .glass { background:rgba(15,29,46,0.55); border:1px solid rgba(255,255,255,0.05); border-radius:16px; }
+
+  /* stats strip */
+  .stats { display:grid; grid-template-columns:repeat(3,1fr); margin-top:14px; padding:12px 0; }
+  .stats > div { text-align:center; }
+  .stats > div + div { border-left:1px solid rgba(255,255,255,0.06); }
+  .stats .v { font-family:var(--mono); font-size:15px; font-weight:700; letter-spacing:-.02em; margin-top:5px; }
+
+  /* group header */
+  .ghead { display:flex; justify-content:space-between; align-items:baseline; margin:22px 0 8px; }
+  .ghead .n { font-family:var(--serif); font-style:italic; font-size:15px; color:var(--text-1); }
+  .ghead .r { font-family:var(--mono); font-size:9px; letter-spacing:.14em; color:var(--label); }
+  .tag { font-family:var(--mono); font-size:8.5px; letter-spacing:.14em; color:var(--accent-l); border:1px solid rgba(var(--accent-rgb),.3);
+         background:rgba(var(--accent-rgb),.1); border-radius:6px; padding:2px 5px; margin-left:6px; font-style:normal; vertical-align:2px; }
+
+  /* A rows */
+  .arow { display:grid; grid-template-columns:62px 1fr 38px; align-items:center; gap:10px; padding:9px 0; border-top:1px solid rgba(255,255,255,0.045); }
+  .arow .when b { display:block; font-family:var(--mono); font-size:10px; font-weight:600; letter-spacing:.08em; color:var(--text-2); }
+  .arow .when span { display:block; font-family:var(--mono); font-size:9px; letter-spacing:.1em; color:var(--label); margin-top:2px; }
+  .chips { display:flex; gap:5px; flex-wrap:wrap; }
+  .chip { font-family:var(--mono); font-size:12.5px; font-weight:600; letter-spacing:-.02em; padding:4px 6px; border-radius:7px;
+          background:rgba(255,255,255,0.035); border:1px solid rgba(255,255,255,0.06); }
+  .chip.best { border-color:color-mix(in oklab,var(--mc) 45%,transparent); background:color-mix(in oklab,var(--mc) 9%,transparent); }
+  .delta { font-family:var(--mono); font-size:10px; font-weight:600; text-align:right; letter-spacing:.04em; }
+
+  /* B table */
+  .tbl { width:100%; border-collapse:separate; border-spacing:0; table-layout:fixed; margin-top:6px; }
+  .tbl th { position:sticky; top:0; z-index:1; background:color-mix(in oklab,var(--card) 96%,transparent);
+            font-family:var(--mono); font-size:8.5px; letter-spacing:.16em; color:var(--label); font-weight:600; padding:10px 0 8px; text-align:center; }
+  .tbl th:first-child { text-align:left; width:66px; }
+  .tbl td { font-family:var(--mono); font-size:12.5px; font-weight:600; letter-spacing:-.02em; text-align:center; padding:8px 0; border-top:1px solid rgba(255,255,255,0.045); }
+  .tbl td.dt { text-align:left; font-weight:500; }
+  .tbl td.dt b { display:block; font-size:10px; letter-spacing:.06em; color:var(--text-2); font-weight:600; }
+  .tbl td.dt span { display:block; font-size:8.5px; letter-spacing:.1em; color:var(--label); margin-top:2px; }
+  .tbl td.empty { color:rgba(255,255,255,0.12); font-weight:400; }
+  .tbl td.best span.cell { border-bottom:1.5px solid var(--mc-l); padding-bottom:1px; }
+  .tbl tr.sep td { border-top:none; padding:18px 0 4px; text-align:left; }
+  .tbl tr.sep td .n { font-family:var(--serif); font-style:italic; font-size:14px; font-weight:400; letter-spacing:0; color:var(--text-1); }
+  .tbl tr.sep td .r { float:right; font-family:var(--mono); font-size:9px; letter-spacing:.14em; font-weight:500; color:var(--label); padding-top:4px; }
+
+  /* C chart */
+  .chart { margin-top:14px; padding:14px 12px 10px; }
+  .bars { display:flex; align-items:flex-end; gap:3px; height:96px; }
+  .bars button { flex:1; height:100%; display:flex; align-items:flex-end; padding:0; border-radius:4px; }
+  .bars button i { display:block; width:100%; border-radius:4px 4px 2px 2px; background:linear-gradient(180deg,color-mix(in oklab,var(--mc) 55%,transparent),color-mix(in oklab,var(--mc) 18%,transparent)); }
+  .bars button.on i { background:linear-gradient(180deg,var(--mc-l),var(--mc)); box-shadow:0 0 12px color-mix(in oklab,var(--mc) 70%,transparent); }
+  .blabels { display:flex; gap:3px; margin-top:7px; }
+  .blabels span { font-family:var(--mono); font-size:8px; letter-spacing:.1em; color:var(--label); white-space:nowrap; overflow:hidden; border-left:1px solid rgba(255,255,255,0.1); padding-left:4px; }
+  .sel { margin-top:12px; padding:14px; }
+  .sel .top { display:flex; justify-content:space-between; align-items:baseline; }
+  .sel .when { font-family:var(--mono); font-size:10px; letter-spacing:.14em; color:var(--text-2); font-weight:600; }
+  .tiles { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-top:10px; }
+  .tile { border-radius:10px; padding:8px 4px 7px; text-align:center; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); }
+  .tile.best { border-color:color-mix(in oklab,var(--mc) 45%,transparent); background:color-mix(in oklab,var(--mc) 9%,transparent); }
+  .tile .now { font-family:var(--mono); font-size:14px; font-weight:600; letter-spacing:-.02em; }
+  .tile .was { font-family:var(--mono); font-size:10px; color:var(--ghost); margin-top:3px; }
+  .nav2 { display:flex; gap:6px; }
+  .nav2 button { width:28px; height:28px; border-radius:9px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.06); display:grid; place-items:center; color:var(--text-2); }
+  .nav2 button:disabled { opacity:.3; cursor:default; }
+  button:focus-visible { outline:2px solid var(--accent-l); outline-offset:2px; }
+
+  .more { margin-top:14px; width:100%; height:42px; border-radius:12px; border:1px dashed rgba(255,255,255,0.12); color:var(--text-2); font-size:12.5px; }
+
+  .notes { max-width:1240px; margin:0 auto; padding:0 16px 64px; display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:16px; }
+  .note { padding:18px; border-radius:18px; background:rgba(15,29,46,0.5); border:1px solid rgba(255,255,255,0.05); }
+  .note h3 { font-family:var(--mono); font-size:10px; letter-spacing:.2em; color:var(--accent-l); font-weight:600; text-transform:uppercase; }
+  .note p { color:var(--text-2); font-size:13px; line-height:1.55; margin-top:8px; }
+</style>
+</head>
+<body>
+
+<header class="page-head">
+  <h1>Exercise history</h1>
+  <p>The sheet that opens when you tap <i>Last</i> on the workout screen. All three open as a bottom sheet instead of a centred pop-up, group sessions by mesocycle, use the full width, and mark in blue what went up since the session before. Each phone scrolls.</p>
+  <div class="src">Real history · Lat Pulldown · 80 sessions, 28 shown</div>
+</header>
+
+<main class="frames">
+  <section class="col">
+    <div class="col-label">
+      <div class="k">A · SESSIONS</div>
+      <div class="d">One line per session: when, the sets as chips, and the change since the session before. Closest to today, just tidier and much shorter.</div>
+    </div>
+    <div class="phone" id="A"></div>
+  </section>
+  <section class="col">
+    <div class="col-label">
+      <div class="k">B · SET TABLE <span class="rec">RECOMMENDED</span></div>
+      <div class="d">Set 1 always sits under set 1, so you read down a column to see how each set has moved. Built for the question you have mid-workout.</div>
+    </div>
+    <div class="phone" id="B"></div>
+  </section>
+  <section class="col">
+    <div class="col-label">
+      <div class="k">C · CHART</div>
+      <div class="d">Best set per session as bars; tap one to see that session against the one before, in the review page’s tiles. Tap a bar to try it.</div>
+    </div>
+    <div class="phone" id="C"></div>
+  </section>
+</main>
+
+<section class="notes">
+  <div class="note">
+    <h3>Shared by all three</h3>
+    <p>Bottom sheet with the workout dimmed behind it; closes by tapping outside or the ×. Stats across the top: last time, best set ever (by est. 1RM), sessions logged. Shows the most recent blocks first, then <i>Show older</i>.</p>
+  </div>
+  <div class="note">
+    <h3>What this data says</h3>
+    <p>Lat Pulldown has been at 70 kg since November, so all the progress is in reps. B makes that visible down the Set 1 column; A and C show it as small blue numbers.</p>
+  </div>
+  <div class="note">
+    <h3>Junk sessions</h3>
+    <p>The dev data has a 3.75 kg × 0 test session in “sadfasdf”. Sets with 0 reps can’t be logged anymore, so it’s left out here; the real sheet would still show it.</p>
+  </div>
+</section>
+
+<script>
+const RAW = [
+  ['Big Boi','2026-02-17',4,4,'70x11 70x10 70x8'], ['Big Boi','2026-02-12',4,1,'70x12 70x10 70x8'],
+  ['Big Boi','2026-02-05',3,4,'70x10 70x9 70x9'], ['Big Boi','2026-02-02',3,1,'70x11 70x9 70x7'],
+  ['Big Boi','2026-01-29',2,4,'70x9 70x8 70x8'], ['Big Boi','2026-01-26',2,1,'70x10 70x9 70x7'],
+  ['Big Boi','2026-01-23',1,4,'70x8 70x7 70x7'], ['Big Boi','2026-01-20',1,1,'70x9 70x8'],
+  ['Fat Fuck','2026-01-15',4,4,'70x10 70x8'], ['Fat Fuck','2026-01-12',4,1,'70x11 70x9'],
+  ['Fat Fuck','2025-12-29',3,1,'70x12 70x8'], ['Fat Fuck','2025-12-25',2,4,'70x10 70x8'],
+  ['Fat Fuck','2025-12-22',2,1,'70x11 70x8'], ['Fat Fuck','2025-12-18',1,4,'70x10 70x8'],
+  ['Fat Fuck','2025-12-15',1,1,'70x11 70x6'],
+  ['End of this road','2025-12-12',4,1,'65x7'], ['End of this road','2025-12-08',3,4,'70x11 70x9 70x7'],
+  ['End of this road','2025-12-05',3,1,'70x12 70x7 70x6'], ['End of this road','2025-12-03',2,4,'70x10 70x6 65x8'],
+  ['End of this road','2025-11-25',2,1,'70x11 70x6 65x8'], ['End of this road','2025-11-19',1,4,'70x9 65x8 65x6'],
+  ['End of this road','2025-11-17',1,1,'70x10 65x8 65x6'],
+  ['Time to Die','2025-11-07',3,4,'65x12 60x12 60x10'], ['Time to Die','2025-11-03',3,1,'65x13 60x12 60x10'],
+  ['Time to Die','2025-10-30',2,4,'65x11 60x11 60x9'], ['Time to Die','2025-10-27',2,1,'65x12 60x11 60x8'],
+  ['Time to Die','2025-10-21',1,4,'65x10 60x10'], ['Time to Die','2025-10-13',1,1,'65x11 60x10'],
+];
+// Newest first; each knows the session before it (older).
+const S = RAW.map(([meso,date,wk,day,sets]) => ({ meso, date, wk, day, sets: sets.split(' ').map(x=>x.split('x').map(Number)) }));
+S.forEach((s,i)=> s.prev = S[i+1] || null);
+const e1 = ([w,r]) => w*(1+r/30);
+const best = sets => sets.reduce((b,s)=> e1(s)>e1(b)?s:b, sets[0]);
+const fmt = n => (Math.round(n*10)/10).toString();
+const MON = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+const DOW = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
+const d8 = iso => { const d = new Date(iso+'T00:00:00'); return `${MON[d.getMonth()]} ${d.getDate()}`; };
+const dow = iso => DOW[new Date(iso+'T00:00:00').getDay()];
+const allBest = S.reduce((b,s)=>{ const x = best(s.sets); return !b || e1(x)>e1(b.set) ? {set:x, s} : b; }, null);
+const groups = [...new Set(S.map(s=>s.meso))].map(m => ({ meso:m, sessions:S.filter(s=>s.meso===m) }));
+const range = g => `${d8(g.sessions[g.sessions.length-1].date)} – ${d8(g.sessions[0].date)}`;
+
+const icon = { x:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>',
+  l:'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M15 18l-6-6 6-6"/></svg>',
+  r:'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M9 18l6-6-6-6"/></svg>' };
+
+/* A number pair with whatever beat the same set last session in blue. */
+const pair = (s, was) => `<span class="${was && s[0]>was[0]?'up':''}">${fmt(s[0])}</span><span class="times">×</span><span class="${was && s[1]>was[1]?'up':''}">${s[1]}</span>`;
+
+function shell(id, body) {
+  const last = S[0];
+  document.getElementById(id).innerHTML = `
+    <div class="app-bg"></div>
+    <div class="behind"><div class="t">Day 1</div><div class="h">Lat Pulldown</div></div>
+    <div class="scrim"></div>
+    <div class="sheet">
+      <div class="grab"></div>
+      <div class="sh-head">
+        <div><div class="mg"><i></i>Back · Cable</div><div class="sh-title">Lat Pulldown</div></div>
+        <button class="x" aria-label="Close">${icon.x}</button>
+      </div>
+      <div class="scroll" id="${id}-scroll">
+        <div class="glass stats">
+          <div><div class="eyebrow">Last</div><div class="v">${last.sets.map(s=>s[1]).join(' · ')}<span style="color:var(--label);font-weight:500;font-size:10px"> @${last.sets[0][0]}</span></div></div>
+          <div><div class="eyebrow">Best set</div><div class="v">${allBest.set[0]}<span class="times">×</span>${allBest.set[1]}</div></div>
+          <div><div class="eyebrow">Sessions</div><div class="v">80</div></div>
+        </div>
+        ${body}
+      </div>
+    </div>`;
+}
+
+/* ── A · sessions ── */
+function renderA(){
+  shell('A', groups.map((g,gi)=>`
+    <div class="ghead"><span class="n">${g.meso}${gi===0?'<span class="tag">THIS BLOCK</span>':''}</span><span class="r">${range(g)}</span></div>
+    ${g.sessions.map(s=>{
+      const b = best(s.sets);
+      const d = s.prev ? e1(b)-e1(best(s.prev.sets)) : 0;
+      return `<div class="arow">
+        <div class="when"><b>${d8(s.date)}</b><span>W${s.wk} · D${s.day}</span></div>
+        <div class="chips">${s.sets.map((x,i)=>`<span class="chip${x===b?' best':''}">${pair(x, s.prev?.sets[i])}</span>`).join('')}</div>
+        <div class="delta ${d>0?'up':''}" style="${d<=0?'color:var(--label)':''}">${Math.abs(d)<0.05?'=':(d>0?'▲':'▼')+fmt(Math.abs(d))}</div>
+      </div>`;}).join('')}
+  `).join('') + `<button class="more">Show older</button>`);
+}
+
+/* ── B · set table ── */
+function renderB(){
+  const cols = Math.max(...S.map(s=>s.sets.length));
+  const head = `<tr><th>DATE</th>${Array.from({length:cols},(_,i)=>`<th>SET ${i+1}</th>`).join('')}</tr>`;
+  const rows = groups.map((g,gi)=>`
+    <tr class="sep"><td colspan="${cols+1}"><span class="n">${g.meso}</span>${gi===0?'<span class="tag">THIS BLOCK</span>':''}<span class="r">${range(g)}</span></td></tr>
+    ${g.sessions.map(s=>{
+      const b = best(s.sets);
+      return `<tr><td class="dt"><b>${d8(s.date)}</b><span>W${s.wk} · D${s.day}</span></td>
+        ${Array.from({length:cols},(_,i)=>{
+          const x = s.sets[i];
+          if(!x) return `<td class="empty">·</td>`;
+          return `<td class="${x===b?'best':''}"><span class="cell">${pair(x, s.prev?.sets[i])}</span></td>`;
+        }).join('')}</tr>`;}).join('')}
+  `).join('');
+  shell('B', `<table class="tbl"><thead>${head}</thead><tbody>${rows}</tbody></table><button class="more">Show older</button>`);
+}
+
+/* ── C · chart ── */
+let selC = 0;
+function renderC(){
+  const shown = S.slice(0, 16);           // newest first
+  const chrono = [...shown].reverse();    // oldest → newest for the chart
+  const vals = chrono.map(s=>e1(best(s.sets)));
+  const lo = Math.min(...vals) - 3, hi = Math.max(...vals);
+  const sel = S[selC];
+  const b = best(sel.sets);
+  const d = sel.prev ? e1(b)-e1(best(sel.prev.sets)) : null;
+  // group spans for labels under the bars
+  const spans = []; chrono.forEach(s=>{ const l = spans[spans.length-1]; if(l && l.meso===s.meso) l.n++; else spans.push({meso:s.meso,n:1}); });
+  shell('C', `
+    <div class="glass chart">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px">
+        <span class="eyebrow">Best set · est. 1RM</span><span class="eyebrow" style="color:var(--text-2)">LAST 16</span>
+      </div>
+      <div class="bars">${chrono.map((s,i)=>{
+        const idx = S.indexOf(s);
+        return `<button class="${idx===selC?'on':''}" data-i="${idx}" aria-label="${d8(s.date)}: best ${fmt(vals[i])}"><i style="height:${Math.max(6,(vals[i]-lo)/(hi-lo)*100)}%"></i></button>`;}).join('')}</div>
+      <div class="blabels">${spans.map(sp=>`<span style="flex:${sp.n}">${sp.meso.toUpperCase()}</span>`).join('')}</div>
+    </div>
+    <div class="glass sel">
+      <div class="top">
+        <div><div class="when">${dow(sel.date)}, ${d8(sel.date)}</div><div class="eyebrow" style="margin-top:3px">${sel.meso} · Week ${sel.wk} · Day ${sel.day}</div></div>
+        <div class="nav2"><button data-step="1" aria-label="Older" ${selC>=S.length-1?'disabled':''}>${icon.l}</button><button data-step="-1" aria-label="Newer" ${selC===0?'disabled':''}>${icon.r}</button></div>
+      </div>
+      <div class="tiles">${sel.sets.map((x,i)=>{ const was = sel.prev?.sets[i];
+        return `<div class="tile${x===b?' best':''}"><div class="now">${pair(x, was)}</div><div class="was">${was?`${fmt(was[0])}×${was[1]}`:'—'}</div></div>`;}).join('')}</div>
+      <div style="display:flex;justify-content:space-between;margin-top:12px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.05);font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;color:var(--label)">
+        <span>EST 1RM <b style="color:var(--text-2);font-weight:500">${fmt(e1(b))}</b>${d!=null&&Math.abs(d)>=0.05?` <span class="${d>0?'up':''}">${d>0?'▲':'▼'}${fmt(Math.abs(d))}</span>`:''}</span>
+        <span>GHOST = SESSION BEFORE</span>
+      </div>
+    </div>
+    <div class="ghead"><span class="n">All sessions</span><span class="r">NEWEST FIRST</span></div>
+    ${S.slice(0,10).map((s,i)=>`<div class="arow" style="grid-template-columns:62px 1fr;cursor:pointer" data-i="${i}">
+      <div class="when"><b>${d8(s.date)}</b><span>W${s.wk} · D${s.day}</span></div>
+      <div class="chips">${s.sets.map((x,j)=>`<span class="chip">${pair(x, s.prev?.sets[j])}</span>`).join('')}</div></div>`).join('')}
+    <button class="more">Show older</button>`);
+  const root = document.getElementById('C');
+  root.querySelectorAll('[data-i]').forEach(el=>el.addEventListener('click',()=>{ selC = +el.dataset.i; const y = document.getElementById('C-scroll').scrollTop; renderC(); document.getElementById('C-scroll').scrollTop = Math.min(y, 0); }));
+  root.querySelectorAll('[data-step]').forEach(el=>el.addEventListener('click',()=>{ selC = Math.max(0, Math.min(S.length-1, selC + +el.dataset.step)); renderC(); }));
+}
+renderA(); renderB(); renderC();
+</script>
+</body>
+</html>

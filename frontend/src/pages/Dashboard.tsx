@@ -170,8 +170,12 @@ export default function Dashboard() {
           </Link>
         </div>
 
-        {/* Date + week strip */}
-        <div style={{ marginTop: 28, textAlign: 'center' }}>
+        {/* Date + week strip — opens the mesocycle */}
+        <Link
+          to={mesocycle ? `/mesocycles/${mesocycle.id}` : '/mesocycles'}
+          aria-label={mesocycle ? `Open ${mesocycle.name}` : 'Mesocycles'}
+          style={{ display: 'block', marginTop: 28, textAlign: 'center', textDecoration: 'none' }}
+        >
           <div
             style={{
               fontSize: 11,
@@ -226,7 +230,7 @@ export default function Dashboard() {
               )
             })}
           </div>
-        </div>
+        </Link>
 
         {/* Hero — vertically centered */}
         <div

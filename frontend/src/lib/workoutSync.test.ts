@@ -32,7 +32,7 @@ describe('workoutSync', () => {
 
   it('saves locally first, then syncs and drops the draft', async () => {
     put.mockResolvedValue({ session: serverSession })
-    workoutSync.save(base, exercises(5), { urgent: true })
+    workoutSync.save(base, exercises(5), { urgent: true, editOnly: false })
     expect(workoutSync.getDraft('user-1', 'm1', 0, 0)?.rev).toBe(1)
 
     await workoutSync.flush()
@@ -47,7 +47,7 @@ describe('workoutSync', () => {
 
   it('keeps the draft and reports offline when the network fails', async () => {
     put.mockRejectedValue(new NetworkError('offline'))
-    workoutSync.save(base, exercises(5), { urgent: true })
+    workoutSync.save(base, exercises(5), { urgent: true, editOnly: false })
     await workoutSync.flush()
 
     expect(workoutSync.getDraft('user-1', 'm1', 0, 0)).not.toBeNull()
@@ -62,10 +62,10 @@ describe('workoutSync', () => {
   it('keeps a draft that changed while its save was in flight', async () => {
     let release!: (v: unknown) => void
     put.mockImplementation(() => new Promise(r => { release = r }))
-    workoutSync.save(base, exercises(5), { urgent: true })
+    workoutSync.save(base, exercises(5), { urgent: true, editOnly: false })
     const flushing = workoutSync.flush()
     await Promise.resolve()
-    workoutSync.save(base, exercises(6), { urgent: true })
+    workoutSync.save(base, exercises(6), { urgent: true, editOnly: false })
     release({ session: serverSession })
     await flushing
 
@@ -75,7 +75,7 @@ describe('workoutSync', () => {
 
   it('flags a snapshot the server rejects and stops retrying it', async () => {
     put.mockRejectedValue(new ApiError(400, 'Invalid session index'))
-    workoutSync.save(base, exercises(5), { urgent: true })
+    workoutSync.save(base, exercises(5), { urgent: true, editOnly: false })
     await workoutSync.flush()
 
     expect(workoutSync.getDraft('user-1', 'm1', 0, 0)?.error).toBe('Invalid session index')
@@ -85,11 +85,28 @@ describe('workoutSync', () => {
     expect(put).not.toHaveBeenCalled()
   })
 
+  it('keeps edits to a past session out of later sessions', async () => {
+    put.mockResolvedValue({ session: serverSession })
+    workoutSync.save(base, exercises(5), { urgent: true, editOnly: true })
+    await workoutSync.flush()
+    expect(put.mock.calls[0]![1]).toMatchObject({ apply_to_future: false })
+  })
+
+  it('carries set counts forward if any unsynced change came from a live workout', async () => {
+    put.mockRejectedValue(new NetworkError('offline'))
+    workoutSync.save(base, exercises(5), { urgent: true, editOnly: false })
+    await workoutSync.flush()
+    workoutSync.save(base, exercises(6), { urgent: true, editOnly: true })
+    put.mockResolvedValue({ session: serverSession })
+    await workoutSync.flush()
+    expect(put.mock.lastCall![1]).toMatchObject({ apply_to_future: true })
+  })
+
   it('remembers the day the first set was logged', () => {
     vi.setSystemTime(new Date(2026, 9, 6, 23, 50))
-    workoutSync.save(base, exercises(5), { urgent: false })
+    workoutSync.save(base, exercises(5), { urgent: false, editOnly: false })
     vi.setSystemTime(new Date(2026, 9, 7, 0, 10))
-    workoutSync.save(base, exercises(6), { urgent: false })
+    workoutSync.save(base, exercises(6), { urgent: false, editOnly: false })
     expect(workoutSync.getDraft('user-1', 'm1', 0, 0)?.loggedOn).toBe('2026-10-06')
   })
 })

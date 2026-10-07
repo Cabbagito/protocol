@@ -1,0 +1,427 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Workout Review — Directions</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Fraunces:ital,opsz,wght@0,9..144,400;1,9..144,400;1,9..144,500&display=swap" rel="stylesheet">
+<style>
+  /* Dark theme tokens (src/lib/themes.ts) */
+  :root {
+    --deep:#070d15; --base:#0d1b2a; --card:#0f1d2e; --panel:#132438; --border:#1e3a52;
+    /* --text-m is #475569 in the app; it disappears on the gradient, so the
+       prototype lifts it. Worth doing in the theme too. */
+    --text-1:#e2e8f0; --text-2:#cbd5e1; --text-m:#7d8ba1;
+    --ghost:rgba(203,213,225,0.42);
+    --accent-l:#38bdf8; --accent:#0ea5e9; --accent-d:#0284c7; --accent-rgb:14,165,233;
+    --wave-c1:#0ea5e9; --wave-c2:#8b5cf6; --wave-c3:#22d3ee; --wave-c4:#ec4899;
+    --p-grad:linear-gradient(135deg,#0ea5e9 0%,#6366f1 55%,#8b5cf6 100%);
+    --p-grad-cta:linear-gradient(135deg,var(--accent-l) 0%,var(--accent-d) 100%);
+    --glass:rgba(15,29,46,0.5); --glass-b:rgba(255,255,255,0.05);
+    --mono:'JetBrains Mono',ui-monospace,monospace;
+    --serif:'Fraunces','Instrument Serif',Georgia,serif;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:#04080d; color:var(--text-1); font-family:Inter,system-ui,sans-serif; -webkit-font-smoothing:antialiased; }
+
+  .page-head { max-width:1240px; margin:0 auto; padding:40px 16px 8px; }
+  .page-head h1 { font-family:var(--serif); font-style:italic; font-weight:400; font-size:30px; }
+  .page-head p { color:var(--text-2); font-size:14px; line-height:1.55; margin-top:8px; max-width:760px; }
+  .page-head .src { font-family:var(--mono); font-size:10px; letter-spacing:.18em; color:var(--text-m); margin-top:12px; text-transform:uppercase; }
+
+  .frames { display:flex; flex-wrap:wrap; justify-content:center; gap:36px; padding:28px 16px 40px; max-width:1240px; margin:0 auto; }
+  .col { width:375px; max-width:100%; }
+  .col-label { padding:0 4px 14px; }
+  .col-label .k { font-family:var(--mono); font-size:11px; letter-spacing:.2em; color:var(--accent-l); font-weight:600; }
+  .col-label .k .rec { color:var(--text-m); margin-left:8px; }
+  .col-label .d { color:var(--text-2); font-size:13px; line-height:1.5; margin-top:6px; min-height:58px; }
+
+  /* Phone */
+  .phone { position:relative; width:100%; border-radius:44px; overflow:hidden; background:var(--deep);
+           border:1px solid rgba(255,255,255,0.08); box-shadow:0 40px 80px -30px rgba(0,0,0,0.8); isolation:isolate; }
+  @media (max-width:420px){ .phone { border-radius:24px; } }
+  .app-bg { position:absolute; top:0; left:0; right:0; height:900px; z-index:-1; pointer-events:none;
+    -webkit-mask-image:linear-gradient(to bottom,#000 60%,transparent); mask-image:linear-gradient(to bottom,#000 60%,transparent);
+    background-image:
+      linear-gradient(75deg, transparent 10%, color-mix(in oklab,var(--wave-c3) 22%,transparent) 30%, transparent 55%, color-mix(in oklab,var(--wave-c4) 25%,transparent) 75%, transparent 95%),
+      linear-gradient(115deg, transparent 0%, color-mix(in oklab,var(--accent) 31%,transparent) 35%, transparent 50%, color-mix(in oklab,var(--wave-c2) 35%,transparent) 70%, transparent 90%),
+      radial-gradient(circle 175px at calc(120% - 160px) 560px, color-mix(in oklab,var(--wave-c4) 40%,transparent) 12%, transparent),
+      radial-gradient(circle 195px at calc(-10% + 180px) 470px, color-mix(in oklab,var(--wave-c3) 45%,transparent) 12%, transparent),
+      radial-gradient(circle 205px at calc(130% - 190px) 230px, color-mix(in oklab,var(--wave-c2) 75%,transparent) 12%, transparent),
+      radial-gradient(circle 220px at calc(-25% + 210px) 130px, color-mix(in oklab,var(--wave-c1) 75%,transparent) 12%, transparent);
+    background-size:150% 900px,150% 900px,100% 900px,100% 900px,100% 900px,100% 900px;
+    background-position:center top; background-repeat:no-repeat; background-blend-mode:normal,normal,screen,screen,screen,screen; }
+  .scr { padding:54px 20px 28px; }
+
+  /* Shared chrome (matches MesocycleDetail) */
+  .chrome { display:flex; align-items:center; justify-content:space-between; padding:4px 0 18px; }
+  .gbtn { width:36px; height:36px; border-radius:12px; background:rgba(255,255,255,0.04); border:1px solid var(--glass-b);
+          color:var(--text-2); display:grid; place-items:center; flex:none; }
+  .chrome .mid { text-align:center; min-width:0; padding:0 8px; }
+  .eyebrow { font-family:var(--mono); font-size:9px; letter-spacing:.22em; color:var(--text-m); font-weight:500; text-transform:uppercase; }
+  .chrome .t { font-family:var(--serif); font-style:italic; font-size:20px; margin-top:2px; }
+  .sec { display:flex; justify-content:space-between; align-items:baseline; margin:24px 0 10px; }
+  .sec .l { font-family:var(--mono); font-size:10px; letter-spacing:.18em; color:var(--text-m); font-weight:600; text-transform:uppercase; }
+  .sec .r { font-family:var(--mono); font-size:9px; letter-spacing:.16em; color:var(--text-m); font-weight:500; display:flex; gap:10px; align-items:center; }
+  .glass { background:var(--glass); border:1px solid var(--glass-b); border-radius:18px; }
+  .mono { font-family:var(--mono); }
+  .up { color:var(--accent-l); }
+  .x { color:var(--text-m); font-weight:400; margin:0 2px; }
+
+  /* Muscle chips (Dashboard) */
+  .chips { display:flex; flex-wrap:wrap; justify-content:center; gap:8px 14px; }
+  .chip { display:flex; align-items:center; gap:6px; font-family:var(--mono); font-size:9.5px; font-weight:600; letter-spacing:.16em; text-transform:uppercase; }
+  .dot { width:7px; height:7px; border-radius:50%; flex:none; }
+
+  /* Set distribution bar */
+  .dist { display:flex; gap:3px; height:6px; }
+  .dist span { border-radius:3px; }
+  .legend { display:flex; flex-wrap:wrap; gap:6px 14px; margin-top:10px; }
+  .legend .chip { font-size:9px; letter-spacing:.14em; font-weight:500; color:var(--text-2); }
+  .legend b { font-weight:600; color:var(--text-1); }
+
+  /* Lift card */
+  .lift { position:relative; padding:14px 14px 12px 18px; border-radius:16px; background:color-mix(in oklab,var(--card) 70%,transparent);
+          border:1px solid var(--glass-b); overflow:hidden; }
+  .lift + .lift { margin-top:10px; }
+  .lift .bar { position:absolute; left:0; top:14px; bottom:14px; width:3px; border-radius:0 2px 2px 0; }
+  .lift .hd { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
+  .lift .mg { font-family:var(--mono); font-size:9px; font-weight:600; letter-spacing:.16em; text-transform:uppercase; }
+  .lift .nm { font-size:15px; font-weight:600; letter-spacing:-.01em; margin-top:3px; line-height:1.25; }
+  .verdict { flex:none; font-family:var(--mono); font-size:10px; font-weight:600; letter-spacing:.12em; padding:5px 8px; border-radius:8px; white-space:nowrap;
+             color:var(--accent-l); background:rgba(var(--accent-rgb),0.12); border:1px solid rgba(var(--accent-rgb),0.28); }
+  .verdict.new { color:var(--text-2); background:transparent; border:1px dashed rgba(255,255,255,0.16); }
+  .foot { display:flex; justify-content:space-between; margin-top:12px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.05);
+          font-family:var(--mono); font-size:9.5px; letter-spacing:.12em; color:var(--text-m); }
+  .foot b { color:var(--text-2); font-weight:500; letter-spacing:.04em; }
+
+  /* A · ghost set tiles */
+  .tiles { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-top:12px; }
+  .tile { border-radius:10px; padding:8px 4px 7px; text-align:center; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); }
+  .tile .now { font-family:var(--mono); font-size:14px; font-weight:600; letter-spacing:-.02em; }
+  .tile .was { font-family:var(--mono); font-size:10px; color:var(--ghost); margin-top:3px; }
+  .tile.best { border-color:var(--mc-b); background:var(--mc-bg); }
+
+  /* B · ledger */
+  .ledger { width:100%; border-collapse:collapse; margin-top:10px; font-family:var(--mono); table-layout:fixed; }
+  .ledger th:nth-child(1) { width:28px; } .ledger th:nth-child(4) { width:84px; }
+  .ledger th { font-size:8.5px; letter-spacing:.16em; color:var(--text-m); font-weight:600; text-align:right; padding:0 6px 6px; }
+  .ledger th:first-child, .ledger td:first-child { text-align:left; }
+  .ledger td { font-size:13px; padding:7px 6px; text-align:right; border-top:1px solid rgba(255,255,255,0.04); }
+  .ledger td.was { color:var(--ghost); font-size:12px; }
+  .ledger td.n { color:var(--text-m); font-size:11px; width:28px; }
+  .ledger td.d { font-size:10.5px; width:84px; white-space:nowrap; }
+  .ledger tr.best td { background:var(--mc-bg); }
+  .ledger tr.best td:first-child { border-radius:8px 0 0 8px; } .ledger tr.best td:last-child { border-radius:0 8px 8px 0; }
+  .trio { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+  .trio > div { padding:12px 10px; border-radius:13px; background:var(--glass); border:1px solid var(--glass-b); }
+  .trio .v { font-family:var(--mono); font-size:20px; font-weight:700; margin-top:6px; letter-spacing:-.02em; }
+  .trio .c { font-family:var(--mono); font-size:9.5px; letter-spacing:.1em; margin-top:3px; color:var(--text-m); }
+  .mrows { display:grid; grid-template-columns:1fr 1fr; gap:10px 16px; padding:14px; }
+  .mrow { display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:8px; }
+  .mrow .lb { font-family:var(--mono); font-size:9px; font-weight:600; letter-spacing:.14em; text-transform:uppercase; width:64px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .mrow .tr { height:5px; border-radius:3px; background:rgba(255,255,255,0.05); overflow:hidden; }
+  .mrow .tr i { display:block; height:100%; border-radius:3px; }
+  .mrow .ct { font-family:var(--mono); font-size:10px; color:var(--text-2); }
+
+  /* C · trend */
+  .tlift { display:grid; grid-template-columns:1fr 120px; gap:12px; align-items:stretch; }
+  .setlist { font-family:var(--mono); font-size:12.5px; margin-top:10px; display:grid; grid-template-columns:auto auto; justify-content:start; gap:3px 14px; }
+  .setlist span { white-space:nowrap; }
+  .spark { display:flex; flex-direction:column; justify-content:space-between; align-items:flex-end; }
+  .spark .e { font-family:var(--mono); font-size:16px; font-weight:700; letter-spacing:-.02em; }
+  .spark .e small { font-size:9px; color:var(--text-m); font-weight:500; letter-spacing:.14em; margin-left:3px; }
+  .spark .dd { font-family:var(--mono); font-size:9.5px; letter-spacing:.1em; margin-top:2px; text-align:right; }
+  .wkbars { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; align-items:end; height:84px; padding:0 4px; }
+  .wkbars > div { display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; gap:6px; }
+  .wkbars i { display:block; width:100%; border-radius:7px 7px 3px 3px; }
+  .wkbars span { font-family:var(--mono); font-size:9px; letter-spacing:.16em; color:var(--text-m); font-weight:600; }
+
+  /* Skipped + nav */
+  .skipped { margin-top:10px; padding:12px 14px; border-radius:14px; border:1px dashed rgba(255,255,255,0.10); color:var(--text-m); font-size:12.5px; line-height:1.5; }
+  .skipped .eyebrow { margin-bottom:3px; }
+  .skipped span { color:var(--text-2); opacity:.7; }
+  .nav { margin:28px 0 0; height:64px; border-radius:22px; padding:6px; display:flex; align-items:center;
+         background:color-mix(in oklab,var(--card) 80%,transparent); border:1px solid rgba(255,255,255,0.05);
+         box-shadow:0 12px 40px -12px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.04); }
+  .nav a { flex:1; height:52px; border-radius:16px; display:flex; align-items:center; justify-content:center; gap:8px; color:var(--text-m); font-size:13px; font-weight:600; }
+  .nav a.on { background:var(--p-grad-cta); color:#fff; box-shadow:0 6px 20px -6px rgba(var(--accent-rgb),0.6); }
+
+  /* Flow notes */
+  .notes { max-width:1240px; margin:0 auto; padding:0 16px 64px; display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:16px; }
+  .note { padding:18px; border-radius:18px; background:var(--glass); border:1px solid var(--glass-b); }
+  .note h3 { font-family:var(--mono); font-size:10px; letter-spacing:.2em; color:var(--accent-l); font-weight:600; text-transform:uppercase; }
+  .note p, .note li { color:var(--text-2); font-size:13px; line-height:1.55; margin-top:8px; }
+  .note ul { padding-left:16px; }
+</style>
+</head>
+<body>
+
+<header class="page-head">
+  <h1>Workout review</h1>
+  <p>Three directions for the page a finished workout opens to. All three drop the old fixed header for the same chrome as the mesocycle page, move the muscle split to the top, and show every lift next to the last time you did it, the same comparison as the grey targets while logging.</p>
+  <div class="src">Real sets · Big Boi · week 3 day 1 (shown as “Pull”) vs week 2</div>
+</header>
+
+<main class="frames">
+  <section class="col">
+    <div class="col-label">
+      <div class="k">A · GHOST SETS <span class="rec">CHOSEN</span></div>
+      <div class="d">Each set as a tile with last time’s set ghosted under it, what went up in blue, and a trend line of the last few best sets.</div>
+    </div>
+    <div class="phone"><div class="app-bg"></div><div class="scr" id="A"></div></div>
+  </section>
+
+  <section class="col">
+    <div class="col-label">
+      <div class="k">B · LEDGER</div>
+      <div class="d">Numbers first: this week, last week and the change, set by set, in full-width columns. The densest option and the fastest to scan.</div>
+    </div>
+    <div class="phone"><div class="app-bg"></div><div class="scr" id="B"></div></div>
+  </section>
+
+  <section class="col">
+    <div class="col-label">
+      <div class="k">C · TREND</div>
+      <div class="d">Each lift with its best set plotted across the block, so you see where this session sits. Less about last week, more about the arc.</div>
+    </div>
+    <div class="phone"><div class="app-bg"></div><div class="scr" id="C"></div></div>
+  </section>
+</main>
+
+<section class="notes">
+  <div class="note">
+    <h3>How you get here</h3>
+    <ul>
+      <li>Tap a done session on the mesocycle grid. Open and upcoming sessions still open the workout screen.</li>
+      <li>Back always returns to the mesocycle.</li>
+    </ul>
+  </div>
+  <div class="note">
+    <h3>Editing (the pencil)</h3>
+    <p>Opens this session on the workout screen with <i>Done editing</i> instead of <i>Finish workout</i>, then returns here. Worth knowing: changing a past session’s set count today also changes the set count of that lift in later sessions you haven’t started.</p>
+  </div>
+  <div class="note">
+    <h3>Not shown</h3>
+    <p>Myo-rep sets keep their MR / MM colour tag on the tile. Session notes and exercise notes go under the lift they belong to. A skipped session opens the workout screen as it does now, because that’s where <i>Undo skip</i> lives.</p>
+  </div>
+</section>
+
+<script>
+const MC = {
+  back:{p:'#14b8a6',l:'#2dd4bf'}, biceps:{p:'#6366f1',l:'#818cf8'}, 'rear delt':{p:'#d946ef',l:'#e879f9'},
+  traps:{p:'#8b5cf6',l:'#a78bfa'}, forearms:{p:'#64748b',l:'#94a3b8'},
+};
+const S = {
+  name:'Pull', week:3, prev:2, date:'MON, FEB 2',
+  totals:{ sets:[17,17], vol:[8135,8450], reps:[207,211] },
+  weekVol:[6395,8450,8135,12325],
+  lifts:[
+    { n:'Lat Pulldown', mg:'back', sets:[[70,11],[70,9],[70,7]], last:[[70,10],[70,9],[70,7]], trend:[91.0,93.3,95.7,98.0] },
+    { n:'Seated Cable Row', mg:'back', skipped:true },
+    { n:'Lying Dumbbell Curl', mg:'biceps', skipped:true },
+    { n:'Freemotion Rear Delt Fly', mg:'rear delt', sets:[[55,10],[55,7]], last:[[50,13],[50,9]], trend:[63.0,71.7,73.3,75.2] },
+    { n:'Dumbbell Shrug', mg:'traps', sets:[[25,11],[25,11]], last:[[22.5,13],[22.5,13]], trend:[30.0,32.3,34.2,37.5] },
+    { n:'Cable Wrist Curl', mg:'forearms', sets:[[25,27],[25,27],[25,27]], last:[[25,26],[25,26],[25,26]], trend:[45.8,46.7,47.5,90.0] },
+    { n:'Machine Chest Supported Row', mg:'back', sets:[[50,10],[50,8],[50,7]], last:null, trend:[null,null,66.7,null] },
+    { n:'Machine Preacher Curl', mg:'biceps', sets:[[45,10],[45,7],[40,9],[40,9]], last:[[45,9],[45,6],[40,8],[40,8]], trend:[null,58.5,60.0,61.5] },
+  ],
+};
+
+const e1 = ([w,r]) => w*(1+r/30);
+const best = sets => sets.reduce((b,s)=> e1(s)>e1(b)?s:b, sets[0]);
+const fmt = n => (Math.round(n*10)/10).toString();
+const vol = sets => sets.reduce((a,[w,r])=>a+w*r,0);
+const done = S.lifts.filter(l=>!l.skipped);
+const skipped = S.lifts.filter(l=>l.skipped);
+const compared = done.filter(l=>l.last);
+const upCount = compared.filter(l=>e1(best(l.sets))>e1(best(l.last))).length;
+
+function verdict(l){
+  if(!l.last) return {t:'FIRST TIME', cls:'new'};
+  const dw = Math.max(...l.sets.map(s=>s[0])) - Math.max(...l.last.map(s=>s[0]));
+  if(dw>0) return {t:`▲ ${fmt(dw)} KG`};
+  const dr = l.sets.reduce((a,s,i)=>a+s[1]-(l.last[i]?.[1]??s[1]),0);
+  if(dr>0) return {t:`▲ ${dr} REP${dr>1?'S':''}`};
+  if(dr<0) return {t:`▼ ${-dr} REPS`, cls:'new'};
+  return {t:'MATCHED', cls:'new'};
+}
+const muscles = (() => {
+  const m = new Map();
+  done.forEach(l=>m.set(l.mg,(m.get(l.mg)||0)+l.sets.length));
+  return [...m].sort((a,b)=>b[1]-a[1]);
+})();
+const icon = {
+  back:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 18l-6-6 6-6"/></svg>',
+  pen:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>',
+  home:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>',
+  db:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 7v10M3 9v6M18 7v10M21 9v6M6 12h12"/></svg>',
+  apple:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7c-2-2-6-1.5-6.5 2.5S7 19 9.5 20c1 .4 1.7-.3 2.5-.3s1.5.7 2.5.3C17 19 19 13.5 18.5 9.5S14 5 12 7Z"/><path d="M12 7c0-2 1-3.5 3-4"/></svg>',
+};
+
+const chrome = () => `
+  <div class="chrome">
+    <div class="gbtn" aria-label="Back to mesocycle">${icon.back}</div>
+    <div class="mid"><div class="eyebrow">WEEK ${S.week} · ${S.date}</div><div class="t">${S.name}</div></div>
+    <div class="gbtn" aria-label="Edit sets">${icon.pen}</div>
+  </div>`;
+const nav = () => `<div class="nav"><a>${icon.home}</a><a class="on">${icon.db}Workout</a><a>${icon.apple}</a></div>`;
+const chips = () => `<div class="chips">${muscles.map(([g])=>`<div class="chip" style="color:${MC[g].l}"><span class="dot" style="background:${MC[g].p};box-shadow:0 0 10px ${MC[g].p}"></span>${g}</div>`).join('')}</div>`;
+const dist = () => `
+  <div class="dist">${muscles.map(([g,n])=>`<span style="flex:${n};background:linear-gradient(90deg,${MC[g].p},${MC[g].l})"></span>`).join('')}</div>
+  <div class="legend">${muscles.map(([g,n])=>`<div class="chip"><span class="dot" style="background:${MC[g].p}"></span>${g} <b>${n}</b></div>`).join('')}</div>`;
+const skippedRow = () => `<div class="skipped"><div class="eyebrow">Skipped</div><span>${skipped.map(l=>l.n).join(' · ')}</span></div>`;
+const liftHead = (l, right) => {
+  const c = MC[l.mg];
+  return `<div class="bar" style="background:linear-gradient(180deg,${c.p},${c.l});box-shadow:0 0 10px ${c.p}80"></div>
+    <div class="hd"><div style="min-width:0"><div class="mg" style="color:${c.l}">${l.mg}</div><div class="nm">${l.n}</div></div>${right}</div>`;
+};
+const pct = (a,b) => { const p = Math.round((a-b)/b*100); return p===0?'±0%':(p>0?`+${p}%`:`−${-p}%`); };
+const diff = (a,b) => a===b?'±0':(a>b?`+${a-b}`:`−${b-a}`);
+
+/* ── A · Ghost sets ── */
+function renderA(){
+  const t = S.totals;
+  document.getElementById('A').innerHTML = `
+    ${chrome()}
+    ${chips()}
+    <div class="sec"><div class="l">Totals</div><div class="r">VS WEEK ${S.prev}</div></div>
+    <div class="glass" style="display:grid;grid-template-columns:repeat(3,1fr);padding:14px 0">
+      ${[['Sets',t.sets[0],diff(t.sets[0],t.sets[1])],['KG lifted',(t.vol[0]/1000).toFixed(1)+'k',pct(t.vol[0],t.vol[1])],['Reps',t.reps[0],diff(t.reps[0],t.reps[1])]]
+        .map(([k,v,d],i)=>`<div style="text-align:center;${i?'border-left:1px solid rgba(255,255,255,0.06)':''}">
+          <div class="mono" style="font-size:20px;font-weight:700;letter-spacing:-.02em">${v}</div>
+          <div class="eyebrow" style="margin-top:4px">${k} <span style="color:var(--text-2);letter-spacing:.06em">${d}</span></div></div>`).join('')}
+    </div>
+    <div class="sec"><div class="l">Sets by muscle</div></div>
+    ${dist()}
+    <div class="sec"><div class="l">Lifts</div>
+      <div class="r"><span style="color:var(--text-1)">NOW</span><span style="color:var(--ghost)">LAST TIME</span></div></div>
+    ${done.map(l=>{
+      const c = MC[l.mg]; const v = verdict(l); const b = best(l.sets);
+      const tiles = l.sets.map((s,i)=>{
+        const was = l.last?.[i];
+        const wUp = was && s[0]>was[0], rUp = was && s[1]>was[1];
+        const isBest = s===b;
+        return `<div class="tile${isBest?' best':''}" style="--mc-b:${c.p}66;--mc-bg:${c.p}14">
+          <div class="now"><span class="${wUp?'up':''}">${fmt(s[0])}</span><span class="x">×</span><span class="${rUp?'up':''}">${s[1]}</span></div>
+          <div class="was">${was?`${fmt(was[0])}×${was[1]}`:'—'}</div></div>`;
+      }).join('');
+      const d = l.last ? e1(b)-e1(best(l.last)) : null;
+      return `<div class="lift">${liftHead(l,`<div class="verdict ${v.cls||''}">${v.t}</div>`)}
+        <div class="tiles">${tiles}</div>
+        <div class="foot" style="align-items:center"><span>EST 1RM <b>${fmt(e1(b))}</b>${d!=null?` <span class="up">▲${fmt(d)}</span>`:''}</span>${miniSpark(l)}</div>
+      </div>`;
+    }).join('')}
+    ${skippedRow()}
+    ${nav()}`;
+}
+
+/* Last few best sets (est. 1RM), this session last. */
+function miniSpark(l){
+  const vals = l.trend.slice(0, S.week).filter(v=>v!=null).slice(-4);
+  if(vals.length<2) return '';
+  const W=76,H=24,pad=4,c=MC[l.mg], lo=Math.min(...vals), span=Math.max(...vals)-lo||1;
+  const x=i=>pad+i*(W-2*pad)/(vals.length-1), y=v=>H-pad-(v-lo)/span*(H-2*pad);
+  const d=vals.map((v,i)=>`${i?'L':'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+  return `<svg width="${W}" height="${H}" style="overflow:visible"><path d="${d}" fill="none" stroke="${c.l}" stroke-width="1.6" opacity=".85"/>
+    ${vals.map((v,i)=>i===vals.length-1?`<circle cx="${x(i)}" cy="${y(v)}" r="3.2" fill="${c.l}" stroke="#fff" stroke-width="1.2"/>`:`<circle cx="${x(i)}" cy="${y(v)}" r="1.8" fill="${c.l}" opacity=".7"/>`).join('')}</svg>`;
+}
+
+/* ── B · Ledger ── */
+function renderB(){
+  const t = S.totals; const peak = muscles[0][1];
+  document.getElementById('B').innerHTML = `
+    ${chrome()}
+    <div class="trio">
+      <div><div class="eyebrow">Lifts up</div><div class="v"><span class="up">${upCount}</span><span style="color:var(--text-m);font-weight:500">/${compared.length}</span></div><div class="c">${done.length-compared.length} FIRST TIME</div></div>
+      <div><div class="eyebrow">Sets</div><div class="v">${t.sets[0]}</div><div class="c">${diff(t.sets[0],t.sets[1])} VS WK ${S.prev}</div></div>
+      <div><div class="eyebrow">KG lifted</div><div class="v">${(t.vol[0]/1000).toFixed(1)}k</div><div class="c">${pct(t.vol[0],t.vol[1])} VS WK ${S.prev}</div></div>
+    </div>
+    <div class="glass" style="margin-top:10px;border-radius:14px"><div class="mrows">
+      ${muscles.map(([g,n])=>`<div class="mrow"><span class="lb" style="color:${MC[g].l}">${g}</span>
+        <span class="tr"><i style="width:${n/peak*100}%;background:linear-gradient(90deg,${MC[g].p},${MC[g].l})"></i></span><span class="ct">${n}</span></div>`).join('')}
+    </div></div>
+    <div class="sec"><div class="l">Lifts</div></div>
+    ${done.map(l=>{
+      const c = MC[l.mg]; const b = best(l.sets);
+      const d = l.last ? e1(b)-e1(best(l.last)) : null;
+      const rows = l.sets.map((s,i)=>{
+        const was = l.last?.[i];
+        let delta = '<span style="color:var(--text-m)">—</span>';
+        if(was){
+          const parts = [];
+          if(s[0]!==was[0]) parts.push(`${s[0]>was[0]?'+':'−'}${fmt(Math.abs(s[0]-was[0]))}kg`);
+          if(s[1]!==was[1]) parts.push(`${s[1]>was[1]?'+':'−'}${Math.abs(s[1]-was[1])}`);
+          delta = parts.length ? parts.map(p=>`<span class="${p[0]==='+'?'up':''}" style="${p[0]==='−'?'color:var(--text-2)':''}">${p}</span>`).join(' ') : '<span style="color:var(--text-m)">=</span>';
+        }
+        return `<tr class="${s===b?'best':''}" style="--mc-bg:${c.p}18">
+          <td class="n">${i+1}</td><td>${fmt(s[0])}<span class="x">×</span>${s[1]}</td>
+          <td class="was">${was?`${fmt(was[0])}×${was[1]}`:'—'}</td><td class="d">${delta}</td></tr>`;
+      }).join('');
+      return `<div class="lift">${liftHead(l, `<div style="text-align:right;flex:none"><div class="eyebrow">Est 1RM</div>
+          <div class="mono" style="font-size:16px;font-weight:700;margin-top:2px">${fmt(e1(b))}${d!=null?` <span class="up" style="font-size:10px">▲${fmt(d)}</span>`:''}</div></div>`)}
+        <table class="ledger"><thead><tr><th>#</th><th>WK ${S.week}</th><th>WK ${S.prev}</th><th>Δ</th></tr></thead><tbody>${rows}</tbody></table>
+      </div>`;
+    }).join('')}
+    ${skippedRow()}
+    ${nav()}`;
+}
+
+/* ── C · Trend ── */
+function spark(l){
+  const W=120,H=52,pad=6, c = MC[l.mg];
+  const pts = l.trend.map((v,i)=>v==null?null:{i,v});
+  const vals = pts.filter(Boolean).map(p=>p.v);
+  const lo = Math.min(...vals), hi = Math.max(...vals), span = hi-lo || 1;
+  const x = i => pad + i*(W-2*pad)/3, y = v => H-pad - (v-lo)/span*(H-2*pad);
+  const real = pts.filter(Boolean);
+  const path = real.map((p,k)=>`${k?'L':'M'}${x(p.i).toFixed(1)},${y(p.v).toFixed(1)}`).join(' ');
+  const cur = S.week-1;
+  const dots = real.map(p=>{
+    const on = p.i===cur;
+    return on ? `<circle cx="${x(p.i)}" cy="${y(p.v)}" r="4" fill="${c.l}" stroke="#fff" stroke-width="1.5" style="filter:drop-shadow(0 0 6px ${c.p})"/>`
+              : `<circle cx="${x(p.i)}" cy="${y(p.v)}" r="2.2" fill="${p.i>cur?'rgba(255,255,255,0.25)':c.l}"/>`;
+  }).join('');
+  const ticks = [0,1,2,3].map(i=>`<line x1="${x(i)}" x2="${x(i)}" y1="${H-1}" y2="${H-3}" stroke="rgba(255,255,255,0.15)"/>`).join('');
+  return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="overflow:visible">${ticks}
+    ${real.length>1?`<path d="${path}" fill="none" stroke="${c.l}" stroke-width="1.8" stroke-linejoin="round" opacity=".85"/>`:''}${dots}</svg>`;
+}
+function renderC(){
+  const peak = Math.max(...S.weekVol);
+  document.getElementById('C').innerHTML = `
+    ${chrome()}
+    ${chips()}
+    <div class="glass" style="margin-top:22px;padding:16px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:14px">
+        <div class="eyebrow" style="font-size:10px;letter-spacing:.18em;font-weight:600">KG lifted by week</div>
+        <div class="mono up" style="font-size:10px;letter-spacing:.14em;white-space:nowrap">${pct(S.weekVol[2],S.weekVol[1])} VS WK ${S.prev}</div>
+      </div>
+      <div class="wkbars">${S.weekVol.map((v,i)=>{
+        const on = i===S.week-1;
+        return `<div><span class="mono" style="font-size:10px;letter-spacing:0;color:${on?'var(--text-1)':'var(--text-m)'};font-weight:${on?700:500}">${(v/1000).toFixed(1)}k</span>
+          <i style="height:${v/peak*56}px;background:${on?'linear-gradient(180deg,var(--accent-l),var(--accent))':'linear-gradient(180deg,rgba(var(--accent-rgb),0.35),rgba(var(--accent-rgb),0.12))'};${on?'box-shadow:0 0 14px rgba(var(--accent-rgb),0.55)':''}"></i>
+          <span style="${on?'color:var(--accent-l)':''}">W${i+1}</span></div>`;}).join('')}</div>
+    </div>
+    <div class="sec"><div class="l">Sets by muscle</div></div>
+    ${dist()}
+    <div class="sec"><div class="l">Lifts</div><div class="r">BEST SET · W1–W4</div></div>
+    ${done.map(l=>{
+      const c = MC[l.mg]; const b = best(l.sets);
+      const d = l.last ? e1(b)-e1(best(l.last)) : null;
+      return `<div class="lift"><div class="tlift">
+        <div style="min-width:0">${liftHead(l,'')}
+          <div class="setlist">${l.sets.map(s=>`<span style="${s===b?`color:${c.l}`:''}">${fmt(s[0])}<span class="x">×</span>${s[1]}</span>`).join('')}</div>
+        </div>
+        <div class="spark">${spark(l)}
+          <div><div class="e">${fmt(e1(b))}<small>1RM</small></div>
+          <div class="dd ${d!=null?'up':''}" style="${d==null?'color:var(--text-m)':''}">${d!=null?`▲${fmt(d)} VS WK ${S.prev}`:'FIRST TIME'}</div></div>
+        </div>
+      </div></div>`;
+    }).join('')}
+    ${skippedRow()}
+    ${nav()}`;
+}
+renderA(); renderB(); renderC();
+</script>
+</body>
+</html>

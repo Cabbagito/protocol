@@ -3,12 +3,14 @@ import { Link, useNavigate } from 'react-router-dom'
 import PageLoader from '../components/PageLoader'
 import { useSplits, useSplit, useActiveMesocycle } from '../api/hooks'
 import { getMuscleColor } from '../lib/muscleColors'
+import { useBack } from '../lib/navigation'
 import type { SplitListItem } from '../types'
 
 const MONO = 'JetBrains Mono, ui-monospace, monospace'
 
 export default function Splits() {
   const navigate = useNavigate()
+  const back = useBack('/settings')
   const { data: splits = [], isLoading } = useSplits()
   const { data: activeMeso } = useActiveMesocycle()
   const liveSplitId = activeMeso?.split_id ?? null
@@ -24,7 +26,7 @@ export default function Splits() {
         <Chrome
           title="Splits"
           sub={`${splits.length} TEMPLATE${splits.length === 1 ? '' : 'S'}`}
-          onBack={() => navigate(-1)}
+          onBack={back}
         />
 
         {isLoading ? (

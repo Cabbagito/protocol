@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Exercise History — Aligned Rows</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Fraunces:ital,opsz,wght@0,9..144,400;1,9..144,400;1,9..144,500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --deep:#070d15; --card:#0f1d2e;
+    --text-1:#e2e8f0; --text-2:#cbd5e1; --text-m:#475569;
+    --label:color-mix(in oklab,var(--text-2) 55%,var(--text-m));
+    --accent-l:#38bdf8; --accent-rgb:14,165,233;
+    --wave-c2:#8b5cf6; --wave-c3:#22d3ee;
+    --mono:'JetBrains Mono',ui-monospace,monospace;
+    --serif:'Fraunces',Georgia,serif;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:#04080d; color:var(--text-1); font-family:Inter,system-ui,sans-serif; -webkit-font-smoothing:antialiased; }
+  button { font:inherit; color:inherit; background:none; border:none; cursor:pointer; }
+  button:focus-visible { outline:2px solid var(--accent-l); outline-offset:2px; }
+
+  .page-head { max-width:1240px; margin:0 auto; padding:40px 16px 8px; }
+  .page-head h1 { font-family:var(--serif); font-style:italic; font-weight:400; font-size:30px; }
+  .page-head p { color:var(--text-2); font-size:14px; line-height:1.55; margin-top:8px; max-width:800px; }
+  .rules { margin-top:14px; display:grid; gap:6px; max-width:800px; padding-left:18px; color:var(--text-2); font-size:13.5px; line-height:1.5; }
+
+  .frames { display:flex; flex-wrap:wrap; justify-content:center; gap:36px; padding:28px 16px 64px; max-width:1240px; margin:0 auto; }
+  .col { width:375px; max-width:100%; }
+  .col-label { padding:0 4px 14px; }
+  .col-label .k { font-family:var(--mono); font-size:11px; letter-spacing:.2em; color:var(--accent-l); font-weight:600; }
+  .col-label .k .rec { color:var(--label); margin-left:8px; }
+  .col-label .d { color:var(--text-2); font-size:13px; line-height:1.5; margin-top:6px; min-height:58px; }
+
+  .phone { position:relative; width:100%; height:812px; border-radius:44px; overflow:hidden; background:var(--deep);
+           border:1px solid rgba(255,255,255,0.08); box-shadow:0 40px 80px -30px rgba(0,0,0,0.8); isolation:isolate; }
+  @media (max-width:420px){ .phone { border-radius:24px; } }
+  .app-bg { position:absolute; inset:0; z-index:-1; pointer-events:none;
+    background-image:
+      radial-gradient(circle 220px at 30% 20%, color-mix(in oklab,var(--mc) 55%,transparent) 12%, transparent),
+      radial-gradient(circle 205px at 85% 35%, color-mix(in oklab,var(--wave-c2) 55%,transparent) 12%, transparent),
+      radial-gradient(circle 195px at 20% 70%, color-mix(in oklab,var(--wave-c3) 35%,transparent) 12%, transparent); }
+  .behind { padding:58px 20px 0; text-align:center; filter:blur(1px); opacity:.5; }
+  .behind .t { font-family:var(--serif); font-style:italic; font-size:18px; }
+  .behind .h { font-size:30px; font-weight:700; margin-top:40px; letter-spacing:-.02em; }
+  .scrim { position:absolute; inset:0; background:rgba(2,6,12,0.55); }
+
+  .sheet { position:absolute; left:0; right:0; bottom:0; top:64px; display:flex; flex-direction:column;
+           border-radius:26px 26px 0 0; background:color-mix(in oklab,var(--card) 94%,transparent);
+           border-top:1px solid rgba(255,255,255,0.08); box-shadow:0 -20px 60px -20px rgba(0,0,0,0.8); }
+  .grab { width:38px; height:4px; border-radius:2px; background:rgba(255,255,255,0.16); margin:8px auto 0; flex:none; }
+  .sh-head { padding:12px 20px 0; display:flex; justify-content:space-between; align-items:flex-start; flex:none; }
+  .mg { font-family:var(--mono); font-size:9px; font-weight:600; letter-spacing:.16em; text-transform:uppercase; color:var(--mc-l); display:flex; align-items:center; gap:6px; }
+  .mg i { width:7px; height:7px; border-radius:50%; background:var(--mc); box-shadow:0 0 10px var(--mc); }
+  .sh-title { font-size:20px; font-weight:600; letter-spacing:-.015em; margin-top:4px; }
+  .x { width:32px; height:32px; border-radius:10px; background:rgba(255,255,255,0.05); display:grid; place-items:center; color:var(--text-2); }
+  .scroll { flex:1; overflow-y:auto; padding:0 20px 28px; scrollbar-width:none; }
+  .scroll::-webkit-scrollbar { display:none; }
+
+  .eyebrow { font-family:var(--mono); font-size:9px; letter-spacing:.18em; color:var(--label); font-weight:600; text-transform:uppercase; }
+  .up { color:var(--accent-l); }
+  .times { color:var(--text-m); font-weight:400; margin:0 1px; }
+  .glass { background:rgba(15,29,46,0.55); border:1px solid rgba(255,255,255,0.05); border-radius:16px; }
+  .stats { display:grid; grid-template-columns:repeat(3,1fr); margin-top:14px; padding:12px 0; }
+  .stats > div { text-align:center; }
+  .stats > div + div { border-left:1px solid rgba(255,255,255,0.06); }
+  .stats .v { font-family:var(--mono); font-size:15px; font-weight:700; letter-spacing:-.02em; margin-top:5px; }
+
+  .ghead { display:flex; justify-content:space-between; align-items:baseline; margin:22px 0 6px; }
+  .ghead .n { font-family:var(--serif); font-style:italic; font-size:15px; }
+  .ghead .r { font-family:var(--mono); font-size:9px; letter-spacing:.14em; color:var(--label); }
+  .tag { font-family:var(--mono); font-size:8.5px; letter-spacing:.14em; color:var(--accent-l); border:1px solid rgba(var(--accent-rgb),.3);
+         background:rgba(var(--accent-rgb),.1); border-radius:6px; padding:2px 5px; margin-left:6px; font-style:normal; vertical-align:2px; }
+
+  /* Aligned rows */
+  .row { padding:8px 0; border-top:1px solid rgba(255,255,255,0.045); }
+  .row.side { display:grid; grid-template-columns:54px 1fr; gap:10px; align-items:center; }
+  .when b { font-family:var(--mono); font-size:10px; font-weight:600; letter-spacing:.08em; color:var(--text-2); }
+  .when span { font-family:var(--mono); font-size:9px; letter-spacing:.1em; color:var(--label); }
+  .side .when b, .side .when span { display:block; }
+  .side .when span { margin-top:2px; }
+  .stack .when { margin-bottom:6px; }
+  .stack .when span { margin-left:8px; }
+  .slots { display:grid; gap:4px; }
+  .chip { position:relative; height:28px; display:flex; align-items:center; justify-content:center; border-radius:7px;
+          font-family:var(--mono); font-size:12.5px; font-weight:600; letter-spacing:-.02em; white-space:nowrap;
+          background:rgba(255,255,255,0.035); border:1px solid rgba(255,255,255,0.06); }
+  .chip.best { border-color:color-mix(in oklab,var(--mc) 50%,transparent); background:color-mix(in oklab,var(--mc) 10%,transparent); }
+  .chip.gap { background:transparent; border:1px dashed rgba(255,255,255,0.13); color:var(--label); font-weight:400; }
+  .chip .st { position:absolute; top:1px; right:3px; font-size:6.5px; font-weight:700; letter-spacing:.04em; color:#2dd4bf; }
+  .more { margin-top:14px; width:100%; height:42px; border-radius:12px; border:1px dashed rgba(255,255,255,0.12); color:var(--text-2); font-size:12.5px; }
+
+  /* B, for contrast */
+  .tbl { width:100%; border-collapse:separate; border-spacing:0; table-layout:fixed; margin-top:6px; }
+  .tbl th { font-family:var(--mono); font-size:8px; letter-spacing:.1em; color:var(--label); font-weight:600; padding:10px 0 8px; text-align:center; }
+  .tbl th:first-child { text-align:left; width:52px; }
+  .tbl td { font-family:var(--mono); font-size:12.5px; font-weight:600; letter-spacing:-.02em; text-align:center; padding:8px 0; border-top:1px solid rgba(255,255,255,0.045); white-space:nowrap; }
+  .tbl td.dt { text-align:left; font-size:10px; color:var(--text-2); }
+  .tbl td.empty { color:rgba(255,255,255,0.12); font-weight:400; }
+</style>
+</head>
+<body>
+
+<header class="page-head">
+  <h1>Exercise history · aligned rows</h1>
+  <p>A’s one line per session, with B’s “set 1 under set 1”, and nothing reserved for the session with the most sets.</p>
+  <ol class="rules">
+    <li>A row is only as long as that session’s sets: a short day ends early, a one-off extra set adds one chip.</li>
+    <li>All chips of one exercise share one width, so set N sits under set N in every row.</li>
+    <li>A skipped set keeps its place as a dashed blank, so the sets after it don’t shift left.</li>
+    <li>Chips are sized for the exercise’s usual set count plus one spare. If those don’t fit beside the date, the date moves above them, and an extra set that still doesn’t fit wraps.</li>
+  </ol>
+</header>
+
+<main class="frames">
+  <section class="col">
+    <div class="col-label">
+      <div class="k">D · LAT PULLDOWN <span class="rec">REAL DATA</span></div>
+      <div class="d">Usually 3 sets, sometimes 2 or 1, so short days end early. Your history has no 4-set day, so Feb 5’s 4th set is made up to show one.</div>
+    </div>
+    <div class="phone" id="pull"></div>
+  </section>
+  <section class="col">
+    <div class="col-label">
+      <div class="k">D · LATERAL RAISE <span class="rec">MADE-UP SETS</span></div>
+      <div class="d">Usually 6 sets, so the date goes above them. Feb 12 has a one-off 7th set (wraps), Feb 5 skipped set 3, the old block did 4, and set 7 on Feb 12 is a myo-rep.</div>
+    </div>
+    <div class="phone" id="lat"></div>
+  </section>
+  <section class="col">
+    <div class="col-label">
+      <div class="k">B · SAME LATERALS <span class="rec">THE PROBLEM</span></div>
+      <div class="d">For comparison: B with the lateral data needs 7 columns for every row because of one day, and the numbers no longer fit.</div>
+    </div>
+    <div class="phone" id="latB"></div>
+  </section>
+</main>
+
+<script>
+const PULL = {
+  name:'Lat Pulldown', mgLabel:'Back · Cable', mc:'#14b8a6', mcl:'#2dd4bf', count:80,
+  raw:[
+    ['Big Boi','2026-02-17',4,4,'70x11 70x10 70x8'], ['Big Boi','2026-02-12',4,1,'70x12 70x10 70x8'],
+    ['Big Boi','2026-02-05',3,4,'70x10 70x9 70x9 70x8'], ['Big Boi','2026-02-02',3,1,'70x11 70x9 70x7'],
+    ['Big Boi','2026-01-29',2,4,'70x9 70x8 70x8'], ['Big Boi','2026-01-26',2,1,'70x10 70x9 70x7'],
+    ['Big Boi','2026-01-23',1,4,'70x8 70x7 70x7'], ['Big Boi','2026-01-20',1,1,'70x9 70x8'],
+    ['Fat Fuck','2026-01-15',4,4,'70x10 70x8'], ['Fat Fuck','2026-01-12',4,1,'70x11 70x9'],
+    ['Fat Fuck','2025-12-29',3,1,'70x12 70x8'], ['Fat Fuck','2025-12-25',2,4,'70x10 70x8'],
+    ['Fat Fuck','2025-12-22',2,1,'70x11 70x8'], ['Fat Fuck','2025-12-18',1,4,'70x10 70x8'],
+    ['Fat Fuck','2025-12-15',1,1,'70x11 70x6'],
+    ['End of this road','2025-12-12',4,1,'65x7'], ['End of this road','2025-12-08',3,4,'70x11 70x9 70x7'],
+    ['End of this road','2025-12-05',3,1,'70x12 70x7 70x6'], ['End of this road','2025-12-03',2,4,'70x10 70x6 65x8'],
+    ['End of this road','2025-11-25',2,1,'70x11 70x6 65x8'], ['End of this road','2025-11-19',1,4,'70x9 65x8 65x6'],
+    ['End of this road','2025-11-17',1,1,'70x10 65x8 65x6'],
+  ],
+};
+const LAT = {
+  name:'Dumbbell Lateral Raise', mgLabel:'Side delt · Dumbbell', mc:'#9333ea', mcl:'#a855f7', count:34,
+  raw:[
+    ['Big Boi','2026-02-17',4,4,'10x15 10x14 10x13 8x16 8x15 8x14'],
+    ['Big Boi','2026-02-12',4,1,'10x14 10x13 10x12 8x15 8x15 8x13 8x12/mr'],
+    ['Big Boi','2026-02-05',3,4,'10x14 10x12 - 8x15 8x14 8x13'],
+    ['Big Boi','2026-02-02',3,1,'10x13 10x12 10x11 8x15 8x14 8x12'],
+    ['Big Boi','2026-01-29',2,4,'10x12 10x12 10x10 8x14 8x13 8x12'],
+    ['Big Boi','2026-01-26',2,1,'8x18 8x16 8x15 8x14 8x13 8x12'],
+    ['Fat Fuck','2026-01-15',4,4,'8x17 8x15 8x14 8x13'],
+    ['Fat Fuck','2026-01-12',4,1,'8x16 8x15 8x13 8x12'],
+    ['Fat Fuck','2025-12-29',3,1,'8x15 8x14 8x13 8x12'],
+    ['Fat Fuck','2025-12-22',2,1,'8x15 8x14 8x12 8x11'],
+  ],
+};
+
+// Each session: slots in set order; null = a skipped set that keeps its place.
+function sessions(ex){
+  const S = ex.raw.map(([meso,date,wk,day,sets]) => ({
+    meso, date, wk, day,
+    slots: sets.split(' ').map(t => {
+      if (t === '-') return null;
+      const [wr, type] = t.split('/');
+      const [w, r] = wr.split('x').map(Number);
+      return { w, r, type: type || null };
+    }),
+  }));
+  S.forEach((s,i)=> s.prev = S[i+1] || null);
+  return S;
+}
+const e1 = s => s.w*(1+s.r/30);
+const bestOf = slots => slots.filter(Boolean).reduce((b,s)=> !b || e1(s)>e1(b) ? s : b, null);
+const fmt = n => (Math.round(n*10)/10).toString();
+const MON = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+const d8 = iso => { const d = new Date(iso+'T00:00:00'); return `${MON[d.getMonth()]} ${d.getDate()}`; };
+const mode = xs => { const c = new Map(); xs.forEach(x=>c.set(x,(c.get(x)||0)+1)); return [...c].sort((a,b)=>b[1]-a[1]||b[0]-a[0])[0][0]; };
+const groupsOf = S => [...new Set(S.map(s=>s.meso))].map(m => ({ meso:m, sessions:S.filter(s=>s.meso===m) }));
+const range = g => `${d8(g.sessions[g.sessions.length-1].date)} – ${d8(g.sessions[0].date)}`;
+const pair = (s, was) => `<span class="${was && s.w>was.w?'up':''}">${fmt(s.w)}</span><span class="times">×</span><span class="${was && s.r>was.r?'up':''}">${s.r}</span>`;
+const X = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>';
+
+function shell(id, ex, S){
+  const best = S.map(s=>bestOf(s.slots)).reduce((b,s)=> !b || e1(s)>e1(b) ? s : b, null);
+  const el = document.getElementById(id);
+  el.style.setProperty('--mc', ex.mc); el.style.setProperty('--mc-l', ex.mcl);
+  el.innerHTML = `
+    <div class="app-bg"></div>
+    <div class="behind"><div class="t">Day 1</div><div class="h">${ex.name}</div></div>
+    <div class="scrim"></div>
+    <div class="sheet">
+      <div class="grab"></div>
+      <div class="sh-head">
+        <div><div class="mg"><i></i>${ex.mgLabel}</div><div class="sh-title">${ex.name}</div></div>
+        <button class="x" aria-label="Close">${X}</button>
+      </div>
+      <div class="scroll">
+        <div class="glass stats">
+          <div><div class="eyebrow">Best set</div><div class="v">${fmt(best.w)}<span class="times">×</span>${best.r}</div></div>
+          <div><div class="eyebrow">Best est. 1RM</div><div class="v">${fmt(e1(best))}</div></div>
+          <div><div class="eyebrow">Sessions</div><div class="v">${ex.count}</div></div>
+        </div>
+        <div class="body"></div>
+      </div>
+    </div>`;
+  return el.querySelector('.body');
+}
+
+/* ── D · aligned rows ── */
+function renderD(id, ex){
+  const S = sessions(ex);
+  const body = shell(id, ex, S);
+  const avail = body.clientWidth;                       // full row width
+  const GAP = 4, DATE = 54 + 10;
+  const glyphs = Math.max(...S.flatMap(s=>s.slots.filter(Boolean).map(x=>fmt(x.w).length + 1 + String(x.r).length)));
+  const minW = Math.ceil(glyphs * 7.6 + 6);            // what the numbers need
+  const usual = mode(S.map(s=>s.slots.length));
+  const side = usual*minW + (usual-1)*GAP <= avail - DATE;
+  const area = side ? avail - DATE : avail;
+  // Room for the usual sets plus one spare, if the numbers still fit.
+  const w = Math.floor(Math.min(76, Math.max(minW, (area - usual*GAP) / (usual + 1))));
+  const perLine = Math.max(1, Math.floor((area + GAP) / (w + GAP)));
+
+  body.innerHTML = groupsOf(S).map((g,gi)=>`
+    <div class="ghead"><span class="n">${g.meso}${gi===0?'<span class="tag">THIS BLOCK</span>':''}</span><span class="r">${range(g)}</span></div>
+    ${g.sessions.map(s=>{
+      const b = bestOf(s.slots);
+      const chips = s.slots.map((x,i)=>{
+        if (!x) return `<span class="chip gap" title="Skipped">–</span>`;
+        const was = s.prev?.slots[i];
+        return `<span class="chip${x===b?' best':''}">${x.type?`<span class="st">${x.type.toUpperCase()}</span>`:''}${pair(x, was)}</span>`;
+      }).join('');
+      return `<div class="row ${side?'side':'stack'}">
+        <div class="when"><b>${d8(s.date)}</b><span>W${s.wk} · D${s.day}</span></div>
+        <div class="slots" style="grid-template-columns:repeat(${perLine}, ${w}px)">${chips}</div>
+      </div>`;}).join('')}
+  `).join('') + `<button class="more">Show older</button>`;
+}
+
+/* ── B, for contrast ── */
+function renderB(id, ex){
+  const S = sessions(ex);
+  const body = shell(id, ex, S);
+  const cols = Math.max(...S.map(s=>s.slots.length));
+  body.innerHTML = `<table class="tbl"><thead><tr><th>DATE</th>${Array.from({length:cols},(_,i)=>`<th>S${i+1}</th>`).join('')}</tr></thead><tbody>
+    ${S.map(s=>`<tr><td class="dt">${d8(s.date)}</td>${Array.from({length:cols},(_,i)=>{
+      const x = s.slots[i];
+      return x ? `<td>${pair(x, s.prev?.slots[i])}</td>` : `<td class="empty">·</td>`;
+    }).join('')}</tr>`).join('')}
+  </tbody></table>`;
+}
+
+renderD('pull', PULL); renderD('lat', LAT); renderB('latB', LAT);
+</script>
+</body>
+</html>

@@ -6,6 +6,7 @@ import { useToast } from '../components/Toast'
 import { useExercises } from '../api/hooks'
 import { getMuscleColor } from '../lib/muscleColors'
 import { MUSCLE_GROUP_ROWS, EQUIPMENT_TYPES } from '../components/exerciseConstants'
+import { useBack } from '../lib/navigation'
 import type { Exercise } from '../types'
 
 const MONO = 'JetBrains Mono, ui-monospace, monospace'
@@ -44,6 +45,7 @@ const EQUIPMENT_ICONS: Record<string, React.ReactNode> = {
 
 export default function Exercises() {
   const navigate = useNavigate()
+  const back = useBack('/settings')
   const { data: exercises = [], isLoading } = useExercises()
   const [query, setQuery] = useState('')
   const [muscleSel, setMuscleSel] = useState<Set<string>>(new Set())
@@ -121,7 +123,7 @@ export default function Exercises() {
         <Chrome
           title="Exercises"
           sub={`${exercises.length} LIFTS · ${totalGroupCount} GROUPS`}
-          onBack={() => navigate(-1)}
+          onBack={back}
           onAdd={() => setCreateOpen(true)}
         />
 

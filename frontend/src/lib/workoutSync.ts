@@ -110,13 +110,18 @@ class WorkoutSync {
     return readJson(draftKey(userId, mesocycleId, weekIndex, sessionIndex))
   }
 
-  /** Persist a local change and schedule a sync. */
+  /**
+   * Persist a local change and schedule a sync. `editOnly` marks a
+   * correction to a past session; it sticks only while every unsynced
+   * change is one.
+   */
   save(
     base: Pick<SessionDraft, 'userId' | 'mesocycleId' | 'weekIndex' | 'sessionIndex'>,
     exercises: SessionExercise[],
-    { urgent }: { urgent: boolean },
+    { urgent, editOnly }: { urgent: boolean; editOnly: boolean },
   ): void {
     const prev = this.getDraft(base.userId, base.mesocycleId, base.weekIndex, base.sessionIndex)
+    const prevPending = prev && isDraftDirty(prev)
     const hasLogged = exercises.some(e => e.sets.some(s => s.logged))
     const draft: SessionDraft = {
       v: 1,
@@ -127,6 +132,7 @@ class WorkoutSync {
       syncedRev: prev?.syncedRev ?? 0,
       updatedAt: Date.now(),
       error: null,
+      editOnly: editOnly && (!prevPending || !!prev.editOnly),
     }
     try {
       window.localStorage.setItem(keyOf(draft), JSON.stringify(draft))

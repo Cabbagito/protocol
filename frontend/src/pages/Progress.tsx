@@ -1,5 +1,5 @@
 import { useId, useMemo, useState } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import PageLoader from '../components/PageLoader'
 import { useExercises, useMesocycles, useMesocycleDetails } from '../api/hooks'
 import { getMuscleColor } from '../lib/muscleColors'
@@ -14,6 +14,7 @@ import {
   type TrainedExercise,
 } from '../lib/trainingLog'
 import { useToday } from '../hooks/useToday'
+import { useBack } from '../lib/navigation'
 import type { Mesocycle } from '../types'
 
 const MONO = 'JetBrains Mono, ui-monospace, monospace'
@@ -36,7 +37,7 @@ interface Selected {
 }
 
 export default function Progress() {
-  const navigate = useNavigate()
+  const back = useBack('/settings')
   const [searchParams, setSearchParams] = useSearchParams()
   const today = useToday()
   const { data: exercises = [], isLoading: exercisesLoading } = useExercises()
@@ -112,7 +113,7 @@ export default function Progress() {
       }}
     >
       <div style={{ position: 'relative', zIndex: 1, padding: '12px 22px 0' }}>
-        <Chrome title="Progress" sub={selected ? subText : 'NO DATA YET'} onBack={() => navigate(-1)} />
+        <Chrome title="Progress" sub={selected ? subText : 'NO DATA YET'} onBack={back} />
 
         {!selected ? (
           <EmptyState />

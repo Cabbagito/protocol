@@ -35,6 +35,7 @@ async def save_session(db: AsyncSession, user_id: str, data: SaveSessionRequest)
         data.session_index,
         exercises=[e.model_dump() for e in data.exercises],
         logged_on=data.logged_on or date_type.today(),
+        apply_to_future=data.apply_to_future,
     )
     sync_completed_at(mesocycle)
 

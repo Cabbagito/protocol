@@ -11,6 +11,8 @@ interface Params {
   /** The session as currently known (server data + unsynced local drafts). */
   session: MesoSession
   readOnly: boolean
+  /** Correcting a past session: set-count changes stay in this session. */
+  editOnly: boolean
 }
 
 type Urgency = 'urgent' | 'edit'
@@ -21,7 +23,7 @@ type Urgency = 'urgent' | 'edit'
  * state is authoritative. Every action is persisted to the phone right away
  * and synced in the background — merely opening a session never saves.
  */
-export function useWorkoutSession({ mesocycleId, weekIndex, sessionIndex, session, readOnly }: Params) {
+export function useWorkoutSession({ mesocycleId, weekIndex, sessionIndex, session, readOnly, editOnly }: Params) {
   const [exercises, setExercises] = useState<SessionExercise[]>(() => sessionFromServer(session))
   const pending = useRef<Urgency | null>(null)
 
@@ -34,9 +36,9 @@ export function useWorkoutSession({ mesocycleId, weekIndex, sessionIndex, sessio
     workoutSync.save(
       { userId, mesocycleId, weekIndex, sessionIndex },
       exercises,
-      { urgent: urgency === 'urgent' },
+      { urgent: urgency === 'urgent', editOnly },
     )
-  }, [exercises, mesocycleId, weekIndex, sessionIndex])
+  }, [exercises, mesocycleId, weekIndex, sessionIndex, editOnly])
 
   // Leaving the page: push whatever is pending without waiting for the debounce.
   useEffect(() => () => workoutSync.schedule(0), [])
