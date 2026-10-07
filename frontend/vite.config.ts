@@ -8,9 +8,12 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      // New versions wait until main.tsx applies them (on cold start or when
-      // the app is backgrounded) instead of force-reloading mid-task.
-      registerType: 'prompt',
+      // A new service worker takes over by itself (skipWaiting + clientsClaim),
+      // so no installed version can get stuck on an old build. main.tsx
+      // registers it and decides when the page reloads into the new code:
+      // at startup, or when the app goes to the background — never mid-task.
+      registerType: 'autoUpdate',
+      injectRegister: false,
       includeAssets: ['favicon.svg'],
       manifest: {
         name: 'Protocol',
@@ -43,6 +46,8 @@ export default defineConfig({
         ]
       },
       workbox: {
+        skipWaiting: true,
+        clientsClaim: true,
         cleanupOutdatedCaches: true,
         // The ~1 MB ZXing barcode wasm is not precached for everyone; it is
         // cached on first use of the scanner instead (runtimeCaching below).
