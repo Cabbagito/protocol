@@ -3,30 +3,35 @@
 @tailwind utilities;
 
 @layer base {
-  /* The document is the app's only scroll container. The body pads itself
-     out of the notch / home-indicator areas (standalone PWA with
-     viewport-fit=cover), so a full-height page must be --app-h tall, not
-     100vh/100dvh — otherwise it overflows by the two insets and scrolls. */
+  /* Layout contract (components/Layout.tsx):
+     - the document is the only scroll container, and it is never shorter
+       than the screen: --screen-h is the real screen height (lib/viewport.ts
+       works around iOS 26 sizing the home-screen app's window short);
+     - the shell pads the notch / home-indicator insets and the floating nav,
+       and paints the one shared background; pages only lay out content;
+     - nothing rubber-bands: a page that fits the screen does not move. */
   :root {
-    --app-h: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    --nav-h: 64px;
+    --nav-gap: 18px;
+    /* Distance from the screen's bottom edge to the top of the nav */
+    --nav-top: calc(env(safe-area-inset-bottom) + var(--nav-gap) + var(--nav-h));
+    /* Bottom offset for bars and buttons that float above the nav */
+    --above-nav: calc(var(--nav-top) + 16px);
   }
 
   html {
     background: var(--deep);
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
-    overscroll-behavior-y: contain;
+    overscroll-behavior: none;
   }
 
+  /* No background here: it would paint over the shared .app-bg (z-index -1). */
   body {
     @apply antialiased;
-    background: var(--deep);
     color: var(--text-1);
+    min-height: var(--screen-h, 100svh);
     overscroll-behavior: none;
-    padding-top: env(safe-area-inset-top);
-    padding-bottom: env(safe-area-inset-bottom);
-    padding-left: env(safe-area-inset-left);
-    padding-right: env(safe-area-inset-right);
   }
 
   /* Vignette overlay — softer on mobile, full on desktop */
@@ -606,7 +611,8 @@
    Four soft color blobs + two diagonal aurora stripes, painted as layered
    gradients on a single fixed element: no animation, no blur filters, no
    compositing-heavy blend modes on the page. Colors come from the active
-   theme's --wave-c1..c4. Rendered by components/AuroraBackground.tsx. */
+   theme's --wave-c1..c4. Rendered once by the shell (components/Layout.tsx),
+   behind every page. */
 
 .app-bg {
   --bg-blob-a: 75%;
@@ -626,8 +632,9 @@
 
   position: fixed;
   inset: 0;
+  min-height: var(--screen-h, 100%);
   pointer-events: none;
-  z-index: 0;
+  z-index: -1;
   /* Top layer first. Blob centers hold their color for the first 12% so the
      unblurred gradients don't read as hard hot-spots. */
   background-image:
@@ -667,6 +674,54 @@
   --bg-aur2b-a: 11%;
   --bg-blend: multiply;
   --bg-aur-blend: multiply;
+}
+
+/* ── App shell ───────────────────────────────────────────── */
+
+.app-shell {
+  min-height: var(--screen-h, 100svh);
+  display: flex;
+  flex-direction: column;
+  padding:
+    env(safe-area-inset-top)
+    env(safe-area-inset-right)
+    calc(var(--nav-top) + 48px)
+    env(safe-area-inset-left);
+}
+
+/* A flex column so a page can fill the screen with flex: 1 (Dashboard). No
+   z-index: overlays rendered inside pages must stay above the nav. */
+.app-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 32rem;
+  margin: 0 auto;
+}
+
+/* Covers the status bar (the app draws under it) with the same background,
+   so content scrolling up fades out under the clock instead of passing
+   behind it. The short fade below the inset softens the edge over page
+   glows (the workout's muscle spotlight). Zero height without an inset. */
+.status-scrim {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: calc(env(safe-area-inset-top) + min(14px, env(safe-area-inset-top)));
+  overflow: hidden;
+  background: var(--deep);
+  -webkit-mask-image: linear-gradient(to bottom, #000 env(safe-area-inset-top), transparent);
+  mask-image: linear-gradient(to bottom, #000 env(safe-area-inset-top), transparent);
+  pointer-events: none;
+  z-index: 99;
+}
+.status-scrim > .app-bg {
+  position: absolute;
+  inset: 0 0 auto;
+  height: var(--screen-h, 100vh);
+  z-index: auto;
 }
 
 /* ── Per-muscle breathing keyframes for the Log button ────── */

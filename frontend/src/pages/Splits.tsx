@@ -1,6 +1,5 @@
 import { useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import AuroraBackground from '../components/AuroraBackground'
 import PageLoader from '../components/PageLoader'
 import { useSplits, useSplit, useActiveMesocycle } from '../api/hooks'
 import { getMuscleColor } from '../lib/muscleColors'
@@ -18,13 +17,10 @@ export default function Splits() {
     <div
       style={{
         position: 'relative',
-        background: 'var(--deep)',
-        overflow: 'hidden',
+        overflowX: 'clip',
       }}
     >
-      <AuroraBackground />
-
-      <div style={{ position: 'relative', zIndex: 1, padding: '12px 22px 130px' }}>
+      <div style={{ position: 'relative', zIndex: 1, padding: '12px 22px 0' }}>
         <Chrome
           title="Splits"
           sub={`${splits.length} TEMPLATE${splits.length === 1 ? '' : 'S'}`}

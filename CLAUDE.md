@@ -50,6 +50,8 @@ The frontend is not containerized in dev: on Docker Desktop for Mac a `node_modu
 
 **Database:** PostgreSQL with async SQLAlchemy and Alembic migrations. Migrations run automatically on startup (`alembic upgrade head`).
 
+**Frontend layout:** `components/Layout.tsx` is the app shell and owns the screen: the one shared background, the safe-area insets, a status-bar scrim and the floating nav's clearance (contract at the top of `src/index.css`). Pages only lay out content: no backgrounds, viewport heights or nav padding; bars floating above the nav use `bottom: var(--above-nav)`. The document is the scroll container and never shorter than `--screen-h` (`lib/viewport.ts`): iOS 26+ sizes an installed app's window one status-bar short whenever the page is shorter than that (WebKit bug 301108), leaving a dead strip at the bottom. Navigation runs as transitions (`v7_startTransition`), so the current page stays until the next one is ready, and the tab pages are preloaded.
+
 **Backend pattern:** Thin routers delegate to service layer (`app/services/`). Pydantic schemas in `app/schemas/`, one file per domain. Domain logic (progression calculations) isolated in `app/domain/` with no DB dependencies.
 
 ## Data Model

@@ -1,6 +1,8 @@
 import { Link, useLocation } from 'react-router-dom'
-import { useLayoutEffect } from 'react'
+import { useLayoutEffect, useMemo } from 'react'
 import { HomeIcon, DumbbellIcon, AppleIcon } from './Icons'
+import { useActiveMesocycle } from '../api/hooks'
+import { getCurrentPosition } from '../lib/mesoUtils'
 import { useKeyboardVisible } from '../lib/useKeyboardVisible'
 
 const navItems = [
@@ -9,9 +11,15 @@ const navItems = [
   { path: '/diet', label: 'Diet', icon: AppleIcon },
 ]
 
+/**
+ * The app shell: owns the screen (height, safe-area insets, background,
+ * status-bar scrim, nav clearance) so pages only lay out their content.
+ * See the layout contract at the top of src/index.css.
+ */
 export default function Layout({ children }: { children: React.ReactNode }) {
   const { pathname } = useLocation()
   const keyboardOpen = useKeyboardVisible()
+  const workoutHref = useWorkoutHref()
 
   // The document is the scroll container: open every route at the top
   // instead of at the previous page's offset.
@@ -20,10 +28,14 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   }, [pathname])
 
   return (
-    <div>
-      <main className="max-w-lg mx-auto w-full">
+    <div className="app-shell">
+      <div className="app-bg" aria-hidden="true" />
+      <main className="app-main">
         {children}
       </main>
+      <div className="status-scrim" aria-hidden="true">
+        <div className="app-bg" />
+      </div>
 
       {/* BottomNavV3 — floating glass capsule with gradient pill on active item. */}
       {!keyboardOpen && (
@@ -33,8 +45,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           style={{
             left: 18,
             right: 18,
-            bottom: 'calc(env(safe-area-inset-bottom) + 18px)',
-            height: 64,
+            bottom: 'calc(env(safe-area-inset-bottom) + var(--nav-gap))',
+            height: 'var(--nav-h)',
             borderRadius: 22,
             background: 'color-mix(in oklab, var(--card) 80%, transparent)',
             backdropFilter: 'blur(28px) saturate(180%)',
@@ -58,7 +70,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             return (
               <Link
                 key={item.path}
-                to={item.path}
+                to={item.path === '/workout' ? workoutHref : item.path}
                 aria-label={item.label}
                 aria-current={isActive ? 'page' : undefined}
                 style={{
@@ -91,4 +103,19 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       )}
     </div>
   )
+}
+
+/**
+ * The Workout tab opens the current session directly instead of hopping
+ * through /workout → /workout/:id → ?week=&session= redirects.
+ */
+function useWorkoutHref(): string {
+  const { data: mesocycle } = useActiveMesocycle()
+  return useMemo(() => {
+    if (!mesocycle) return '/workout'
+    const pos = getCurrentPosition(mesocycle.structure)
+    return pos
+      ? `/workout/${mesocycle.id}?week=${pos.weekIndex}&session=${pos.sessionIndex}`
+      : '/workout'
+  }, [mesocycle])
 }

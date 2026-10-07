@@ -3,7 +3,6 @@ import PageLoader from '../components/PageLoader'
 import AddFoodSheet from '../components/AddFoodSheet'
 import BodyweightCard from '../components/BodyweightCard'
 import BottomSheet from '../components/BottomSheet'
-import AuroraBackground from '../components/AuroraBackground'
 import { useToast } from '../components/Toast'
 import { ChevronLeftIcon, ChevronRightIcon, TrashIcon } from '../components/Icons'
 import { useDailyLog, useDailyTargets, useDeleteLog } from '../api/hooks'
@@ -73,17 +72,14 @@ export default function Diet() {
     <div
       style={{
         position: 'relative',
-        background: 'var(--deep)',
-        overflow: 'hidden',
+        overflowX: 'clip',
       }}
     >
-      <AuroraBackground />
-
       <div
         style={{
           position: 'relative',
           zIndex: 1,
-          padding: '12px 22px 130px',
+          padding: '12px 22px 0',
         }}
       >
         {/* Top bar — date pager */}
@@ -229,7 +225,7 @@ export default function Diet() {
           position: 'fixed',
           zIndex: 100,
           right: 22,
-          bottom: 'calc(env(safe-area-inset-bottom) + 100px)',
+          bottom: 'var(--above-nav)',
           display: 'flex',
           alignItems: 'center',
           gap: 8,

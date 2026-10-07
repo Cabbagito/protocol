@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import AuroraBackground from '../components/AuroraBackground'
 import PageLoader from '../components/PageLoader'
 import { useToast } from '../components/Toast'
 import {
@@ -199,7 +198,7 @@ export default function SplitEditor() {
 
   if (isEdit && splitLoading) {
     return (
-      <div style={{ background: 'var(--deep)' }}>
+      <div>
         <PageLoader className="min-h-[60vh]" />
       </div>
     )
@@ -219,13 +218,10 @@ export default function SplitEditor() {
     <div
       style={{
         position: 'relative',
-        background: 'var(--deep)',
-        overflow: 'hidden',
+        overflowX: 'clip',
       }}
     >
-      <AuroraBackground />
-
-      <div style={{ position: 'relative', zIndex: 1, padding: '12px 22px 200px' }}>
+      <div style={{ position: 'relative', zIndex: 1, padding: '12px 22px 70px' }}>
         <Chrome
           title={name || 'Untitled split'}
           sub={eyebrow}
@@ -483,7 +479,7 @@ export default function SplitEditor() {
           position: 'fixed',
           left: 18,
           right: 18,
-          bottom: 'calc(env(safe-area-inset-bottom) + 96px)',
+          bottom: 'var(--above-nav)',
           maxWidth: 480,
           marginLeft: 'auto',
           marginRight: 'auto',

@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import AuroraBackground from '../components/AuroraBackground'
 import ThemePicker from '../components/ThemePicker'
 import { ChevronRightIcon } from '../components/Icons'
 import { useToast } from '../components/Toast'
@@ -15,6 +14,7 @@ import { clearToken, getUserId, getUserInfo } from '../lib/auth'
 import { resetLocalData } from '../lib/queryClient'
 import { workoutSync } from '../lib/workoutSync'
 import { parseDecimal } from '../lib/decimal'
+import { viewportDiagnostics } from '../lib/viewport'
 import DecimalInput from '../components/DecimalInput'
 
 export default function Settings() {
@@ -65,13 +65,10 @@ export default function Settings() {
     <div
       style={{
         position: 'relative',
-        background: 'var(--deep)',
-        overflow: 'hidden',
+        overflowX: 'clip',
       }}
     >
-      <AuroraBackground />
-
-      <div style={{ position: 'relative', zIndex: 1, padding: '12px 22px 130px' }}>
+      <div style={{ position: 'relative', zIndex: 1, padding: '12px 22px 0' }}>
         {/* Profile head */}
         <div style={{ textAlign: 'center', padding: '24px 0 28px' }}>
           <div
@@ -174,8 +171,35 @@ export default function Settings() {
             <span style={{ ...rowLabelStyle, color: '#f87171' }}>Log out</span>
           </button>
         </SectionCard>
+
+        <DisplayInfo />
       </div>
     </div>
+  )
+}
+
+/** Screen measurements, to check iOS sizes the installed app correctly. */
+function DisplayInfo() {
+  const [info, setInfo] = useState(viewportDiagnostics)
+  useEffect(() => {
+    const update = () => setInfo(viewportDiagnostics())
+    window.addEventListener('resize', update)
+    return () => window.removeEventListener('resize', update)
+  }, [])
+  return (
+    <p
+      style={{
+        marginTop: 18,
+        textAlign: 'center',
+        fontSize: 9,
+        lineHeight: 1.6,
+        letterSpacing: '0.08em',
+        color: 'var(--text-m)',
+        fontFamily: 'JetBrains Mono, ui-monospace, monospace',
+      }}
+    >
+      {info}
+    </p>
   )
 }
 

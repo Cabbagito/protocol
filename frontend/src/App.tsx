@@ -39,16 +39,24 @@ function lazyWithRetry(importFn: () => Promise<{ default: React.ComponentType<an
   )
 }
 
+// The tab pages and the workout screen are fetched in the background after
+// startup, so switching tabs never waits on a chunk.
+const loadDashboard = () => import('./pages/Dashboard')
+const loadDiet = () => import('./pages/Diet')
+const loadWorkoutHub = () => import('./pages/WorkoutHub')
+const loadWorkout = () => import('./pages/Workout')
+const PRELOAD = [loadDashboard, loadDiet, loadWorkoutHub, loadWorkout]
+
 const Login = lazyWithRetry(() => import('./pages/Login'))
-const Dashboard = lazyWithRetry(() => import('./pages/Dashboard'))
-const Diet = lazyWithRetry(() => import('./pages/Diet'))
+const Dashboard = lazyWithRetry(loadDashboard)
+const Diet = lazyWithRetry(loadDiet)
 const Exercises = lazyWithRetry(() => import('./pages/Exercises'))
 const Splits = lazyWithRetry(() => import('./pages/Splits'))
 const SplitEditor = lazyWithRetry(() => import('./pages/SplitEditor'))
 const Mesocycles = lazyWithRetry(() => import('./pages/Mesocycles'))
 const MesocycleDetail = lazyWithRetry(() => import('./pages/MesocycleDetail'))
-const WorkoutHub = lazyWithRetry(() => import('./pages/WorkoutHub'))
-const Workout = lazyWithRetry(() => import('./pages/Workout'))
+const WorkoutHub = lazyWithRetry(loadWorkoutHub)
+const Workout = lazyWithRetry(loadWorkout)
 const WorkoutDetail = lazyWithRetry(() => import('./pages/WorkoutDetail'))
 const Progress = lazyWithRetry(() => import('./pages/Progress'))
 const Settings = lazyWithRetry(() => import('./pages/Settings'))
@@ -94,6 +102,10 @@ export default function App() {
 
   useEffect(() => {
     setIsAuthenticated(!!getToken())
+    const id = window.setTimeout(() => {
+      for (const load of PRELOAD) load().catch(() => {})
+    }, 1000)
+    return () => window.clearTimeout(id)
   }, [])
 
   if (isAuthenticated === null) {

@@ -1,6 +1,5 @@
 import { useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import AuroraBackground from '../components/AuroraBackground'
 import PageLoader from '../components/PageLoader'
 import CreateExerciseSheet from '../components/CreateExerciseSheet'
 import { useToast } from '../components/Toast'
@@ -115,13 +114,10 @@ export default function Exercises() {
     <div
       style={{
         position: 'relative',
-        background: 'var(--deep)',
-        overflow: 'hidden',
+        overflowX: 'clip',
       }}
     >
-      <AuroraBackground />
-
-      <div style={{ position: 'relative', zIndex: 1, padding: '12px 22px 130px' }}>
+      <div style={{ position: 'relative', zIndex: 1, padding: '12px 22px 0' }}>
         <Chrome
           title="Exercises"
           sub={`${exercises.length} LIFTS · ${totalGroupCount} GROUPS`}
