@@ -3,7 +3,10 @@ import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import { ToastProvider } from './components/Toast'
 import App from './App'
+import { installViewportHeight } from './lib/viewport'
 import './index.css'
+
+installViewportHeight()
 
 // ── Service worker updates ─────────────────────────────────────────
 // A new deploy's service worker activates on its own (see vite.config.ts).
@@ -44,7 +47,9 @@ if (import.meta.env.PROD && 'serviceWorker' in navigator) {
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <BrowserRouter>
+    {/* Navigations run as transitions: the current page stays on screen
+        until the next one is ready, instead of flashing a loader. */}
+    <BrowserRouter future={{ v7_startTransition: true }}>
       <ToastProvider>
         <App />
       </ToastProvider>

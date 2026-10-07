@@ -1,6 +1,5 @@
 import { useId, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import AuroraBackground from '../components/AuroraBackground'
 import PageLoader from '../components/PageLoader'
 import { useExercises, useMesocycles, useMesocycleDetails } from '../api/hooks'
 import { getMuscleColor } from '../lib/muscleColors'
@@ -96,7 +95,7 @@ export default function Progress() {
 
   if (exercisesLoading || listLoading || detailsLoading) {
     return (
-      <div style={{ background: 'var(--deep)' }}>
+      <div>
         <PageLoader className="min-h-[60vh]" />
       </div>
     )
@@ -109,13 +108,10 @@ export default function Progress() {
     <div
       style={{
         position: 'relative',
-        background: 'var(--deep)',
-        overflow: 'hidden',
+        overflowX: 'clip',
       }}
     >
-      <AuroraBackground />
-
-      <div style={{ position: 'relative', zIndex: 1, padding: '12px 22px 130px' }}>
+      <div style={{ position: 'relative', zIndex: 1, padding: '12px 22px 0' }}>
         <Chrome title="Progress" sub={selected ? subText : 'NO DATA YET'} onBack={() => navigate(-1)} />
 
         {!selected ? (

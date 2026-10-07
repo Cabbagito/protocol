@@ -8,7 +8,6 @@ import {
   useUpdateExerciseNote, useWeightLogs,
 } from '../../api/hooks'
 import { ApiError, NetworkError } from '../../api/client'
-import AuroraBackground from '../../components/AuroraBackground'
 import MuscleSpotlight from '../../components/MuscleSpotlight'
 import ProgressRail from '../../components/ProgressRail'
 import ExercisePeekCard from '../../components/ExercisePeekCard'
@@ -275,11 +274,10 @@ export function WorkoutSession({ mesocycle, weekIndex, sessionIndex }: WorkoutSe
   const mesoExercises = useMemo(() => toMesoExercises(exercises), [exercises])
 
   return (
-    <div style={{ position: 'relative', minHeight: 'var(--app-h)', background: 'var(--deep)', overflow: 'hidden' }}>
-      <AuroraBackground />
+    <div style={{ position: 'relative', overflowX: 'clip' }}>
       <MuscleSpotlight group={currentEx?.muscle_group ?? 'chest'} />
 
-      <div style={{ position: 'relative', zIndex: 1, padding: `12px 20px ${showFinishBar ? 250 : 130}px` }}>
+      <div style={{ position: 'relative', zIndex: 1, padding: `12px 20px ${showFinishBar ? 120 : 0}px` }}>
         {/* ── Header: back / title / mesocycle ── */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <button type="button" onClick={() => navigate(-1)} aria-label="Back" style={headerButton}>

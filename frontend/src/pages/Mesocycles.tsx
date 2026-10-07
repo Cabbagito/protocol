@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import AuroraBackground from '../components/AuroraBackground'
 import PageLoader from '../components/PageLoader'
 import { useToast } from '../components/Toast'
 import { useScrollLock } from '../hooks/useScrollLock'
@@ -30,13 +29,10 @@ export default function Mesocycles() {
     <div
       style={{
         position: 'relative',
-        background: 'var(--deep)',
-        overflow: 'hidden',
+        overflowX: 'clip',
       }}
     >
-      <AuroraBackground />
-
-      <div style={{ position: 'relative', zIndex: 1, padding: '12px 22px 130px' }}>
+      <div style={{ position: 'relative', zIndex: 1, padding: '12px 22px 0' }}>
         <Chrome
           title="Mesocycles"
           sub={`${activeMesos.length} ACTIVE · ${archived.length} ARCHIVED`}

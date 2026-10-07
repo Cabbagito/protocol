@@ -21,7 +21,7 @@ export function WorkoutFinishBar({
       style={{
         position: 'fixed',
         left: 18, right: 18,
-        bottom: 'calc(env(safe-area-inset-bottom) + 98px)',
+        bottom: 'var(--above-nav)',
         zIndex: 100,
         maxWidth: 480,
         marginLeft: 'auto', marginRight: 'auto',

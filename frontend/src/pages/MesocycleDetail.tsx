@@ -1,5 +1,4 @@
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import AuroraBackground from '../components/AuroraBackground'
 import PageLoader from '../components/PageLoader'
 import { useToast } from '../components/Toast'
 import {
@@ -26,7 +25,7 @@ export default function MesocycleDetail() {
 
   if (isLoading) {
     return (
-      <div style={{ background: 'var(--deep)' }}>
+      <div>
         <PageLoader className="min-h-[60vh]" />
       </div>
     )
@@ -35,7 +34,6 @@ export default function MesocycleDetail() {
     return (
       <div
         style={{
-          background: 'var(--deep)',
           color: 'var(--text-2)',
           padding: 32,
           textAlign: 'center',
@@ -94,13 +92,10 @@ export default function MesocycleDetail() {
     <div
       style={{
         position: 'relative',
-        background: 'var(--deep)',
-        overflow: 'hidden',
+        overflowX: 'clip',
       }}
     >
-      <AuroraBackground />
-
-      <div style={{ position: 'relative', zIndex: 1, padding: '12px 22px 130px' }}>
+      <div style={{ position: 'relative', zIndex: 1, padding: '12px 22px 0' }}>
         <Chrome title={mesocycle.name} sub={eyebrow} onBack={() => navigate('/mesocycles')} />
 
         {/* Hero progress */}

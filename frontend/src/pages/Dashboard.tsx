@@ -4,7 +4,6 @@ import { useActiveMesocycle } from '../api/hooks'
 import { countCompletedWorkouts, countTotalWorkouts, getCurrentPosition } from '../lib/mesoUtils'
 import { GearIcon } from '../components/Icons'
 import PageLoader from '../components/PageLoader'
-import AuroraBackground from '../components/AuroraBackground'
 import { getUserInfo } from '../lib/auth'
 import { localDateKey, parseIso } from '../lib/dates'
 import { useToday } from '../hooks/useToday'
@@ -122,20 +121,19 @@ export default function Dashboard() {
     <div
       style={{
         position: 'relative',
-        minHeight: 'var(--app-h)',
-        overflow: 'hidden',
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        overflowX: 'clip',
       }}
     >
-      <AuroraBackground />
-
+      {/* Fills the screen above the nav (the shell pads it) without scrolling */}
       <div
         style={{
           position: 'relative',
           zIndex: 1,
-          // body already pads the home-indicator inset; 130px clears the
-          // floating nav (64px + 18px offset) with a 48px gap.
-          padding: '12px 22px 130px',
-          minHeight: 'var(--app-h)',
+          flex: 1,
+          padding: '12px 22px 0',
           display: 'flex',
           flexDirection: 'column',
         }}
