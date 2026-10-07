@@ -170,6 +170,7 @@ def apply_session_snapshot(
     *,
     exercises: list[dict],
     logged_on: date,
+    apply_to_future: bool = True,
 ) -> None:
     """Overwrite one session with the client's snapshot of it.
 
@@ -182,9 +183,10 @@ def apply_session_snapshot(
     client can never wipe data it didn't know about.
 
     A set-count change carries onto matching future sessions that haven't
-    been started. The session date is the day its first set was logged: it is
-    set from ``logged_on`` when the session goes from no logged sets to some,
-    and cleared when no logged sets remain. Mutates ``structure`` in place.
+    been started, unless ``apply_to_future`` is False. The session date is
+    the day its first set was logged: it is set from ``logged_on`` when the
+    session goes from no logged sets to some, and cleared when no logged sets
+    remain. Mutates ``structure`` in place.
     """
     session = structure["weeks"][week_index]["sessions"][session_index]
     had_logged = any(
@@ -215,7 +217,7 @@ def apply_session_snapshot(
             new_sets.append(entry)
         exercise["sets"] = new_sets
 
-        if len(new_sets) != old_count:
+        if apply_to_future and len(new_sets) != old_count:
             resize_future_sets(
                 structure, week_index, session, exercise["exercise_id"], len(new_sets)
             )

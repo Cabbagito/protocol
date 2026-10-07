@@ -15,6 +15,7 @@ import { getUserId } from '../../lib/auth'
 import { todayIso } from '../../lib/dates'
 import { formatHistorySummary } from '../../lib/exerciseHistory'
 import { findNextOpenSession, getCurrentPosition } from '../../lib/mesoUtils'
+import { useBack } from '../../lib/navigation'
 import { useKeyboardVisible } from '../../lib/useKeyboardVisible'
 import {
   applySnapshotToSession, findPreviousPerformance, targetForSet, toMesoExercises, withSession,
@@ -23,7 +24,7 @@ import {
 import { SyncUnavailableError, workoutSync } from '../../lib/workoutSync'
 import { useWorkoutSession } from '../../hooks/useWorkoutSession'
 import type { Mesocycle } from '../../types'
-import { ExerciseHistoryPopup } from './ExerciseHistoryPopup'
+import { ExerciseHistorySheet } from './ExerciseHistorySheet'
 import { ExercisePicker } from './ExercisePicker'
 import { LoggingState } from './LoggingState'
 import { NoteModal } from './NoteModal'
@@ -31,34 +32,37 @@ import { ReorderSheet } from './ReorderSheet'
 import { SkippedExerciseState } from './SkippedExerciseState'
 import { SyncPill } from './SyncPill'
 import { WorkoutFinishBar } from './WorkoutFinishBar'
-import { BackIcon, MesocycleIcon, ReorderIcon, SkipIcon } from './icons'
+import { ReorderIcon, SkipIcon } from './icons'
 
 interface WorkoutSessionProps {
   mesocycle: Mesocycle
   weekIndex: number
   sessionIndex: number
+  /** Correcting a finished session (opened from its review). */
+  editing: boolean
 }
 
 const MONO = 'JetBrains Mono, ui-monospace, monospace'
 
-const headerButton: React.CSSProperties = {
-  width: 44, height: 44, borderRadius: 12,
-  background: 'rgba(255,255,255,0.05)',
-  border: '1px solid rgba(255,255,255,0.06)',
-  color: 'var(--text-2)',
-  display: 'grid', placeItems: 'center',
+const titleButton: React.CSSProperties = {
+  display: 'block', margin: '0 auto', padding: 0,
+  background: 'transparent', border: 'none', color: 'inherit', cursor: 'pointer',
 }
 
 /**
  * One workout session. Mounted with a key per session (see pages/Workout),
  * so switching sessions always starts from fresh state.
  */
-export function WorkoutSession({ mesocycle, weekIndex, sessionIndex }: WorkoutSessionProps) {
+export function WorkoutSession({ mesocycle, weekIndex, sessionIndex, editing }: WorkoutSessionProps) {
   const toast = useToast()
   const keyboardOpen = useKeyboardVisible()
   const queryClient = useQueryClient()
   const navigate = useNavigate()
   const mesocycleId = mesocycle.id
+  const mesoPath = `/mesocycles/${mesocycleId}`
+  const reviewPath = `/workouts/${mesocycleId}/${weekIndex}/${sessionIndex}`
+  // Done editing returns to the review the edit was opened from.
+  const backToReview = useBack(reviewPath)
 
   const week = mesocycle.structure.weeks[weekIndex]!
   const serverSession = week.sessions[sessionIndex]!
@@ -72,7 +76,7 @@ export function WorkoutSession({ mesocycle, weekIndex, sessionIndex }: WorkoutSe
   const canLog = !isFutureSession && !isSkippedSession
 
   const session = useWorkoutSession({
-    mesocycleId, weekIndex, sessionIndex, session: serverSession, readOnly: !canLog,
+    mesocycleId, weekIndex, sessionIndex, session: serverSession, readOnly: !canLog, editOnly: editing,
   })
   const { exercises } = session
 
@@ -126,7 +130,7 @@ export function WorkoutSession({ mesocycle, weekIndex, sessionIndex }: WorkoutSe
   }
 
   const allLogged = exercises.length > 0 && exercises.every((_, i) => exerciseDone(i))
-  const showFinishBar = canLog && allLogged && !keyboardOpen
+  const showFinishBar = canLog && (allLogged || editing) && !keyboardOpen
 
   // "Last time" for the current exercise: earlier in this mesocycle, else
   // the most recent older mesocycle.
@@ -205,7 +209,7 @@ export function WorkoutSession({ mesocycle, weekIndex, sessionIndex }: WorkoutSe
 
   const handleAddExercise = async (exerciseId: string) => {
     const ok = await runServerChange(
-      () => addExercise.mutateAsync({ ...position, exercise_id: exerciseId, apply_to_future: true }),
+      () => addExercise.mutateAsync({ ...position, exercise_id: exerciseId, apply_to_future: !editing }),
       'Failed to add exercise',
     )
     if (ok) setAddExerciseOpen(false)
@@ -213,7 +217,7 @@ export function WorkoutSession({ mesocycle, weekIndex, sessionIndex }: WorkoutSe
 
   const handleRemoveExercise = async (exerciseId: string) => {
     const ok = await runServerChange(
-      () => removeExercise.mutateAsync({ ...position, exercise_id: exerciseId, apply_to_future: true }),
+      () => removeExercise.mutateAsync({ ...position, exercise_id: exerciseId, apply_to_future: !editing }),
       'Failed to remove exercise',
     )
     if (ok) setCurIdxOverride(null)
@@ -221,7 +225,7 @@ export function WorkoutSession({ mesocycle, weekIndex, sessionIndex }: WorkoutSe
 
   const handleReorder = async (exerciseIds: string[], currentExerciseId: string | null) => {
     const ok = await runServerChange(
-      () => reorderExercises.mutateAsync({ ...position, exercise_ids: exerciseIds, apply_to_future: true }),
+      () => reorderExercises.mutateAsync({ ...position, exercise_ids: exerciseIds, apply_to_future: !editing }),
       'Failed to reorder exercises',
     )
     if (!ok) return
@@ -251,6 +255,8 @@ export function WorkoutSession({ mesocycle, weekIndex, sessionIndex }: WorkoutSe
   }
 
   // ─── finish ───
+  // Finishing opens the session's review in place of the workout; finishing
+  // an edit goes back to the review it came from.
   const finishingRef = useRef(false)
   const handleFinish = () => {
     if (finishingRef.current) return
@@ -258,9 +264,8 @@ export function WorkoutSession({ mesocycle, weekIndex, sessionIndex }: WorkoutSe
     // Everything is already saved on the phone; just push it now.
     workoutSync.schedule(0)
     if (!navigator.onLine) toast.showSuccess("Saved on this phone — it'll sync when you have signal")
-    navigate(nextOpen
-      ? `/workout/${mesocycleId}?week=${nextOpen.weekIndex}&session=${nextOpen.sessionIndex}`
-      : `/mesocycles/${mesocycleId}`)
+    if (editing) backToReview()
+    else navigate(reviewPath, { replace: true })
   }
 
   // ─── set actions with cursor moves ───
@@ -278,33 +283,23 @@ export function WorkoutSession({ mesocycle, weekIndex, sessionIndex }: WorkoutSe
       <MuscleSpotlight group={currentEx?.muscle_group ?? 'chest'} />
 
       <div style={{ position: 'relative', zIndex: 1, padding: `12px 20px ${showFinishBar ? 120 : 0}px` }}>
-        {/* ── Header: back / title / mesocycle ── */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <button type="button" onClick={() => navigate(-1)} aria-label="Back" style={headerButton}>
-            <BackIcon />
-          </button>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 9, color: 'var(--text-m)', letterSpacing: '0.22em', fontFamily: MONO, fontWeight: 500 }}>
-              WEEK {week.week_number} · DAY {sessionIndex + 1}
-            </div>
-            <div
+        {/* ── Header: the title opens the mesocycle (as does tapping Workout again) ── */}
+        <div style={{ textAlign: 'center', minHeight: 44 }}>
+          <button type="button" onClick={() => navigate(mesoPath)} aria-label="Open mesocycle" style={titleButton}>
+            <span style={{ display: 'block', fontSize: 9, color: 'var(--text-m)', letterSpacing: '0.22em', fontFamily: MONO, fontWeight: 500 }}>
+              {editing && 'EDITING · '}WEEK {week.week_number} · DAY {sessionIndex + 1}
+            </span>
+            <span
               style={{
+                display: 'block',
                 fontFamily: "'Fraunces', 'Instrument Serif', Georgia, serif",
                 fontStyle: 'italic', fontSize: 18, color: 'var(--text-1)', marginTop: 1,
               }}
             >
               {serverSession.session_name}
-            </div>
-            {canLog && <SyncPill />}
-          </div>
-          <button
-            type="button"
-            onClick={() => navigate(`/mesocycles/${mesocycleId}`)}
-            aria-label="View mesocycle"
-            style={headerButton}
-          >
-            <MesocycleIcon />
+            </span>
           </button>
+          {canLog && <SyncPill />}
         </div>
 
         {/* ── Future-session banner (preview only) ── */}
@@ -495,7 +490,7 @@ export function WorkoutSession({ mesocycle, weekIndex, sessionIndex }: WorkoutSe
         )}
 
         {/* ── Skip the whole workout ── */}
-        {canLog && !keyboardOpen && (
+        {canLog && !editing && !keyboardOpen && (
           <button
             type="button"
             onClick={() => handleSetSessionSkipped(true)}
@@ -573,11 +568,12 @@ export function WorkoutSession({ mesocycle, weekIndex, sessionIndex }: WorkoutSe
       )}
 
       {historyOpen && currentEx && (
-        <ExerciseHistoryPopup
+        <ExerciseHistorySheet
           exerciseName={currentEx.exercise_name}
           muscleGroup={currentEx.muscle_group}
           equipmentType={currentEx.equipment_type}
           history={history ?? []}
+          mesocycleId={mesocycleId}
           onClose={() => setHistoryOpen(false)}
         />
       )}
@@ -585,10 +581,10 @@ export function WorkoutSession({ mesocycle, weekIndex, sessionIndex }: WorkoutSe
       {showFinishBar && (
         <WorkoutFinishBar
           exercises={exercises}
-          isLastSession={isLastSession}
+          label={editing ? 'DONE EDITING' : isLastSession ? 'FINISH MESOCYCLE' : 'FINISH WORKOUT'}
+          eyebrow={editing ? 'Editing' : 'Session complete'}
           busy={busy}
           onFinish={handleFinish}
-          onReviewSets={() => navigate(`/workouts/${mesocycleId}/${weekIndex}/${sessionIndex}`)}
         />
       )}
     </div>

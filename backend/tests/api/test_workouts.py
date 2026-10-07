@@ -153,6 +153,16 @@ async def test_added_set_propagates_to_future_weeks(client, user):
     assert [len(w["sessions"][0]["exercises"][0]["sets"]) for w in weeks] == [4, 4, 4]
 
 
+async def test_set_count_change_can_stay_in_its_session(client, user):
+    meso = await make_mesocycle(client, user.headers, days=1, per_day=1, total_weeks=3)
+    ex_id = meso["structure"]["weeks"][0]["sessions"][0]["exercises"][0]["exercise_id"]
+    body = _snap(meso, 0, 0, [_ex(ex_id, [{}, {}, {}, {}])])
+    body["apply_to_future"] = False
+    await client.put("/api/workouts/session", json=body, headers=user.headers)
+    weeks = (await _structure(client, user, meso["id"]))["weeks"]
+    assert [len(w["sessions"][0]["exercises"][0]["sets"]) for w in weeks] == [4, 3, 3]
+
+
 async def test_add_exercise_rejects_duplicates_and_skips_started_sessions(client, user):
     meso = await make_mesocycle(client, user.headers, days=1, per_day=1, total_weeks=3)
     first = meso["structure"]["weeks"][0]["sessions"][0]["exercises"][0]["exercise_id"]

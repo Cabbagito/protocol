@@ -9,6 +9,7 @@ import {
   useDeleteSplit,
   useExercises,
 } from '../api/hooks'
+import { useBack } from '../lib/navigation'
 import type { Exercise } from '../types'
 import DayCard from './split-editor/DayCard'
 
@@ -29,6 +30,7 @@ export default function SplitEditor() {
   const { id } = useParams<{ id: string }>()
   const isEdit = !!id
   const navigate = useNavigate()
+  const back = useBack('/splits')
   const toast = useToast()
 
   const { data: existingSplit, isLoading: splitLoading } = useSplit(id ?? '')
@@ -162,7 +164,7 @@ export default function SplitEditor() {
     try {
       if (isEdit) await updateSplit.mutateAsync(payload)
       else await createSplit.mutateAsync(payload)
-      navigate('/splits')
+      back()
     } catch {
       toast.showError(`Failed to ${isEdit ? 'update' : 'create'} split`)
     }
@@ -182,7 +184,7 @@ export default function SplitEditor() {
     if (!id || !confirm('Delete this split? Mesocycles created from it are kept.')) return
     try {
       await deleteSplit.mutateAsync(id)
-      navigate('/splits')
+      back()
     } catch {
       toast.showError('Failed to delete split')
     }
@@ -191,7 +193,7 @@ export default function SplitEditor() {
   // Back arrow and Discard both leave the editor: confirm unsaved changes.
   function handleDiscard() {
     if (dirty && !confirm('Discard your changes?')) return
-    navigate('/splits')
+    back()
   }
 
   const isSaving = createSplit.isPending || updateSplit.isPending

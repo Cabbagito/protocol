@@ -74,6 +74,19 @@ export function useExerciseHistory(exerciseId: string | undefined) {
   })
 }
 
+/** Server history of several exercises, in the order of `ids` (undefined until loaded). */
+export function useExerciseHistories(ids: string[]) {
+  return useQueries({
+    queries: ids.map((id) => exerciseHistoryQuery(id)),
+    combine: combineExerciseHistories,
+  })
+}
+
+// Module-level so useQueries can memoize the combined result between renders.
+function combineExerciseHistories(results: UseQueryResult<ExerciseSessionHistory[]>[]) {
+  return results.map((r) => r.data)
+}
+
 export function mesocycleQuery(id: string) {
   return queryOptions({
     queryKey: queryKeys.mesocycles.detail(id),

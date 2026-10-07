@@ -10,12 +10,14 @@ import {
   useSplits,
 } from '../api/hooks'
 import { getCurrentPosition, isSessionDone, isSessionSkipped } from '../lib/mesoUtils'
+import { useBack } from '../lib/navigation'
 import type { MesocycleListItem, Mesocycle } from '../types'
 
 const MONO = 'JetBrains Mono, ui-monospace, monospace'
 
 export default function Mesocycles() {
   const navigate = useNavigate()
+  const back = useBack('/settings')
   const { data: mesocycles = [], isLoading } = useMesocycles()
   const { data: activeMeso } = useActiveMesocycle()
   const [createOpen, setCreateOpen] = useState(false)
@@ -36,7 +38,7 @@ export default function Mesocycles() {
         <Chrome
           title="Mesocycles"
           sub={`${activeMesos.length} ACTIVE · ${archived.length} ARCHIVED`}
-          onBack={() => navigate(-1)}
+          onBack={back}
         />
 
         {isLoading ? (

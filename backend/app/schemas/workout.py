@@ -39,6 +39,9 @@ class SaveSessionRequest(BaseModel):
     # server's own "today" is UTC and the save may arrive days later (offline).
     logged_on: date | None = None
     exercises: list[SnapshotExercise]
+    # False when correcting a past session: set-count changes then stay in
+    # this session instead of resizing later, unstarted ones.
+    apply_to_future: bool = True
 
 
 class ExerciseNoteRequest(BaseModel):
