@@ -57,10 +57,11 @@ There is no automatic progression and nothing is copied between weeks.
    - first, earlier in this mesocycle (most recent date);
    - otherwise, the most recent older mesocycle.
 
-   That session's set with the same number is shown as a **grey target** for
-   weight and reps. Sets beyond last time's count use its final set.
-2. **LOG accepts what's shown.** Tap it to log the grey values, or type over
-   them first.
+   That session's set with the same number fills in the weight and shows
+   the reps as a **grey target**. Sets beyond last time's count use its
+   final set.
+2. **LOG accepts what's shown.** Tap it to log the shown values, or type
+   over them first.
 3. **Weight carries forward within a session.** Typing a weight also fills
    it into the later open sets of that exercise.
 4. **Bodyweight exercises** (pull-ups, dips, …) can be logged at 0 kg. If

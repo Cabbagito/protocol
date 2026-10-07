@@ -88,7 +88,8 @@ export function LoggingState({
     return () => clearTimeout(t)
   }, [confirmRemoveFor])
 
-  // What LOG will record: typed values, else last time's (the grey targets).
+  // What LOG will record: typed values, else last time's. The weight shows as
+  // entered; untouched reps stay a grey target.
   const weight = activeSet.weight ?? target.weight ?? (isBodyweight ? 0 : null)
   const reps = activeSet.reps ?? target.reps
   const isLogValid = weight != null && reps != null && reps > 0 && (weight > 0 || isBodyweight)
@@ -169,9 +170,8 @@ export function LoggingState({
       <div style={{ marginTop: 16 }}>
         <NumeralsCard
           group={exercise.muscle_group}
-          weight={activeSet.weight}
+          weight={weight}
           reps={activeSet.reps}
-          weightTarget={target.weight ?? (isBodyweight ? 0 : null)}
           repsTarget={target.reps}
           weightLabel={isBodyweight ? 'WEIGHT · BW' : 'WEIGHT'}
           setNum={activeIdx + 1}

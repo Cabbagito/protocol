@@ -4,11 +4,10 @@ import './NumeralsCard.css'
 
 interface NumeralsCardProps {
   group: string
-  /** Typed/logged values; null shows the target as a grey placeholder. */
+  /** Shown as entered values; null reps show the target as a grey placeholder. */
   weight: number | null
   reps: number | null
-  /** What to aim for (last time's set). Shown greyed until the user types. */
-  weightTarget?: number | null
+  /** Reps to aim for (last time's set). Shown greyed until the user types. */
   repsTarget?: number | null
   /** Overrides the WEIGHT label, e.g. for bodyweight exercises. */
   weightLabel?: string
@@ -35,14 +34,13 @@ interface NumeralsCardProps {
 /**
  * Hero weight/reps card on the v5 workout screen. The 56px mono numerals
  * are tap-editable text inputs (decimal comma accepted). -/+ nudges step by
- * 0.5kg for weight and 1 for reps. Untouched fields show last time's value
+ * 0.5kg for weight and 1 for reps. Untouched reps show last time's value
  * as a grey placeholder; LOG accepts whatever is shown.
  */
 export default function NumeralsCard({
   group,
   weight,
   reps,
-  weightTarget = null,
   repsTarget = null,
   weightLabel = 'WEIGHT',
   setNum,
@@ -162,7 +160,6 @@ export default function NumeralsCard({
         <Column
           label={weightLabel}
           value={weight}
-          placeholder={weightTarget}
           step={0.5}
           minValue={0}
           onChange={onWeightChange}
@@ -274,7 +271,7 @@ function SecondaryButton({ onClick, color, children }: { onClick: () => void; co
 interface ColumnProps {
   label: string
   value: number | null
-  placeholder: number | null
+  placeholder?: number | null
   step: number
   minValue: number
   onChange: (n: number) => void
@@ -289,7 +286,7 @@ function fmt(n: number | null): string {
 }
 
 function Column({
-  label, value, placeholder, step, minValue, onChange, color, integerOnly,
+  label, value, placeholder = null, step, minValue, onChange, color, integerOnly,
 }: ColumnProps) {
   // Local text state lets the input go through transient invalid states
   // (e.g. trailing "." while typing 22.5) without snapping back.
