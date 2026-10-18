@@ -58,7 +58,7 @@ export default function Splits() {
                 marginTop: 14,
                 borderRadius: 14,
                 background: 'transparent',
-                border: '1px dashed rgba(255,255,255,0.08)',
+                border: '1px dashed var(--fill-strong)',
                 color: 'var(--accent-l)',
                 fontSize: 13,
                 fontWeight: 500,
@@ -115,11 +115,11 @@ function SplitCard({ split, isLive }: { split: SplitListItem; isLive: boolean })
         padding: 16,
         borderRadius: 18,
         background: isLive
-          ? `linear-gradient(180deg, color-mix(in oklab, ${accent} 14%, rgba(15,29,46,0.5)), rgba(15,29,46,0.6))`
-          : 'rgba(15,29,46,0.45)',
+          ? `linear-gradient(180deg, color-mix(in oklab, ${accent} 14%, var(--glass)), var(--glass-row))`
+          : 'var(--glass)',
         border: isLive
-          ? `1px solid color-mix(in oklab, ${accent} 35%, rgba(255,255,255,0.05))`
-          : '1px solid rgba(255,255,255,0.05)',
+          ? `1px solid color-mix(in oklab, ${accent} 35%, var(--line))`
+          : '1px solid var(--line)',
         textDecoration: 'none',
         color: 'inherit',
         display: 'block',
@@ -170,7 +170,7 @@ function SplitCard({ split, isLive }: { split: SplitListItem; isLive: boolean })
                   letterSpacing: '0.22em',
                   padding: '2px 7px',
                   borderRadius: 100,
-                  border: '1px solid rgba(255,255,255,0.1)',
+                  border: '1px solid var(--fill-strong)',
                   fontFamily: MONO,
                   fontWeight: 700,
                   flexShrink: 0,
@@ -226,7 +226,7 @@ function SplitCard({ split, isLive }: { split: SplitListItem; isLive: boolean })
                 alignItems: 'center',
                 gap: 10,
                 padding: '6px 0',
-                borderTop: di > 0 ? '1px solid rgba(255,255,255,0.04)' : 'none',
+                borderTop: di > 0 ? '1px solid var(--line)' : 'none',
               }}
             >
               <span
@@ -319,8 +319,8 @@ function Chrome({ title, sub, onBack }: { title: string; sub: string; onBack: ()
           width: 36,
           height: 36,
           borderRadius: 12,
-          background: 'rgba(255,255,255,0.04)',
-          border: '1px solid rgba(255,255,255,0.05)',
+          background: 'var(--fill-soft)',
+          border: '1px solid var(--line)',
           color: 'var(--text-2)',
           display: 'grid',
           placeItems: 'center',
@@ -363,8 +363,8 @@ function EmptyState({ onCreate }: { onCreate: () => void }) {
         padding: '40px 22px',
         borderRadius: 16,
         textAlign: 'center',
-        background: 'rgba(15,29,46,0.4)',
-        border: '1px dashed rgba(255,255,255,0.08)',
+        background: 'var(--glass)',
+        border: '1px dashed var(--fill-strong)',
       }}
     >
       <div className="p-display" style={{ fontSize: 22, color: 'var(--text-1)' }}>

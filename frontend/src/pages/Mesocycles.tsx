@@ -125,8 +125,8 @@ function Chrome({ title, sub, onBack }: { title: string; sub: string; onBack: ()
           width: 36,
           height: 36,
           borderRadius: 12,
-          background: 'rgba(255,255,255,0.04)',
-          border: '1px solid rgba(255,255,255,0.05)',
+          background: 'var(--fill-soft)',
+          border: '1px solid var(--line)',
           color: 'var(--text-2)',
           display: 'grid',
           placeItems: 'center',
@@ -206,7 +206,7 @@ function PrimaryActiveCard({ meso }: { meso: MesocycleListItem | Mesocycle }) {
         textDecoration: 'none',
         color: 'inherit',
         background:
-          'linear-gradient(180deg, rgba(var(--accent-rgb),0.14), rgba(15,29,46,0.6))',
+          'linear-gradient(180deg, rgba(var(--accent-rgb),0.14), var(--glass-row))',
         border: '1px solid rgba(var(--accent-rgb),0.30)',
       }}
     >
@@ -293,8 +293,8 @@ function PrimaryActiveCard({ meso }: { meso: MesocycleListItem | Mesocycle }) {
                   background: isDone
                     ? 'var(--accent-l)'
                     : isCurrent
-                      ? 'color-mix(in oklab, var(--accent) 60%, rgba(255,255,255,0.06))'
-                      : 'rgba(255,255,255,0.05)',
+                      ? 'color-mix(in oklab, var(--accent) 60%, var(--fill))'
+                      : 'var(--fill)',
                   boxShadow: isDone || isCurrent ? '0 0 6px var(--accent)' : 'none',
                   alignSelf: 'center',
                 }}
@@ -348,13 +348,13 @@ function ArchivedRow({ meso }: { meso: MesocycleListItem }) {
         display: 'flex',
         alignItems: 'center',
         gap: 12,
-        background: 'rgba(15,29,46,0.4)',
-        border: '1px solid rgba(255,255,255,0.05)',
+        background: 'var(--glass)',
+        border: '1px solid var(--line)',
         textDecoration: 'none',
         color: 'inherit',
       }}
     >
-      <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'rgba(255,255,255,0.15)' }} />
+      <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'color-mix(in oklab, var(--text-m) 30%, transparent)' }} />
       <div style={{ flex: 1, minWidth: 0 }}>
         <div
           style={{
@@ -438,7 +438,7 @@ function CreateMesoDialog({
     >
       <div
         className="absolute inset-0"
-        style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(2px)' }}
+        style={{ background: 'var(--scrim)', backdropFilter: 'blur(2px)' }}
       />
       <form
         onSubmit={handleSubmit}
@@ -446,7 +446,7 @@ function CreateMesoDialog({
         className="relative w-full max-w-sm rounded-2xl slide-up"
         style={{
           background: 'var(--card)',
-          border: '1px solid rgba(255,255,255,0.06)',
+          border: '1px solid var(--line)',
           boxShadow: '0 24px 48px rgba(0,0,0,0.6)',
           padding: 20,
         }}
@@ -471,8 +471,8 @@ function CreateMesoDialog({
               width: '100%',
               padding: '10px 12px',
               borderRadius: 10,
-              background: 'rgba(255,255,255,0.04)',
-              border: '1px solid rgba(255,255,255,0.06)',
+              background: 'var(--fill-soft)',
+              border: '1px solid var(--line)',
               color: 'var(--text-1)',
               fontSize: 14,
               outline: 'none',
@@ -499,8 +499,8 @@ function CreateMesoDialog({
                 width: '100%',
                 padding: '10px 12px',
                 borderRadius: 10,
-                background: 'rgba(255,255,255,0.04)',
-                border: '1px solid rgba(255,255,255,0.06)',
+                background: 'var(--fill-soft)',
+                border: '1px solid var(--line)',
                 color: 'var(--text-1)',
                 fontSize: 14,
                 outline: 'none',
@@ -525,8 +525,8 @@ function CreateMesoDialog({
               justifyContent: 'space-between',
               padding: '10px 14px',
               borderRadius: 10,
-              background: 'rgba(255,255,255,0.04)',
-              border: '1px solid rgba(255,255,255,0.06)',
+              background: 'var(--fill-soft)',
+              border: '1px solid var(--line)',
             }}
           >
             <button
@@ -536,8 +536,8 @@ function CreateMesoDialog({
                 width: 36,
                 height: 36,
                 borderRadius: 8,
-                background: 'rgba(255,255,255,0.04)',
-                border: '1px solid rgba(255,255,255,0.06)',
+                background: 'var(--fill-soft)',
+                border: '1px solid var(--line)',
                 color: 'var(--text-2)',
                 cursor: 'pointer',
               }}
@@ -561,8 +561,8 @@ function CreateMesoDialog({
                 width: 36,
                 height: 36,
                 borderRadius: 8,
-                background: 'rgba(255,255,255,0.04)',
-                border: '1px solid rgba(255,255,255,0.06)',
+                background: 'var(--fill-soft)',
+                border: '1px solid var(--line)',
                 color: 'var(--text-2)',
                 cursor: 'pointer',
               }}
@@ -580,8 +580,8 @@ function CreateMesoDialog({
               flex: 1,
               height: 44,
               borderRadius: 12,
-              background: 'rgba(255,255,255,0.04)',
-              border: '1px solid rgba(255,255,255,0.06)',
+              background: 'var(--fill-soft)',
+              border: '1px solid var(--line)',
               color: 'var(--text-2)',
               fontSize: 13,
               fontWeight: 500,
@@ -626,8 +626,8 @@ function EmptyState({ onCreate }: { onCreate: () => void }) {
         padding: '40px 22px',
         borderRadius: 16,
         textAlign: 'center',
-        background: 'rgba(15,29,46,0.4)',
-        border: '1px dashed rgba(255,255,255,0.08)',
+        background: 'var(--glass)',
+        border: '1px dashed var(--fill-strong)',
       }}
     >
       <div className="p-display" style={{ fontSize: 22, color: 'var(--text-1)' }}>

@@ -135,8 +135,8 @@ export default function Exercises() {
             gap: 10,
             padding: '12px 14px',
             borderRadius: 14,
-            background: 'rgba(15,29,46,0.5)',
-            border: '1px solid rgba(255,255,255,0.05)',
+            background: 'var(--glass)',
+            border: '1px solid var(--line)',
           }}
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-m)" strokeWidth="2" strokeLinecap="round">
@@ -189,8 +189,8 @@ export default function Exercises() {
             marginTop: 10,
             padding: '10px 12px',
             borderRadius: 14,
-            background: 'rgba(15,29,46,0.4)',
-            border: '1px solid rgba(255,255,255,0.05)',
+            background: 'var(--glass)',
+            border: '1px solid var(--line)',
             display: 'flex',
             flexDirection: 'column',
             gap: 6,
@@ -227,7 +227,7 @@ export default function Exercises() {
                         background: sel
                           ? `color-mix(in oklab, ${color.primary} 18%, transparent)`
                           : 'transparent',
-                        border: `1px solid ${sel ? `color-mix(in oklab, ${color.primary} 40%, transparent)` : 'rgba(255,255,255,0.05)'}`,
+                        border: `1px solid ${sel ? `color-mix(in oklab, ${color.primary} 40%, transparent)` : 'var(--line)'}`,
                         color: sel ? color.text : 'var(--text-2)',
                         fontSize: 10,
                         fontWeight: 600,
@@ -264,7 +264,7 @@ export default function Exercises() {
               gap: 8,
               marginTop: 6,
               paddingTop: 8,
-              borderTop: '1px solid rgba(255,255,255,0.05)',
+              borderTop: '1px solid var(--line)',
             }}
           >
             <span
@@ -294,7 +294,7 @@ export default function Exercises() {
                       background: sel ? 'rgba(var(--accent-rgb),0.16)' : 'transparent',
                       border: sel
                         ? '1px solid rgba(var(--accent-rgb),0.40)'
-                        : '1px solid rgba(255,255,255,0.05)',
+                        : '1px solid var(--line)',
                       color: sel ? 'var(--accent-l)' : 'var(--text-2)',
                       fontSize: 10,
                       fontWeight: 600,
@@ -330,8 +330,8 @@ export default function Exercises() {
               padding: '40px 22px',
               textAlign: 'center',
               borderRadius: 16,
-              background: 'rgba(15,29,46,0.4)',
-              border: '1px dashed rgba(255,255,255,0.08)',
+              background: 'var(--glass)',
+              border: '1px dashed var(--fill-strong)',
               color: 'var(--text-m)',
               fontSize: 13,
             }}
@@ -449,8 +449,8 @@ function ExerciseRow({
         display: 'flex',
         alignItems: 'center',
         borderRadius: 12,
-        background: 'rgba(15,29,46,0.4)',
-        border: '1px solid rgba(255,255,255,0.05)',
+        background: 'var(--glass)',
+        border: '1px solid var(--line)',
       }}
     >
       <button
@@ -540,7 +540,7 @@ function ExerciseRow({
             height: 36,
             marginRight: 8,
             borderRadius: 10,
-            background: 'rgba(255,255,255,0.05)',
+            background: 'var(--fill)',
             border: 'none',
             color: 'var(--text-2)',
             display: 'grid',
@@ -587,8 +587,8 @@ function Chrome({
           width: 36,
           height: 36,
           borderRadius: 12,
-          background: 'rgba(255,255,255,0.04)',
-          border: '1px solid rgba(255,255,255,0.05)',
+          background: 'var(--fill-soft)',
+          border: '1px solid var(--line)',
           color: 'var(--text-2)',
           display: 'grid',
           placeItems: 'center',
