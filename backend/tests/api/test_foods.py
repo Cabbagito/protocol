@@ -1,5 +1,6 @@
-"""Food items: ownership, deletion, barcode sharing and lookup."""
+"""Food items: ownership, units, search, barcode sharing and lookup."""
 
+import uuid
 from datetime import date
 
 from app.services import food_service, off_client
@@ -11,7 +12,7 @@ FOOD = {
     "protein_per_100g": 6,
     "carbs_per_100g": 24,
     "fat_per_100g": 3,
-    "default_serving_g": 250,
+    "units": [{"name": "jar", "grams": 250}],
 }
 BARCODE = "5000112637922"
 
@@ -76,23 +77,31 @@ async def test_seeded_foods_are_read_only(client, user):
     assert resp.status_code == 403
 
 
-async def test_barcode_foods_are_shared_and_read_only(client, user, other_user):
+async def test_barcode_foods_are_shared_and_correctable_by_anyone(client, user, other_user):
     resp = await _create(client, user.headers, barcode=BARCODE)
     assert resp.status_code == 201
     food = resp.json()
     assert food["user_id"] is None
     assert food["barcode"] == BARCODE
+    assert food["editable"] is True
 
     # Visible to everyone ...
     theirs = (await client.get("/api/foods?q=Overnight", headers=other_user.headers)).json()
     assert [f["id"] for f in theirs] == [food["id"]]
 
-    # ... editable by no one, not even its creator.
+    # ... correctable by anyone (a typo from the first scan isn't forever) ...
+    resp = await client.put(
+        f"/api/foods/{food['id']}",
+        json={**FOOD, "kcal_per_100g": 160, "units": [{"name": "pot", "grams": 200}]},
+        headers=other_user.headers,
+    )
+    assert resp.status_code == 200
+    assert resp.json()["kcal_per_100g"] == 160
+    assert [(u["name"], u["grams"]) for u in resp.json()["units"]] == [("pot", 200)]
+    assert resp.json()["barcode"] == BARCODE
+
+    # ... and deletable by no one, since others may have logged it.
     for headers in (user.headers, other_user.headers):
-        resp = await client.put(
-            f"/api/foods/{food['id']}", json={**FOOD, "kcal_per_100g": 1}, headers=headers
-        )
-        assert resp.status_code == 403
         resp = await client.delete(f"/api/foods/{food['id']}", headers=headers)
         assert resp.status_code == 403
 
@@ -130,46 +139,160 @@ async def test_barcode_insert_race_returns_existing_food(client, user, other_use
     assert resp.json()["id"] == first["id"]
 
 
-async def test_delete_own_food_keeps_log_entries(client, user):
-    food = (await _create(client, user.headers)).json()
-    today = date.today().isoformat()
-    log = {
-        "logged_on": today,
-        "food_item_id": food["id"],
-        "name": food["name"],
-        "quantity_g": 250,
-        "kcal": 375,
-        "protein_g": 15,
-        "carbs_g": 60,
-        "fat_g": 7.5,
+def _meal(food: dict, **item) -> dict:
+    return {
+        "eaten_on": date.today().isoformat(),
+        "eaten_at": "08:30",
+        "items": [
+            {
+                "food_item_id": food["id"],
+                "name": food["name"],
+                "unit_name": None,
+                "unit_quantity": 250,
+                "quantity_g": 250,
+                "kcal": 375,
+                "protein_g": 15,
+                "carbs_g": 60,
+                "fat_g": 7.5,
+                **item,
+            }
+        ],
     }
-    assert (await client.post("/api/food-logs", json=log, headers=user.headers)).status_code == 201
+
+
+async def test_delete_own_food_keeps_meal_items(client, user):
+    food = (await _create(client, user.headers)).json()
+    meal_id = str(uuid.uuid4())
+    resp = await client.put(f"/api/meals/{meal_id}", json=_meal(food), headers=user.headers)
+    assert resp.status_code == 200
 
     resp = await client.delete(f"/api/foods/{food['id']}", headers=user.headers)
     assert resp.status_code == 204
 
-    day = (await client.get(f"/api/food-logs?date={today}", headers=user.headers)).json()
-    assert len(day["entries"]) == 1
-    entry = day["entries"][0]
-    assert entry["food_item_id"] is None
-    assert entry["name"] == "Overnight Oats"
-    assert entry["kcal"] == 375
-    assert day["totals"]["protein_g"] == 15
+    meal = (await client.get(f"/api/meals/{meal_id}", headers=user.headers)).json()
+    [item] = meal["items"]
+    assert item["food_item_id"] is None
+    assert item["name"] == "Overnight Oats"
+    assert item["kcal"] == 375
+    assert meal["totals"]["protein_g"] == 15
 
 
 async def test_cannot_log_other_users_food(client, user, other_user):
     food = (await _create(client, user.headers)).json()
-    log = {
-        "logged_on": date.today().isoformat(),
-        "food_item_id": food["id"],
-        "name": "x",
-        "kcal": 1,
-        "protein_g": 0,
-        "carbs_g": 0,
-        "fat_g": 0,
-    }
-    resp = await client.post("/api/food-logs", json=log, headers=other_user.headers)
+    resp = await client.put(
+        f"/api/meals/{uuid.uuid4()}", json=_meal(food), headers=other_user.headers
+    )
     assert resp.status_code == 404
+
+
+# --- units ---
+
+
+async def test_food_units_come_with_the_food(client, user):
+    food = (await _create(client, user.headers)).json()
+    assert [(u["name"], u["grams"], u["user_id"]) for u in food["units"]] == [("jar", 250, None)]
+
+
+async def test_unit_names_are_validated(client, user):
+    for units in (
+        [{"name": "grams", "grams": 1}],
+        [{"name": "cup", "grams": 0}],
+        [{"name": "cup", "grams": 90}, {"name": "Cup", "grams": 91}],
+        [{"name": "  ", "grams": 5}],
+    ):
+        resp = await _create(client, user.headers, units=units)
+        assert resp.status_code == 422, units
+
+
+async def test_personal_units_are_private(client, user, other_user):
+    seeded = await _seeded_food(client, user.headers)
+    resp = await client.post(
+        f"/api/foods/{seeded['id']}/units",
+        json={"name": "My bowl", "grams": 320},
+        headers=user.headers,
+    )
+    assert resp.status_code == 201
+    mine = [u for u in resp.json()["units"] if u["user_id"] == user.id]
+    assert [(u["name"], u["grams"]) for u in mine] == [("My bowl", 320)]
+
+    theirs = (await client.get(f"/api/foods/{seeded['id']}", headers=other_user.headers)).json()
+    assert all(u["user_id"] is None for u in theirs["units"])
+
+    # The same name again (any case) is a conflict.
+    resp = await client.post(
+        f"/api/foods/{seeded['id']}/units",
+        json={"name": "my BOWL", "grams": 300},
+        headers=user.headers,
+    )
+    assert resp.status_code == 409
+
+    # Others can't delete it; the owner can.
+    unit_id = mine[0]["id"]
+    url = f"/api/foods/{seeded['id']}/units/{unit_id}"
+    assert (await client.delete(url, headers=other_user.headers)).status_code == 404
+    assert (await client.delete(url, headers=user.headers)).status_code == 204
+
+
+async def test_seeded_food_units_are_read_only(client, user):
+    seeded = next(
+        f
+        for f in (await client.get("/api/foods?q=banana", headers=user.headers)).json()
+        if f["seeded"]
+    )
+    [unit] = seeded["units"]
+    assert (unit["name"], unit["grams"]) == ("medium", 118)
+    resp = await client.delete(
+        f"/api/foods/{seeded['id']}/units/{unit['id']}", headers=user.headers
+    )
+    assert resp.status_code == 403
+
+
+async def test_updating_a_food_keeps_personal_units(client, user):
+    food = (await _create(client, user.headers)).json()
+    await client.post(
+        f"/api/foods/{food['id']}/units", json={"name": "spoon", "grams": 15}, headers=user.headers
+    )
+    resp = await client.put(
+        f"/api/foods/{food['id']}",
+        json={**FOOD, "units": [{"name": "jar", "grams": 300}, {"name": "cup", "grams": 240}]},
+        headers=user.headers,
+    )
+    assert sorted((u["name"], u["grams"]) for u in resp.json()["units"]) == [
+        ("cup", 240),
+        ("jar", 300),
+        ("spoon", 15),
+    ]
+
+
+# --- search ---
+
+
+async def test_search_puts_recent_foods_first_with_last_amount(client, user):
+    oats = (await _create(client, user.headers, name="Steel cut oats")).json()
+    await _create(client, user.headers, name="Oat milk barista")
+    await client.put(
+        f"/api/meals/{uuid.uuid4()}",
+        json=_meal(oats, unit_name="jar", unit_quantity=0.5, quantity_g=125),
+        headers=user.headers,
+    )
+    hits = (await client.get("/api/foods?q=oat", headers=user.headers)).json()
+    assert hits[0]["id"] == oats["id"]
+    assert hits[0]["last_used"] == {"unit_name": "jar", "unit_quantity": 0.5, "quantity_g": 125}
+    assert all(h["last_used"] is None for h in hits[1:])
+
+
+async def test_search_matches_every_word_in_name_or_brand(client, user):
+    await _create(client, user.headers, name="Protein bar", brand="Barebells")
+    await _create(client, user.headers, name="Protein pudding")
+    hits = (await client.get("/api/foods?q=barebells protein", headers=user.headers)).json()
+    assert [h["name"] for h in hits] == ["Protein bar"]
+
+
+async def test_search_prefers_names_starting_with_the_query(client, user):
+    await _create(client, user.headers, name="Zzz apple pie")
+    hits = (await client.get("/api/foods?q=apple", headers=user.headers)).json()
+    names = [h["name"] for h in hits]
+    assert names.index("Apple, raw") < names.index("Zzz apple pie")
 
 
 # --- barcode lookup ---
@@ -198,6 +321,8 @@ async def test_lookup_creates_shared_food_from_open_food_facts(client, user, mon
                 "carbohydrates_100g": 57.5,
                 "fat_100g": 30.9,
             },
+            "serving_quantity": 15,
+            "product_quantity": 400,
         }
 
     monkeypatch.setattr(off_client, "fetch_product", _product)
@@ -207,6 +332,10 @@ async def test_lookup_creates_shared_food_from_open_food_facts(client, user, mon
     assert body["status"] == "found"
     assert body["food"]["name"] == "Nutella"
     assert body["food"]["user_id"] is None
+    assert [(u["name"], u["grams"]) for u in body["food"]["units"]] == [
+        ("serving", 15),
+        ("pack", 400),
+    ]
 
 
 async def test_lookup_unknown_barcode_returns_draft(client, user, monkeypatch):
@@ -247,6 +376,6 @@ async def test_lookup_releases_transaction_before_http_call(monkeypatch):
         return None
 
     monkeypatch.setattr(off_client, "fetch_product", _fetch)
-    result = await food_service.lookup_barcode(_RecordingSession(events), BARCODE)
+    result = await food_service.lookup_barcode(_RecordingSession(events), BARCODE, "user")
     assert result.status == "draft"
     assert events == ["select", "commit", "http"]

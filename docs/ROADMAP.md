@@ -1,9 +1,15 @@
 # Protocol — Roadmap
 
-**Last Updated:** 2026-10-06
+**Last Updated:** 2026-10-18
 
 ## Recently shipped
 
+- **Diet redesign** — meals by time on a day timeline, every macro per food and
+  meal, one food at a time with per-food units, products from barcodes and pack
+  photos (Claude reads the label), meal names from Claude Haiku
+  (see `docs/DIET-LOGIC.md`).
+- **Design system in Claude Design** — the visual spec and new screen designs
+  live there now (see `CLAUDE.md` › Design); the HTML prototypes are gone.
 - **Local-first workout logging** — every set is saved on the phone first and
   synced in the background with retries; the app opens offline
   (see `docs/WORKOUT-LOGIC.md`).
@@ -19,15 +25,11 @@
 
 ## Next, in rough priority order
 
-### 1. Food logging good enough to switch to
-The diet side is functional but doesn't yet beat a dedicated app. In order:
-- **Fast re-logging:** recent and favourite foods at the top of search,
-  "copy yesterday" / repeat a meal, edit a logged entry (today: delete only).
-- **Meals** (breakfast/lunch/…) and quick-add of kcal/macros without a food.
-- **AI meal logging** (text first, photo second) via Claude
-  (`ANTHROPIC_API_KEY` config stub exists): describe a meal → editable rows
-  with estimated macros → confirm.
-- Visual pass on Diet + AddFoodSheet.
+### 1. Diet, after the redesign
+- Local-first meals: drafts on the phone and a sync queue, as for workouts
+  (meals save online today, with an optimistic screen).
+- Not designed yet: quick add of numbers without a food, describing a whole meal
+  to Claude.
 
 ### 2. Progress / analysis redesign
 The Progress page works but is thin. Training: weekly sets per muscle group,

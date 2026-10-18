@@ -1,18 +1,40 @@
-from datetime import date, datetime
-from typing import Literal
+from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, computed_field
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    StringConstraints,
+    computed_field,
+    field_validator,
+)
+
+UnitName = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=50)]
+
+# Grams are always available, so a unit may not be called that.
+_GRAM_NAMES = {"g", "gram", "grams"}
 
 
-class FoodItemCreate(BaseModel):
-    name: str = Field(min_length=1, max_length=255)
-    brand: str | None = Field(default=None, max_length=100)
-    kcal_per_100g: float = Field(ge=0)
-    protein_per_100g: float = Field(ge=0)
-    carbs_per_100g: float = Field(ge=0)
-    fat_per_100g: float = Field(ge=0)
-    default_serving_g: float | None = Field(default=None, gt=0)
-    barcode: str | None = Field(default=None, min_length=8, max_length=32, pattern=r"^\d+$")
+class FoodUnitCreate(BaseModel):
+    name: UnitName
+    grams: float = Field(gt=0, le=100_000)
+
+    @field_validator("name")
+    @classmethod
+    def _not_grams(cls, name: str) -> str:
+        if name.lower() in _GRAM_NAMES:
+            raise ValueError("grams are always available")
+        return name
+
+
+class FoodUnitResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    name: str
+    grams: float
+    # None: the food's own unit; a user id: that user's personal unit.
+    user_id: str | None
 
 
 class FoodItemUpdate(BaseModel):
@@ -22,7 +44,29 @@ class FoodItemUpdate(BaseModel):
     protein_per_100g: float = Field(ge=0)
     carbs_per_100g: float = Field(ge=0)
     fat_per_100g: float = Field(ge=0)
-    default_serving_g: float | None = Field(default=None, gt=0)
+    # The food's own units; an update replaces them. Personal units are
+    # managed under /foods/{id}/units.
+    units: list[FoodUnitCreate] = Field(default_factory=list, max_length=20)
+
+    @field_validator("units")
+    @classmethod
+    def _unique_unit_names(cls, units: list[FoodUnitCreate]) -> list[FoodUnitCreate]:
+        names = [u.name.lower() for u in units]
+        if len(names) != len(set(names)):
+            raise ValueError("unit names must be unique")
+        return units
+
+
+class FoodItemCreate(FoodItemUpdate):
+    barcode: str | None = Field(default=None, min_length=8, max_length=32, pattern=r"^\d+$")
+
+
+class LastUsed(BaseModel):
+    """How much of a food the user logged the last time."""
+
+    unit_name: str | None
+    unit_quantity: float | None
+    quantity_g: float | None
 
 
 class FoodItemResponse(BaseModel):
@@ -35,28 +79,37 @@ class FoodItemResponse(BaseModel):
     protein_per_100g: float
     carbs_per_100g: float
     fat_per_100g: float
-    default_serving_g: float | None
     barcode: str | None
-    # Owner of a custom food; None for seeded and barcode (shared) foods,
-    # which nobody can modify.
+    # Owner of a custom food; None for seeded and barcode (shared) foods.
     user_id: str | None
     seed_key: str | None = Field(exclude=True)
+    units: list[FoodUnitResponse] = Field(default_factory=list)
+    last_used: LastUsed | None = None
 
     @computed_field
     @property
     def seeded(self) -> bool:
         return self.seed_key is not None
 
+    @computed_field
+    @property
+    def editable(self) -> bool:
+        # Seeded foods are read-only. Everything else a user can see is
+        # theirs or a shared barcode product, which anyone may correct.
+        return self.seed_key is None
+
 
 class FoodDraft(BaseModel):
-    barcode: str
+    """A product that isn't in the database yet, as far as it is known."""
+
+    barcode: str | None = None
     name: str | None = None
     brand: str | None = None
     kcal_per_100g: float | None = None
     protein_per_100g: float | None = None
     carbs_per_100g: float | None = None
     fat_per_100g: float | None = None
-    default_serving_g: float | None = None
+    units: list[FoodUnitCreate] = Field(default_factory=list)
 
 
 class BarcodeLookupResponse(BaseModel):
@@ -65,40 +118,11 @@ class BarcodeLookupResponse(BaseModel):
     draft: FoodDraft | None = None
 
 
-class FoodLogCreate(BaseModel):
-    logged_on: date
-    food_item_id: str | None = None
-    quantity_g: float | None = Field(default=None, gt=0)
-    name: str = Field(min_length=1, max_length=255)
-    kcal: float = Field(ge=0)
-    protein_g: float = Field(ge=0)
-    carbs_g: float = Field(ge=0)
-    fat_g: float = Field(ge=0)
+class LabelImage(BaseModel):
+    media_type: Literal["image/jpeg", "image/png", "image/webp"]
+    # Base64, without a data: prefix. About 2 MB of image at most.
+    data: str = Field(min_length=1, max_length=2_800_000)
 
 
-class FoodLogResponse(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    id: str
-    logged_on: date
-    food_item_id: str | None
-    name: str
-    quantity_g: float | None
-    kcal: float
-    protein_g: float
-    carbs_g: float
-    fat_g: float
-    created_at: datetime
-
-
-class DailyTotals(BaseModel):
-    kcal: float
-    protein_g: float
-    carbs_g: float
-    fat_g: float
-
-
-class DailyLogResponse(BaseModel):
-    date: date
-    totals: DailyTotals
-    entries: list[FoodLogResponse]
+class ReadLabelRequest(BaseModel):
+    images: list[LabelImage] = Field(min_length=1, max_length=4)

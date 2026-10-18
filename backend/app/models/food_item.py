@@ -14,7 +14,6 @@ class FoodItem(Base, TimestampMixin):
     protein_per_100g: Mapped[float] = mapped_column(Float, nullable=False)
     carbs_per_100g: Mapped[float] = mapped_column(Float, nullable=False)
     fat_per_100g: Mapped[float] = mapped_column(Float, nullable=False)
-    default_serving_g: Mapped[float | None] = mapped_column(Float, nullable=True)
     barcode: Mapped[str | None] = mapped_column(String(32), nullable=True, unique=True, index=True)
     seed_key: Mapped[str | None] = mapped_column(String(100), nullable=True, unique=True)
     user_id: Mapped[str | None] = mapped_column(

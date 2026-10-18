@@ -29,3 +29,8 @@ async def get_db():
             yield session
         finally:
             await session.close()
+
+
+def get_session_factory() -> async_sessionmaker[AsyncSession]:
+    """For work that outlives the request (background tasks)."""
+    return async_session

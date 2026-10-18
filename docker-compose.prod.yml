@@ -23,6 +23,8 @@ services:
       # The backend also refuses to start with an empty or placeholder key.
       SECRET_KEY: ${SECRET_KEY:?SECRET_KEY must be set in .env}
       ADMIN_NAME: ${ADMIN_NAME:-Admin}
+      # Optional: meal names and label reading degrade without it.
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       CORS_ORIGINS: '["https://${DOMAIN}"]'
     depends_on:
       db:

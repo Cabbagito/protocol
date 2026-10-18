@@ -21,7 +21,7 @@ import {
   applySnapshotToSession, findPreviousPerformance, targetForSet, toMesoExercises, withSession,
   type SetTarget,
 } from '../../lib/workoutSession'
-import { SyncUnavailableError, workoutSync } from '../../lib/workoutSync'
+import { SyncUnavailableError, useSyncStatus, workoutSync } from '../../lib/workoutSync'
 import { useWorkoutSession } from '../../hooks/useWorkoutSession'
 import type { Mesocycle } from '../../types'
 import { ExerciseHistorySheet } from './ExerciseHistorySheet'
@@ -30,7 +30,7 @@ import { LoggingState } from './LoggingState'
 import { NoteModal } from './NoteModal'
 import { ReorderSheet } from './ReorderSheet'
 import { SkippedExerciseState } from './SkippedExerciseState'
-import { SyncPill } from './SyncPill'
+import { SyncPill } from '../../components/SyncPill'
 import { WorkoutFinishBar } from './WorkoutFinishBar'
 import { ReorderIcon, SkipIcon } from './icons'
 
@@ -299,7 +299,7 @@ export function WorkoutSession({ mesocycle, weekIndex, sessionIndex, editing }: 
               {serverSession.session_name}
             </span>
           </button>
-          {canLog && <SyncPill />}
+          {canLog && <WorkoutSyncPill />}
         </div>
 
         {/* ── Future-session banner (preview only) ── */}
@@ -588,5 +588,18 @@ export function WorkoutSession({ mesocycle, weekIndex, sessionIndex, editing }: 
         />
       )}
     </div>
+  )
+}
+
+function WorkoutSyncPill() {
+  const status = useSyncStatus()
+  return (
+    <SyncPill
+      status={status}
+      onRetry={() => {
+        const userId = getUserId()
+        if (userId) workoutSync.retryRejected(userId)
+      }}
+    />
   )
 }

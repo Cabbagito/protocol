@@ -51,3 +51,31 @@ async def test_bootstrap_skipped_without_password(db, monkeypatch):
     monkeypatch.setattr(settings, "app_password", "")
     await seed.ensure_bootstrap_user(db)
     assert (await db.execute(select(User))).first() is None
+
+
+async def test_seed_foods_restores_seeded_units_and_keeps_personal_ones(db, user):
+    from app.models.food_unit import FoodUnit
+
+    banana = (await db.execute(select(FoodItem).where(FoodItem.seed_key == "banana"))).scalar_one()
+    [unit] = (
+        (await db.execute(select(FoodUnit).where(FoodUnit.food_item_id == banana.id)))
+        .scalars()
+        .all()
+    )
+    unit.grams = 1
+    db.add(FoodUnit(food_item_id=banana.id, user_id=None, name="bunch", grams=600))
+    db.add(FoodUnit(food_item_id=banana.id, user_id=user.id, name="small", grams=90))
+    await db.commit()
+
+    assert await seed.seed_foods(db) == 1
+
+    units = (
+        await db.execute(
+            select(FoodUnit.name, FoodUnit.grams, FoodUnit.user_id)
+            .where(FoodUnit.food_item_id == banana.id)
+            .order_by(FoodUnit.name)
+        )
+    ).all()
+    assert [tuple(u) for u in units] == [("medium", 118, None), ("small", 90, user.id)]
+    # Nothing else changes on a second run.
+    assert await seed.seed_foods(db) == 0

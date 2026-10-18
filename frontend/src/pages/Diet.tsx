@@ -1,471 +1,164 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import PageLoader from '../components/PageLoader'
-import AddFoodSheet from '../components/AddFoodSheet'
 import BodyweightCard from '../components/BodyweightCard'
-import BottomSheet from '../components/BottomSheet'
-import { useToast } from '../components/Toast'
-import { ChevronLeftIcon, ChevronRightIcon, TrashIcon } from '../components/Icons'
-import { useDailyLog, useDailyTargets, useDeleteLog } from '../api/hooks'
-import { parseIso, localDateKey } from '../lib/dates'
+import DayStrip from '../components/diet/DayStrip'
+import DayTotals from '../components/diet/DayTotals'
+import MealCard from '../components/diet/MealCard'
+import CalendarSheet from '../components/diet/CalendarSheet'
+import { ChevronLeft, ChevronRight, Chrome, ChromeButton, OfflineNote, PlusIcon, SectionLabel } from '../components/diet/ui'
+import { MONO } from '../components/diet/styles'
+import { useDailyTargets, useDietDay, useDietDays } from '../api/hooks'
+import { addDays, parseIso, weekStart } from '../lib/dates'
+import { ZERO } from '../lib/diet'
 import { useToday } from '../hooks/useToday'
-import { round1 } from '../lib/formatters'
-import type { FoodLog } from '../types'
 
-// Fallback shown only while the targets query is loading. The server
-// backfills a real row for every user; this is purely a no-flash default.
-const FALLBACK_TARGETS = {
-  kcal: 2400,
-  protein_g: 180,
-  carbs_g: 280,
-  fat_g: 80,
+// Shown only until the targets load; every user has a real row.
+const FALLBACK_TARGETS = { kcal: 2270, protein_g: 160, carbs_g: 250, fat_g: 70 }
+
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
+
+function eyebrow(date: string, today: string): string {
+  const d = parseIso(date)
+  const sameYear = date.slice(0, 4) === today.slice(0, 4)
+  const weekday = d.toLocaleDateString('en-US', { weekday: 'long' })
+  const day = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', ...(sameYear ? {} : { year: 'numeric' }) })
+  return `${weekday} · ${day}`
 }
 
-function shiftDate(iso: string, delta: number): string {
-  const date = parseIso(iso)
-  date.setDate(date.getDate() + delta)
-  return localDateKey(date)
-}
-
-function formatDateLabel(iso: string, today: string): string {
-  if (iso === today) return 'TODAY'
-  return parseIso(iso)
-    .toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })
-    .toUpperCase()
-    .replace(',', ' ·')
+function title(date: string, today: string): string {
+  if (date === today) return 'Today'
+  if (date === addDays(today, -1)) return 'Yesterday'
+  const d = parseIso(date)
+  if (date > addDays(today, -7)) return d.toLocaleDateString('en-US', { weekday: 'long' })
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
 export default function Diet() {
-  // null = follow "today", so a PWA resumed the next morning logs to the
-  // new day instead of the one it was opened on.
   const today = useToday()
-  const [pickedDate, setPickedDate] = useState<string | null>(null)
-  const date = pickedDate !== null && pickedDate < today ? pickedDate : today
-  const [sheetOpen, setSheetOpen] = useState(false)
-  const [logToDelete, setLogToDelete] = useState<FoodLog | null>(null)
-  const { data, isLoading } = useDailyLog(date)
-  const { data: targets } = useDailyTargets()
-  const deleteLog = useDeleteLog()
-  const toast = useToast()
+  const navigate = useNavigate()
+  const [params, setParams] = useSearchParams()
+  const picked = params.get('date')
+  // No date (or a stale one) follows today, so a PWA resumed the next
+  // morning shows the new day.
+  const date = picked && ISO_DATE.test(picked) && picked < today ? picked : today
+  const [calendarOpen, setCalendarOpen] = useState(false)
 
-  const totals = data?.totals ?? { kcal: 0, protein_g: 0, carbs_g: 0, fat_g: 0 }
-  const entries = data?.entries ?? []
-  const goals = targets ?? FALLBACK_TARGETS
-  const dateLabel = useMemo(() => formatDateLabel(date, today), [date, today])
-  const isToday = date === today
+  const { data, isLoading, offline } = useDietDay(date)
+  const { data: savedTargets } = useDailyTargets()
+  const targets = data?.targets ?? savedTargets ?? FALLBACK_TARGETS
+  const start = weekStart(date)
+  const { data: week } = useDietDays(start, addDays(start, 6))
+  const kcalByDate = new Map((week ?? []).map((d) => [d.date, d.kcal]))
+  if (data) kcalByDate.set(date, data.totals.kcal)
 
-  function goToDay(next: string) {
-    setPickedDate(next >= today ? null : next)
+  const meals = data?.meals ?? []
+
+  function goTo(next: string) {
+    setCalendarOpen(false)
+    setParams(next >= today ? {} : { date: next }, { replace: true })
   }
 
-  async function handleDelete() {
-    if (!logToDelete) return
-    try {
-      await deleteLog.mutateAsync({ id: logToDelete.id, date })
-    } catch {
-      toast.showError('Failed to delete entry')
-    } finally {
-      setLogToDelete(null)
-    }
+  function logMeal() {
+    navigate(`/diet/meals/new${date === today ? '' : `?date=${date}`}`)
   }
 
   return (
-    <div
-      style={{
-        position: 'relative',
-        overflowX: 'clip',
-      }}
-    >
-      <div
-        style={{
-          position: 'relative',
-          zIndex: 1,
-          padding: '12px 22px 0',
-        }}
-      >
-        {/* Top bar — date pager */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
-          <button
-            onClick={() => goToDay(shiftDate(date, -1))}
-            aria-label="Previous day"
-            style={{
-              width: 32, height: 32, borderRadius: 10,
-              background: 'rgba(255,255,255,0.05)',
-              border: '1px solid rgba(255,255,255,0.06)',
-              color: 'var(--text-2)',
-              display: 'grid', placeItems: 'center',
-              cursor: 'pointer',
-            }}
-          >
-            <ChevronLeftIcon className="w-3.5 h-3.5" />
-          </button>
-          <div
-            style={{
-              fontSize: 11, color: 'var(--text-2)', letterSpacing: '0.22em',
-              fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontWeight: 500,
-              minWidth: 140, textAlign: 'center',
-            }}
-          >
-            {dateLabel}
-          </div>
-          <button
-            onClick={() => goToDay(shiftDate(date, 1))}
-            disabled={isToday}
-            aria-label="Next day"
-            style={{
-              width: 32, height: 32, borderRadius: 10,
-              background: 'rgba(255,255,255,0.05)',
-              border: '1px solid rgba(255,255,255,0.06)',
-              color: 'var(--text-2)',
-              display: 'grid', placeItems: 'center',
-              opacity: isToday ? 0.3 : 1,
-              cursor: 'pointer',
-            }}
-          >
-            <ChevronRightIcon className="w-3.5 h-3.5" />
-          </button>
-        </div>
+    <div style={{ padding: '12px 22px 0', overflowX: 'clip' }}>
+      <Chrome
+        left={
+          <ChromeButton label="Previous day" onClick={() => goTo(addDays(date, -1))}>
+            <ChevronLeft />
+          </ChromeButton>
+        }
+        eyebrow={eyebrow(date, today)}
+        title={title(date, today)}
+        onTitleClick={() => setCalendarOpen(true)}
+        titleLabel="Open the calendar"
+        right={
+          <ChromeButton label="Next day" onClick={() => goTo(addDays(date, 1))} disabled={date >= today}>
+            <ChevronRight />
+          </ChromeButton>
+        }
+      />
 
-        {/* Calorie ring + macros */}
-        <div
-          style={{
-            marginTop: 22,
-            padding: 22,
-            borderRadius: 20,
-            textAlign: 'center',
-            background:
-              'linear-gradient(180deg, rgba(var(--accent-rgb),0.06), color-mix(in oklab, var(--card) 65%, transparent))',
-            border: '1px solid rgba(255,255,255,0.05)',
-          }}
-        >
-          <CalorieRing kcal={totals.kcal} goal={goals.kcal} />
+      <DayStrip date={date} today={today} kcalByDate={kcalByDate} target={targets.kcal} onPick={goTo} />
 
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr 1fr 1fr',
-              gap: 10,
-              marginTop: 18,
-            }}
-          >
-            <MacroBar
-              label="PROTEIN"
-              value={totals.protein_g}
-              goal={goals.protein_g}
-              color="var(--m-chest)"
-            />
-            <MacroBar
-              label="CARBS"
-              value={totals.carbs_g}
-              goal={goals.carbs_g}
-              color="var(--accent)"
-            />
-            <MacroBar
-              label="FAT"
-              value={totals.fat_g}
-              goal={goals.fat_g}
-              color="var(--m-quads)"
-            />
-          </div>
-        </div>
+      <DayTotals totals={data?.totals ?? ZERO} targets={targets} />
 
-        {/* Meals */}
-        <div style={{ marginTop: 22 }}>
-          <div
-            style={{
-              fontSize: 10,
-              fontWeight: 600,
-              letterSpacing: '0.18em',
-              textTransform: 'uppercase',
-              color: 'var(--text-m)',
-              fontFamily: 'JetBrains Mono, ui-monospace, monospace',
-              marginBottom: 12,
-            }}
-          >
-            Meals
-          </div>
-
-          {isLoading ? (
-            <PageLoader />
-          ) : entries.length === 0 ? (
+      {isLoading && !data ? (
+        <PageLoader />
+      ) : offline && meals.length === 0 ? (
+        <OfflineNote style={{ marginTop: 22 }}>Offline · this day needs a connection</OfflineNote>
+      ) : (
+        <>
+          <SectionLabel>{meals.length === 1 ? '1 meal' : `${meals.length} meals`}</SectionLabel>
+          {offline && <OfflineNote style={{ marginBottom: 10 }}>Offline · this day needs a connection</OfflineNote>}
+          {meals.length === 0 ? (
             <button
-              onClick={() => setSheetOpen(true)}
+              type="button"
+              onClick={logMeal}
               style={{
                 width: '100%',
                 padding: '18px 16px',
                 borderRadius: 14,
                 background: 'transparent',
-                border: '1px dashed rgba(255,255,255,0.08)',
-                color: 'var(--text-m)',
+                border: '1px dashed var(--fill-strong)',
+                color: 'var(--text-2)',
                 fontSize: 13,
                 cursor: 'pointer',
               }}
             >
-              + Log first meal
+              {date === today ? 'Nothing logged yet today' : 'Nothing logged on this day'}
             </button>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {entries.map(entry => (
-                <MealRow
-                  key={entry.id}
-                  entry={entry}
-                  onDelete={() => setLogToDelete(entry)}
-                />
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              {meals.map((meal, i) => (
+                <MealCard key={meal.id} meal={meal} to={`/diet/meals/${meal.id}`} last={i === meals.length - 1} />
               ))}
             </div>
           )}
-        </div>
+        </>
+      )}
 
-        <BodyweightCard date={date} today={today} />
-      </div>
+      <BodyweightCard date={date} today={today} />
+      {/* Room for the Log meal pill */}
+      <div style={{ height: 64 }} />
 
-      {/* Floating add button */}
-      <button
-        onClick={() => setSheetOpen(true)}
+      <Link
+        to={`/diet/meals/new${date === today ? '' : `?date=${date}`}`}
         style={{
           position: 'fixed',
           zIndex: 100,
           right: 22,
           bottom: 'var(--above-nav)',
-          display: 'flex',
+          display: 'inline-flex',
           alignItems: 'center',
           gap: 8,
           padding: '12px 18px',
           borderRadius: 999,
           background: 'var(--p-grad-cta)',
           color: 'var(--btn-text)',
-          fontFamily: "'JetBrains Mono', 'SF Mono', monospace",
+          fontFamily: MONO,
           fontWeight: 500,
           fontSize: 12,
           letterSpacing: '0.05em',
-          border: 'none',
-          cursor: 'pointer',
+          textDecoration: 'none',
           boxShadow: '0 14px 40px -10px rgba(var(--accent-rgb),0.55), inset 0 1px 0 rgba(255,255,255,0.18)',
         }}
       >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-          <path d="M12 4v16m8-8H4" />
-        </svg>
-        Log food
-      </button>
+        <PlusIcon />
+        Log meal
+      </Link>
 
-      <AddFoodSheet open={sheetOpen} onClose={() => setSheetOpen(false)} date={date} />
-
-      <BottomSheet
-        open={!!logToDelete}
-        onClose={() => setLogToDelete(null)}
-        title={logToDelete?.name}
-        actions={[
-          {
-            label: 'Delete entry',
-            variant: 'danger',
-            icon: <TrashIcon className="w-4 h-4" />,
-            onClick: handleDelete,
-          },
-        ]}
+      <CalendarSheet
+        open={calendarOpen}
+        onClose={() => setCalendarOpen(false)}
+        date={date}
+        today={today}
+        target={targets.kcal}
+        onPick={goTo}
       />
-    </div>
-  )
-}
-
-/* ─────────────────────────────────────────────────────────────────── */
-/*  Calorie ring                                                        */
-/* ─────────────────────────────────────────────────────────────────── */
-
-function CalorieRing({ kcal, goal }: { kcal: number; goal: number }) {
-  const radius = 85
-  const circumference = 2 * Math.PI * radius // ≈ 534
-  const pct = Math.min(1, kcal / goal)
-  const filled = pct * circumference
-
-  return (
-    <div style={{ position: 'relative', width: 180, height: 180, margin: '0 auto' }}>
-      <svg
-        viewBox="0 0 200 200"
-        style={{ width: '100%', height: '100%', transform: 'rotate(-90deg)' }}
-      >
-        <defs>
-          <linearGradient id="diet-ring-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="var(--accent)" />
-            <stop offset="100%" stopColor="var(--accent-d)" />
-          </linearGradient>
-        </defs>
-        <circle
-          cx="100"
-          cy="100"
-          r={radius}
-          fill="none"
-          stroke="rgba(255,255,255,0.06)"
-          strokeWidth="14"
-        />
-        <circle
-          cx="100"
-          cy="100"
-          r={radius}
-          fill="none"
-          stroke="url(#diet-ring-grad)"
-          strokeWidth="14"
-          strokeLinecap="round"
-          strokeDasharray={`${filled} ${circumference}`}
-          style={{ filter: 'drop-shadow(0 0 8px rgba(var(--accent-rgb),0.5))' }}
-        />
-      </svg>
-      <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center' }}>
-        <div style={{ textAlign: 'center' }}>
-          <div
-            style={{
-              fontSize: 36,
-              fontWeight: 700,
-              color: 'var(--text-1)',
-              lineHeight: 1,
-              fontFamily: 'JetBrains Mono, ui-monospace, monospace',
-            }}
-          >
-            {Math.round(kcal)}
-          </div>
-          <div
-            style={{
-              fontSize: 10,
-              color: 'var(--text-m)',
-              marginTop: 6,
-              letterSpacing: '0.2em',
-              fontFamily: 'JetBrains Mono, ui-monospace, monospace',
-            }}
-          >
-            / {Math.round(goal)} KCAL
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-/* ─────────────────────────────────────────────────────────────────── */
-/*  Macro bar                                                           */
-/* ─────────────────────────────────────────────────────────────────── */
-
-function MacroBar({
-  label, value, goal, color,
-}: { label: string; value: number; goal: number; color: string }) {
-  const pct = Math.min(100, (value / goal) * 100)
-  return (
-    <div style={{ textAlign: 'center' }}>
-      <div
-        style={{
-          fontSize: 9,
-          color: 'var(--text-m)',
-          letterSpacing: '0.15em',
-          fontFamily: 'JetBrains Mono, ui-monospace, monospace',
-        }}
-      >
-        {label}
-      </div>
-      <div
-        style={{
-          fontSize: 18,
-          fontWeight: 600,
-          color: 'var(--text-1)',
-          marginTop: 4,
-          fontFamily: 'JetBrains Mono, ui-monospace, monospace',
-        }}
-      >
-        {round1(value)}
-        <span style={{ fontSize: 10, color: 'var(--text-m)' }}>/{goal}g</span>
-      </div>
-      <div
-        style={{
-          height: 2,
-          marginTop: 6,
-          background: 'rgba(255,255,255,0.06)',
-          borderRadius: 1,
-          overflow: 'hidden',
-        }}
-      >
-        <div
-          style={{
-            width: `${pct}%`,
-            height: '100%',
-            background: color,
-            boxShadow: `0 0 6px ${color}`,
-            borderRadius: 1,
-            transition: 'width 0.3s ease',
-          }}
-        />
-      </div>
-    </div>
-  )
-}
-
-/* ─────────────────────────────────────────────────────────────────── */
-/*  Meal row                                                            */
-/* ─────────────────────────────────────────────────────────────────── */
-
-function MealRow({ entry, onDelete }: { entry: FoodLog; onDelete: () => void }) {
-  return (
-    <div
-      style={{
-        position: 'relative',
-        padding: '14px 16px',
-        borderRadius: 14,
-        background: 'color-mix(in oklab, var(--card) 70%, transparent)',
-        border: '1px solid rgba(255,255,255,0.05)',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 12,
-      }}
-    >
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div
-          style={{
-            fontSize: 14,
-            fontWeight: 600,
-            color: 'var(--text-1)',
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-          }}
-        >
-          {entry.name}
-        </div>
-        <div
-          style={{
-            fontSize: 10,
-            color: 'var(--text-m)',
-            marginTop: 4,
-            fontFamily: 'JetBrains Mono, ui-monospace, monospace',
-            letterSpacing: '0.05em',
-          }}
-        >
-          {round1(entry.protein_g)}P · {round1(entry.carbs_g)}C · {round1(entry.fat_g)}F
-          {entry.quantity_g ? ` · ${Math.round(entry.quantity_g)}g` : ''}
-        </div>
-      </div>
-      <div
-        style={{
-          fontFamily: 'JetBrains Mono, ui-monospace, monospace',
-          fontSize: 13,
-          color: 'var(--text-1)',
-        }}
-      >
-        {Math.round(entry.kcal)}
-        <span style={{ color: 'var(--text-m)', fontSize: 10, marginLeft: 4 }}>kcal</span>
-      </div>
-      <button
-        onClick={onDelete}
-        aria-label="Delete entry"
-        style={{
-          width: 32,
-          height: 32,
-          borderRadius: 8,
-          background: 'transparent',
-          border: 'none',
-          color: 'var(--text-m)',
-          display: 'grid',
-          placeItems: 'center',
-          cursor: 'pointer',
-        }}
-      >
-        <TrashIcon className="w-4 h-4" />
-      </button>
     </div>
   )
 }

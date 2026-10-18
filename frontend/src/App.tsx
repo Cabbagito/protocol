@@ -6,6 +6,7 @@ import PageLoader from './components/PageLoader'
 import SplashScreen from './components/SplashScreen'
 import { getToken } from './lib/auth'
 import { persistOptions, queryClient } from './lib/queryClient'
+import { mealSync } from './lib/mealSync'
 import { workoutSync } from './lib/workoutSync'
 
 // Clear all service worker caches and unregister SWs so a reload fetches fresh assets
@@ -50,6 +51,8 @@ const PRELOAD = [loadDashboard, loadDiet, loadWorkoutHub, loadWorkout]
 const Login = lazyWithRetry(() => import('./pages/Login'))
 const Dashboard = lazyWithRetry(loadDashboard)
 const Diet = lazyWithRetry(loadDiet)
+const Meal = lazyWithRetry(() => import('./pages/Meal'))
+const Product = lazyWithRetry(() => import('./pages/Product'))
 const Exercises = lazyWithRetry(() => import('./pages/Exercises'))
 const Splits = lazyWithRetry(() => import('./pages/Splits'))
 const SplitEditor = lazyWithRetry(() => import('./pages/SplitEditor'))
@@ -85,8 +88,9 @@ class ChunkErrorBoundary extends Component<{ children: ReactNode }, { hasError: 
   }
 }
 
-// Push any workout changes saved on this phone but not yet on the server.
+// Push any workout and meal changes saved on this phone but not yet on the server.
 workoutSync.start()
+mealSync.start()
 
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -128,6 +132,8 @@ export default function App() {
                       <Routes>
                         <Route path="/" element={<Dashboard />} />
                         <Route path="/diet" element={<Diet />} />
+                        <Route path="/diet/meals/:id" element={<Meal />} />
+                        <Route path="/diet/products/:id" element={<Product />} />
                         <Route path="/exercises" element={<Exercises />} />
                         <Route path="/splits" element={<Splits />} />
                         <Route path="/splits/new" element={<SplitEditor />} />

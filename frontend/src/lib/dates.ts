@@ -19,3 +19,16 @@ export function parseIso(iso: string): Date {
   const d = parts[2] ?? 1
   return new Date(y, m - 1, d)
 }
+
+export function addDays(iso: string, n: number): string {
+  const d = parseIso(iso)
+  d.setDate(d.getDate() + n)
+  return localDateKey(d)
+}
+
+/** Monday of the week that holds `iso`. */
+export function weekStart(iso: string): string {
+  const d = parseIso(iso)
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7))
+  return localDateKey(d)
+}

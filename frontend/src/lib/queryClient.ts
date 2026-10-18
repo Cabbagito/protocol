@@ -18,9 +18,15 @@ export const queryClient = new QueryClient({
 
 const CACHE_KEY = 'protocol_query_cache'
 
-// Workout data is persisted so the app opens with the last-known state
-// even with no signal (deep inside the gym).
-const PERSISTED_ROOTS = new Set(['mesocycles', 'exercises', 'weight-logs', 'daily-targets'])
+// Workout and diet data are persisted so the app opens with the last-known
+// state even with no signal (deep inside the gym).
+const PERSISTED_ROOTS = new Set(['mesocycles', 'exercises', 'weight-logs', 'daily-targets', 'diet'])
+
+// Of the foods, the recent ones and those opened, so they can be logged
+// offline; every typed search would add up.
+function persistedFood(key: readonly unknown[]): boolean {
+  return key[0] === 'foods' && ((key[1] === 'search' && key[2] === '') || key[1] === 'detail')
+}
 
 export const persistOptions: Omit<PersistQueryClientOptions, 'queryClient'> = {
   persister: createSyncStoragePersister({
@@ -33,7 +39,8 @@ export const persistOptions: Omit<PersistQueryClientOptions, 'queryClient'> = {
   buster: 'v2',
   dehydrateOptions: {
     shouldDehydrateQuery: (query) =>
-      query.state.status === 'success' && PERSISTED_ROOTS.has(String(query.queryKey[0])),
+      query.state.status === 'success' &&
+      (PERSISTED_ROOTS.has(String(query.queryKey[0])) || persistedFood(query.queryKey)),
   },
 }
 

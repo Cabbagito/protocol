@@ -594,6 +594,29 @@
      automatically via cascade. Distinct from --p-grad (multi-hue,
      reserved for hero text). */
   --p-grad-cta: linear-gradient(135deg, var(--accent-l) 0%, var(--accent-d) 100%);
+
+  /* Glass and hairlines on the static gradient. Derived from the theme, so
+     light themes get visible lines (older code still writes white literals). */
+  --glass: color-mix(in oklab, var(--card) 50%, transparent);
+  --glass-row: color-mix(in oklab, var(--card) 70%, transparent);
+  --glass-strong: color-mix(in oklab, var(--card) 80%, transparent);
+  --line: color-mix(in oklab, var(--text-1) 6%, transparent);
+  --fill-soft: color-mix(in oklab, var(--text-1) 4%, transparent);
+  --fill: color-mix(in oklab, var(--text-1) 7%, transparent);
+  --fill-strong: color-mix(in oklab, var(--text-1) 9%, transparent);
+  --scrim: rgba(0, 0, 0, 0.6);
+  --danger: #f87171;
+  --danger-soft: #fb7185;
+
+  /* Diet: protein and fat borrow muscle hues, carbs follow the accent. */
+  --macro-protein: var(--m-chest);   --macro-protein-l: var(--m-chest-l);
+  --macro-carbs: var(--accent);      --macro-carbs-l: var(--accent-l);
+  --macro-fat: var(--m-quads);       --macro-fat-l: var(--m-quads-l);
+
+  /* What Claude filled in (meal names, label readings) until the user
+     changes it. Fixed across themes. */
+  --ai: #a78bfa;
+  --ai-rgb: 139, 92, 246;
 }
 
 /* Primary CTA fill — 1-hue accent gradient + mono label font.

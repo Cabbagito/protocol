@@ -17,7 +17,7 @@ diet log with barcode scanning.
  │   ◇ Exercises (seeded + custom)   ◇ Splits (templates)  │
  │   ◇ Mesocycles                    ◇ Workout logging     │
  │   ◇ Offline sync                  ◇ Progress            │
- │   ◇ Food log + barcode            ◇ Macro targets       │
+ │   ◇ Meals + barcode + labels      ◇ Macro targets       │
  │   ◇ Bodyweight                                          │
  │                                                         │
  └─────────────────────────────────────────────────────────┘
@@ -134,7 +134,7 @@ protocol/
 │   ├── migrations/              Alembic migrations (auto-upgrade on start)
 │   └── pyproject.toml
 │
-├── docs/                        PRD, roadmap, go-live notes, workout logic
+├── docs/                        PRD, roadmap, go-live notes, workout and diet logic
 ├── docker-compose.yml           Development (hot reload)
 ├── docker-compose.prod.yml      Production (Caddy + auto-SSL)
 ├── Caddyfile                    Reverse proxy config
@@ -191,7 +191,9 @@ The implemented design is "v5": themeable dark UI (several themes in Settings) o
 | `POST` | `/api/workouts/add-exercise` · `replace-exercise` · `remove-exercise` · `reorder-exercises` | Change a session's exercise list |
 | `POST` | `/api/workouts/skip-session` | Skip / restore a whole workout |
 | `GET` | `/api/exercises/{id}/history` | Every logged session of an exercise |
-| `GET` | `/api/foods` · `/api/food-logs` · `/api/weight-logs` · `/api/me/daily-targets` | Diet |
+| `GET` · `PUT` | `/api/meals?date=` · `/api/meals/days` · `/api/meals/{id}` | Meals by day; save a meal's snapshot (idempotent) |
+| `GET` · `POST` | `/api/foods` · `/api/foods/{id}/units` · `/api/foods/by-barcode/{code}` · `/api/foods/read-label` | Foods, units, barcodes, pack photos |
+| `GET` | `/api/weight-logs` · `/api/me/daily-targets` | Bodyweight, macro targets |
 | `GET` | `/api/health` | Health check |
 
 All endpoints except `/auth/login` and `/health` require a Bearer JWT token.

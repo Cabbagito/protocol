@@ -12,6 +12,7 @@ import {
 } from '../api/hooks'
 import { clearToken, getUserId, getUserInfo } from '../lib/auth'
 import { resetLocalData } from '../lib/queryClient'
+import { mealSync } from '../lib/mealSync'
 import { workoutSync } from '../lib/workoutSync'
 import { parseDecimal } from '../lib/decimal'
 import { viewportDiagnostics } from '../lib/viewport'
@@ -52,10 +53,13 @@ export default function Settings() {
   function handleLogout() {
     const userId = getUserId()
     if (
-      userId && workoutSync.hasUnsynced(userId) &&
-      !confirm("Some workout sets haven't synced yet and will be lost if you log out. Log out anyway?")
+      userId && (workoutSync.hasUnsynced(userId) || mealSync.hasUnsynced(userId)) &&
+      !confirm("Some workout sets or meals haven't synced yet and will be lost if you log out. Log out anyway?")
     ) return
-    if (userId) workoutSync.discardAll(userId)
+    if (userId) {
+      workoutSync.discardAll(userId)
+      mealSync.discardAll(userId)
+    }
     resetLocalData()
     clearToken()
     navigate('/login', { replace: true })

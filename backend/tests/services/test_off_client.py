@@ -19,6 +19,7 @@ def _product(**overrides):
             "fat_100g": 30.9,
         },
         "serving_quantity": 15,
+        "product_quantity": 400,
     }
     product.update(overrides)
     return product
@@ -33,7 +34,7 @@ def test_map_product_full_payload():
     assert draft.protein_per_100g == 6.3
     assert draft.carbs_per_100g == 57.5
     assert draft.fat_per_100g == 30.9
-    assert draft.default_serving_g == 15
+    assert [(u.name, u.grams) for u in draft.units] == [("serving", 15), ("pack", 400)]
     assert is_complete(draft)
 
 
@@ -72,13 +73,14 @@ def test_map_product_rejects_bad_values():
             "fat_100g": 3,
         },
         serving_quantity=0,
+        product_quantity="large",
     )
     draft = map_product(product, BARCODE)
     assert draft.kcal_per_100g is None
     assert draft.protein_per_100g is None
     assert draft.carbs_per_100g is None
     assert draft.fat_per_100g == 3
-    assert draft.default_serving_g is None
+    assert draft.units == []
 
 
 def _fetch_with_handler(handler):

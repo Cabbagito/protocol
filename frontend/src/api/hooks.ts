@@ -1,6 +1,14 @@
-import { useCallback } from 'react'
-import { queryOptions, useQuery, useQueries, useMutation, useQueryClient, type UseQueryResult } from '@tanstack/react-query'
-import { api } from './client'
+import { useCallback, useMemo } from 'react'
+import {
+  queryOptions,
+  useQuery,
+  useQueries,
+  useMutation,
+  useQueryClient,
+  type QueryClient,
+  type UseQueryResult,
+} from '@tanstack/react-query'
+import { api, NetworkError } from './client'
 import type {
   Exercise,
   EquipmentType,
@@ -9,10 +17,13 @@ import type {
   Mesocycle,
   MesocycleListItem,
   BarcodeLookup,
+  DayKcal,
+  DietDay,
+  FoodDraft,
+  FoodInput,
   FoodItem,
-  FoodLog,
-  FoodLogCreate,
-  DailyLog,
+  FoodUnitInput,
+  Meal,
   DailyTargets,
   DailyTargetsUpdate,
   WeightLog,
@@ -20,6 +31,8 @@ import type {
 import type { ExerciseSessionHistory } from '../lib/exerciseHistory'
 import { getUserId } from '../lib/auth'
 import { todayIso } from '../lib/dates'
+import { matchFoods } from '../lib/diet'
+import { mealSync, overlayDay, overlayDays, overlayMeal, useMealSyncStatus, type MealDraft } from '../lib/mealSync'
 import { overlayDrafts } from '../lib/workoutSession'
 import { useSyncStatus, workoutSync } from '../lib/workoutSync'
 
@@ -42,10 +55,13 @@ export const queryKeys = {
   foods: {
     all: ['foods'] as const,
     search: (q: string) => ['foods', 'search', q] as const,
+    detail: (id: string) => ['foods', 'detail', id] as const,
   },
-  foodLogs: {
-    all: ['food-logs'] as const,
-    day: (date: string) => ['food-logs', date] as const,
+  diet: {
+    all: ['diet'] as const,
+    day: (date: string) => ['diet', 'day', date] as const,
+    days: (from: string, to: string) => ['diet', 'days', from, to] as const,
+    meal: (id: string) => ['diet', 'meal', id] as const,
   },
   dailyTargets: ['daily-targets'] as const,
   weightLogs: ['weight-logs'] as const,
@@ -382,45 +398,151 @@ export function useRemoveExerciseFromSession() {
 
 // --- Diet Hooks ---
 
-export function useFoods(q: string) {
-  return useQuery({
-    queryKey: queryKeys.foods.search(q),
-    queryFn: () =>
-      api.get<FoodItem[]>(`/foods${q ? `?q=${encodeURIComponent(q)}` : ''}`),
-    staleTime: 1000 * 60 * 5,
-  })
+/** Meal changes saved on this phone and not yet (or just) confirmed by the server. */
+function useMealDrafts(): MealDraft[] {
+  const { version } = useMealSyncStatus()
+  return useMemo(() => {
+    void version // re-read when local drafts change
+    const userId = getUserId()
+    return userId ? mealSync.drafts(userId) : []
+  }, [version])
 }
 
-export interface FoodItemPayload {
-  name: string
-  brand?: string | null
-  kcal_per_100g: number
-  protein_per_100g: number
-  carbs_per_100g: number
-  fat_per_100g: number
-  default_serving_g?: number | null
+/**
+ * A day as the user should see it: server data plus meals still waiting to
+ * sync. `offline` when the server's copy can't be loaded.
+ */
+export function useDietDay(date: string) {
+  const drafts = useMealDrafts()
+  const query = useQuery({
+    queryKey: queryKeys.diet.day(date),
+    queryFn: () => api.get<DietDay>(`/meals?date=${date}`),
+    staleTime: 0,
+  })
+  const server = query.data
+  const data = useMemo(() => overlayDay(date, server, drafts), [date, server, drafts])
+  return { data, isLoading: query.isLoading, offline: isOffline(query) && server === undefined }
+}
+
+/** Kcal per day with meals, for the week strip and the calendar. */
+export function useDietDays(from: string, to: string) {
+  const drafts = useMealDrafts()
+  const { data: server } = useQuery({
+    queryKey: queryKeys.diet.days(from, to),
+    queryFn: () => api.get<DayKcal[]>(`/meals/days?from=${from}&to=${to}`),
+    staleTime: 0,
+  })
+  const data = useMemo(() => overlayDays(from, to, server, drafts), [from, to, server, drafts])
+  return { data }
+}
+
+/**
+ * One meal as the user should see it. `deleted` when it was deleted on this
+ * phone; a meal made here and not synced yet isn't asked for.
+ */
+export function useMeal(id: string, enabled = true) {
+  const queryClient = useQueryClient()
+  const drafts = useMealDrafts()
+  const draft = drafts.find((d) => d.id === id) ?? null
+  const query = useQuery({
+    queryKey: queryKeys.diet.meal(id),
+    queryFn: () => api.get<Meal>(`/meals/${id}`),
+    enabled: enabled && !(draft && !draft.server),
+    // Opened from the timeline: show the day's copy while it loads.
+    initialData: () => {
+      for (const [, day] of queryClient.getQueriesData<DietDay>({ queryKey: ['diet', 'day'] })) {
+        const meal = day?.meals.find((m) => m.id === id)
+        if (meal) return meal
+      }
+      return undefined
+    },
+    initialDataUpdatedAt: 0,
+  })
+  const data = useMemo(() => overlayMeal(id, query.data, draft), [id, query.data, draft])
+  return { data, draft, deleted: !!draft && !draft.snapshot, isLoading: query.isLoading, error: query.error }
+}
+
+/** Every food in the query cache (search results and details), each once. */
+function cachedFoods(queryClient: QueryClient): FoodItem[] {
+  const byId = new Map<string, FoodItem>()
+  // Recent foods first: they carry last_used.
+  const lists = queryClient.getQueriesData<FoodItem[]>({ queryKey: ['foods', 'search'] })
+  lists.sort(([a], [b]) => Number(b[2] === '') - Number(a[2] === ''))
+  for (const [, foods] of lists) for (const f of foods ?? []) if (!byId.has(f.id)) byId.set(f.id, f)
+  for (const [, food] of queryClient.getQueriesData<FoodItem>({ queryKey: ['foods', 'detail'] })) {
+    if (food && !byId.has(food.id)) byId.set(food.id, food)
+  }
+  return [...byId.values()]
+}
+
+function isOffline(query: { isPaused: boolean; error: Error | null }): boolean {
+  return query.isPaused || query.error instanceof NetworkError
+}
+
+/**
+ * Food search. Without a connection it falls back to the foods already on the
+ * phone (`offline`), since search itself needs the server.
+ */
+export function useFoods(q: string) {
+  const queryClient = useQueryClient()
+  const query = useQuery({
+    queryKey: queryKeys.foods.search(q),
+    queryFn: () => api.get<FoodItem[]>(`/foods${q ? `?q=${encodeURIComponent(q)}` : ''}`),
+    staleTime: 1000 * 60 * 5,
+    placeholderData: (previous) => previous,
+  })
+  const offline = isOffline(query) && (query.data === undefined || query.isPlaceholderData)
+  const local = useMemo(
+    () => (offline ? matchFoods(cachedFoods(queryClient), q) : undefined),
+    [offline, queryClient, q],
+  )
+  return { data: local ?? query.data, isFetching: query.isFetching, offline }
+}
+
+export function useFood(id: string | null | undefined) {
+  const queryClient = useQueryClient()
+  const query = useQuery({
+    queryKey: queryKeys.foods.detail(id ?? ''),
+    queryFn: () => api.get<FoodItem>(`/foods/${id}`),
+    enabled: !!id,
+    staleTime: 1000 * 60 * 5,
+    // A food from search results is complete enough to measure, offline too.
+    initialData: () => cachedFoods(queryClient).find((f) => f.id === id),
+    initialDataUpdatedAt: 0,
+  })
+  return { ...query, offline: isOffline(query) && query.data === undefined }
+}
+
+function useFoodMutation<V>(mutationFn: (vars: V) => Promise<FoodItem>) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn,
+    // Fail with a NetworkError offline instead of waiting for a connection.
+    networkMode: 'always',
+    onSuccess: (food) => {
+      queryClient.setQueryData(queryKeys.foods.detail(food.id), food)
+      queryClient.invalidateQueries({ queryKey: ['foods', 'search'] })
+    },
+  })
 }
 
 export function useCreateFood() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: (data: FoodItemPayload & { barcode?: string | null }) =>
-      api.post<FoodItem>('/foods', data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.foods.all })
-    },
-  })
+  return useFoodMutation((data: FoodInput & { barcode: string | null }) =>
+    api.post<FoodItem>('/foods', data),
+  )
 }
 
 export function useUpdateFood() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: FoodItemPayload }) =>
-      api.put<FoodItem>(`/foods/${id}`, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.foods.all })
-    },
-  })
+  return useFoodMutation(({ id, data }: { id: string; data: FoodInput }) =>
+    api.put<FoodItem>(`/foods/${id}`, data),
+  )
+}
+
+/** A personal unit ("my bowl" = 320 g); answers with the food. */
+export function useAddUnit() {
+  return useFoodMutation(({ foodId, unit }: { foodId: string; unit: FoodUnitInput }) =>
+    api.post<FoodItem>(`/foods/${foodId}/units`, unit),
+  )
 }
 
 export function useBarcodeLookup() {
@@ -428,40 +550,20 @@ export function useBarcodeLookup() {
   return useMutation({
     // A lookup can create a shared food server-side (Open Food Facts hit),
     // so it's modeled as a mutation and invalidates the food cache.
-    mutationFn: (barcode: string) =>
-      api.get<BarcodeLookup>(`/foods/by-barcode/${barcode}`),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.foods.all })
+    mutationFn: (barcode: string) => api.get<BarcodeLookup>(`/foods/by-barcode/${barcode}`),
+    networkMode: 'always',
+    onSuccess: (result) => {
+      if (result.food) queryClient.setQueryData(queryKeys.foods.detail(result.food.id), result.food)
+      queryClient.invalidateQueries({ queryKey: ['foods', 'search'] })
     },
   })
 }
 
-export function useDailyLog(date: string) {
-  return useQuery({
-    queryKey: queryKeys.foodLogs.day(date),
-    queryFn: () => api.get<DailyLog>(`/food-logs?date=${date}`),
-    staleTime: 0,
-  })
-}
-
-export function useCreateLog() {
-  const queryClient = useQueryClient()
+/** Claude reads name, brand, per-100 g values and units from pack photos. */
+export function useReadLabel() {
   return useMutation({
-    mutationFn: (data: FoodLogCreate) => api.post<FoodLog>('/food-logs', data),
-    onSuccess: (_result, variables) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.foodLogs.day(variables.logged_on) })
-    },
-  })
-}
-
-export function useDeleteLog() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: ({ id }: { id: string; date: string }) =>
-      api.delete(`/food-logs/${id}`),
-    onSuccess: (_result, variables) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.foodLogs.day(variables.date) })
-    },
+    mutationFn: (images: { media_type: string; data: string }[]) =>
+      api.post<FoodDraft>('/foods/read-label', { images }, { timeoutMs: 90_000 }),
   })
 }
 
@@ -509,7 +611,7 @@ export function useUpdateDailyTargets() {
       api.put<DailyTargets>('/me/daily-targets', data),
     onSuccess: (result) => {
       queryClient.setQueryData(queryKeys.dailyTargets, result)
-      queryClient.invalidateQueries({ queryKey: queryKeys.foodLogs.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.diet.all })
     },
   })
 }

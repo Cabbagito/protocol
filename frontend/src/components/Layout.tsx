@@ -20,7 +20,7 @@ const navItems: { section: Section; label: string; icon: typeof HomeIcon }[] = [
  * See the layout contract at the top of src/index.css.
  */
 export default function Layout({ children }: { children: React.ReactNode }) {
-  const { pathname, key } = useLocation()
+  const { pathname, search, key } = useLocation()
   const keyboardOpen = useKeyboardVisible()
   const { activeMesoPath, workoutHref } = useWorkoutTab()
   const section = sectionOf(pathname, activeMesoPath)
@@ -33,8 +33,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   // Lets back buttons tell whether their parent page is right below in history.
   useLayoutEffect(() => {
-    recordLocation(pathname)
-  }, [pathname, key])
+    recordLocation(pathname + search)
+  }, [pathname, search, key])
 
   const hrefs: Record<Section, string> = {
     home: '/',
