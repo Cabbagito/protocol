@@ -122,7 +122,6 @@ protocol/
 │   │   ├── lib/                 Auth, muscle colors, meso utilities
 │   │   ├── pages/               12 lazy-loaded route pages
 │   │   └── types/               TypeScript interfaces
-│   ├── design/                  13 HTML design prototypes
 │   └── package.json
 │
 ├── backend/                     FastAPI + SQLAlchemy (uv)
@@ -135,7 +134,7 @@ protocol/
 │   ├── migrations/              Alembic migrations (auto-upgrade on start)
 │   └── pyproject.toml
 │
-├── docs/                        PRD, Go-Live roadmap, UI style guide
+├── docs/                        PRD, roadmap, go-live notes, workout logic
 ├── docker-compose.yml           Development (hot reload)
 ├── docker-compose.prod.yml      Production (Caddy + auto-SSL)
 ├── Caddyfile                    Reverse proxy config
@@ -174,7 +173,7 @@ git pull && docker compose -f docker-compose.prod.yml up -d --build
 
 ## Design System
 
-The implemented design is "v5": themeable dark UI (several themes in Settings) on a static gradient background, Inter + JetBrains Mono, with one color per muscle group. Spec and prototypes: [`docs/design-v5/README.md`](docs/design-v5/README.md). Tokens live as CSS variables in `frontend/src/index.css` and `frontend/src/lib/themes.ts`.
+The implemented design is "v5": themeable dark UI (several themes in Settings) on a static gradient background, Inter + JetBrains Mono, with one color per muscle group. The spec is the Protocol design system in Claude Design (linked from `CLAUDE.md`); new screens are designed there before they are built. Tokens live as CSS variables in `frontend/src/index.css` and `frontend/src/lib/themes.ts`.
 
 ## API Endpoints
 
