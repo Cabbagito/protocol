@@ -77,7 +77,7 @@ export default function BodyweightCard({ date, today }: { date: string; today: s
                   {delta !== null && (
                     <span
                       style={{
-                        color: delta > 0 ? 'var(--m-quads)' : delta < 0 ? 'var(--accent)' : 'var(--text-m)',
+                        color: delta > 0 ? 'var(--m-quads-t)' : delta < 0 ? 'var(--accent)' : 'var(--text-m)',
                         marginRight: 8,
                       }}
                     >

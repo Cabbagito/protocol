@@ -263,7 +263,7 @@ export default function DayCard({
                     <div
                       style={{
                         fontSize: 9,
-                        color: color.light,
+                        color: color.text,
                         letterSpacing: '0.15em',
                         textTransform: 'uppercase',
                         fontFamily: MONO,

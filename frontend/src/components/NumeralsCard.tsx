@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { getMuscleColor } from '../lib/muscleColors'
+import { getMuscleColor, type MuscleColor } from '../lib/muscleColors'
 import './NumeralsCard.css'
 
 interface NumeralsCardProps {
@@ -96,7 +96,7 @@ export default function NumeralsCard({
               onClick={onLastClick}
               style={{
                 fontSize: 10,
-                color: c.light,
+                color: c.text,
                 letterSpacing: '0.2em',
                 fontFamily: 'JetBrains Mono, ui-monospace, monospace',
                 fontWeight: 500,
@@ -114,7 +114,7 @@ export default function NumeralsCard({
             <div
               style={{
                 fontSize: 10,
-                color: c.light,
+                color: c.text,
                 letterSpacing: '0.2em',
                 fontFamily: 'JetBrains Mono, ui-monospace, monospace',
                 fontWeight: 500,
@@ -193,7 +193,7 @@ export default function NumeralsCard({
           height: 56,
           borderRadius: 16,
           background: `linear-gradient(135deg, ${c.primary}, ${c.light})`,
-          color: 'white',
+          color: 'var(--on-muscle)',
           fontWeight: 700,
           fontSize: 16,
           border: '1px solid transparent',
@@ -275,7 +275,7 @@ interface ColumnProps {
   step: number
   minValue: number
   onChange: (n: number) => void
-  color: { primary: string; light: string }
+  color: MuscleColor
   /** Block decimals (used for reps). */
   integerOnly?: boolean
 }
@@ -324,7 +324,7 @@ function Column({
           fontWeight: 600,
           letterSpacing: '0.14em',
           textTransform: 'uppercase',
-          color: color.light,
+          color: color.text,
           fontFamily: 'JetBrains Mono, ui-monospace, monospace',
         }}
       >
@@ -379,7 +379,7 @@ function Column({
   )
 }
 
-function NudgeButton({ label, color, onClick, children }: { label: string; color: { primary: string; light: string }; onClick: () => void; children: React.ReactNode }) {
+function NudgeButton({ label, color, onClick, children }: { label: string; color: MuscleColor; onClick: () => void; children: React.ReactNode }) {
   return (
     <button
       type="button"
@@ -391,7 +391,7 @@ function NudgeButton({ label, color, onClick, children }: { label: string; color
         borderRadius: 10,
         background: 'rgba(255,255,255,0.05)',
         border: `1px solid color-mix(in oklab, ${color.primary} 25%, var(--border))`,
-        color: color.light,
+        color: color.text,
         fontSize: 18,
         cursor: 'pointer',
       }}

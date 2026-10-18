@@ -95,7 +95,7 @@ export default function ProgressRail({ exercises, currentIndex }: ProgressRailPr
         <span
           style={{
             fontSize: 9,
-            color: currentColor?.light ?? 'var(--text-m)',
+            color: currentColor?.text ?? 'var(--text-m)',
             letterSpacing: '0.18em',
             fontFamily: 'JetBrains Mono, ui-monospace, monospace',
             fontWeight: 500,

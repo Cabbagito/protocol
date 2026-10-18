@@ -342,7 +342,7 @@ function SelectedHero({
               <span
                 style={{
                   fontSize: 9,
-                  color: color.light,
+                  color: color.text,
                   letterSpacing: '0.22em',
                   fontFamily: MONO,
                   fontWeight: 600,
@@ -404,7 +404,7 @@ function SelectedHero({
 
         <div style={{ position: 'relative', marginTop: 14 }}>
           {series.length >= 2 ? (
-            <Sparkline pts={series} color={color.primary} colorLight={color.light} height={82} />
+            <Sparkline pts={series} color={color.primary} colorLight={color.text} height={82} />
           ) : (
             <div
               style={{
@@ -443,19 +443,19 @@ function SelectedHero({
           label="BEST SET"
           value={best ? `${formatWeight(best.weight)}×${best.reps}` : '—'}
           sub={best && best.e1rm > 0 ? `≈${Math.round(best.e1rm)}KG 1RM` : ''}
-          subColor={color.light}
+          subColor={color.text}
         />
         <StatCard
           label="TREND"
           value={trendPct === null ? '—' : trendPct >= 0 ? `+${trendPct}%` : `${trendPct}%`}
           sub={trendPct === null ? '' : 'EST 1RM'}
-          subColor={color.light}
+          subColor={color.text}
         />
         <StatCard
           label="FREQUENCY"
           value={sessions.length > 0 ? `${perWeek.toFixed(1)}/wk` : '—'}
           sub={`${sessions.length} ${sessions.length === 1 ? 'SESSION' : 'SESSIONS'}`}
-          subColor={color.light}
+          subColor={color.text}
         />
       </div>
     </>
@@ -786,7 +786,7 @@ function OtherRow({
           <span
             style={{
               fontSize: 8,
-              color: color.light,
+              color: color.text,
               letterSpacing: '0.18em',
               fontFamily: MONO,
               fontWeight: 600,
@@ -811,12 +811,12 @@ function OtherRow({
         </div>
       </div>
       <div style={{ width: 110, height: 28 }}>
-        {series.length >= 2 && <MiniSparkline pts={series} color={color.primary} colorLight={color.light} />}
+        {series.length >= 2 && <MiniSparkline pts={series} color={color.primary} colorLight={color.text} />}
       </div>
       <div
         style={{
           fontSize: 11,
-          color: color.light,
+          color: color.text,
           textAlign: 'right',
           fontWeight: 600,
           letterSpacing: '0.05em',

@@ -97,7 +97,7 @@ export default function ExercisePeekCard({
             <span
               style={{
                 fontSize: 8,
-                color: c.light,
+                color: c.text,
                 letterSpacing: '0.18em',
                 fontFamily: 'JetBrains Mono, ui-monospace, monospace',
               }}
@@ -109,7 +109,7 @@ export default function ExercisePeekCard({
             <span
               style={{
                 fontSize: 8,
-                color: c.light,
+                color: c.text,
                 letterSpacing: '0.18em',
                 fontFamily: 'JetBrains Mono, ui-monospace, monospace',
               }}
@@ -166,7 +166,7 @@ export default function ExercisePeekCard({
         height="14"
         viewBox="0 0 24 24"
         fill="none"
-        stroke={status === 'done' ? c.light : 'var(--text-m)'}
+        stroke={status === 'done' ? c.text : 'var(--text-m)'}
         strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"

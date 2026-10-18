@@ -372,8 +372,8 @@ export default function MesocycleDetail() {
                 gap: 8,
                 padding: 14,
                 borderRadius: 14,
-                background: 'rgba(15,29,46,0.4)',
-                border: '1px solid rgba(255,255,255,0.05)',
+                background: 'var(--glass)',
+                border: '1px solid var(--line)',
               }}
             >
               {volume.map((v) => {
@@ -402,7 +402,7 @@ export default function MesocycleDetail() {
                       <span
                         style={{
                           fontSize: 9,
-                          color: color.light,
+                          color: color.text,
                           letterSpacing: '0.15em',
                           textTransform: 'uppercase',
                           fontFamily: MONO,
@@ -416,7 +416,7 @@ export default function MesocycleDetail() {
                       style={{
                         height: 6,
                         borderRadius: 3,
-                        background: 'rgba(255,255,255,0.05)',
+                        background: 'var(--fill)',
                         overflow: 'hidden',
                       }}
                     >

@@ -31,7 +31,7 @@ export default function MuscleAccent({ group, variant = 'pill' }: MuscleAccentPr
             fontSize: 10,
             fontWeight: 600,
             letterSpacing: '0.18em',
-            color: c.light,
+            color: c.text,
             textTransform: 'uppercase',
             fontFamily: 'JetBrains Mono, ui-monospace, monospace',
           }}
@@ -55,7 +55,7 @@ export default function MuscleAccent({ group, variant = 'pill' }: MuscleAccentPr
         fontFamily: 'JetBrains Mono, ui-monospace, monospace',
         background: `color-mix(in oklab, ${c.primary} 12%, transparent)`,
         border: `1px solid color-mix(in oklab, ${c.primary} 22%, transparent)`,
-        color: c.light,
+        color: c.text,
       }}
     >
       {label}

@@ -262,7 +262,7 @@ export default function Dashboard() {
                       fontSize: 10,
                       fontWeight: 600,
                       letterSpacing: '0.18em',
-                      color: `var(--m-${g.replace(/\s+/g, '-')}-l, var(--text-2))`,
+                      color: `var(--m-${g.replace(/\s+/g, '-')}-t, var(--text-2))`,
                       textTransform: 'uppercase',
                       fontFamily: 'JetBrains Mono, ui-monospace, monospace',
                     }}

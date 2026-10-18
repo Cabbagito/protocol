@@ -273,7 +273,7 @@ function SplitCard({ split, isLive }: { split: SplitListItem; isLive: boolean })
                         textTransform: 'uppercase',
                         background: `color-mix(in oklab, ${c.primary} 12%, transparent)`,
                         border: `1px solid color-mix(in oklab, ${c.primary} 25%, transparent)`,
-                        color: c.light,
+                        color: c.text,
                         fontFamily: MONO,
                       }}
                     >
