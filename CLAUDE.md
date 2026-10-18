@@ -56,6 +56,10 @@ The frontend is not containerized in dev: on Docker Desktop for Mac a `node_modu
 
 **Backend pattern:** Thin routers delegate to service layer (`app/services/`). Pydantic schemas in `app/schemas/`, one file per domain. Domain logic (progression calculations) isolated in `app/domain/` with no DB dependencies.
 
+## Design
+
+The visual spec is the **Protocol design system** in Claude Design: https://claude.ai/artifact/NsJhqrd6Vh2U8Snyb7mWkz. It holds the tokens (built from `src/lib/themes.ts`, `src/index.css` and `lib/muscleColors.ts`), voice and copy, layout and motion rules, and guidelines with previews for the shared components; read its `project/README.md` (Artifact `read` with `path`) before UI work. New screens are proposed as Claude Design artifacts built on it (`/design-prototype`) and implemented once approved; designs are not kept in the repo. When code adds or changes a token or a shared component, update the design system in the same piece of work.
+
 ## Data Model
 
 **Data ownership:** Exercise, Split, Mesocycle and FoodItem have a nullable `user_id` FK. `NULL` = system/seed data (visible to all users). `<uuid>` = user-created (visible only to owner). Reads filter with `user_id = current OR user_id IS NULL`; writes require `user_id = current` (exercises and foods: shared rows → 403, other users' rows → 404; see `common.get_writable_entity`).
