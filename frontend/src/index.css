@@ -685,7 +685,8 @@
 }
 
 /* Light themes: tone the layers down and multiply so the bg stays light. */
-[data-theme="light"] .app-bg,
+[data-theme="paper"] .app-bg,
+[data-theme="mist"] .app-bg,
 [data-theme="linen"] .app-bg {
   --bg-blob-a: 35%;
   --bg-blob3-a: 35%;
