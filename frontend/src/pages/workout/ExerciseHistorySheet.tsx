@@ -99,7 +99,7 @@ export function ExerciseHistorySheet({
         <div style={{ width: 38, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.16)', margin: '8px auto 0', flex: 'none' }} />
         <div style={{ padding: '12px 20px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flex: 'none' }}>
           <div style={{ minWidth: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: MONO, fontSize: 9, fontWeight: 600, letterSpacing: '0.16em', textTransform: 'uppercase', color: c.light }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: MONO, fontSize: 9, fontWeight: 600, letterSpacing: '0.16em', textTransform: 'uppercase', color: c.text }}>
               <span style={{ width: 7, height: 7, borderRadius: '50%', background: c.primary, boxShadow: `0 0 10px ${c.primary}` }} />
               {muscleGroup} · {equipmentType}
             </div>

@@ -58,7 +58,7 @@ The frontend is not containerized in dev: on Docker Desktop for Mac a `node_modu
 
 ## Design
 
-The visual spec is the **Protocol design system** in Claude Design: https://claude.ai/artifact/NsJhqrd6Vh2U8Snyb7mWkz. It holds the tokens (built from `src/lib/themes.ts`, `src/index.css` and `lib/muscleColors.ts`), voice and copy, layout and motion rules, and guidelines with previews for the shared components; read its `project/README.md` (Artifact `read` with `path`) before UI work. New screens are proposed as Claude Design artifacts built on it (`/design-prototype`) and implemented once approved; designs are not kept in the repo. When code adds or changes a token or a shared component, update the design system in the same piece of work.
+The visual spec is the **Protocol design system** in Claude Design: https://claude.ai/artifact/NsJhqrd6Vh2U8Snyb7mWkz. It holds the tokens (built from `src/lib/themes.ts` and `src/index.css`, which also holds the muscle colours that `lib/muscleColors.ts` hands out), voice and copy, layout and motion rules, and guidelines with previews for the shared components; read its `project/README.md` (Artifact `read` with `path`) before UI work. New screens are proposed as Claude Design artifacts built on it (`/design-prototype`) and implemented once approved; designs are not kept in the repo. When code adds or changes a token or a shared component, update the design system in the same piece of work.
 
 ## Data Model
 

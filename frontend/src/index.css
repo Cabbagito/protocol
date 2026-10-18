@@ -567,27 +567,42 @@
 }
 
 /* ============================================================
-   v5 — Muscle color vars, static background, per-muscle
-   breathing keyframes.
+   v5 — Muscle colours and the static background.
    ============================================================ */
 
+/* Muscle colours, the same in every theme (lib/muscleColors.ts hands them
+   out by muscle). Hues sit about 26° apart round the wheel and hue
+   neighbours one lightness step apart (OKLCH L 0.64 / 0.72 / 0.76–0.82,
+   chroma 0.10–0.12), so no two read alike. --m-<muscle> is the fill,
+   -l the lighter step (gradient ends, logged ticks), -d the dark step for
+   text on light grounds, and -t whichever of -l / -d the theme reads text
+   in. --on-muscle labels a muscle fill (LOG). */
 :root {
-  --m-chest:#f97316;       --m-chest-l:#fb923c;
-  --m-back:#14b8a6;        --m-back-l:#2dd4bf;
-  --m-quads:#eab308;       --m-quads-l:#facc15;
-  --m-hamstrings:#22c55e;  --m-hamstrings-l:#4ade80;
-  --m-glutes:#f43f5e;      --m-glutes-l:#fb7185;
-  --m-calves:#06b6d4;      --m-calves-l:#22d3ee;
-  --m-biceps:#6366f1;      --m-biceps-l:#818cf8;
-  --m-triceps:#ec4899;     --m-triceps-l:#f472b6;
-  --m-shoulders:#a855f7;   --m-shoulders-l:#c084fc;
-  --m-traps:#8b5cf6;       --m-traps-l:#a78bfa;
-  --m-core:#f59e0b;        --m-core-l:#fbbf24;
-  --m-abs:#f59e0b;         --m-abs-l:#fbbf24;
-  --m-forearms:#64748b;    --m-forearms-l:#94a3b8;
-  --m-front-delt:#a855f7;    --m-front-delt-l:#c084fc;
-  --m-side-delt:#a855f7;     --m-side-delt-l:#c084fc;
-  --m-rear-delt:#a855f7;     --m-rear-delt-l:#c084fc;
+  --m-glutes:#e1878e;     --m-glutes-l:#f0acb0;     --m-glutes-d:#9e4b54;
+  --m-chest:#c8724e;      --m-chest-l:#d6967c;      --m-chest-d:#9c5131;
+  --m-abs:#d29754;        --m-abs-l:#e3b889;        --m-abs-d:#905c16;
+  --m-quads:#dac46d;      --m-quads-l:#f2e1a5;      --m-quads-d:#7b6816;
+  --m-obliques:#9caf5d;   --m-obliques-l:#bac98f;   --m-obliques-d:#61721c;
+  --m-hamstrings:#589f5e; --m-hamstrings-l:#84b787; --m-hamstrings-d:#397940;
+  --m-back:#67c6aa;       --m-back-l:#9ddec8;       --m-back-d:#1a7a63;
+  --m-calves:#269ea2;     --m-calves-l:#6eb6b8;     --m-calves-d:#1a777a;
+  --m-biceps:#62bfe0;     --m-biceps-l:#9ad9f1;     --m-biceps-d:#1a748f;
+  --m-front-delt:#4e90d2; --m-front-delt-l:#7eacdc; --m-front-delt-d:#316ca5;
+  --m-side-delt:#a0acf1;  --m-side-delt-l:#c1cbfb;  --m-side-delt-d:#5862a7;
+  --m-rear-delt:#987aca;  --m-rear-delt-l:#b09cd6;  --m-rear-delt-d:#73599e;
+  --m-traps:#d29bd3;      --m-traps-l:#e7bee7;      --m-traps-d:#89518b;
+  --m-triceps:#c36c94;    --m-triceps-l:#d391ad;    --m-triceps-d:#984c70;
+  --m-forearms:#a39688;   --m-forearms-l:#bdb2a7;   --m-forearms-d:#71675d;
+
+  --m-glutes-t: var(--m-glutes-l);         --m-chest-t: var(--m-chest-l);
+  --m-abs-t: var(--m-abs-l);               --m-quads-t: var(--m-quads-l);
+  --m-obliques-t: var(--m-obliques-l);     --m-hamstrings-t: var(--m-hamstrings-l);
+  --m-back-t: var(--m-back-l);             --m-calves-t: var(--m-calves-l);
+  --m-biceps-t: var(--m-biceps-l);         --m-front-delt-t: var(--m-front-delt-l);
+  --m-side-delt-t: var(--m-side-delt-l);   --m-rear-delt-t: var(--m-rear-delt-l);
+  --m-traps-t: var(--m-traps-l);           --m-triceps-t: var(--m-triceps-l);
+  --m-forearms-t: var(--m-forearms-l);
+  --on-muscle: var(--base);
 
   /* CTA / nav-active / day-pill background — quieter 1-hue gradient
      derived from the current theme's accent range. Inherits per-theme
@@ -608,15 +623,31 @@
   --danger: #f87171;
   --danger-soft: #fb7185;
 
-  /* Diet: protein and fat borrow muscle hues, carbs follow the accent. */
-  --macro-protein: var(--m-chest);   --macro-protein-l: var(--m-chest-l);
+  /* Diet: protein and fat borrow muscle hues, carbs follow the accent.
+     The -l steps are for labels. */
+  --macro-protein: var(--m-chest);   --macro-protein-l: var(--m-chest-t);
   --macro-carbs: var(--accent);      --macro-carbs-l: var(--accent-l);
-  --macro-fat: var(--m-quads);       --macro-fat-l: var(--m-quads-l);
+  --macro-fat: var(--m-quads);       --macro-fat-l: var(--m-quads-t);
 
   /* What Claude filled in (meal names, label readings) until the user
      changes it. Fixed across themes. */
   --ai: #a78bfa;
   --ai-rgb: 139, 92, 246;
+}
+
+/* Light palettes read muscle text in the dark step, as accent-l does there. */
+[data-theme="paper"],
+[data-theme="mist"],
+[data-theme="linen"] {
+  --m-glutes-t: var(--m-glutes-d);         --m-chest-t: var(--m-chest-d);
+  --m-abs-t: var(--m-abs-d);               --m-quads-t: var(--m-quads-d);
+  --m-obliques-t: var(--m-obliques-d);     --m-hamstrings-t: var(--m-hamstrings-d);
+  --m-back-t: var(--m-back-d);             --m-calves-t: var(--m-calves-d);
+  --m-biceps-t: var(--m-biceps-d);         --m-front-delt-t: var(--m-front-delt-d);
+  --m-side-delt-t: var(--m-side-delt-d);   --m-rear-delt-t: var(--m-rear-delt-d);
+  --m-traps-t: var(--m-traps-d);           --m-triceps-t: var(--m-triceps-d);
+  --m-forearms-t: var(--m-forearms-d);
+  --on-muscle: var(--text-1);
 }
 
 /* Primary CTA fill — 1-hue accent gradient + mono label font.
@@ -746,24 +777,6 @@
   height: var(--screen-h, 100vh);
   z-index: auto;
 }
-
-/* ── Per-muscle breathing keyframes for the Log button ────── */
-
-@keyframes p-btn-breathe-chest      { 0%,100% { border-color: color-mix(in oklab, var(--m-chest)     30%, transparent); } 50% { border-color: color-mix(in oklab, var(--m-chest)     70%, transparent); box-shadow: 0 0 14px -2px color-mix(in oklab, var(--m-chest)     50%, transparent); } }
-@keyframes p-btn-breathe-back       { 0%,100% { border-color: color-mix(in oklab, var(--m-back)      30%, transparent); } 50% { border-color: color-mix(in oklab, var(--m-back)      70%, transparent); box-shadow: 0 0 14px -2px color-mix(in oklab, var(--m-back)      50%, transparent); } }
-@keyframes p-btn-breathe-shoulders  { 0%,100% { border-color: color-mix(in oklab, var(--m-shoulders) 30%, transparent); } 50% { border-color: color-mix(in oklab, var(--m-shoulders) 70%, transparent); box-shadow: 0 0 14px -2px color-mix(in oklab, var(--m-shoulders) 50%, transparent); } }
-@keyframes p-btn-breathe-triceps    { 0%,100% { border-color: color-mix(in oklab, var(--m-triceps)   30%, transparent); } 50% { border-color: color-mix(in oklab, var(--m-triceps)   70%, transparent); box-shadow: 0 0 14px -2px color-mix(in oklab, var(--m-triceps)   50%, transparent); } }
-@keyframes p-btn-breathe-biceps     { 0%,100% { border-color: color-mix(in oklab, var(--m-biceps)    30%, transparent); } 50% { border-color: color-mix(in oklab, var(--m-biceps)    70%, transparent); box-shadow: 0 0 14px -2px color-mix(in oklab, var(--m-biceps)    50%, transparent); } }
-@keyframes p-btn-breathe-quads      { 0%,100% { border-color: color-mix(in oklab, var(--m-quads)     30%, transparent); } 50% { border-color: color-mix(in oklab, var(--m-quads)     70%, transparent); box-shadow: 0 0 14px -2px color-mix(in oklab, var(--m-quads)     50%, transparent); } }
-@keyframes p-btn-breathe-hamstrings { 0%,100% { border-color: color-mix(in oklab, var(--m-hamstrings) 30%, transparent); } 50% { border-color: color-mix(in oklab, var(--m-hamstrings) 70%, transparent); box-shadow: 0 0 14px -2px color-mix(in oklab, var(--m-hamstrings) 50%, transparent); } }
-@keyframes p-btn-breathe-glutes     { 0%,100% { border-color: color-mix(in oklab, var(--m-glutes)    30%, transparent); } 50% { border-color: color-mix(in oklab, var(--m-glutes)    70%, transparent); box-shadow: 0 0 14px -2px color-mix(in oklab, var(--m-glutes)    50%, transparent); } }
-@keyframes p-btn-breathe-calves     { 0%,100% { border-color: color-mix(in oklab, var(--m-calves)    30%, transparent); } 50% { border-color: color-mix(in oklab, var(--m-calves)    70%, transparent); box-shadow: 0 0 14px -2px color-mix(in oklab, var(--m-calves)    50%, transparent); } }
-@keyframes p-btn-breathe-traps      { 0%,100% { border-color: color-mix(in oklab, var(--m-traps)     30%, transparent); } 50% { border-color: color-mix(in oklab, var(--m-traps)     70%, transparent); box-shadow: 0 0 14px -2px color-mix(in oklab, var(--m-traps)     50%, transparent); } }
-@keyframes p-btn-breathe-abs        { 0%,100% { border-color: color-mix(in oklab, var(--m-abs)       30%, transparent); } 50% { border-color: color-mix(in oklab, var(--m-abs)       70%, transparent); box-shadow: 0 0 14px -2px color-mix(in oklab, var(--m-abs)       50%, transparent); } }
-@keyframes p-btn-breathe-forearms   { 0%,100% { border-color: color-mix(in oklab, var(--m-forearms)  30%, transparent); } 50% { border-color: color-mix(in oklab, var(--m-forearms)  70%, transparent); box-shadow: 0 0 14px -2px color-mix(in oklab, var(--m-forearms)  50%, transparent); } }
-@keyframes p-btn-breathe-front-delt { 0%,100% { border-color: color-mix(in oklab, var(--m-front-delt) 30%, transparent); } 50% { border-color: color-mix(in oklab, var(--m-front-delt) 70%, transparent); box-shadow: 0 0 14px -2px color-mix(in oklab, var(--m-front-delt) 50%, transparent); } }
-@keyframes p-btn-breathe-side-delt  { 0%,100% { border-color: color-mix(in oklab, var(--m-side-delt)  30%, transparent); } 50% { border-color: color-mix(in oklab, var(--m-side-delt)  70%, transparent); box-shadow: 0 0 14px -2px color-mix(in oklab, var(--m-side-delt)  50%, transparent); } }
-@keyframes p-btn-breathe-rear-delt  { 0%,100% { border-color: color-mix(in oklab, var(--m-rear-delt)  30%, transparent); } 50% { border-color: color-mix(in oklab, var(--m-rear-delt)  70%, transparent); box-shadow: 0 0 14px -2px color-mix(in oklab, var(--m-rear-delt)  50%, transparent); } }
 
 /* Focus ring for numeric inputs in NumeralsCard (since they use outline:none). */
 .p-num-input:focus-visible {

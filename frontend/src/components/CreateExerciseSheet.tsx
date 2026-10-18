@@ -193,7 +193,7 @@ function ExerciseForm({ onClose, initialName = '', exercise, onSaved }: CreateEx
                             borderRadius: 100,
                             background: sel ? `color-mix(in oklab, ${c.primary} 20%, transparent)` : 'transparent',
                             border: `1px solid ${sel ? `color-mix(in oklab, ${c.primary} 45%, transparent)` : 'rgba(255,255,255,0.08)'}`,
-                            color: sel ? c.light : 'var(--text-2)',
+                            color: sel ? c.text : 'var(--text-2)',
                             fontSize: 10,
                             fontWeight: 600,
                             letterSpacing: '0.1em',

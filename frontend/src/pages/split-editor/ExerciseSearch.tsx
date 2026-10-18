@@ -88,7 +88,7 @@ export default function ExerciseSearch({
               <div key={mg}>
                 <div
                   className="text-[10px] font-bold uppercase tracking-wider px-3 pt-2 pb-1 sticky top-0 z-[1]"
-                  style={{ color: color.primary, background: 'var(--panel)' }}
+                  style={{ color: color.text, background: 'var(--panel)' }}
                 >
                   {mg}
                 </div>

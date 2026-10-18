@@ -107,7 +107,7 @@ export default function WorkoutDetail() {
               {muscles.map(({ muscleGroup }) => {
                 const c = getMuscleColor(muscleGroup)
                 return (
-                  <span key={muscleGroup} style={{ ...chipText, color: c.light }}>
+                  <span key={muscleGroup} style={{ ...chipText, color: c.text }}>
                     <Dot color={c.primary} glow />
                     {muscleGroup}
                   </span>
@@ -272,7 +272,7 @@ function LiftCard({
       />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
         <div style={{ minWidth: 0 }}>
-          <div style={{ ...chipText, fontSize: 9, color: c.light }}>{exercise.muscle_group}</div>
+          <div style={{ ...chipText, fontSize: 9, color: c.text }}>{exercise.muscle_group}</div>
           <div style={{ fontSize: 15, fontWeight: 600, letterSpacing: '-0.01em', marginTop: 3, lineHeight: 1.25, color: 'var(--text-1)' }}>
             {exercise.exercise_name}
           </div>
@@ -376,13 +376,13 @@ function Sparkline({ values, color }: { values: number[]; color: MuscleColor }) 
       width={W} height={H} viewBox={`0 0 ${W} ${H}`} style={{ overflow: 'visible', flex: 'none' }}
       role="img" aria-label={`Est. 1RM over the last ${values.length} times`}
     >
-      <path d={path} fill="none" stroke={color.light} strokeWidth={1.6} strokeLinejoin="round" opacity={0.85} />
+      <path d={path} fill="none" stroke={color.text} strokeWidth={1.6} strokeLinejoin="round" opacity={0.85} />
       {values.map((v, i) =>
         i === last ? (
-          <circle key={i} cx={x(i)} cy={y(v)} r={3.2} fill={color.light} stroke="white" strokeWidth={1.2}
+          <circle key={i} cx={x(i)} cy={y(v)} r={3.2} fill={color.text} stroke="white" strokeWidth={1.2}
             style={{ filter: `drop-shadow(0 0 5px ${color.primary})` }} />
         ) : (
-          <circle key={i} cx={x(i)} cy={y(v)} r={1.8} fill={color.light} opacity={0.7} />
+          <circle key={i} cx={x(i)} cy={y(v)} r={1.8} fill={color.text} opacity={0.7} />
         ),
       )}
     </svg>

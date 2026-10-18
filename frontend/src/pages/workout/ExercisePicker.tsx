@@ -125,7 +125,7 @@ export function ExercisePicker({ mode = 'replace', initialMuscleGroup, initialEq
               <div className="text-left">
                 <div className="text-sm font-medium text-[var(--text-1)]">{ex.name}</div>
                 <div className="flex items-center gap-2 mt-0.5">
-                  <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: color.light }}>
+                  <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: color.text }}>
                     {ex.muscle_group}
                   </span>
                   <span className="text-[10px]" style={{ color: 'var(--text-m)' }}>&middot;</span>

@@ -26,8 +26,8 @@ export function MuscleGroupChips({
                   onClick={() => onToggle(mg)}
                   className="filter-chip"
                   style={{
-                    color: isSelected ? color.light : 'var(--text-2)',
-                    background: isSelected ? color.bg : 'transparent',
+                    color: isSelected ? color.text : 'var(--text-2)',
+                    background: isSelected ? `color-mix(in oklab, ${color.primary} 10%, transparent)` : 'transparent',
                     borderColor: isSelected ? color.primary : 'rgba(148,163,184,0.15)',
                   }}
                 >

@@ -12,9 +12,9 @@ export default function MuscleGroupBadge({ muscleGroup }: MuscleGroupBadgeProps)
     <span
       className="pill-badge"
       style={{
-        color: color.light,
-        background: color.bg,
-        border: `1px solid ${color.border}`,
+        color: color.text,
+        background: `color-mix(in oklab, ${color.primary} 10%, transparent)`,
+        border: `1px solid color-mix(in oklab, ${color.primary} 15%, transparent)`,
       }}
     >
       {muscleGroup}

@@ -133,7 +133,7 @@ export function LoggingState({
       {allDone && (
         <div
           style={{
-            fontSize: 11, color: c.light, marginTop: 8, letterSpacing: '0.22em',
+            fontSize: 11, color: c.text, marginTop: 8, letterSpacing: '0.22em',
             fontFamily: 'JetBrains Mono, ui-monospace, monospace',
             textTransform: 'uppercase', fontWeight: 600,
           }}
@@ -196,7 +196,7 @@ export function LoggingState({
           const isSkipped = s.skipped
           const isActive = i === activeIdx
           const done = s.logged
-          const colorText = done ? c.light : isActive ? 'var(--text-1)' : 'var(--text-m)'
+          const colorText = done ? c.text : isActive ? 'var(--text-1)' : 'var(--text-m)'
           const setTypeInfo = s.set_type && s.set_type !== 'straight' ? SET_TYPE_LABELS[s.set_type] : null
           return (
             <div
@@ -240,7 +240,7 @@ export function LoggingState({
                 >
                   SET {i + 1}
                   {isActive && (
-                    <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke={c.light} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                    <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke={c.text} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                       <polyline points={typeMenuOpen ? '18 15 12 9 6 15' : '6 9 12 15 18 9'} />
                     </svg>
                   )}
@@ -350,7 +350,7 @@ export function LoggingState({
                           </span>
                           <span style={{ flex: 1 }}>{opt.label}</span>
                           {checked && (
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={c.light} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={c.text} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                               <polyline points="20 6 9 17 4 12" />
                             </svg>
                           )}
@@ -388,7 +388,7 @@ export function LoggingState({
           style={{
             marginTop: 16, width: '100%', height: 50, borderRadius: 14,
             background: `linear-gradient(135deg, ${c.primary}, ${c.light})`,
-            color: 'white', fontWeight: 700, fontSize: 14, letterSpacing: '0.2em',
+            color: 'var(--on-muscle)', fontWeight: 700, fontSize: 14, letterSpacing: '0.2em',
             border: 'none', cursor: 'pointer',
             boxShadow: `0 12px 30px -8px color-mix(in oklab, ${c.primary} 60%, transparent)`,
           }}

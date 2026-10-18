@@ -228,7 +228,7 @@ export default function Exercises() {
                           ? `color-mix(in oklab, ${color.primary} 18%, transparent)`
                           : 'transparent',
                         border: `1px solid ${sel ? `color-mix(in oklab, ${color.primary} 40%, transparent)` : 'rgba(255,255,255,0.05)'}`,
-                        color: sel ? color.light : 'var(--text-2)',
+                        color: sel ? color.text : 'var(--text-2)',
                         fontSize: 10,
                         fontWeight: 600,
                         letterSpacing: '0.1em',
@@ -379,7 +379,7 @@ export default function Exercises() {
                         fontSize: 10,
                         fontWeight: 600,
                         letterSpacing: '0.22em',
-                        color: color.light,
+                        color: color.text,
                         textTransform: 'uppercase',
                         fontFamily: MONO,
                       }}
