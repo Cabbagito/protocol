@@ -50,6 +50,8 @@ const PRELOAD = [loadDashboard, loadDiet, loadWorkoutHub, loadWorkout]
 const Login = lazyWithRetry(() => import('./pages/Login'))
 const Dashboard = lazyWithRetry(loadDashboard)
 const Diet = lazyWithRetry(loadDiet)
+const Meal = lazyWithRetry(() => import('./pages/Meal'))
+const Product = lazyWithRetry(() => import('./pages/Product'))
 const Exercises = lazyWithRetry(() => import('./pages/Exercises'))
 const Splits = lazyWithRetry(() => import('./pages/Splits'))
 const SplitEditor = lazyWithRetry(() => import('./pages/SplitEditor'))
@@ -128,6 +130,8 @@ export default function App() {
                       <Routes>
                         <Route path="/" element={<Dashboard />} />
                         <Route path="/diet" element={<Diet />} />
+                        <Route path="/diet/meals/:id" element={<Meal />} />
+                        <Route path="/diet/products/:id" element={<Product />} />
                         <Route path="/exercises" element={<Exercises />} />
                         <Route path="/splits" element={<Splits />} />
                         <Route path="/splits/new" element={<SplitEditor />} />

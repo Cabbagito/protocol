@@ -5,11 +5,12 @@
   user with several mesocycles, naive completed_at, food logs), downgrades
   and re-upgrades cleanly, and enforces its new constraints.
 - 0017 cleans workout structures without touching logged sets.
+- 0018 turns food logs into meals and default servings into units, and back.
 """
 
 import json
 import uuid
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, time
 
 import pytest
 from alembic import command
@@ -288,7 +289,8 @@ NEW_INDEXES = {
 
 
 def test_0016_upgrade_downgrade_on_populated_database(migration_db):
-    from app.core.seed import seed_default_splits, seed_exercises, seed_foods
+    # Foods aren't seeded: today's food seeder expects today's schema.
+    from app.core.seed import seed_default_splits, seed_exercises
 
     _alembic(command.upgrade, "0015")
 
@@ -300,7 +302,6 @@ def test_0016_upgrade_downgrade_on_populated_database(migration_db):
         try:
             async with async_sessionmaker(engine, class_=AsyncSession)() as session:
                 await seed_exercises(session)
-                await seed_foods(session)
                 await seed_default_splits(session)
         finally:
             await engine.dispose()
@@ -504,3 +505,116 @@ def test_0017_cleans_structures_and_stamps_completion(migration_db):
         "logged": False,
     }
     assert open_at is None
+
+
+def test_0018_food_logs_become_meals_and_servings_become_units(migration_db):
+    _alembic(command.upgrade, "0017")
+    alice, bob, oats, nutella = _uid(), _uid(), _uid(), _uid()
+    now = datetime(2026, 10, 1, tzinfo=UTC)
+
+    async def _populate(conn):
+        for user_id, name in ((alice, "Alice"), (bob, "Bob")):
+            await conn.execute(
+                "INSERT INTO users (id, name, password_hash, created_at, updated_at) "
+                "VALUES ($1, $2, 'x', $3, $3)",
+                user_id,
+                name,
+                now,
+            )
+        await conn.execute(
+            "INSERT INTO food_items (id, name, kcal_per_100g, protein_per_100g, carbs_per_100g, "
+            "fat_per_100g, default_serving_g, user_id, created_at, updated_at) "
+            "VALUES ($1, 'Oats', 380, 13, 60, 7, 40, $2, $3, $3)",
+            oats,
+            alice,
+            now,
+        )
+        await conn.execute(
+            "INSERT INTO food_items (id, name, kcal_per_100g, protein_per_100g, carbs_per_100g, "
+            "fat_per_100g, barcode, created_at, updated_at) "
+            "VALUES ($1, 'Nutella', 539, 6.3, 57.5, 30.9, '3017620422003', $2, $2)",
+            nutella,
+            now,
+        )
+        logs = [
+            # user, day, food, name, grams, kcal, created
+            (alice, date(2026, 6, 2), oats, "Oats", 40.0, 152.0, 1),
+            (alice, date(2026, 6, 2), nutella, "Nutella", 15.0, 81.0, 2),
+            (alice, date(2026, 6, 3), None, "Quick entry", None, 300.0, 3),
+            (bob, date(2026, 6, 2), nutella, "Nutella", 30.0, 162.0, 4),
+        ]
+        for user_id, day, food, name, grams, kcal, minute in logs:
+            created = now.replace(minute=minute)
+            await conn.execute(
+                "INSERT INTO food_logs (id, user_id, logged_on, food_item_id, name, quantity_g, "
+                "kcal, protein_g, carbs_g, fat_g, created_at, updated_at) "
+                "VALUES ($1, $2, $3, $4, $5, $6, $7, 1, 2, 3, $8, $8)",
+                _uid(),
+                user_id,
+                day,
+                food,
+                name,
+                grams,
+                kcal,
+                created,
+            )
+
+    _sql(_populate)
+    _alembic(command.upgrade, "0018")
+
+    async def _read(conn):
+        meals = await conn.fetch(
+            "SELECT m.user_id, m.eaten_on, m.eaten_at, m.name, m.name_source, "
+            "array_agg(i.name ORDER BY i.position) AS items, "
+            "array_agg(i.quantity_g ORDER BY i.position) AS grams, "
+            "array_agg(i.unit_quantity ORDER BY i.position) AS amounts, "
+            "array_agg(i.unit_name ORDER BY i.position) AS units "
+            "FROM meals m JOIN meal_items i ON i.meal_id = m.id "
+            "GROUP BY m.id ORDER BY m.user_id = $1 DESC, m.eaten_on",
+            alice,
+        )
+        units = await conn.fetch("SELECT food_item_id, user_id, name, grams FROM food_units")
+        tables = {
+            r["tablename"]
+            for r in await conn.fetch("SELECT tablename FROM pg_tables WHERE schemaname='public'")
+        }
+        return [dict(m) for m in meals], [dict(u) for u in units], tables
+
+    meals, units, tables = _sql(_read)
+    assert "food_logs" not in tables
+    assert [
+        (m["user_id"], m["eaten_on"], m["items"], m["grams"], m["amounts"], m["units"])
+        for m in meals
+    ] == [
+        (alice, date(2026, 6, 2), ["Oats", "Nutella"], [40, 15], [40, 15], [None, None]),
+        (alice, date(2026, 6, 3), ["Quick entry"], [None], [None], [None]),
+        (bob, date(2026, 6, 2), ["Nutella"], [30], [30], [None]),
+    ]
+    assert all(m["eaten_at"] == time(12, 0) for m in meals)
+    assert all(m["name"] is None and m["name_source"] == "auto" for m in meals)
+    assert units == [{"food_item_id": oats, "user_id": None, "name": "serving", "grams": 40}]
+
+    # --- downgrade and re-upgrade ---
+    _alembic(command.downgrade, "-1")
+
+    async def _read_old(conn):
+        logs = await conn.fetch(
+            "SELECT user_id, logged_on, name, quantity_g FROM food_logs "
+            "ORDER BY user_id = $1 DESC, logged_on, name",
+            alice,
+        )
+        serving = await conn.fetchval(
+            "SELECT default_serving_g FROM food_items WHERE id = $1", oats
+        )
+        return [tuple(r) for r in logs], serving
+
+    logs, serving = _sql(_read_old)
+    assert logs == [
+        (alice, date(2026, 6, 2), "Nutella", 15),
+        (alice, date(2026, 6, 2), "Oats", 40),
+        (alice, date(2026, 6, 3), "Quick entry", None),
+        (bob, date(2026, 6, 2), "Nutella", 30),
+    ]
+    assert serving == 40
+    _alembic(command.upgrade, "0018")
+    assert len(_sql(_read)[0]) == 3

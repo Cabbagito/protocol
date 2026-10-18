@@ -8,12 +8,12 @@ import logging
 
 import httpx
 
-from app.schemas.food import FoodDraft
+from app.schemas.food import FoodDraft, FoodUnitCreate
 
 logger = logging.getLogger(__name__)
 
 _BASE_URL = "https://world.openfoodfacts.org/api/v2/product"
-_FIELDS = "product_name,brands,nutriments,serving_quantity"
+_FIELDS = "product_name,brands,nutriments,serving_quantity,product_quantity"
 _TIMEOUT = 5.0
 # OFF asks API consumers to identify themselves.
 _USER_AGENT = "Protocol/1.0 (personal fitness tracker)"
@@ -69,9 +69,11 @@ def map_product(product: dict, barcode: str) -> FoodDraft:
     if kcal is None and None not in (protein, carbs, fat):
         kcal = round(4 * protein + 4 * carbs + 9 * fat, 1)
 
-    serving = _as_float(product.get("serving_quantity"))
-    if serving is not None and serving <= 0:
-        serving = None
+    units = []
+    for unit_name, field in (("serving", "serving_quantity"), ("pack", "product_quantity")):
+        grams = _as_float(product.get(field))
+        if grams is not None and 0 < grams <= 100_000:
+            units.append(FoodUnitCreate(name=unit_name, grams=grams))
 
     return FoodDraft(
         barcode=barcode,
@@ -81,7 +83,7 @@ def map_product(product: dict, barcode: str) -> FoodDraft:
         protein_per_100g=protein,
         carbs_per_100g=carbs,
         fat_per_100g=fat,
-        default_serving_g=serving,
+        units=units,
     )
 
 

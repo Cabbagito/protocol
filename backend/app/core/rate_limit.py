@@ -75,3 +75,7 @@ class FailedAttemptLimiter:
 
 # 10 failed logins per client IP per minute, then 429 until the window frees up.
 login_limiter = FailedAttemptLimiter(max_failures=10, window_seconds=60)
+
+# Label readings are paid Claude calls: 30 per user per hour is plenty for
+# scanning a cupboard and stops a stuck client from running up a bill.
+label_limiter = FailedAttemptLimiter(max_failures=30, window_seconds=3600)

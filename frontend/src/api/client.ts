@@ -73,10 +73,11 @@ export const api = {
     return request<T>(endpoint)
   },
 
-  post<T>(endpoint: string, data?: unknown): Promise<T> {
+  post<T>(endpoint: string, data?: unknown, opts?: { timeoutMs?: number }): Promise<T> {
     return request<T>(endpoint, {
       method: 'POST',
       body: data ? JSON.stringify(data) : undefined,
+      timeoutMs: opts?.timeoutMs,
     })
   },
 

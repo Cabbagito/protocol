@@ -6,10 +6,11 @@ import { useNavigate } from 'react-router-dom'
  * (Mesocycle → Mesocycles → Settings → Home), so a page's back button always
  * lands in the same place, never on "the previous page".
  *
- * The shell records which path sits at each history index. When the parent
- * is the entry right below the current one, going back pops it, so history
- * doesn't grow; a page reached any other way (a shortcut, a tab) is replaced
- * by its parent.
+ * The shell records which path (with its query, e.g. the Diet day
+ * `/diet?date=2026-10-16`) sits at each history index. When the parent is the
+ * entry right below the current one, going back pops it, so history doesn't
+ * grow; a page reached any other way (a shortcut, a tab) is replaced by its
+ * parent.
  */
 const pathsByIndex: string[] = []
 
@@ -19,14 +20,14 @@ function historyIndex(): number | null {
   return typeof idx === 'number' ? idx : null
 }
 
-export function recordLocation(pathname: string): void {
+export function recordLocation(path: string): void {
   const idx = historyIndex()
   if (idx === null) return
-  pathsByIndex[idx] = pathname
+  pathsByIndex[idx] = path
   pathsByIndex.length = idx + 1
 }
 
-/** Go up to `parent` (a pathname). */
+/** Go up to `parent` (a path, with a query if the parent has one). */
 export function useBack(parent: string): () => void {
   const navigate = useNavigate()
   return useCallback(() => {

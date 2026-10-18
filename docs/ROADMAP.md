@@ -4,6 +4,10 @@
 
 ## Recently shipped
 
+- **Diet redesign** — meals by time on a day timeline, every macro per food and
+  meal, one food at a time with per-food units, products from barcodes and pack
+  photos (Claude reads the label), meal names from Claude Haiku
+  (see `docs/DIET-LOGIC.md`).
 - **Design system in Claude Design** — the visual spec and new screen designs
   live there now (see `CLAUDE.md` › Design); the HTML prototypes are gone.
 - **Local-first workout logging** — every set is saved on the phone first and
@@ -21,12 +25,11 @@
 
 ## Next, in rough priority order
 
-### 1. Food logging good enough to switch to
-Designed and approved; next to build. Plan: [`docs/DIET-REDESIGN.md`](DIET-REDESIGN.md).
-Meals as timed eating occasions on a day timeline, every macro per food and
-meal, logging one food at a time with per-food units, products from pack
-photos and barcodes, meal names and summaries from Claude Haiku. Not designed
-yet: quick add of numbers without a food, describing a whole meal to Claude.
+### 1. Diet, after the redesign
+- Local-first meals: drafts on the phone and a sync queue, as for workouts
+  (meals save online today, with an optimistic screen).
+- Not designed yet: quick add of numbers without a food, describing a whole meal
+  to Claude.
 
 ### 2. Progress / analysis redesign
 The Progress page works but is thin. Training: weekly sets per muscle group,

@@ -9,10 +9,14 @@ import type {
   Mesocycle,
   MesocycleListItem,
   BarcodeLookup,
+  DayKcal,
+  DietDay,
+  FoodDraft,
+  FoodInput,
   FoodItem,
-  FoodLog,
-  FoodLogCreate,
-  DailyLog,
+  FoodUnitInput,
+  Meal,
+  MealSnapshot,
   DailyTargets,
   DailyTargetsUpdate,
   WeightLog,
@@ -20,6 +24,7 @@ import type {
 import type { ExerciseSessionHistory } from '../lib/exerciseHistory'
 import { getUserId } from '../lib/auth'
 import { todayIso } from '../lib/dates'
+import { sumMacros } from '../lib/diet'
 import { overlayDrafts } from '../lib/workoutSession'
 import { useSyncStatus, workoutSync } from '../lib/workoutSync'
 
@@ -42,10 +47,13 @@ export const queryKeys = {
   foods: {
     all: ['foods'] as const,
     search: (q: string) => ['foods', 'search', q] as const,
+    detail: (id: string) => ['foods', 'detail', id] as const,
   },
-  foodLogs: {
-    all: ['food-logs'] as const,
-    day: (date: string) => ['food-logs', date] as const,
+  diet: {
+    all: ['diet'] as const,
+    day: (date: string) => ['diet', 'day', date] as const,
+    days: (from: string, to: string) => ['diet', 'days', from, to] as const,
+    meal: (id: string) => ['diet', 'meal', id] as const,
   },
   dailyTargets: ['daily-targets'] as const,
   weightLogs: ['weight-logs'] as const,
@@ -382,45 +390,184 @@ export function useRemoveExerciseFromSession() {
 
 // --- Diet Hooks ---
 
+export function useDietDay(date: string) {
+  return useQuery({
+    queryKey: queryKeys.diet.day(date),
+    queryFn: () => api.get<DietDay>(`/meals?date=${date}`),
+    staleTime: 0,
+  })
+}
+
+/** Kcal per day with meals, for the week strip and the calendar. */
+export function useDietDays(from: string, to: string) {
+  return useQuery({
+    queryKey: queryKeys.diet.days(from, to),
+    queryFn: () => api.get<DayKcal[]>(`/meals/days?from=${from}&to=${to}`),
+    staleTime: 0,
+  })
+}
+
+export function useMeal(id: string, enabled = true) {
+  const queryClient = useQueryClient()
+  return useQuery({
+    queryKey: queryKeys.diet.meal(id),
+    queryFn: () => api.get<Meal>(`/meals/${id}`),
+    enabled,
+    // Opened from the timeline: show the day's copy while it loads.
+    initialData: () => {
+      for (const [, day] of queryClient.getQueriesData<DietDay>({ queryKey: ['diet', 'day'] })) {
+        const meal = day?.meals.find((m) => m.id === id)
+        if (meal) return meal
+      }
+      return undefined
+    },
+    initialDataUpdatedAt: 0,
+  })
+}
+
+function sameItems(a: Meal['items'], b: Meal['items']): boolean {
+  const key = (items: Meal['items']) =>
+    JSON.stringify(items.map((i) => [i.name, i.unit_name, i.unit_quantity, i.quantity_g]))
+  return key(a) === key(b)
+}
+
+/** What the server will answer, so the screen updates before it does. */
+function optimisticMeal(id: string, snapshot: MealSnapshot, previous: Meal | undefined): Meal {
+  const unchanged = !!previous && sameItems(previous.items, snapshot.items)
+  return {
+    id,
+    eaten_on: snapshot.eaten_on,
+    eaten_at: snapshot.eaten_at,
+    name: snapshot.name ?? (unchanged && previous?.name_source === 'auto' ? previous.name : null),
+    name_source: snapshot.name ? 'user' : 'auto',
+    summary: unchanged ? (previous?.summary ?? null) : null,
+    totals: sumMacros(snapshot.items),
+    items: snapshot.items,
+  }
+}
+
+function withMeal(day: DietDay, meal: Meal | null, id: string): DietDay {
+  const others = day.meals.filter((m) => m.id !== id)
+  const meals = meal ? [...others, meal].sort((a, b) => a.eaten_at.localeCompare(b.eaten_at)) : others
+  return { ...day, meals, totals: sumMacros(meals.map((m) => m.totals)) }
+}
+
+// Newest save per meal: an older save's answer must not overwrite a newer
+// snapshot already on screen.
+const latestSave = new Map<string, number>()
+let saveCounter = 0
+// Claude names a meal in the background, a moment after the save answers.
+const NAME_REFRESH_MS = 3000
+
+export function useSaveMeal() {
+  const queryClient = useQueryClient()
+
+  const putInCaches = useCallback(
+    (meal: Meal) => {
+      queryClient.setQueryData(queryKeys.diet.meal(meal.id), meal)
+      queryClient.setQueryData<DietDay>(queryKeys.diet.day(meal.eaten_on), (day) =>
+        day ? withMeal(day, meal, meal.id) : day,
+      )
+    },
+    [queryClient],
+  )
+
+  return useMutation({
+    // One at a time, in order: each save is a full snapshot.
+    scope: { id: 'save-meal' },
+    mutationFn: ({ id, snapshot }: { id: string; snapshot: MealSnapshot }) =>
+      api.put<Meal>(`/meals/${id}`, snapshot),
+    onMutate: ({ id, snapshot }) => {
+      const version = ++saveCounter
+      latestSave.set(id, version)
+      const previous = queryClient.getQueryData<Meal>(queryKeys.diet.meal(id))
+      putInCaches(optimisticMeal(id, snapshot, previous))
+      return { version }
+    },
+    onSuccess: (meal, { id }, context) => {
+      if (latestSave.get(id) !== context?.version) return
+      putInCaches(meal)
+      queryClient.invalidateQueries({ queryKey: ['diet', 'days'] })
+      queryClient.invalidateQueries({ queryKey: queryKeys.foods.all })
+      if (meal.name === null || meal.summary === null) {
+        setTimeout(() => {
+          if (latestSave.get(id) !== context?.version) return
+          queryClient.invalidateQueries({ queryKey: queryKeys.diet.meal(id) })
+          queryClient.invalidateQueries({ queryKey: queryKeys.diet.day(meal.eaten_on) })
+        }, NAME_REFRESH_MS)
+      }
+    },
+    onError: (_err, { id, snapshot }) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.diet.meal(id) })
+      queryClient.invalidateQueries({ queryKey: queryKeys.diet.day(snapshot.eaten_on) })
+    },
+  })
+}
+
+export function useDeleteMeal() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id }: { id: string; date: string }) => api.delete(`/meals/${id}`),
+    onMutate: ({ id, date }) => {
+      latestSave.delete(id)
+      queryClient.setQueryData<DietDay>(queryKeys.diet.day(date), (day) =>
+        day ? withMeal(day, null, id) : day,
+      )
+    },
+    onSettled: (_result, _err, { id, date }) => {
+      queryClient.removeQueries({ queryKey: queryKeys.diet.meal(id) })
+      queryClient.invalidateQueries({ queryKey: queryKeys.diet.day(date) })
+      queryClient.invalidateQueries({ queryKey: ['diet', 'days'] })
+    },
+  })
+}
+
 export function useFoods(q: string) {
   return useQuery({
     queryKey: queryKeys.foods.search(q),
-    queryFn: () =>
-      api.get<FoodItem[]>(`/foods${q ? `?q=${encodeURIComponent(q)}` : ''}`),
+    queryFn: () => api.get<FoodItem[]>(`/foods${q ? `?q=${encodeURIComponent(q)}` : ''}`),
+    staleTime: 1000 * 60 * 5,
+    placeholderData: (previous) => previous,
+  })
+}
+
+export function useFood(id: string | null | undefined) {
+  return useQuery({
+    queryKey: queryKeys.foods.detail(id ?? ''),
+    queryFn: () => api.get<FoodItem>(`/foods/${id}`),
+    enabled: !!id,
     staleTime: 1000 * 60 * 5,
   })
 }
 
-export interface FoodItemPayload {
-  name: string
-  brand?: string | null
-  kcal_per_100g: number
-  protein_per_100g: number
-  carbs_per_100g: number
-  fat_per_100g: number
-  default_serving_g?: number | null
+function useFoodMutation<V>(mutationFn: (vars: V) => Promise<FoodItem>) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn,
+    onSuccess: (food) => {
+      queryClient.setQueryData(queryKeys.foods.detail(food.id), food)
+      queryClient.invalidateQueries({ queryKey: ['foods', 'search'] })
+    },
+  })
 }
 
 export function useCreateFood() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: (data: FoodItemPayload & { barcode?: string | null }) =>
-      api.post<FoodItem>('/foods', data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.foods.all })
-    },
-  })
+  return useFoodMutation((data: FoodInput & { barcode: string | null }) =>
+    api.post<FoodItem>('/foods', data),
+  )
 }
 
 export function useUpdateFood() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: FoodItemPayload }) =>
-      api.put<FoodItem>(`/foods/${id}`, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.foods.all })
-    },
-  })
+  return useFoodMutation(({ id, data }: { id: string; data: FoodInput }) =>
+    api.put<FoodItem>(`/foods/${id}`, data),
+  )
+}
+
+/** A personal unit ("my bowl" = 320 g); answers with the food. */
+export function useAddUnit() {
+  return useFoodMutation(({ foodId, unit }: { foodId: string; unit: FoodUnitInput }) =>
+    api.post<FoodItem>(`/foods/${foodId}/units`, unit),
+  )
 }
 
 export function useBarcodeLookup() {
@@ -428,40 +575,19 @@ export function useBarcodeLookup() {
   return useMutation({
     // A lookup can create a shared food server-side (Open Food Facts hit),
     // so it's modeled as a mutation and invalidates the food cache.
-    mutationFn: (barcode: string) =>
-      api.get<BarcodeLookup>(`/foods/by-barcode/${barcode}`),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.foods.all })
+    mutationFn: (barcode: string) => api.get<BarcodeLookup>(`/foods/by-barcode/${barcode}`),
+    onSuccess: (result) => {
+      if (result.food) queryClient.setQueryData(queryKeys.foods.detail(result.food.id), result.food)
+      queryClient.invalidateQueries({ queryKey: ['foods', 'search'] })
     },
   })
 }
 
-export function useDailyLog(date: string) {
-  return useQuery({
-    queryKey: queryKeys.foodLogs.day(date),
-    queryFn: () => api.get<DailyLog>(`/food-logs?date=${date}`),
-    staleTime: 0,
-  })
-}
-
-export function useCreateLog() {
-  const queryClient = useQueryClient()
+/** Claude reads name, brand, per-100 g values and units from pack photos. */
+export function useReadLabel() {
   return useMutation({
-    mutationFn: (data: FoodLogCreate) => api.post<FoodLog>('/food-logs', data),
-    onSuccess: (_result, variables) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.foodLogs.day(variables.logged_on) })
-    },
-  })
-}
-
-export function useDeleteLog() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: ({ id }: { id: string; date: string }) =>
-      api.delete(`/food-logs/${id}`),
-    onSuccess: (_result, variables) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.foodLogs.day(variables.date) })
-    },
+    mutationFn: (images: { media_type: string; data: string }[]) =>
+      api.post<FoodDraft>('/foods/read-label', { images }, { timeoutMs: 90_000 }),
   })
 }
 
@@ -509,7 +635,7 @@ export function useUpdateDailyTargets() {
       api.put<DailyTargets>('/me/daily-targets', data),
     onSuccess: (result) => {
       queryClient.setQueryData(queryKeys.dailyTargets, result)
-      queryClient.invalidateQueries({ queryKey: queryKeys.foodLogs.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.diet.all })
     },
   })
 }

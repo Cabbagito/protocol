@@ -126,6 +126,21 @@ export interface Mesocycle {
 
 // Diet
 
+export interface FoodUnit {
+  id: string
+  name: string
+  grams: number
+  // null: the food's own unit; a user id: that user's personal unit.
+  user_id: string | null
+}
+
+/** How much of a food the user logged the last time. */
+export interface LastUsed {
+  unit_name: string | null
+  unit_quantity: number | null
+  quantity_g: number | null
+}
+
 export interface FoodItem {
   id: string
   name: string
@@ -134,23 +149,42 @@ export interface FoodItem {
   protein_per_100g: number
   carbs_per_100g: number
   fat_per_100g: number
-  default_serving_g: number | null
   barcode: string | null
-  // Owner of a custom food; null for seeded and barcode (shared) foods,
-  // which the API refuses to modify (403).
+  // Owner of a custom food; null for seeded and barcode (shared) foods.
   user_id: string | null
   seeded: boolean
+  // Seeded foods are read-only; custom foods and barcode products aren't.
+  editable: boolean
+  units: FoodUnit[]
+  // Only in search results, for foods the user has logged.
+  last_used: LastUsed | null
 }
 
+export interface FoodUnitInput {
+  name: string
+  grams: number
+}
+
+export interface FoodInput {
+  name: string
+  brand: string | null
+  kcal_per_100g: number
+  protein_per_100g: number
+  carbs_per_100g: number
+  fat_per_100g: number
+  units: FoodUnitInput[]
+}
+
+/** A product as far as it is known: from Open Food Facts or the pack photos. */
 export interface FoodDraft {
-  barcode: string
+  barcode: string | null
   name: string | null
   brand: string | null
   kcal_per_100g: number | null
   protein_per_100g: number | null
   carbs_per_100g: number | null
   fat_per_100g: number | null
-  default_serving_g: number | null
+  units: FoodUnitInput[]
 }
 
 export interface BarcodeLookup {
@@ -159,41 +193,59 @@ export interface BarcodeLookup {
   draft: FoodDraft | null
 }
 
-export interface FoodLog {
-  id: string
-  logged_on: string
+export interface MacroTotals {
+  kcal: number
+  protein_g: number
+  carbs_g: number
+  fat_g: number
+}
+
+export interface MealItem extends MacroTotals {
+  id?: string
   food_item_id: string | null
   name: string
+  // How the amount was entered: unit_quantity of unit_name (null = grams).
+  unit_name: string | null
+  unit_quantity: number | null
   quantity_g: number | null
-  kcal: number
-  protein_g: number
-  carbs_g: number
-  fat_g: number
-  created_at: string
 }
 
-export interface FoodLogCreate {
-  logged_on: string
-  food_item_id?: string | null
-  quantity_g?: number | null
-  name: string
-  kcal: number
-  protein_g: number
-  carbs_g: number
-  fat_g: number
+/** A line of the timeline card: a label for some items, by index. */
+export interface SummaryLine {
+  text: string
+  items: number[]
 }
 
-export interface DailyTotals {
-  kcal: number
-  protein_g: number
-  carbs_g: number
-  fat_g: number
+export interface Meal {
+  id: string
+  eaten_on: string
+  eaten_at: string // HH:MM
+  // null until Claude has named the current items (or without Claude).
+  name: string | null
+  name_source: 'auto' | 'user'
+  summary: SummaryLine[] | null
+  totals: MacroTotals
+  items: MealItem[]
 }
 
-export interface DailyLog {
+/** PUT /meals/{id}: the full snapshot. A name is the user's; null is Claude's. */
+export interface MealSnapshot {
+  eaten_on: string
+  eaten_at: string
+  name: string | null
+  items: MealItem[]
+}
+
+export interface DietDay {
   date: string
-  totals: DailyTotals
-  entries: FoodLog[]
+  totals: MacroTotals
+  targets: DailyTargets
+  meals: Meal[]
+}
+
+export interface DayKcal {
+  date: string
+  kcal: number
 }
 
 export interface DailyTargets {

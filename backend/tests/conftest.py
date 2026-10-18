@@ -40,6 +40,8 @@ if not (TEST_URL.database or "").startswith("protocol_test"):
 os.environ["DATABASE_URL"] = TEST_DATABASE_URL
 os.environ["SECRET_KEY"] = "test-secret-key-not-for-production"
 os.environ["APP_PASSWORD"] = ""
+# Never call the real Claude API from tests; tests that need it mock it.
+os.environ["ANTHROPIC_API_KEY"] = ""
 
 
 async def _seed() -> None:
@@ -73,9 +75,10 @@ def _prepare_database() -> None:
 def _reset_login_limiter():
     """The failed-login limiter is process-global; don't let tests share it."""
     yield
-    from app.core.rate_limit import login_limiter
+    from app.core.rate_limit import label_limiter, login_limiter
 
     login_limiter.clear()
+    label_limiter.clear()
 
 
 @pytest.fixture(scope="session")
@@ -129,7 +132,7 @@ async def db(session_factory) -> AsyncIterator:
 async def client(session_factory) -> AsyncIterator:
     from httpx import ASGITransport, AsyncClient
 
-    from app.core.database import get_db
+    from app.core.database import get_db, get_session_factory
     from app.main import app
 
     async def _get_test_db():
@@ -137,12 +140,15 @@ async def client(session_factory) -> AsyncIterator:
             yield session
 
     app.dependency_overrides[get_db] = _get_test_db
+    # Background tasks (meal summaries) run in the test's transaction too.
+    app.dependency_overrides[get_session_factory] = lambda: session_factory
     try:
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as c:
             yield c
     finally:
         app.dependency_overrides.pop(get_db, None)
+        app.dependency_overrides.pop(get_session_factory, None)
 
 
 @dataclass

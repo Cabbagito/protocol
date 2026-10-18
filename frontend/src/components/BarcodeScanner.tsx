@@ -20,15 +20,15 @@ type CameraState = 'starting' | 'live' | 'denied' | 'no-camera' | 'unavailable'
 const CAMERA_MESSAGES: Record<Exclude<CameraState, 'starting' | 'live'>, { title: string; body: string }> = {
   denied: {
     title: 'Camera access is blocked',
-    body: 'Allow camera access for Protocol in your device settings, or type the barcode below.',
+    body: 'Allow camera access for Protocol in your device settings, or add the product from photos of the pack.',
   },
   'no-camera': {
     title: 'No camera found',
-    body: 'This device has no usable camera. Type the barcode below.',
+    body: 'This device has no usable camera.',
   },
   unavailable: {
     title: 'Camera unavailable',
-    body: 'The camera could not be started (it may be in use by another app). Type the barcode below.',
+    body: 'The camera could not be started; it may be in use by another app.',
   },
 }
 
@@ -48,10 +48,10 @@ interface BarcodeScannerProps {
   onClose: () => void
 }
 
+/** The camera, a frame and an exit: point it at a barcode. */
 export default function BarcodeScanner({ onDetected, onClose }: BarcodeScannerProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const [camera, setCamera] = useState<CameraState>('starting')
-  const [manualCode, setManualCode] = useState('')
   useScrollLock(true)
 
   // Parents pass inline callbacks; keep the camera effect independent of
@@ -139,27 +139,26 @@ export default function BarcodeScanner({ onDetected, onClose }: BarcodeScannerPr
     }
   }, [])
 
-  const manualValid = BARCODE_PATTERN.test(manualCode)
   const failure = camera === 'starting' || camera === 'live' ? null : CAMERA_MESSAGES[camera]
 
-  // No camera: put the cursor straight into the manual field.
-  const manualInputRef = useRef<HTMLInputElement>(null)
   useEffect(() => {
-    if (failure) manualInputRef.current?.focus()
-  }, [failure])
-
-  function submitManual(e: React.FormEvent) {
-    e.preventDefault()
-    if (manualValid) onDetectedRef.current(manualCode)
-  }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
 
   return createPortal(
     <div
       role="dialog"
       aria-modal="true"
-      aria-label="Scan barcode"
-      className="fixed inset-0 z-[103] flex flex-col"
-      style={{ background: '#000', color: 'white' }}
+      aria-label="Scan a barcode"
+      className="fixed inset-0 z-[103]"
+      style={{
+        background: 'radial-gradient(ellipse at 50% 42%, #2a3140 0%, #12161d 55%, #05070a 100%)',
+        color: '#e2e8f0',
+      }}
     >
       {/* Camera feed fills the screen behind everything */}
       <video
@@ -171,144 +170,84 @@ export default function BarcodeScanner({ onDetected, onClose }: BarcodeScannerPr
         style={{ opacity: camera === 'live' ? 1 : 0, transition: 'opacity 0.2s' }}
       />
 
-      {/* Header */}
-      <div
-        className="relative z-10 flex items-center justify-between px-5 pb-3"
+      <button
+        type="button"
+        onClick={onClose}
+        aria-label="Close the scanner"
+        className="absolute z-10 grid place-items-center"
         style={{
-          paddingTop: 'calc(env(safe-area-inset-top) + 14px)',
-          background: 'linear-gradient(180deg, rgba(0,0,0,0.7), transparent)',
+          top: 'calc(env(safe-area-inset-top) + 12px)',
+          left: 20,
+          width: 40,
+          height: 40,
+          borderRadius: 13,
+          background: 'rgba(0,0,0,0.5)',
+          border: '1px solid rgba(255,255,255,0.14)',
+          color: '#e2e8f0',
         }}
       >
-        <div
-          style={{
-            fontSize: 11,
-            fontWeight: 600,
-            letterSpacing: '0.2em',
-            textTransform: 'uppercase',
-            fontFamily: MONO,
-          }}
-        >
-          Scan barcode
-        </div>
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Close scanner"
-          className="w-10 h-10 flex items-center justify-center rounded-full"
-          style={{ background: 'rgba(255,255,255,0.14)', color: 'white' }}
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-            <line x1="18" y1="6" x2="6" y2="18" />
-            <line x1="6" y1="6" x2="18" y2="18" />
-          </svg>
-        </button>
-      </div>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true">
+          <path d="M6 6l12 12M18 6L6 18" />
+        </svg>
+      </button>
 
-      {/* Scan window / status */}
-      <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-8">
+      <div className="absolute inset-0 flex flex-col items-center justify-center px-8">
         {failure ? (
           <div className="max-w-xs text-center" role="alert">
             <div className="text-[15px] font-semibold">{failure.title}</div>
-            <div className="text-[13px] mt-2" style={{ color: 'rgba(255,255,255,0.7)' }}>
+            <div className="text-[13px] mt-2" style={{ color: 'rgba(226,232,240,0.75)' }}>
               {failure.body}
             </div>
           </div>
         ) : (
           <>
-            <div className="relative w-[80%] max-w-[300px]" style={{ aspectRatio: '3 / 2' }}>
+            <div className="relative" style={{ width: 290, maxWidth: '80%', height: 170 }}>
               {/* Dim everything outside the window */}
               <div
-                className="absolute inset-0 rounded-2xl"
-                style={{ boxShadow: '0 0 0 100vmax rgba(0,0,0,0.55)' }}
+                className="absolute inset-0"
+                style={{ borderRadius: 22, boxShadow: '0 0 0 100vmax rgba(0,0,0,0.45)' }}
               />
               <ScanCorners />
-              {camera === 'starting' && (
-                <div
-                  className="absolute inset-0 flex items-center justify-center text-[12px]"
-                  style={{ color: 'rgba(255,255,255,0.6)', fontFamily: MONO, letterSpacing: '0.12em' }}
-                >
-                  STARTING CAMERA…
-                </div>
-              )}
+              <div
+                className="absolute"
+                style={{
+                  left: 24,
+                  right: 24,
+                  top: '50%',
+                  height: 2,
+                  background: '#38bdf8',
+                  boxShadow: '0 0 12px rgba(56,189,248,0.9)',
+                }}
+              />
             </div>
             <div
-              className="mt-5 text-[12px] text-center"
-              style={{ color: 'rgba(255,255,255,0.8)' }}
+              className="mt-7 text-center"
+              style={{
+                fontFamily: MONO,
+                fontSize: 10,
+                letterSpacing: '0.2em',
+                color: 'rgba(226,232,240,0.85)',
+              }}
             >
-              Line up the barcode inside the frame
+              {camera === 'starting' ? 'STARTING CAMERA…' : 'POINT AT A BARCODE'}
             </div>
           </>
         )}
       </div>
-
-      {/* Manual entry — always available */}
-      <form
-        onSubmit={submitManual}
-        className="relative z-10 px-5 pt-4"
-        style={{
-          paddingBottom: 'calc(env(safe-area-inset-bottom) + 18px)',
-          background: 'linear-gradient(0deg, rgba(0,0,0,0.85) 60%, transparent)',
-        }}
-      >
-        <label
-          htmlFor="manual-barcode"
-          className="block mb-2"
-          style={{
-            fontSize: 10,
-            letterSpacing: '0.18em',
-            textTransform: 'uppercase',
-            fontFamily: MONO,
-            color: 'rgba(255,255,255,0.6)',
-          }}
-        >
-          Or type the barcode
-        </label>
-        <div className="flex gap-2">
-          <input
-            ref={manualInputRef}
-            id="manual-barcode"
-            type="text"
-            inputMode="numeric"
-            pattern="\d*"
-            autoComplete="off"
-            value={manualCode}
-            onChange={(e) => setManualCode(e.target.value.replace(/\D/g, ''))}
-            placeholder="8–14 digits"
-            className="flex-1 min-w-0 rounded-xl px-3 text-center"
-            style={{
-              height: 46,
-              fontFamily: MONO,
-              fontSize: 16,
-              color: 'white',
-              background: 'rgba(255,255,255,0.1)',
-              border: '1px solid rgba(255,255,255,0.18)',
-              outline: 'none',
-            }}
-          />
-          <button
-            type="submit"
-            disabled={!manualValid}
-            className="btn-primary rounded-xl px-4 disabled:opacity-40"
-            style={{ height: 46, fontSize: 13 }}
-          >
-            Look up
-          </button>
-        </div>
-      </form>
     </div>,
     document.body,
   )
 }
 
 function ScanCorners() {
-  const corner = 'absolute w-7 h-7'
-  const line = '3px solid rgba(255,255,255,0.95)'
+  const corner = 'absolute w-[34px] h-[34px]'
+  const line = '3px solid #fff'
   return (
     <>
-      <span className={`${corner} top-0 left-0 rounded-tl-2xl`} style={{ borderTop: line, borderLeft: line }} />
-      <span className={`${corner} top-0 right-0 rounded-tr-2xl`} style={{ borderTop: line, borderRight: line }} />
-      <span className={`${corner} bottom-0 left-0 rounded-bl-2xl`} style={{ borderBottom: line, borderLeft: line }} />
-      <span className={`${corner} bottom-0 right-0 rounded-br-2xl`} style={{ borderBottom: line, borderRight: line }} />
+      <span className={`${corner} top-0 left-0`} style={{ borderTop: line, borderLeft: line, borderTopLeftRadius: 22 }} />
+      <span className={`${corner} top-0 right-0`} style={{ borderTop: line, borderRight: line, borderTopRightRadius: 22 }} />
+      <span className={`${corner} bottom-0 left-0`} style={{ borderBottom: line, borderLeft: line, borderBottomLeftRadius: 22 }} />
+      <span className={`${corner} bottom-0 right-0`} style={{ borderBottom: line, borderRight: line, borderBottomRightRadius: 22 }} />
     </>
   )
 }

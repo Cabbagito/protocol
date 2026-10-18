@@ -5,8 +5,10 @@ from pathlib import Path
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.base import generate_uuid
 from app.models.exercise import Exercise
 from app.models.food_item import FoodItem
+from app.models.food_unit import FoodUnit
 from app.models.mesocycle import Mesocycle
 from app.models.split import Split, SplitDay, SplitDayExercise
 from app.models.user import User
@@ -81,15 +83,46 @@ _FOOD_FIELDS = (
     "protein_per_100g",
     "carbs_per_100g",
     "fat_per_100g",
-    "default_serving_g",
 )
 
 
+def _plan_seed_units(
+    units: list[dict], current: list[FoodUnit]
+) -> tuple[list[FoodUnit], list[dict], bool]:
+    """Compare a seeded food's own units with the seed file: returns (units to
+    delete, unit specs to add, whether anything changed). Matching units are
+    updated in place. Seeded foods are read-only, so their own (user_id NULL)
+    units come only from here; units users added for themselves are left
+    alone."""
+    wanted = {u["name"].lower(): u for u in units}
+    have = {u.name.lower(): u for u in current}
+    to_delete = [unit for key, unit in have.items() if key not in wanted]
+    to_add = [spec for key, spec in wanted.items() if key not in have]
+    changed = bool(to_delete or to_add)
+    for key, unit in have.items():
+        spec = wanted.get(key)
+        if spec is not None and (unit.name != spec["name"] or unit.grams != spec["grams"]):
+            unit.name = spec["name"]
+            unit.grams = spec["grams"]
+            changed = True
+    return to_delete, to_add, changed
+
+
 async def seed_foods(session: AsyncSession) -> int:
-    """Seed food items using upsert-by-seed_key. Returns count added/updated."""
+    """Seed food items and their units using upsert-by-seed_key. Returns
+    count added/updated."""
     result = await session.execute(select(FoodItem))
     existing = result.scalars().all()
     by_seed_key = {f.seed_key: f for f in existing if f.seed_key}
+
+    result = await session.execute(
+        select(FoodUnit)
+        .join(FoodItem, FoodItem.id == FoodUnit.food_item_id)
+        .where(FoodItem.seed_key.is_not(None), FoodUnit.user_id.is_(None))
+    )
+    units_by_food: dict[str, list[FoodUnit]] = {}
+    for unit in result.scalars().all():
+        units_by_food.setdefault(unit.food_item_id, []).append(unit)
 
     added = 0
     updated = 0
@@ -97,19 +130,33 @@ async def seed_foods(session: AsyncSession) -> int:
     for row in COMMON_FOODS:
         sk = row["seed_key"]
         values = {field: row.get(field) for field in _FOOD_FIELDS}
+        units = row.get("units", [])
 
-        if sk in by_seed_key:
-            existing_food = by_seed_key[sk]
-            changed = False
-            for field, value in values.items():
-                if getattr(existing_food, field) != value:
-                    setattr(existing_food, field, value)
-                    changed = True
-            if changed:
-                updated += 1
-        else:
-            session.add(FoodItem(seed_key=sk, **values))
+        food = by_seed_key.get(sk)
+        if food is None:
+            food = FoodItem(id=generate_uuid(), seed_key=sk, **values)
+            session.add(food)
+            for spec in units:
+                session.add(FoodUnit(food_item_id=food.id, name=spec["name"], grams=spec["grams"]))
             added += 1
+            continue
+
+        changed = False
+        for field, value in values.items():
+            if getattr(food, field) != value:
+                setattr(food, field, value)
+                changed = True
+        to_delete, to_add, units_changed = _plan_seed_units(units, units_by_food.get(food.id, []))
+        if units_changed:
+            changed = True
+            for unit in to_delete:
+                await session.delete(unit)
+            # Delete before insert: a renamed unit may reuse a deleted name.
+            await session.flush()
+            for spec in to_add:
+                session.add(FoodUnit(food_item_id=food.id, name=spec["name"], grams=spec["grams"]))
+        if changed:
+            updated += 1
 
     if added > 0 or updated > 0:
         await session.commit()
