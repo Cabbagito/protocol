@@ -179,6 +179,25 @@ export function cardLines(meal: Pick<Meal, 'items' | 'summary'>): { lines: CardL
   }
 }
 
+/**
+ * Search among foods already on the phone (offline), like the server does:
+ * every word must match the name or the brand; logged foods first, then names
+ * starting with the query.
+ */
+export function matchFoods(foods: FoodItem[], q: string): FoodItem[] {
+  const query = q.trim().toLowerCase()
+  const words = query.split(/\s+/).filter(Boolean)
+  const rank = (f: FoodItem) => (f.last_used ? 0 : f.name.toLowerCase().startsWith(query) ? 1 : 2)
+  return foods
+    .filter((f) => {
+      const text = `${f.name} ${f.brand ?? ''}`.toLowerCase()
+      return words.every((w) => text.includes(w))
+    })
+    .map((f, i) => ({ f, i, r: rank(f) }))
+    .sort((a, b) => a.r - b.r || a.i - b.i)
+    .map(({ f }) => f)
+}
+
 /** A fresh client-side id for a new meal (the server upserts by it). */
 export function newMealId(): string {
   return crypto.randomUUID()

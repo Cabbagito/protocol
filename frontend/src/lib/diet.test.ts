@@ -6,6 +6,7 @@ import {
   fmtMacro,
   itemFor,
   macrosFor,
+  matchFoods,
   per100OfItem,
   sumMacros,
   unitWord,
@@ -145,5 +146,28 @@ describe('meal names and card lines', () => {
     expect(lines.map((l) => l.text)).toEqual(['A', 'B'])
     expect(more).toBe(3)
     expect(cardLines({ items: items.slice(0, 3), summary: null }).more).toBe(0)
+  })
+})
+
+describe('offline food search', () => {
+  const food = (id: string, name: string, brand: string | null = null, logged = false): FoodItem => ({
+    ...broccoli,
+    id,
+    name,
+    brand,
+    last_used: logged ? { unit_name: null, unit_quantity: 100, quantity_g: 100 } : null,
+  })
+  const foods = [
+    food('1', 'Greek yogurt', 'Fage'),
+    food('2', 'Yogurt, plain'),
+    food('3', 'Frozen yogurt', null, true),
+    food('4', 'Banana'),
+  ]
+
+  it('needs every word in the name or brand, logged foods first', () => {
+    expect(matchFoods(foods, 'yog').map((f) => f.id)).toEqual(['3', '2', '1'])
+    expect(matchFoods(foods, 'fage yog').map((f) => f.id)).toEqual(['1'])
+    expect(matchFoods(foods, 'kiwi')).toEqual([])
+    expect(matchFoods(foods, '')).toHaveLength(4)
   })
 })

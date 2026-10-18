@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { FoodItem, FoodUnit, MealItem } from '../../types'
 import { useAddUnit } from '../../api/hooks'
+import { NetworkError } from '../../api/client'
 import { useToast } from '../Toast'
 import DecimalInput from '../DecimalInput'
 import { parseDecimal } from '../../lib/decimal'
@@ -16,7 +17,7 @@ import {
   per100OfItem,
   unitWord,
 } from '../../lib/diet'
-import { CloseButton, Sheet } from './ui'
+import { CloseButton, OfflineNote, Sheet } from './ui'
 import { MACRO_COLORS, MONO, ctaStyle, macroLabelStyle } from './styles'
 
 export interface AmountTarget {
@@ -25,6 +26,8 @@ export interface AmountTarget {
   /** Editing this logged item (by index in the meal); absent when adding. */
   item?: MealItem
   index?: number
+  /** The logged item's food couldn't be loaded (offline): only its logged unit is known. */
+  offline?: boolean
 }
 
 function startingAmount(target: AmountTarget, units: FoodUnit[]): { unit: string | null; qty: number } {
@@ -218,6 +221,9 @@ function AmountBody({
         </div>
         <CloseButton onClick={onClose} />
       </div>
+      {target.offline && per100 && (
+        <OfflineNote style={{ marginTop: 12 }}>Offline · units need a connection</OfflineNote>
+      )}
 
       {!per100 ? (
         <div style={{ fontSize: 13, color: 'var(--text-2)', margin: '18px 0 8px' }}>
@@ -431,7 +437,13 @@ function NewUnitForm({
       const updated = await addUnit.mutateAsync({ foodId: food.id, unit: { name: name.trim(), grams } })
       onAdded(updated, name.trim())
     } catch (e) {
-      toast.showError(e instanceof Error && e.message !== 'Request failed' ? e.message : 'Failed to add unit')
+      toast.showError(
+        e instanceof NetworkError
+          ? 'Offline · adding a unit needs a connection'
+          : e instanceof Error && e.message !== 'Request failed'
+            ? e.message
+            : 'Failed to add unit',
+      )
     }
   }
 

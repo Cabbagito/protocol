@@ -1,6 +1,14 @@
-import { useCallback } from 'react'
-import { queryOptions, useQuery, useQueries, useMutation, useQueryClient, type UseQueryResult } from '@tanstack/react-query'
-import { api } from './client'
+import { useCallback, useMemo } from 'react'
+import {
+  queryOptions,
+  useQuery,
+  useQueries,
+  useMutation,
+  useQueryClient,
+  type QueryClient,
+  type UseQueryResult,
+} from '@tanstack/react-query'
+import { api, NetworkError } from './client'
 import type {
   Exercise,
   EquipmentType,
@@ -16,7 +24,6 @@ import type {
   FoodItem,
   FoodUnitInput,
   Meal,
-  MealSnapshot,
   DailyTargets,
   DailyTargetsUpdate,
   WeightLog,
@@ -24,7 +31,8 @@ import type {
 import type { ExerciseSessionHistory } from '../lib/exerciseHistory'
 import { getUserId } from '../lib/auth'
 import { todayIso } from '../lib/dates'
-import { sumMacros } from '../lib/diet'
+import { matchFoods } from '../lib/diet'
+import { mealSync, overlayDay, overlayDays, overlayMeal, useMealSyncStatus, type MealDraft } from '../lib/mealSync'
 import { overlayDrafts } from '../lib/workoutSession'
 import { useSyncStatus, workoutSync } from '../lib/workoutSync'
 
@@ -390,29 +398,56 @@ export function useRemoveExerciseFromSession() {
 
 // --- Diet Hooks ---
 
+/** Meal changes saved on this phone and not yet (or just) confirmed by the server. */
+function useMealDrafts(): MealDraft[] {
+  const { version } = useMealSyncStatus()
+  return useMemo(() => {
+    void version // re-read when local drafts change
+    const userId = getUserId()
+    return userId ? mealSync.drafts(userId) : []
+  }, [version])
+}
+
+/**
+ * A day as the user should see it: server data plus meals still waiting to
+ * sync. `offline` when the server's copy can't be loaded.
+ */
 export function useDietDay(date: string) {
-  return useQuery({
+  const drafts = useMealDrafts()
+  const query = useQuery({
     queryKey: queryKeys.diet.day(date),
     queryFn: () => api.get<DietDay>(`/meals?date=${date}`),
     staleTime: 0,
   })
+  const server = query.data
+  const data = useMemo(() => overlayDay(date, server, drafts), [date, server, drafts])
+  return { data, isLoading: query.isLoading, offline: isOffline(query) && server === undefined }
 }
 
 /** Kcal per day with meals, for the week strip and the calendar. */
 export function useDietDays(from: string, to: string) {
-  return useQuery({
+  const drafts = useMealDrafts()
+  const { data: server } = useQuery({
     queryKey: queryKeys.diet.days(from, to),
     queryFn: () => api.get<DayKcal[]>(`/meals/days?from=${from}&to=${to}`),
     staleTime: 0,
   })
+  const data = useMemo(() => overlayDays(from, to, server, drafts), [from, to, server, drafts])
+  return { data }
 }
 
+/**
+ * One meal as the user should see it. `deleted` when it was deleted on this
+ * phone; a meal made here and not synced yet isn't asked for.
+ */
 export function useMeal(id: string, enabled = true) {
   const queryClient = useQueryClient()
-  return useQuery({
+  const drafts = useMealDrafts()
+  const draft = drafts.find((d) => d.id === id) ?? null
+  const query = useQuery({
     queryKey: queryKeys.diet.meal(id),
     queryFn: () => api.get<Meal>(`/meals/${id}`),
-    enabled,
+    enabled: enabled && !(draft && !draft.server),
     // Opened from the timeline: show the day's copy while it loads.
     initialData: () => {
       for (const [, day] of queryClient.getQueriesData<DietDay>({ queryKey: ['diet', 'day'] })) {
@@ -423,127 +458,67 @@ export function useMeal(id: string, enabled = true) {
     },
     initialDataUpdatedAt: 0,
   })
+  const data = useMemo(() => overlayMeal(id, query.data, draft), [id, query.data, draft])
+  return { data, draft, deleted: !!draft && !draft.snapshot, isLoading: query.isLoading, error: query.error }
 }
 
-function sameItems(a: Meal['items'], b: Meal['items']): boolean {
-  const key = (items: Meal['items']) =>
-    JSON.stringify(items.map((i) => [i.name, i.unit_name, i.unit_quantity, i.quantity_g]))
-  return key(a) === key(b)
-}
-
-/** What the server will answer, so the screen updates before it does. */
-function optimisticMeal(id: string, snapshot: MealSnapshot, previous: Meal | undefined): Meal {
-  const unchanged = !!previous && sameItems(previous.items, snapshot.items)
-  return {
-    id,
-    eaten_on: snapshot.eaten_on,
-    eaten_at: snapshot.eaten_at,
-    name: snapshot.name ?? (unchanged && previous?.name_source === 'auto' ? previous.name : null),
-    name_source: snapshot.name ? 'user' : 'auto',
-    summary: unchanged ? (previous?.summary ?? null) : null,
-    totals: sumMacros(snapshot.items),
-    items: snapshot.items,
+/** Every food in the query cache (search results and details), each once. */
+function cachedFoods(queryClient: QueryClient): FoodItem[] {
+  const byId = new Map<string, FoodItem>()
+  // Recent foods first: they carry last_used.
+  const lists = queryClient.getQueriesData<FoodItem[]>({ queryKey: ['foods', 'search'] })
+  lists.sort(([a], [b]) => Number(b[2] === '') - Number(a[2] === ''))
+  for (const [, foods] of lists) for (const f of foods ?? []) if (!byId.has(f.id)) byId.set(f.id, f)
+  for (const [, food] of queryClient.getQueriesData<FoodItem>({ queryKey: ['foods', 'detail'] })) {
+    if (food && !byId.has(food.id)) byId.set(food.id, food)
   }
+  return [...byId.values()]
 }
 
-function withMeal(day: DietDay, meal: Meal | null, id: string): DietDay {
-  const others = day.meals.filter((m) => m.id !== id)
-  const meals = meal ? [...others, meal].sort((a, b) => a.eaten_at.localeCompare(b.eaten_at)) : others
-  return { ...day, meals, totals: sumMacros(meals.map((m) => m.totals)) }
+function isOffline(query: { isPaused: boolean; error: Error | null }): boolean {
+  return query.isPaused || query.error instanceof NetworkError
 }
 
-// Newest save per meal: an older save's answer must not overwrite a newer
-// snapshot already on screen.
-const latestSave = new Map<string, number>()
-let saveCounter = 0
-// Claude names a meal in the background, a moment after the save answers.
-const NAME_REFRESH_MS = 3000
-
-export function useSaveMeal() {
-  const queryClient = useQueryClient()
-
-  const putInCaches = useCallback(
-    (meal: Meal) => {
-      queryClient.setQueryData(queryKeys.diet.meal(meal.id), meal)
-      queryClient.setQueryData<DietDay>(queryKeys.diet.day(meal.eaten_on), (day) =>
-        day ? withMeal(day, meal, meal.id) : day,
-      )
-    },
-    [queryClient],
-  )
-
-  return useMutation({
-    // One at a time, in order: each save is a full snapshot.
-    scope: { id: 'save-meal' },
-    mutationFn: ({ id, snapshot }: { id: string; snapshot: MealSnapshot }) =>
-      api.put<Meal>(`/meals/${id}`, snapshot),
-    onMutate: ({ id, snapshot }) => {
-      const version = ++saveCounter
-      latestSave.set(id, version)
-      const previous = queryClient.getQueryData<Meal>(queryKeys.diet.meal(id))
-      putInCaches(optimisticMeal(id, snapshot, previous))
-      return { version }
-    },
-    onSuccess: (meal, { id }, context) => {
-      if (latestSave.get(id) !== context?.version) return
-      putInCaches(meal)
-      queryClient.invalidateQueries({ queryKey: ['diet', 'days'] })
-      queryClient.invalidateQueries({ queryKey: queryKeys.foods.all })
-      if (meal.name === null || meal.summary === null) {
-        setTimeout(() => {
-          if (latestSave.get(id) !== context?.version) return
-          queryClient.invalidateQueries({ queryKey: queryKeys.diet.meal(id) })
-          queryClient.invalidateQueries({ queryKey: queryKeys.diet.day(meal.eaten_on) })
-        }, NAME_REFRESH_MS)
-      }
-    },
-    onError: (_err, { id, snapshot }) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.diet.meal(id) })
-      queryClient.invalidateQueries({ queryKey: queryKeys.diet.day(snapshot.eaten_on) })
-    },
-  })
-}
-
-export function useDeleteMeal() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: ({ id }: { id: string; date: string }) => api.delete(`/meals/${id}`),
-    onMutate: ({ id, date }) => {
-      latestSave.delete(id)
-      queryClient.setQueryData<DietDay>(queryKeys.diet.day(date), (day) =>
-        day ? withMeal(day, null, id) : day,
-      )
-    },
-    onSettled: (_result, _err, { id, date }) => {
-      queryClient.removeQueries({ queryKey: queryKeys.diet.meal(id) })
-      queryClient.invalidateQueries({ queryKey: queryKeys.diet.day(date) })
-      queryClient.invalidateQueries({ queryKey: ['diet', 'days'] })
-    },
-  })
-}
-
+/**
+ * Food search. Without a connection it falls back to the foods already on the
+ * phone (`offline`), since search itself needs the server.
+ */
 export function useFoods(q: string) {
-  return useQuery({
+  const queryClient = useQueryClient()
+  const query = useQuery({
     queryKey: queryKeys.foods.search(q),
     queryFn: () => api.get<FoodItem[]>(`/foods${q ? `?q=${encodeURIComponent(q)}` : ''}`),
     staleTime: 1000 * 60 * 5,
     placeholderData: (previous) => previous,
   })
+  const offline = isOffline(query) && (query.data === undefined || query.isPlaceholderData)
+  const local = useMemo(
+    () => (offline ? matchFoods(cachedFoods(queryClient), q) : undefined),
+    [offline, queryClient, q],
+  )
+  return { data: local ?? query.data, isFetching: query.isFetching, offline }
 }
 
 export function useFood(id: string | null | undefined) {
-  return useQuery({
+  const queryClient = useQueryClient()
+  const query = useQuery({
     queryKey: queryKeys.foods.detail(id ?? ''),
     queryFn: () => api.get<FoodItem>(`/foods/${id}`),
     enabled: !!id,
     staleTime: 1000 * 60 * 5,
+    // A food from search results is complete enough to measure, offline too.
+    initialData: () => cachedFoods(queryClient).find((f) => f.id === id),
+    initialDataUpdatedAt: 0,
   })
+  return { ...query, offline: isOffline(query) && query.data === undefined }
 }
 
 function useFoodMutation<V>(mutationFn: (vars: V) => Promise<FoodItem>) {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn,
+    // Fail with a NetworkError offline instead of waiting for a connection.
+    networkMode: 'always',
     onSuccess: (food) => {
       queryClient.setQueryData(queryKeys.foods.detail(food.id), food)
       queryClient.invalidateQueries({ queryKey: ['foods', 'search'] })
@@ -576,6 +551,7 @@ export function useBarcodeLookup() {
     // A lookup can create a shared food server-side (Open Food Facts hit),
     // so it's modeled as a mutation and invalidates the food cache.
     mutationFn: (barcode: string) => api.get<BarcodeLookup>(`/foods/by-barcode/${barcode}`),
+    networkMode: 'always',
     onSuccess: (result) => {
       if (result.food) queryClient.setQueryData(queryKeys.foods.detail(result.food.id), result.food)
       queryClient.invalidateQueries({ queryKey: ['foods', 'search'] })

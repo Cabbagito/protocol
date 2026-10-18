@@ -3,26 +3,22 @@ import { useLocation, useNavigate, useParams, useSearchParams } from 'react-rout
 import BarcodeScanner from '../components/BarcodeScanner'
 import BottomSheet from '../components/BottomSheet'
 import PageLoader from '../components/PageLoader'
+import { SyncPill } from '../components/SyncPill'
 import { useToast } from '../components/Toast'
 import AmountSheet, { type AmountTarget } from '../components/diet/AmountSheet'
 import FoodSearch from '../components/diet/FoodSearch'
 import MacroTable from '../components/diet/MacroTable'
 import { BarcodeIcon, ChevronLeft, ChevronRight, Chrome, ChromeButton, DotsIcon, SearchIcon, SectionLabel, Sheet } from '../components/diet/ui'
 import { MACRO_COLORS, MONO, accentChipStyle, ctaStyle, glassRow, macroLabelStyle } from '../components/diet/styles'
-import { ApiError } from '../api/client'
-import {
-  useBarcodeLookup,
-  useDailyTargets,
-  useDeleteMeal,
-  useFood,
-  useMeal,
-  useSaveMeal,
-} from '../api/hooks'
+import { ApiError, NetworkError } from '../api/client'
+import { useBarcodeLookup, useDailyTargets, useFood, useMeal } from '../api/hooks'
+import { getUserId } from '../lib/auth'
 import { parseIso } from '../lib/dates'
 import { ZERO, dayPath, fmtKcal, mealName, newMealId, nowHHMM, sumMacros } from '../lib/diet'
+import { isDirty, mealSync, useMealSyncStatus, type MealDraft } from '../lib/mealSync'
 import { useBack } from '../lib/navigation'
 import { useToday } from '../hooks/useToday'
-import type { FoodItem, Meal as MealType, MealItem } from '../types'
+import type { FoodItem, Meal as MealType, MealItem, MealSnapshot } from '../types'
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
 const HH_MM = /^\d{2}:\d{2}$/
@@ -66,11 +62,13 @@ function MealEditor({ id }: { id: string }) {
   const isDraft = params.get('new') === '1'
   // Opened as a new meal: the logging layout stays for this visit.
   const [mode] = useState<'new' | 'edit'>(isDraft ? 'new' : 'edit')
-  const { data: saved, isLoading, error } = useMeal(id, !isDraft)
+  const { data: current, draft, deleted, isLoading, error } = useMeal(id, !isDraft)
+  // Deleted here: keep showing it while the screen goes back to the day.
+  const [leaving, setLeaving] = useState<MealType | null>(null)
+  const saved = current ?? leaving ?? undefined
   const { data: targets } = useDailyTargets()
-  const saveMeal = useSaveMeal()
-  const deleteMeal = useDeleteMeal()
   const lookup = useBarcodeLookup()
+  const userId = getUserId()
 
   const draftDate = params.get('date')
   const draftAt = params.get('at')
@@ -110,43 +108,49 @@ function MealEditor({ id }: { id: string }) {
 
   // An existing meal's food, to measure it again.
   const editingFoodId = amount?.item?.food_item_id ?? null
-  const { data: editingFood, isLoading: editingFoodLoading } = useFood(
-    amount?.item && !amount.food ? editingFoodId : null,
-  )
+  const {
+    data: editingFood,
+    isLoading: editingFoodLoading,
+    offline: editingFoodOffline,
+  } = useFood(amount?.item && !amount.food ? editingFoodId : null)
   const amountTarget: AmountTarget | null =
     amount && amount.item && !amount.food && editingFoodId
       ? editingFood
         ? { ...amount, food: editingFood }
         : editingFoodLoading
           ? null
-          : amount
+          : { ...amount, offline: editingFoodOffline }
       : amount
+
+  /** Saved on the phone first; the sync queue sends it to the server. */
+  function store(mealId: string, snapshot: MealSnapshot | null) {
+    if (userId) mealSync.save(userId, mealId, snapshot)
+  }
+
+  function deleteAndLeave() {
+    setLeaving(meal)
+    store(id, null)
+    back()
+  }
 
   function save(change: { items?: MealItem[]; eaten_at?: string; name?: string | null }) {
     const items = change.items ?? meal.items
     if (items.length === 0) {
-      if (saved) {
-        deleteMeal.mutate({ id, date: meal.eaten_on }, { onError: () => toast.showError('Failed to delete meal') })
-        if (mode === 'edit') back()
-        // A new meal with nothing left in it is a draft again.
-        else setParams({ new: '1', date: meal.eaten_on, at: meal.eaten_at }, { replace: true })
-      }
+      if (!saved) return
+      if (mode === 'edit') return deleteAndLeave()
+      store(id, null)
+      // A new meal with nothing left in it is a draft again.
+      setParams({ new: '1', date: meal.eaten_on, at: meal.eaten_at }, { replace: true })
       return
     }
-    const snapshot = {
+    store(id, {
       eaten_on: meal.eaten_on,
       eaten_at: change.eaten_at ?? meal.eaten_at,
       name: change.name !== undefined ? change.name : meal.name_source === 'user' ? meal.name : null,
       items,
-    }
-    saveMeal.mutate(
-      { id, snapshot },
-      {
-        // Saved: the address no longer needs the draft's date and time.
-        onSuccess: () => isDraft && setParams({}, { replace: true }),
-        onError: () => toast.showError('Failed to save meal'),
-      },
-    )
+    })
+    // Saved: the address no longer needs the draft's date and time.
+    if (isDraft) setParams({}, { replace: true })
   }
 
   function done(item: MealItem, index: number | undefined) {
@@ -175,31 +179,25 @@ function MealEditor({ id }: { id: string }) {
       const result = await lookup.mutateAsync(code)
       if (result.status === 'found' && result.food) setAmount({ food: result.food })
       else newProduct(code, { draft: result.draft })
-    } catch {
-      toast.showError('Failed to look up the barcode')
+    } catch (e) {
+      toast.showError(e instanceof NetworkError ? 'Offline · scanning needs a connection' : 'Failed to look up the barcode')
     }
   }
 
   function logAgainToday() {
     const copy = newMealId()
-    saveMeal.mutate(
-      {
-        id: copy,
-        snapshot: {
-          eaten_on: today,
-          eaten_at: nowHHMM(),
-          name: meal.name_source === 'user' ? meal.name : null,
-          items: meal.items.map((item) => ({ ...item, id: undefined })),
-        },
-      },
-      { onError: () => toast.showError('Failed to save meal') },
-    )
+    store(copy, {
+      eaten_on: today,
+      eaten_at: nowHHMM(),
+      name: meal.name_source === 'user' ? meal.name : null,
+      items: meal.items.map((item) => ({ ...item, id: undefined })),
+    })
     navigate(`/diet/meals/${copy}`, { replace: true })
   }
 
   if (!saved && !isDraft) {
     if (isLoading) return <PageLoader className="min-h-[60vh]" />
-    const gone = error instanceof ApiError && error.status === 404
+    const gone = deleted || (error instanceof ApiError && error.status === 404)
     return (
       <div style={{ padding: '12px 22px 0' }}>
         <Chrome
@@ -232,6 +230,7 @@ function MealEditor({ id }: { id: string }) {
         }
         eyebrow={eyebrow}
         title={mode === 'new' ? 'New meal' : mealName(meal)}
+        status={saved && !leaving && <MealSyncPill draft={draft} />}
         right={
           saved ? (
             <ChromeButton label="Meal actions" onClick={() => setActionsOpen(true)}>
@@ -378,14 +377,29 @@ function MealEditor({ id }: { id: string }) {
           {
             label: 'Delete meal',
             variant: 'danger',
-            onClick: () => {
-              deleteMeal.mutate({ id, date: meal.eaten_on }, { onError: () => toast.showError('Failed to delete meal') })
-              back()
-            },
+            onClick: deleteAndLeave,
           },
         ]}
       />
     </div>
+  )
+}
+
+/** This meal's sync: on the phone only, being sent, or on the server. */
+function MealSyncPill({ draft }: { draft: MealDraft | null }) {
+  const { state } = useMealSyncStatus()
+  return (
+    <SyncPill
+      status={{
+        state: draft?.error ? 'error' : state,
+        pending: draft && isDirty(draft) ? 1 : 0,
+        error: draft?.error ?? null,
+      }}
+      onRetry={() => {
+        const userId = getUserId()
+        if (userId) mealSync.retryRejected(userId)
+      }}
+    />
   )
 }
 

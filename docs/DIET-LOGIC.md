@@ -95,10 +95,37 @@ components and rules: the Protocol design system, group "Diet" (link in
   barcode with rescan, name, brand, per-100 g values and units. Saving a new product
   returns to the meal with its Amount sheet open (`?add=<food id>`).
 
+## Saving and sync (offline)
+
+Meals save the way workouts do (`docs/WORKOUT-LOGIC.md`): on the phone first, then in
+the background (`frontend/src/lib/mealSync.ts`).
+
+1. Every change to a meal (a food added, changed or removed, the name, the time,
+   "Log again today", deleting it) is written to the phone's storage at once as the
+   meal's full snapshot, one draft per user and meal. Deleting leaves a tombstone.
+2. One background queue sends the drafts, oldest first: `PUT /api/meals/{id}` with
+   the snapshot, `DELETE` for a tombstone (404 counts as done: the meal never reached
+   the server). It retries with backoff until the server confirms, and again when the
+   phone comes back online or the app is reopened. A snapshot the server rejects (a
+   food that was deleted, say) stays on the phone, flagged, until the user taps retry.
+3. Once confirmed, the snapshot is dropped and the server's copy is shown (with
+   Claude's name a moment later). A confirmed tombstone stays for a week, the life of
+   the cached data, so a response loaded before the delete can't bring the meal back.
+
+The day, the meal and the week strip and calendar show the server's data with the
+drafts laid over it: unsynced meals are in the timeline and the totals, deleted ones
+are gone. A day that was never loaded shows only its drafts and says "Offline · this
+day needs a connection". The meal's header shows **Synced**, **Syncing…**,
+**Offline · saved on phone**, or **Not synced · retry** (tap to retry).
+
+**Needs a connection:** searching foods (offline, the search says so and lists the
+matching foods already on the phone: the recent ones, which are kept with the app's
+data, and any loaded since it opened), scanning, reading a label, new or edited
+products, and adding a unit. A logged food whose product isn't on the phone opens in
+the unit it was logged in.
+
 ## Not yet
 
-- Meals save online, with the screen updated before the server answers; local-first
-  drafts and a sync queue like workouts are the follow-up.
 - Quick add (numbers without a food) and describing a whole meal to Claude are not
   designed. Search covers our own foods only (Open Food Facts text search was
   unreliable when tried).

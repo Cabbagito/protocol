@@ -5,6 +5,7 @@
 import { useEffect, useState, type CSSProperties, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { useScrollLock } from '../../hooks/useScrollLock'
+import { OFFLINE_COLOR } from '../SyncPill'
 import { MONO, eyebrowStyle } from './styles'
 
 const chromeButtonStyle: CSSProperties = {
@@ -57,6 +58,7 @@ export function Chrome({
   right,
   onTitleClick,
   titleLabel,
+  status,
 }: {
   left: ReactNode
   eyebrow: string
@@ -64,6 +66,8 @@ export function Chrome({
   right?: ReactNode
   onTitleClick?: () => void
   titleLabel?: string
+  /** Under the title, e.g. a sync pill. */
+  status?: ReactNode
 }) {
   const middle = (
     <>
@@ -86,6 +90,26 @@ export function Chrome({
       </div>
     </>
   )
+  const center = onTitleClick ? (
+    <button
+      type="button"
+      onClick={onTitleClick}
+      aria-label={titleLabel}
+      style={{
+        background: 'transparent',
+        border: 'none',
+        padding: '0 8px',
+        textAlign: 'center',
+        minWidth: 0,
+        cursor: 'pointer',
+        color: 'var(--text-1)',
+      }}
+    >
+      {middle}
+    </button>
+  ) : (
+    <div style={{ textAlign: 'center', minWidth: 0, padding: '0 8px' }}>{middle}</div>
+  )
   return (
     <div
       style={{
@@ -97,27 +121,38 @@ export function Chrome({
       }}
     >
       {left}
-      {onTitleClick ? (
-        <button
-          type="button"
-          onClick={onTitleClick}
-          aria-label={titleLabel}
-          style={{
-            background: 'transparent',
-            border: 'none',
-            padding: '0 8px',
-            textAlign: 'center',
-            minWidth: 0,
-            cursor: 'pointer',
-            color: 'var(--text-1)',
-          }}
-        >
-          {middle}
-        </button>
+      {status ? (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 0 }}>
+          {center}
+          {status}
+        </div>
       ) : (
-        <div style={{ textAlign: 'center', minWidth: 0, padding: '0 8px' }}>{middle}</div>
+        center
       )}
       {right ?? <ChromeSpacer />}
+    </div>
+  )
+}
+
+/** What needs a connection, said in passing ("Offline · search needs a connection"). */
+export function OfflineNote({ children, style }: { children: ReactNode; style?: CSSProperties }) {
+  return (
+    <div
+      role="status"
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 6,
+        fontFamily: MONO,
+        fontSize: 9,
+        letterSpacing: '0.16em',
+        textTransform: 'uppercase',
+        color: OFFLINE_COLOR,
+        ...style,
+      }}
+    >
+      <span aria-hidden="true" style={{ width: 5, height: 5, borderRadius: 999, background: 'currentColor', flex: 'none' }} />
+      {children}
     </div>
   )
 }

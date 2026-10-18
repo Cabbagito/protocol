@@ -6,6 +6,7 @@ import PageLoader from './components/PageLoader'
 import SplashScreen from './components/SplashScreen'
 import { getToken } from './lib/auth'
 import { persistOptions, queryClient } from './lib/queryClient'
+import { mealSync } from './lib/mealSync'
 import { workoutSync } from './lib/workoutSync'
 
 // Clear all service worker caches and unregister SWs so a reload fetches fresh assets
@@ -87,8 +88,9 @@ class ChunkErrorBoundary extends Component<{ children: ReactNode }, { hasError: 
   }
 }
 
-// Push any workout changes saved on this phone but not yet on the server.
+// Push any workout and meal changes saved on this phone but not yet on the server.
 workoutSync.start()
+mealSync.start()
 
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {

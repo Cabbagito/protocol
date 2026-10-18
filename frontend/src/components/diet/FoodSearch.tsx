@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useFoods } from '../../api/hooks'
 import type { FoodItem } from '../../types'
 import { amountLabel, fmtKcal } from '../../lib/diet'
-import { BarcodeIcon, ChevronRight, SearchIcon } from './ui'
+import { BarcodeIcon, ChevronRight, OfflineNote, SearchIcon } from './ui'
 import { MONO, accentChipStyle, glassRow } from './styles'
 
 const RECENT_LIMIT = 8
@@ -49,7 +49,7 @@ export default function FoodSearch({
   const [q, setQ] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
   const query = useDebounced(q.trim(), 200)
-  const { data, isFetching } = useFoods(query)
+  const { data, isFetching, offline } = useFoods(query)
 
   useEffect(() => {
     setQ('')
@@ -105,6 +105,8 @@ export default function FoodSearch({
         </button>
       </label>
 
+      {offline && <OfflineNote style={{ padding: '10px 2px 0' }}>Offline · search needs a connection</OfflineNote>}
+
       {results.length > 0 && (
         <div style={{ ...glassRow, marginTop: 8, padding: '0 14px' }}>
           {!searched && (
@@ -147,7 +149,7 @@ export default function FoodSearch({
           ))}
         </div>
       )}
-      {searched && !isFetching && results.length === 0 && (
+      {searched && !isFetching && !offline && results.length === 0 && (
         <div style={{ fontSize: 13, color: 'var(--text-2)', padding: '12px 2px 0' }}>No foods match “{query}”.</div>
       )}
 

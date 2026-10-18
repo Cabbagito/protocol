@@ -1,28 +1,31 @@
-import { getUserId } from '../../lib/auth'
-import { useSyncStatus, workoutSync } from '../../lib/workoutSync'
+import type { SyncStatus } from '../lib/workoutSync'
 
 const MONO = 'JetBrains Mono, ui-monospace, monospace'
 
-/**
- * Tiny sync indicator for the workout header. Everything is saved on the
- * phone first, so "offline" is informational, not an error.
- */
-export function SyncPill() {
-  const { state, pending, error } = useSyncStatus()
+/** The offline colour of sync indicators and notes. */
+export const OFFLINE_COLOR = '#f59e0b'
 
+/**
+ * Tiny sync indicator under a screen's title (workout, meal). Everything is
+ * saved on the phone first, so "offline" is informational, not an error.
+ */
+export function SyncPill({
+  status: { state, pending, error },
+  onRetry,
+}: {
+  status: Pick<SyncStatus, 'state' | 'pending' | 'error'>
+  onRetry: () => void
+}) {
   let label: string
   let color: string
   let onClick: (() => void) | undefined
   if (state === 'error' && error) {
     label = 'Not synced · retry'
     color = '#fb7185'
-    onClick = () => {
-      const userId = getUserId()
-      if (userId) workoutSync.retryRejected(userId)
-    }
+    onClick = onRetry
   } else if (pending > 0 && state === 'offline') {
     label = 'Offline · saved on phone'
-    color = '#f59e0b'
+    color = OFFLINE_COLOR
   } else if (pending > 0) {
     label = 'Syncing…'
     color = 'var(--text-m)'

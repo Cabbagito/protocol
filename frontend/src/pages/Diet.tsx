@@ -6,7 +6,7 @@ import DayStrip from '../components/diet/DayStrip'
 import DayTotals from '../components/diet/DayTotals'
 import MealCard from '../components/diet/MealCard'
 import CalendarSheet from '../components/diet/CalendarSheet'
-import { ChevronLeft, ChevronRight, Chrome, ChromeButton, PlusIcon, SectionLabel } from '../components/diet/ui'
+import { ChevronLeft, ChevronRight, Chrome, ChromeButton, OfflineNote, PlusIcon, SectionLabel } from '../components/diet/ui'
 import { MONO } from '../components/diet/styles'
 import { useDailyTargets, useDietDay, useDietDays } from '../api/hooks'
 import { addDays, parseIso, weekStart } from '../lib/dates'
@@ -44,7 +44,7 @@ export default function Diet() {
   const date = picked && ISO_DATE.test(picked) && picked < today ? picked : today
   const [calendarOpen, setCalendarOpen] = useState(false)
 
-  const { data, isLoading } = useDietDay(date)
+  const { data, isLoading, offline } = useDietDay(date)
   const { data: savedTargets } = useDailyTargets()
   const targets = data?.targets ?? savedTargets ?? FALLBACK_TARGETS
   const start = weekStart(date)
@@ -88,9 +88,12 @@ export default function Diet() {
 
       {isLoading && !data ? (
         <PageLoader />
+      ) : offline && meals.length === 0 ? (
+        <OfflineNote style={{ marginTop: 22 }}>Offline · this day needs a connection</OfflineNote>
       ) : (
         <>
           <SectionLabel>{meals.length === 1 ? '1 meal' : `${meals.length} meals`}</SectionLabel>
+          {offline && <OfflineNote style={{ marginBottom: 10 }}>Offline · this day needs a connection</OfflineNote>}
           {meals.length === 0 ? (
             <button
               type="button"
