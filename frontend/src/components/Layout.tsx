@@ -63,10 +63,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             bottom: 'calc(env(safe-area-inset-bottom) + var(--nav-gap))',
             height: 'var(--nav-h)',
             borderRadius: 22,
-            background: 'color-mix(in oklab, var(--card) 80%, transparent)',
+            background: 'var(--glass-strong)',
             backdropFilter: 'blur(28px) saturate(180%)',
             WebkitBackdropFilter: 'blur(28px) saturate(180%)',
-            border: '1px solid rgba(255,255,255,0.05)',
+            border: '1px solid var(--line)',
             boxShadow:
               '0 12px 40px -12px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.04)',
             display: 'flex',

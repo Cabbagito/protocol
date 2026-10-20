@@ -75,7 +75,7 @@ export default function ExerciseSearch({
       {/* Results */}
       <div
         className="max-h-[300px] overflow-y-auto rounded-lg flex flex-col"
-        style={{ background: 'var(--panel)', border: '1px solid rgba(255,255,255,0.04)' }}
+        style={{ background: 'var(--panel)', border: '1px solid var(--line)' }}
       >
         {grouped.length === 0 ? (
           <div className="py-4 text-center text-[12px]" style={{ color: 'var(--text-m)' }}>

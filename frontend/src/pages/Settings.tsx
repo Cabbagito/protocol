@@ -256,7 +256,7 @@ function SectionCard({ label, children }: { label: string; children: React.React
         style={{
           borderRadius: 14,
           overflow: 'hidden',
-          border: '1px solid rgba(255,255,255,0.05)',
+          border: '1px solid var(--line)',
           background: 'color-mix(in oklab, var(--card) 65%, transparent)',
         }}
       >
@@ -288,7 +288,7 @@ function Row({ label, value, to }: { label: string; value?: string; to?: string 
 }
 
 function Divider() {
-  return <div style={{ height: 1, background: 'rgba(255,255,255,0.05)' }} />
+  return <div style={{ height: 1, background: 'var(--line)' }} />
 }
 
 function DietTargetsEditor() {
@@ -353,7 +353,7 @@ function DietTargetsEditor() {
           alignItems: 'center',
           justifyContent: 'space-between',
           paddingTop: 10,
-          borderTop: '1px solid rgba(255,255,255,0.05)',
+          borderTop: '1px solid var(--line)',
         }}
       >
         <span style={{ fontSize: 14, color: 'var(--text-1)' }}>Calories</span>

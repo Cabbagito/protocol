@@ -136,7 +136,7 @@ export default function NumeralsCard({
               fontWeight: 500,
               background: 'transparent',
               border: 'none',
-              borderBottom: '1px dotted rgba(255,255,255,0.15)',
+              borderBottom: '1px dotted var(--border)',
               paddingBottom: 1,
               cursor: 'pointer',
             }}
@@ -389,7 +389,7 @@ function NudgeButton({ label, color, onClick, children }: { label: string; color
         width: 48,
         height: 40,
         borderRadius: 10,
-        background: 'rgba(255,255,255,0.05)',
+        background: 'var(--fill)',
         border: `1px solid color-mix(in oklab, ${color.primary} 25%, var(--border))`,
         color: color.text,
         fontSize: 18,

@@ -46,7 +46,7 @@ export default function BodyweightCard({ date, today }: { date: string; today: s
           padding: '18px 18px 14px',
           borderRadius: 20,
           background: 'color-mix(in oklab, var(--card) 70%, transparent)',
-          border: '1px solid rgba(255,255,255,0.05)',
+          border: '1px solid var(--line)',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
@@ -99,9 +99,9 @@ export default function BodyweightCard({ date, today }: { date: string; today: s
             style={{
               padding: '9px 14px',
               borderRadius: 999,
-              background: onDate ? 'rgba(255,255,255,0.06)' : 'var(--p-grad-cta)',
+              background: onDate ? 'var(--fill)' : 'var(--p-grad-cta)',
               color: onDate ? 'var(--text-2)' : 'var(--btn-text)',
-              border: onDate ? '1px solid rgba(255,255,255,0.08)' : 'none',
+              border: onDate ? '1px solid var(--fill-strong)' : 'none',
               fontFamily: MONO,
               fontWeight: 500,
               fontSize: 11,
@@ -268,7 +268,7 @@ function WeighInSheet({
         className="relative w-full max-w-sm rounded-2xl slide-up"
         style={{
           background: 'var(--card)',
-          border: '1px solid rgba(255,255,255,0.06)',
+          border: '1px solid var(--line)',
           boxShadow: '0 24px 48px rgba(0,0,0,0.6)',
           padding: '20px 20px 18px',
         }}
@@ -302,8 +302,8 @@ function WeighInSheet({
               fontWeight: 700,
               fontFamily: MONO,
               color: 'var(--text-1)',
-              background: 'rgba(255,255,255,0.04)',
-              border: '1px solid rgba(255,255,255,0.08)',
+              background: 'var(--fill-soft)',
+              border: '1px solid var(--fill-strong)',
               borderRadius: 12,
               padding: '10px 14px',
               outline: 'none',

@@ -130,7 +130,7 @@ function ExerciseForm({ onClose, initialName = '', exercise, onSaved }: CreateEx
             onClick={onClose}
             aria-label="Close"
             className="w-8 h-8 flex items-center justify-center rounded-full"
-            style={{ background: 'rgba(255,255,255,0.08)', color: 'var(--text-2)' }}
+            style={{ background: 'var(--fill-strong)', color: 'var(--text-2)' }}
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true">
               <line x1="18" y1="6" x2="6" y2="18" />
@@ -192,7 +192,7 @@ function ExerciseForm({ onClose, initialName = '', exercise, onSaved }: CreateEx
                             padding: '6px 10px',
                             borderRadius: 100,
                             background: sel ? `color-mix(in oklab, ${c.primary} 20%, transparent)` : 'transparent',
-                            border: `1px solid ${sel ? `color-mix(in oklab, ${c.primary} 45%, transparent)` : 'rgba(255,255,255,0.08)'}`,
+                            border: `1px solid ${sel ? `color-mix(in oklab, ${c.primary} 45%, transparent)` : 'var(--fill-strong)'}`,
                             color: sel ? c.text : 'var(--text-2)',
                             fontSize: 10,
                             fontWeight: 600,
@@ -231,7 +231,7 @@ function ExerciseForm({ onClose, initialName = '', exercise, onSaved }: CreateEx
                       padding: '7px 12px',
                       borderRadius: 10,
                       background: sel ? 'rgba(var(--accent-rgb),0.16)' : 'transparent',
-                      border: `1px solid ${sel ? 'rgba(var(--accent-rgb),0.40)' : 'rgba(255,255,255,0.08)'}`,
+                      border: `1px solid ${sel ? 'rgba(var(--accent-rgb),0.40)' : 'var(--fill-strong)'}`,
                       color: sel ? 'var(--accent-l)' : 'var(--text-2)',
                       fontSize: 12,
                       fontWeight: 500,
@@ -267,7 +267,7 @@ function ExerciseForm({ onClose, initialName = '', exercise, onSaved }: CreateEx
                     type="button"
                     onClick={() => setConfirmDelete(false)}
                     className="px-3 py-2 rounded-lg text-[12px]"
-                    style={{ color: 'var(--text-2)', border: '1px solid rgba(255,255,255,0.08)' }}
+                    style={{ color: 'var(--text-2)', border: '1px solid var(--fill-strong)' }}
                   >
                     Cancel
                   </button>
