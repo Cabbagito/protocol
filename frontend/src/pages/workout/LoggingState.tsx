@@ -107,7 +107,7 @@ export function LoggingState({
     height: 56,
     background: 'transparent',
     border: 'none',
-    borderRight: '1px solid rgba(255,255,255,0.07)',
+    borderRight: '1px solid var(--line)',
     color: 'var(--text-2)',
     display: 'grid', placeItems: 'center',
     padding: 0,
@@ -216,13 +216,11 @@ export function LoggingState({
                   padding: '10px 4px',
                   borderRadius: 10,
                   textAlign: 'center',
-                  background: isActive
-                    ? 'rgba(255,255,255,0.04)'
-                    : 'rgba(255,255,255,0.02)',
+                  background: 'var(--fill-soft)',
                   border: `1px solid ${
                     isActive
                       ? `color-mix(in oklab, ${c.primary} 60%, transparent)`
-                      : 'rgba(255,255,255,0.06)'
+                      : 'var(--line)'
                   }`,
                   boxShadow: isActive
                     ? `0 0 14px -4px color-mix(in oklab, ${c.primary} 55%, transparent)`
@@ -302,7 +300,7 @@ export function LoggingState({
                         : { left: '50%', transform: 'translateX(-50%)' }),
                       width: 220, padding: 6, borderRadius: 14,
                       background: 'var(--panel)',
-                      border: '1px solid rgba(255,255,255,0.10)',
+                      border: '1px solid var(--fill-strong)',
                       boxShadow: '0 24px 50px -10px rgba(0,0,0,0.85)',
                       textAlign: 'left',
                     }}
@@ -330,7 +328,7 @@ export function LoggingState({
                           }}
                           style={{
                             width: '100%', height: 44, padding: '0 10px', borderRadius: 10,
-                            background: checked ? 'rgba(255,255,255,0.06)' : 'transparent',
+                            background: checked ? 'var(--fill)' : 'transparent',
                             border: 'none',
                             color: checked ? 'var(--text-1)' : 'var(--text-2)',
                             display: 'flex', alignItems: 'center', gap: 10,
@@ -370,7 +368,7 @@ export function LoggingState({
           style={{
             width: 44, padding: '10px 0', borderRadius: 10,
             background: 'transparent',
-            border: '1px dashed rgba(255,255,255,0.08)',
+            border: '1px dashed var(--fill-strong)',
             color: 'var(--text-m)',
             display: 'grid', placeItems: 'center',
             cursor: 'pointer',
@@ -403,8 +401,8 @@ export function LoggingState({
           marginTop: 18,
           display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
           borderRadius: 16,
-          background: 'rgba(255,255,255,0.03)',
-          border: '1px solid rgba(255,255,255,0.08)',
+          background: 'var(--fill-soft)',
+          border: '1px solid var(--fill-strong)',
           overflow: 'hidden',
         }}
       >

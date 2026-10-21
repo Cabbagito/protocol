@@ -66,7 +66,7 @@ export function dayCellStyle(opts: { selected: boolean; future: boolean; empty: 
     border:
       selected || future ? '1px solid transparent' : empty ? '1px dashed var(--fill-strong)' : '1px solid var(--line)',
     color: selected ? 'var(--btn-text)' : 'var(--text-2)',
-    track: selected ? 'rgba(255,255,255,0.3)' : future ? 'transparent' : 'var(--fill)',
+    track: selected ? 'color-mix(in oklab, var(--btn-text) 30%, transparent)' : future ? 'transparent' : 'var(--fill)',
     bar: selected ? 'var(--btn-text)' : 'var(--accent-l)',
     opacity: future ? 0.35 : 1,
   }

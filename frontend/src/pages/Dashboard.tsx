@@ -159,8 +159,8 @@ export default function Dashboard() {
               width: 38,
               height: 38,
               borderRadius: 12,
-              background: 'rgba(255,255,255,0.04)',
-              border: '1px solid rgba(255,255,255,0.05)',
+              background: 'var(--fill-soft)',
+              border: '1px solid var(--line)',
               color: 'var(--text-2)',
               display: 'grid',
               placeItems: 'center',
@@ -194,12 +194,12 @@ export default function Dashboard() {
                 ? 'var(--p-grad-cta)'
                 : trained
                 ? 'rgba(var(--accent-rgb),0.18)'
-                : 'rgba(255,255,255,0.04)'
+                : 'var(--fill-soft)'
               const border = isToday
                 ? 'none'
                 : trained
                 ? '1px solid rgba(var(--accent-rgb),0.35)'
-                : `1px ${isPast ? 'solid' : 'dashed'} rgba(255,255,255,0.08)`
+                : `1px ${isPast ? 'solid' : 'dashed'} var(--fill-strong)`
               const color = isToday
                 ? 'var(--btn-text)'
                 : trained
@@ -375,7 +375,7 @@ export default function Dashboard() {
             <div
               style={{
                 height: 2,
-                background: 'rgba(255,255,255,0.06)',
+                background: 'var(--fill)',
                 borderRadius: 1,
                 overflow: 'hidden',
               }}

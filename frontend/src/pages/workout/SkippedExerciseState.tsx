@@ -52,7 +52,7 @@ export function SkippedExerciseState({ exercise, onUnskip, onAdvanceExercise, ha
         onClick={onUnskip}
         style={{
           marginTop: 24, width: '100%', height: 50, borderRadius: 14,
-          background: 'rgba(255,255,255,0.05)',
+          background: 'var(--fill)',
           border: `1px solid color-mix(in oklab, ${c.primary} 40%, transparent)`,
           color: 'var(--text-1)', fontWeight: 600, fontSize: 14,
           cursor: 'pointer',

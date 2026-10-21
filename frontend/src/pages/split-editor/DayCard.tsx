@@ -66,10 +66,10 @@ export default function DayCard({
     <div
       style={{
         borderRadius: 14,
-        background: 'rgba(15,29,46,0.5)',
+        background: 'var(--glass)',
         border: isExpanded
           ? '1px solid rgba(var(--accent-rgb),0.30)'
-          : '1px solid rgba(255,255,255,0.05)',
+          : '1px solid var(--line)',
         overflow: 'hidden',
       }}
     >
@@ -235,8 +235,8 @@ export default function DayCard({
                     gap: 10,
                     padding: '9px 12px',
                     borderRadius: 10,
-                    background: 'rgba(255,255,255,0.02)',
-                    border: '1px solid rgba(255,255,255,0.05)',
+                    background: 'var(--fill-soft)',
+                    border: '1px solid var(--line)',
                   }}
                 >
                   <div
@@ -305,7 +305,7 @@ export default function DayCard({
                   padding: '14px 12px',
                   textAlign: 'center',
                   borderRadius: 10,
-                  border: '1px dashed rgba(255,255,255,0.08)',
+                  border: '1px dashed var(--fill-strong)',
                 }}
               >
                 <span
@@ -341,7 +341,7 @@ export default function DayCard({
                   padding: '10px 12px',
                   borderRadius: 10,
                   background: 'transparent',
-                  border: '1px dashed rgba(255,255,255,0.08)',
+                  border: '1px dashed var(--fill-strong)',
                   color: 'var(--accent-l)',
                   fontSize: 12,
                   fontWeight: 500,

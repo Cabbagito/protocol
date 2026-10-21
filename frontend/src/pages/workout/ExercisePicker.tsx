@@ -105,7 +105,7 @@ export function ExercisePicker({ mode = 'replace', initialMuscleGroup, initialEq
               onClick={() => setSelectedId(ex.id === selectedId ? null : ex.id)}
               className="w-full flex items-center gap-3 py-3 border-b"
               style={{
-                borderColor: 'rgba(255,255,255,0.04)',
+                borderColor: 'var(--line)',
                 background: ex.id === selectedId ? 'rgba(var(--accent-rgb),0.08)' : undefined,
               }}
             >
@@ -144,7 +144,7 @@ export function ExercisePicker({ mode = 'replace', initialMuscleGroup, initialEq
           type="button"
           onClick={() => setCreateOpen(true)}
           className="w-full my-3 py-3 rounded-xl text-sm font-medium"
-          style={{ border: '1.5px dashed rgba(255,255,255,0.1)', color: 'var(--text-2)' }}
+          style={{ border: '1.5px dashed var(--fill-strong)', color: 'var(--text-2)' }}
         >
           {search.trim() ? `Can't find it? Create “${search.trim()}”` : '+ Create custom exercise'}
         </button>
@@ -163,7 +163,7 @@ export function ExercisePicker({ mode = 'replace', initialMuscleGroup, initialEq
       />
 
       {/* Footer */}
-      <div className="px-4 pt-3 pb-safe" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+      <div className="px-4 pt-3 pb-safe" style={{ borderTop: '1px solid var(--line)' }}>
         {mode === 'replace' && (
           <label className="flex items-center gap-2.5 mb-3 cursor-pointer">
             <button

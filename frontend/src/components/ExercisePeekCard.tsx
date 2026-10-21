@@ -46,8 +46,8 @@ export default function ExercisePeekCard({
         border: isActive
           ? '1px solid var(--border)'
           : isSkipped
-          ? '1px dashed rgba(255,255,255,0.10)'
-          : '1px solid rgba(255,255,255,0.05)',
+          ? '1px dashed var(--fill-strong)'
+          : '1px solid var(--line)',
         display: 'flex',
         alignItems: 'center',
         gap: 12,
@@ -153,7 +153,7 @@ export default function ExercisePeekCard({
               width: 7,
               height: 7,
               borderRadius: '50%',
-              background: s.logged ? c.light : 'rgba(255,255,255,0.08)',
+              background: s.logged ? c.light : 'var(--fill-strong)',
               boxShadow: s.logged
                 ? `0 0 5px color-mix(in oklab, ${c.primary} 50%, transparent)`
                 : 'none',

@@ -78,7 +78,7 @@ export function ExerciseHistorySheet({
 
   return (
     <div className="fixed inset-0 z-[102]" onClick={onClose}>
-      <div className="absolute inset-0" style={{ background: 'rgba(2,6,12,0.55)' }} />
+      <div className="absolute inset-0" style={{ background: 'var(--scrim)' }} />
       <div
         role="dialog"
         aria-modal="true"
@@ -92,11 +92,11 @@ export function ExerciseHistorySheet({
           display: 'flex', flexDirection: 'column',
           borderRadius: '26px 26px 0 0',
           background: 'color-mix(in oklab, var(--card) 94%, transparent)',
-          borderTop: '1px solid rgba(255,255,255,0.08)',
+          borderTop: '1px solid var(--fill-strong)',
           boxShadow: '0 -20px 60px -20px rgba(0,0,0,0.8)',
         }}
       >
-        <div style={{ width: 38, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.16)', margin: '8px auto 0', flex: 'none' }} />
+        <div style={{ width: 38, height: 4, borderRadius: 2, background: 'var(--fill-strong)', margin: '8px auto 0', flex: 'none' }} />
         <div style={{ padding: '12px 20px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flex: 'none' }}>
           <div style={{ minWidth: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: MONO, fontSize: 9, fontWeight: 600, letterSpacing: '0.16em', textTransform: 'uppercase', color: c.text }}>
@@ -111,7 +111,7 @@ export function ExerciseHistorySheet({
             type="button"
             onClick={onClose}
             aria-label="Close"
-            style={{ width: 32, height: 32, borderRadius: 10, background: 'rgba(255,255,255,0.05)', display: 'grid', placeItems: 'center', color: 'var(--text-2)', flex: 'none' }}
+            style={{ width: 32, height: 32, borderRadius: 10, background: 'var(--fill)', display: 'grid', placeItems: 'center', color: 'var(--text-2)', flex: 'none' }}
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" aria-hidden="true">
               <path d="M18 6 6 18M6 6l12 12" />
@@ -132,7 +132,7 @@ export function ExerciseHistorySheet({
               <div
                 style={{
                   display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', marginTop: 14, padding: '12px 0',
-                  borderRadius: 16, background: 'rgba(15,29,46,0.55)', border: '1px solid rgba(255,255,255,0.05)',
+                  borderRadius: 16, background: 'var(--fill-soft)', border: '1px solid var(--line)',
                 }}
               >
                 <Stat label="Best set" divider={false}>
@@ -177,7 +177,7 @@ export function ExerciseHistorySheet({
                   onClick={() => setShowAll(true)}
                   style={{
                     marginTop: 14, width: '100%', height: 42, borderRadius: 12,
-                    border: '1px dashed rgba(255,255,255,0.12)', color: 'var(--text-2)', fontSize: 12.5,
+                    border: '1px dashed var(--border)', color: 'var(--text-2)', fontSize: 12.5,
                   }}
                 >
                   Show older
@@ -238,7 +238,7 @@ function SessionRow({
   return (
     <div
       style={{
-        padding: '8px 0', borderTop: '1px solid rgba(255,255,255,0.045)',
+        padding: '8px 0', borderTop: '1px solid var(--line)',
         ...(layout.beside
           ? { display: 'grid', gridTemplateColumns: `${DATE_COLUMN - 10}px 1fr`, gap: 10, alignItems: 'center' }
           : {}),
@@ -258,7 +258,7 @@ function SessionRow({
               title="Skipped"
               style={{
                 height: 28, borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                border: '1px dashed rgba(255,255,255,0.13)', color: LABEL, fontFamily: MONO, fontSize: 12,
+                border: '1px dashed var(--border)', color: LABEL, fontFamily: MONO, fontSize: 12,
               }}
             >
               –
@@ -287,8 +287,8 @@ function Chip({
         position: 'relative', height: 28, borderRadius: 7,
         display: 'flex', alignItems: 'center', justifyContent: 'center', whiteSpace: 'nowrap',
         fontFamily: MONO, fontSize: 12.5, fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--text-1)',
-        background: isBest ? `color-mix(in oklab, ${color.primary} 10%, transparent)` : 'rgba(255,255,255,0.035)',
-        border: `1px solid ${isBest ? `color-mix(in oklab, ${color.primary} 50%, transparent)` : 'rgba(255,255,255,0.06)'}`,
+        background: isBest ? `color-mix(in oklab, ${color.primary} 10%, transparent)` : 'var(--fill-soft)',
+        border: `1px solid ${isBest ? `color-mix(in oklab, ${color.primary} 50%, transparent)` : 'var(--line)'}`,
       }}
     >
       {typeInfo && (
@@ -323,7 +323,7 @@ function ThisBlockTag() {
 
 function Stat({ label: text, children, divider = true }: { label: string; children: React.ReactNode; divider?: boolean }) {
   return (
-    <div style={{ textAlign: 'center', borderLeft: divider ? '1px solid rgba(255,255,255,0.06)' : undefined }}>
+    <div style={{ textAlign: 'center', borderLeft: divider ? '1px solid var(--line)' : undefined }}>
       <div style={{ fontFamily: MONO, fontSize: 9, letterSpacing: '0.18em', fontWeight: 600, textTransform: 'uppercase', color: LABEL }}>
         {text}
       </div>

@@ -60,8 +60,8 @@ export default function ProgressRail({ exercises, currentIndex }: ProgressRailPr
                     background: s.logged
                       ? c.light
                       : isCur
-                      ? `color-mix(in oklab, ${c.primary} 25%, rgba(255,255,255,0.06))`
-                      : 'rgba(255,255,255,0.06)',
+                      ? `color-mix(in oklab, ${c.primary} 25%, var(--fill))`
+                      : 'var(--fill)',
                     boxShadow: s.logged
                       ? `0 0 6px color-mix(in oklab, ${c.primary} 60%, transparent)`
                       : 'none',

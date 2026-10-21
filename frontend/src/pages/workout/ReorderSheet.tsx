@@ -78,12 +78,12 @@ export function ReorderSheet({ subtitle, exercises, saving, onSave, onClose }: R
           maxHeight: '85vh', overflowY: 'auto',
           background: 'var(--card)',
           borderRadius: '24px 24px 0 0',
-          borderTop: '1px solid rgba(255,255,255,0.08)',
+          borderTop: '1px solid var(--fill-strong)',
           boxShadow: '0 -20px 50px rgba(0,0,0,0.5)',
           padding: '10px 16px calc(env(safe-area-inset-bottom) + 24px)',
         }}
       >
-        <div style={{ width: 36, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.16)', margin: '0 auto' }} />
+        <div style={{ width: 36, height: 4, borderRadius: 2, background: 'var(--fill-strong)', margin: '0 auto' }} />
 
         <div style={{ marginTop: 14, padding: '0 4px', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
           <div>
@@ -134,10 +134,10 @@ export function ReorderSheet({ subtitle, exercises, saving, onSave, onClose }: R
                   display: 'flex', alignItems: 'center', gap: 8,
                   background: highlighted
                     ? `color-mix(in oklab, ${c.primary} 9%, transparent)`
-                    : 'rgba(255,255,255,0.03)',
+                    : 'var(--fill-soft)',
                   border: `1px solid ${highlighted
                     ? `color-mix(in oklab, ${c.primary} 45%, transparent)`
-                    : 'rgba(255,255,255,0.06)'}`,
+                    : 'var(--line)'}`,
                   transition: 'background 0.2s, border-color 0.2s',
                 }}
               >
@@ -204,8 +204,8 @@ function ArrowButton({ label, direction, disabled, onClick }: {
       onClick={onClick}
       style={{
         width: 44, height: 44, flexShrink: 0, borderRadius: 11,
-        background: 'rgba(255,255,255,0.04)',
-        border: '1px solid rgba(255,255,255,0.08)',
+        background: 'var(--fill-soft)',
+        border: '1px solid var(--fill-strong)',
         color: 'var(--text-2)',
         display: 'grid', placeItems: 'center', padding: 0,
         cursor: disabled ? 'default' : 'pointer',

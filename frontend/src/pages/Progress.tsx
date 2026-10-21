@@ -131,8 +131,8 @@ export default function Progress() {
                 gap: 4,
                 padding: 4,
                 borderRadius: 12,
-                background: 'rgba(15,29,46,0.5)',
-                border: '1px solid rgba(255,255,255,0.05)',
+                background: 'var(--glass)',
+                border: '1px solid var(--line)',
               }}
             >
               {PERIODS.map((p) => {
@@ -205,7 +205,7 @@ export default function Progress() {
                       padding: '10px 12px',
                       borderRadius: 12,
                       background: 'transparent',
-                      border: '1px dashed rgba(255,255,255,0.08)',
+                      border: '1px dashed var(--fill-strong)',
                       color: 'var(--text-2)',
                       fontSize: 12,
                       cursor: 'pointer',
@@ -233,8 +233,8 @@ function EmptyState() {
         padding: '40px 22px',
         borderRadius: 18,
         textAlign: 'center',
-        background: 'rgba(15,29,46,0.4)',
-        border: '1px dashed rgba(255,255,255,0.08)',
+        background: 'var(--glass)',
+        border: '1px dashed var(--fill-strong)',
       }}
     >
       <div className="p-display" style={{ fontSize: 22, color: 'var(--text-1)' }}>
@@ -306,8 +306,8 @@ function SelectedHero({
           borderRadius: 20,
           position: 'relative',
           overflow: 'hidden',
-          background: `linear-gradient(180deg, color-mix(in oklab, ${color.primary} 12%, rgba(15,29,46,0.6)), rgba(15,29,46,0.6))`,
-          border: `1px solid color-mix(in oklab, ${color.primary} 28%, rgba(255,255,255,0.05))`,
+          background: `linear-gradient(180deg, color-mix(in oklab, ${color.primary} 12%, var(--glass-row)), var(--glass-row))`,
+          border: `1px solid color-mix(in oklab, ${color.primary} 28%, var(--line))`,
         }}
       >
         <div
@@ -478,8 +478,8 @@ function StatCard({
       style={{
         padding: '12px 12px',
         borderRadius: 13,
-        background: 'rgba(15,29,46,0.45)',
-        border: '1px solid rgba(255,255,255,0.05)',
+        background: 'var(--glass)',
+        border: '1px solid var(--line)',
         minWidth: 0,
       }}
     >
@@ -667,8 +667,8 @@ function WeeklyVolume({ meso }: { meso: Mesocycle }) {
         style={{
           padding: '18px 14px 12px',
           borderRadius: 14,
-          background: 'rgba(15,29,46,0.4)',
-          border: '1px solid rgba(255,255,255,0.05)',
+          background: 'var(--glass)',
+          border: '1px solid var(--line)',
         }}
       >
         <div
@@ -693,7 +693,7 @@ function WeeklyVolume({ meso }: { meso: Mesocycle }) {
                   borderRadius: '3px 3px 0 0',
                   background: highlight
                     ? 'linear-gradient(180deg, var(--accent-l), var(--accent))'
-                    : 'linear-gradient(180deg, color-mix(in oklab, var(--accent) 30%, rgba(255,255,255,0.08)), rgba(255,255,255,0.03))',
+                    : 'linear-gradient(180deg, color-mix(in oklab, var(--accent) 30%, var(--fill-strong)), var(--fill-soft))',
                   boxShadow: highlight ? '0 0 10px rgba(var(--accent-rgb),0.5)' : 'none',
                   opacity: d.complete ? 1 : 0.45,
                 }}
@@ -765,8 +765,8 @@ function OtherRow({
         gridTemplateColumns: '1fr 110px 56px',
         gap: 12,
         alignItems: 'center',
-        background: 'rgba(15,29,46,0.45)',
-        border: '1px solid rgba(255,255,255,0.05)',
+        background: 'var(--glass)',
+        border: '1px solid var(--line)',
         cursor: 'pointer',
         textAlign: 'left',
         color: 'inherit',
@@ -885,8 +885,8 @@ function Chrome({ title, sub, onBack }: { title: string; sub: string; onBack: ()
           width: 36,
           height: 36,
           borderRadius: 12,
-          background: 'rgba(255,255,255,0.04)',
-          border: '1px solid rgba(255,255,255,0.05)',
+          background: 'var(--fill-soft)',
+          border: '1px solid var(--line)',
           color: 'var(--text-2)',
           display: 'grid',
           placeItems: 'center',

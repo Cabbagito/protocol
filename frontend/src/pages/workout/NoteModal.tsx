@@ -20,11 +20,11 @@ export function NoteModal({ exerciseName, initialNote, onSave, onClose }: NoteMo
       <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(2px)' }} />
       <div
         className="relative w-full rounded-t-2xl pb-safe slide-up"
-        style={{ background: 'var(--card)', border: '1px solid rgba(255,255,255,0.06)', borderBottom: 'none' }}
+        style={{ background: 'var(--card)', border: '1px solid var(--line)', borderBottom: 'none' }}
         onClick={e => e.stopPropagation()}
       >
         <div className="flex justify-center pt-3 pb-2">
-          <div className="w-9 h-1 rounded-full" style={{ background: 'rgba(255,255,255,0.15)' }} />
+          <div className="w-9 h-1 rounded-full" style={{ background: 'var(--fill-strong)' }} />
         </div>
         <div className="px-5 pb-1">
           <span className="text-xs font-medium uppercase tracking-wider text-[var(--text-m)]">Note for {exerciseName}</span>

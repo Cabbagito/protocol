@@ -342,7 +342,7 @@ export function WorkoutSession({ mesocycle, weekIndex, sessionIndex, editing }: 
               disabled={busy}
               style={{
                 marginTop: 12, width: '100%', height: 44, borderRadius: 12,
-                background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
+                background: 'var(--fill)', border: '1px solid var(--fill-strong)',
                 color: 'var(--text-1)', fontWeight: 600, fontSize: 13, cursor: 'pointer',
                 opacity: busy ? 0.6 : 1,
               }}
@@ -448,7 +448,7 @@ export function WorkoutSession({ mesocycle, weekIndex, sessionIndex, editing }: 
                   disabled={busy}
                   style={{
                     height: 36, padding: '0 12px', borderRadius: 10,
-                    background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
+                    background: 'var(--fill-soft)', border: '1px solid var(--fill-strong)',
                     color: 'var(--text-2)', fontSize: 12, fontWeight: 500,
                     display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer',
                   }}
@@ -481,7 +481,7 @@ export function WorkoutSession({ mesocycle, weekIndex, sessionIndex, editing }: 
             style={{
               marginTop: 16, width: '100%', padding: '14px 0',
               fontSize: 13, fontWeight: 500, color: 'var(--text-m)', borderRadius: 14,
-              border: '1.5px dashed rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.02)',
+              border: '1.5px dashed var(--fill-strong)', background: 'var(--fill-soft)',
               cursor: 'pointer',
             }}
           >

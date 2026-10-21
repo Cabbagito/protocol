@@ -31,7 +31,7 @@ export function WorkoutFinishBar({
         background: 'color-mix(in oklab, var(--card) 88%, transparent)',
         backdropFilter: 'blur(28px) saturate(180%)',
         WebkitBackdropFilter: 'blur(28px) saturate(180%)',
-        border: '1px solid rgba(255,255,255,0.06)',
+        border: '1px solid var(--line)',
         boxShadow:
           '0 18px 50px -14px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.05)',
       }}

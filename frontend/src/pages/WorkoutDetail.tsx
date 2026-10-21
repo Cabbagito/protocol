@@ -81,7 +81,7 @@ export default function WorkoutDetail() {
           <div
             style={{
               marginBottom: 18, padding: '12px 14px', borderRadius: 14,
-              border: '1px dashed rgba(148,163,184,0.3)', background: 'rgba(148,163,184,0.07)',
+              border: '1px dashed var(--border)', background: 'var(--fill-soft)',
               fontSize: 13, color: 'var(--text-2)',
             }}
           >
@@ -120,7 +120,7 @@ export default function WorkoutDetail() {
             <div
               style={{
                 display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', padding: '14px 0',
-                borderRadius: 18, background: 'rgba(15,29,46,0.5)', border: '1px solid rgba(255,255,255,0.05)',
+                borderRadius: 18, background: 'var(--glass)', border: '1px solid var(--line)',
               }}
             >
               <Stat label="Sets" value={String(totals.sets)} delta={prevTotals && countDelta(totals.sets, prevTotals.sets)} />
@@ -182,7 +182,7 @@ export default function WorkoutDetail() {
           <div
             style={{
               marginTop: 10, padding: '12px 14px', borderRadius: 14,
-              border: '1px dashed rgba(255,255,255,0.10)', fontSize: 12.5, lineHeight: 1.5,
+              border: '1px dashed var(--fill-strong)', fontSize: 12.5, lineHeight: 1.5,
             }}
           >
             <Eyebrow>{notLogged.every(ex => ex.skipped) ? 'Skipped' : 'Not logged'}</Eyebrow>
@@ -196,7 +196,7 @@ export default function WorkoutDetail() {
           <div
             style={{
               marginTop: 10, padding: 14, borderRadius: 14,
-              background: 'rgba(15,29,46,0.5)', border: '1px solid rgba(255,255,255,0.05)',
+              background: 'var(--glass)', border: '1px solid var(--line)',
             }}
           >
             <Eyebrow>Notes</Eyebrow>
@@ -258,8 +258,8 @@ function LiftCard({
     <div
       style={{
         position: 'relative', padding: '14px 14px 12px 18px', borderRadius: 16, overflow: 'hidden',
-        background: 'color-mix(in oklab, var(--card) 70%, transparent)',
-        border: '1px solid rgba(255,255,255,0.05)',
+        background: 'var(--glass-row)',
+        border: '1px solid var(--line)',
       }}
     >
       <div
@@ -283,7 +283,7 @@ function LiftCard({
             padding: '5px 8px', borderRadius: 8, whiteSpace: 'nowrap',
             color: isUp ? 'var(--accent-l)' : 'var(--text-2)',
             background: isUp ? 'rgba(var(--accent-rgb),0.12)' : 'transparent',
-            border: isUp ? '1px solid rgba(var(--accent-rgb),0.28)' : '1px dashed rgba(255,255,255,0.16)',
+            border: isUp ? '1px solid rgba(var(--accent-rgb),0.28)' : '1px dashed var(--border)',
           }}
         >
           {changeLabel(change)}
@@ -303,7 +303,7 @@ function LiftCard({
       <div
         style={{
           display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12,
-          marginTop: 12, paddingTop: 10, borderTop: '1px solid rgba(255,255,255,0.05)',
+          marginTop: 12, paddingTop: 10, borderTop: '1px solid var(--line)',
           fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.12em', color: LABEL,
         }}
       >
@@ -336,8 +336,8 @@ function SetTile({
     <div
       style={{
         position: 'relative', borderRadius: 10, padding: '8px 4px 7px', textAlign: 'center',
-        background: isBest ? `color-mix(in oklab, ${color.primary} 8%, transparent)` : 'rgba(255,255,255,0.03)',
-        border: `1px solid ${isBest ? `color-mix(in oklab, ${color.primary} 40%, transparent)` : 'rgba(255,255,255,0.06)'}`,
+        background: isBest ? `color-mix(in oklab, ${color.primary} 8%, transparent)` : 'var(--fill-soft)',
+        border: `1px solid ${isBest ? `color-mix(in oklab, ${color.primary} 40%, transparent)` : 'var(--line)'}`,
       }}
     >
       {typeInfo && (
@@ -407,7 +407,7 @@ function Dot({ color, glow }: { color: string; glow?: boolean }) {
 
 function Stat({ label, value, delta, divider }: { label: string; value: string; delta: string | null; divider?: boolean }) {
   return (
-    <div style={{ textAlign: 'center', borderLeft: divider ? '1px solid rgba(255,255,255,0.06)' : undefined }}>
+    <div style={{ textAlign: 'center', borderLeft: divider ? '1px solid var(--line)' : undefined }}>
       <div style={{ fontFamily: MONO, fontSize: 20, fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--text-1)' }}>
         {value}
       </div>
@@ -497,6 +497,6 @@ function Chrome({
 
 const chromeButton: React.CSSProperties = {
   width: 36, height: 36, borderRadius: 12, flex: 'none',
-  background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.05)',
+  background: 'var(--fill-soft)', border: '1px solid var(--line)',
   color: 'var(--text-2)', display: 'grid', placeItems: 'center', cursor: 'pointer',
 }

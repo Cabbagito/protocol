@@ -70,7 +70,7 @@
 
   .btn-secondary {
     background: var(--panel);
-    border: 1px solid rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--line);
     @apply text-slate-100 hover:bg-navy-input focus:ring-slate-500 rounded-lg;
   }
 
@@ -99,7 +99,7 @@
 
   .panel-frosted {
     background: var(--panel);
-    border: 1px solid rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--line);
     border-radius: 8px;
     padding: 4px;
   }
@@ -780,7 +780,7 @@
 
 /* Focus ring for numeric inputs in NumeralsCard (since they use outline:none). */
 .p-num-input:focus-visible {
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.45);
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--text-1) 45%, transparent);
   border-radius: 6px;
 }
 

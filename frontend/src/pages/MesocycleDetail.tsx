@@ -172,8 +172,8 @@ export default function MesocycleDetail() {
           style={{
             padding: 16,
             borderRadius: 18,
-            background: 'rgba(15,29,46,0.5)',
-            border: '1px solid rgba(255,255,255,0.05)',
+            background: 'var(--glass)',
+            border: '1px solid var(--line)',
           }}
         >
           {/* Header row */}
@@ -255,7 +255,7 @@ export default function MesocycleDetail() {
                 position: 'relative',
                 overflow: 'hidden',
                 background:
-                  'linear-gradient(180deg, rgba(var(--accent-rgb),0.12), rgba(15,29,46,0.6))',
+                  'linear-gradient(180deg, rgba(var(--accent-rgb),0.12), var(--glass-row))',
                 border: '1px solid rgba(var(--accent-rgb),0.30)',
                 boxShadow: '0 20px 50px -22px rgba(var(--accent-rgb),0.45)',
               }}
@@ -462,8 +462,8 @@ export default function MesocycleDetail() {
             style={{
               height: 46,
               borderRadius: 13,
-              background: 'rgba(15,29,46,0.5)',
-              border: '1px solid rgba(255,255,255,0.05)',
+              background: 'var(--glass-row)',
+              border: '1px solid var(--line)',
               color: 'var(--text-1)',
               fontSize: 13,
               fontWeight: 500,
@@ -478,9 +478,9 @@ export default function MesocycleDetail() {
             style={{
               height: 46,
               borderRadius: 13,
-              background: 'rgba(15,29,46,0.5)',
-              border: '1px solid rgba(248,113,113,0.18)',
-              color: 'rgba(248,113,113,0.85)',
+              background: 'var(--glass-row)',
+              border: '1px solid var(--line)',
+              color: 'var(--danger-soft)',
               fontSize: 13,
               fontWeight: 500,
               cursor: 'pointer',
@@ -534,7 +534,7 @@ function GridCell({ state, to }: { state: CellState; to?: string }) {
           boxShadow: '0 0 14px rgba(var(--accent-rgb),0.55)',
         }}
       >
-        <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'white' }} />
+        <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--btn-text)' }} />
       </div>
     )
   } else if (state === 'skipped') {
@@ -543,13 +543,13 @@ function GridCell({ state, to }: { state: CellState; to?: string }) {
         style={{
           height: 26,
           borderRadius: 7,
-          background: 'rgba(148,163,184,0.06)',
-          border: '1px dashed rgba(148,163,184,0.28)',
+          background: 'var(--fill-soft)',
+          border: '1px dashed var(--border)',
           display: 'grid',
           placeItems: 'center',
         }}
       >
-        <span style={{ width: 8, height: 1.5, borderRadius: 1, background: 'rgba(148,163,184,0.6)' }} />
+        <span style={{ width: 8, height: 1.5, borderRadius: 1, background: 'var(--text-m)' }} />
       </div>
     )
   } else if (state === 'done') {
@@ -575,8 +575,8 @@ function GridCell({ state, to }: { state: CellState; to?: string }) {
         style={{
           height: 26,
           borderRadius: 7,
-          background: 'rgba(255,255,255,0.03)',
-          border: '1px solid rgba(255,255,255,0.06)',
+          background: 'var(--fill-soft)',
+          border: '1px solid var(--line)',
         }}
       />
     )
@@ -609,8 +609,8 @@ function Chrome({ title, sub, onBack }: { title: string; sub: string; onBack: ()
           width: 36,
           height: 36,
           borderRadius: 12,
-          background: 'rgba(255,255,255,0.04)',
-          border: '1px solid rgba(255,255,255,0.05)',
+          background: 'var(--fill-soft)',
+          border: '1px solid var(--line)',
           color: 'var(--text-2)',
           display: 'grid',
           placeItems: 'center',

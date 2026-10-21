@@ -3,4 +3,4 @@ export const SET_TYPE_LABELS: Record<string, { label: string; color: string; bg:
   myorep_match: { label: 'MM', color: '#fbbf24', bg: 'rgba(251,191,36,0.12)', border: 'rgba(251,191,36,0.3)', rowBg: 'rgba(251,191,36,0.05)' },
 }
 
-export const STRAIGHT_PILL = { color: 'var(--text-2)', bg: 'rgba(255,255,255,0.04)', border: 'rgba(255,255,255,0.12)' }
+export const STRAIGHT_PILL = { color: 'var(--text-2)', bg: 'var(--fill-soft)', border: 'var(--border)' }
