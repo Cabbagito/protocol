@@ -79,11 +79,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         >
           {navItems.map((item) => {
             const isActive = item.section === section
+            // On the active mesocycle's page the Workout tab is that page.
+            const label = item.section === 'workout' && pathname === activeMesoPath ? 'Mesocycle' : item.label
             return (
               <Link
                 key={item.section}
                 to={hrefs[item.section]}
-                aria-label={item.label}
+                aria-label={label}
                 aria-current={isActive ? 'page' : undefined}
                 style={{
                   position: 'relative',
@@ -107,7 +109,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 }}
               >
                 <item.icon className="w-5 h-5" />
-                {isActive && <span aria-hidden="true">{item.label}</span>}
+                {isActive && <span aria-hidden="true">{label}</span>}
               </Link>
             )
           })}
