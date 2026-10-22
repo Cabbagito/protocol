@@ -71,6 +71,8 @@
   {"seed_key": "edamame", "name": "Edamame, cooked", "kcal_per_100g": 121, "protein_per_100g": 11, "carbs_per_100g": 9, "fat_per_100g": 5, "units": [{"name": "cup", "grams": 155}]},
   {"seed_key": "tofu_firm", "name": "Tofu, firm", "kcal_per_100g": 144, "protein_per_100g": 17, "carbs_per_100g": 2.8, "fat_per_100g": 8.7, "units": [{"name": "serving", "grams": 85}]},
   {"seed_key": "tempeh", "name": "Tempeh", "kcal_per_100g": 192, "protein_per_100g": 20, "carbs_per_100g": 7.6, "fat_per_100g": 11, "units": [{"name": "serving", "grams": 84}]},
+  {"seed_key": "seitan", "name": "Seitan", "kcal_per_100g": 141, "protein_per_100g": 25, "carbs_per_100g": 6, "fat_per_100g": 2, "units": [{"name": "serving", "grams": 85}]},
+  {"seed_key": "vital_wheat_gluten", "name": "Vital Wheat Gluten", "kcal_per_100g": 370, "protein_per_100g": 75.2, "carbs_per_100g": 13.8, "fat_per_100g": 1.9, "units": [{"name": "tbsp", "grams": 8}]},
   {"seed_key": "hummus", "name": "Hummus", "kcal_per_100g": 166, "protein_per_100g": 7.9, "carbs_per_100g": 14, "fat_per_100g": 10, "units": [{"name": "serving", "grams": 30}]},
   {"seed_key": "almonds", "name": "Almonds", "kcal_per_100g": 579, "protein_per_100g": 21, "carbs_per_100g": 22, "fat_per_100g": 50, "units": [{"name": "handful", "grams": 28}]},
   {"seed_key": "peanuts", "name": "Peanuts, dry roasted", "kcal_per_100g": 585, "protein_per_100g": 24, "carbs_per_100g": 21, "fat_per_100g": 50, "units": [{"name": "handful", "grams": 28}]},
