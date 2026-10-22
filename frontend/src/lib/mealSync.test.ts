@@ -35,7 +35,7 @@ const snapshot = (items: MealItem[], eaten_at = '08:00', eaten_on = DAY): MealSn
   eaten_on, eaten_at, name: null, items,
 })
 const serverMeal = (id: string, s: MealSnapshot, name: string | null = 'Breakfast'): Meal => ({
-  id, eaten_on: s.eaten_on, eaten_at: s.eaten_at, name, name_source: 'auto', summary: null,
+  id, eaten_on: s.eaten_on, eaten_at: s.eaten_at, name, name_source: 'auto', summary: null, naming: false,
   totals: {
     kcal: s.items.reduce((t, i) => t + i.kcal, 0),
     protein_g: s.items.reduce((t, i) => t + i.protein_g, 0),

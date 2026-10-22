@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import type { Meal } from '../../types'
 import { amountLabel, cardLines, fmtKcal, mealName } from '../../lib/diet'
-import { ChevronRight } from './ui'
+import { ChevronRight, NamingTag } from './ui'
 import { MACRO_COLORS, MONO, glassRow, macroLabelStyle } from './styles'
 
 const big = {
@@ -67,10 +67,12 @@ export default function MealCard({ meal, to, last }: { meal: Meal; to: string; l
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
+                color: meal.naming ? 'var(--text-2)' : undefined,
               }}
             >
               {mealName(meal)}
             </div>
+            {meal.naming && <NamingTag />}
             <span style={{ color: 'var(--text-2)', display: 'grid' }}>
               <ChevronRight />
             </span>

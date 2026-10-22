@@ -12,7 +12,7 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.models.meal import Meal
-from app.services import claude
+from app.services import claude, meal_service
 from app.services.meal_service import SummaryJob, items_key
 
 logger = logging.getLogger(__name__)
@@ -107,8 +107,11 @@ async def apply(db: AsyncSession, job: SummaryJob, summary: _Summary) -> bool:
 
 async def refresh(session_factory: async_sessionmaker[AsyncSession], job: SummaryJob) -> None:
     """Background task: name and summarize a meal's current items."""
-    summary = await suggest(job.foods)
-    if summary is None:
-        return
-    async with session_factory() as db:
-        await apply(db, job, summary)
+    try:
+        summary = await suggest(job.foods)
+        if summary is None:
+            return
+        async with session_factory() as db:
+            await apply(db, job, summary)
+    finally:
+        meal_service.summary_done(job)

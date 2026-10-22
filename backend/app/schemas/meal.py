@@ -80,6 +80,8 @@ class MealResponse(BaseModel):
     name_source: Literal["auto", "user"]
     # None unless it describes the current items.
     summary: list[SummaryLine] | None
+    # Claude is naming and summarizing the current items right now.
+    naming: bool
     totals: MacroTotals
     items: list[MealItemResponse]
 

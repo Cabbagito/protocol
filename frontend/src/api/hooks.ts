@@ -398,6 +398,9 @@ export function useRemoveExerciseFromSession() {
 
 // --- Diet Hooks ---
 
+// Claude names a meal a second or two after it's saved: poll until it has.
+const NAMING_POLL_MS = 1500
+
 /** Meal changes saved on this phone and not yet (or just) confirmed by the server. */
 function useMealDrafts(): MealDraft[] {
   const { version } = useMealSyncStatus()
@@ -418,6 +421,7 @@ export function useDietDay(date: string) {
     queryKey: queryKeys.diet.day(date),
     queryFn: () => api.get<DietDay>(`/meals?date=${date}`),
     staleTime: 0,
+    refetchInterval: (q) => (q.state.data?.meals.some((m) => m.naming) ? NAMING_POLL_MS : false),
   })
   const server = query.data
   const data = useMemo(() => overlayDay(date, server, drafts), [date, server, drafts])
@@ -457,6 +461,7 @@ export function useMeal(id: string, enabled = true) {
       return undefined
     },
     initialDataUpdatedAt: 0,
+    refetchInterval: (q) => (q.state.data?.naming ? NAMING_POLL_MS : false),
   })
   const data = useMemo(() => overlayMeal(id, query.data, draft), [id, query.data, draft])
   return { data, draft, deleted: !!draft && !draft.snapshot, isLoading: query.isLoading, error: query.error }

@@ -6,7 +6,7 @@ from datetime import date, time
 import pytest
 
 from app.models.meal import Meal, MealItem
-from app.services import meal_service, meal_summary
+from app.services import claude, meal_service, meal_summary
 
 DAY = "2026-10-18"
 
@@ -47,6 +47,7 @@ def summaries(monkeypatch):
         calls.append(foods)
         return answer["value"]
 
+    monkeypatch.setattr(claude, "get_client", lambda: object())
     monkeypatch.setattr(meal_summary, "suggest", _suggest)
     return calls, answer
 
@@ -65,6 +66,8 @@ async def test_put_creates_then_replaces(client, user):
     assert meal["eaten_at"] == "08:10"
     assert meal["name"] is None
     assert meal["name_source"] == "auto"
+    # Without an API key nobody will name it.
+    assert meal["naming"] is False
     assert meal["totals"] == {"kcal": 228, "protein_g": 8, "carbs_g": 40, "fat_g": 4}
 
     items = [_item("Oats"), _item("Banana", 118, unit_name="medium", unit_quantity=1)]
@@ -156,22 +159,29 @@ async def test_claude_names_and_summarizes_after_a_save(client, user, summaries)
     meal_id, resp = await _put(client, user, items=items)
     # The response goes out before Claude has answered.
     assert resp.json()["name"] is None
+    assert resp.json()["naming"] is True
     assert calls == [["Oats — 60 g", "Banana — 1 medium (118 g)"]]
 
     meal = (await client.get(f"/api/meals/{meal_id}", headers=user.headers)).json()
+    assert meal["naming"] is False
     assert meal["name"] == "Oats and banana"
     assert meal["name_source"] == "auto"
     assert meal["summary"] == [{"text": "Oats", "items": [0]}, {"text": "Banana", "items": [1]}]
 
     # Saving the same items again doesn't ask again; changing them does, and
     # the old name and summary stop showing until the new ones arrive.
-    await _put(client, user, meal_id, items=items, eaten_at="09:00")
+    _, resp = await _put(client, user, meal_id, items=items, eaten_at="09:00")
     assert len(calls) == 1
+    assert resp.json()["naming"] is False
     answer["value"] = None  # Claude unavailable
     _, resp = await _put(client, user, meal_id, items=items[:1])
     assert len(calls) == 2
     assert resp.json()["name"] is None
     assert resp.json()["summary"] is None
+    # Claude failed: the meal is no longer being named.
+    meal = (await client.get(f"/api/meals/{meal_id}", headers=user.headers)).json()
+    assert meal["naming"] is False
+    assert meal["name"] is None
 
 
 async def test_a_users_name_wins_and_can_be_handed_back(client, user, summaries):

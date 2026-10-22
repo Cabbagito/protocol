@@ -224,6 +224,8 @@ export interface Meal {
   name: string | null
   name_source: 'auto' | 'user'
   summary: SummaryLine[] | null
+  // Claude is naming and summarizing the current items right now.
+  naming: boolean
   totals: MacroTotals
   items: MealItem[]
 }
