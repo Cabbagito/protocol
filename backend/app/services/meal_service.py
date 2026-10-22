@@ -3,11 +3,13 @@
 A meal's name and timeline summary come from Claude (``meal_summary``) and
 describe one set of items, fingerprinted by ``items_key``. When the items
 change, both go stale until Claude has caught up: responses then carry no
-summary and, for auto-named meals, no name, so the client shows the foods.
+summary and, for auto-named meals, no name, so the client shows the foods, and
+``naming`` while Claude is at it.
 """
 
 import hashlib
 import json
+from collections import Counter
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import date
@@ -21,9 +23,13 @@ from app.models.food_item import FoodItem
 from app.models.meal import Meal, MealItem
 from app.schemas.daily_targets import DailyTargetsResponse
 from app.schemas.meal import DayKcal, DayResponse, MacroTotals, MealPut, MealResponse
-from app.services import daily_targets_service
+from app.services import claude, daily_targets_service
 
 MAX_DAYS = 92
+
+# Summary jobs running per meal id. Kept in the process, like the login
+# throttle: the API runs as a single uvicorn worker.
+_naming: Counter[str] = Counter()
 
 
 def items_key(items: Sequence[MealItem]) -> str:
@@ -60,6 +66,7 @@ def meal_response(meal: Meal) -> MealResponse:
         name=meal.name if meal.name_source == "user" or current else None,
         name_source=meal.name_source,
         summary=meal.summary if current else None,
+        naming=_naming[meal.id] > 0,
         totals=_totals(meal.items),
         items=meal.items,
     )
@@ -136,6 +143,13 @@ class SummaryJob:
     foods: list[str]
 
 
+def summary_done(job: SummaryJob) -> None:
+    """The job finished, named the meal or not."""
+    _naming[job.meal_id] -= 1
+    if _naming[job.meal_id] <= 0:
+        del _naming[job.meal_id]
+
+
 async def save_meal(
     db: AsyncSession, meal_id: str, user_id: str, *, data: MealPut, _retry: bool = True
 ) -> tuple[MealResponse, SummaryJob | None]:
@@ -143,7 +157,8 @@ async def save_meal(
 
     A name in the snapshot is the user's and always wins; no name hands the
     meal back to Claude. Returns the job for Claude when the items have no
-    current summary.
+    current summary and Claude is set up; the meal is ``naming`` until the
+    job calls ``summary_done``.
     """
     meal = await _get_own(db, meal_id, user_id, for_update=True)
     await _check_foods(db, user_id, {i.food_item_id for i in data.items if i.food_item_id})
@@ -175,9 +190,10 @@ async def save_meal(
 
     key = items_key(meal.items)
     job = None
-    if meal.summary_key != key:
+    if meal.summary_key != key and claude.get_client() is not None:
         foods = [f"{i.name} — {amount_label(i) or 'some'}" for i in meal.items]
         job = SummaryJob(meal_id=meal.id, key=key, foods=foods)
+        _naming[meal.id] += 1
     return meal_response(meal), job
 
 

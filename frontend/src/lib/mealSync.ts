@@ -25,8 +25,6 @@ const MIN_BACKOFF_MS = 2000
 const MAX_BACKOFF_MS = 30_000
 // As long as the persisted query cache, which may still hold a deleted meal.
 const TOMBSTONE_MS = 7 * 24 * 60 * 60 * 1000
-// Claude names a meal in the background, a moment after the save answers.
-const NAME_REFRESH_MS = 3000
 
 /** Where the server has a meal, as far as this phone knows. */
 export interface ServerCopy {
@@ -71,6 +69,8 @@ export function draftMeal(id: string, snapshot: MealSnapshot, previous: Meal | u
     name: snapshot.name ?? (unchanged && previous?.name_source === 'auto' ? previous.name : null),
     name_source: snapshot.name ? 'user' : 'auto',
     summary: unchanged ? (previous?.summary ?? null) : null,
+    // Claude starts on new items once the server has them.
+    naming: unchanged ? (previous?.naming ?? false) : false,
     totals: sumMacros(snapshot.items),
     items: snapshot.items,
   }
@@ -456,15 +456,8 @@ class MealSync {
     } catch {
       /* ignore */
     }
+    // A meal Claude is naming keeps its day and page refetching (api/hooks).
     updateCaches(d.id, d.server, meal)
-
-    if (meal && (meal.name === null || meal.summary === null)) {
-      setTimeout(() => {
-        if (readJson(keyOf(d))) return // changed again; that save will refresh
-        void queryClient.invalidateQueries({ queryKey: mealKey(meal.id), exact: true })
-        void queryClient.invalidateQueries({ queryKey: dayKey(meal.eaten_on), exact: true })
-      }, NAME_REFRESH_MS)
-    }
   }
 
   /** Clear rejected drafts' errors so the queue tries them again. */

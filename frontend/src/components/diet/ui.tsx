@@ -388,6 +388,45 @@ export function CameraIcon({ size = 20 }: IconProps) {
   )
 }
 
+/** Claude at work: a ring turning in the AI colour (still under reduced motion). */
+export function AiSpinner({ size = 12 }: IconProps) {
+  return (
+    <svg className="motion-safe:animate-spin" width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeOpacity={0.25} strokeWidth={3} />
+      <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" strokeWidth={3} strokeLinecap="round" />
+    </svg>
+  )
+}
+
+/** Beside a meal's name while Claude names it. */
+export function NamingTag() {
+  return (
+    <span
+      role="status"
+      aria-label="Claude is naming this meal"
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 5,
+        flex: 'none',
+        padding: '3px 7px',
+        borderRadius: 999,
+        background: 'rgba(var(--ai-rgb),0.12)',
+        border: '1px solid rgba(var(--ai-rgb),0.35)',
+        color: 'var(--ai)',
+        fontFamily: MONO,
+        fontSize: 9,
+        fontWeight: 600,
+        letterSpacing: '0.14em',
+        lineHeight: 1,
+      }}
+    >
+      <AiSpinner size={10} />
+      NAMING
+    </span>
+  )
+}
+
 /** Marks what Claude filled in. */
 export function SparkleIcon({ size = 13 }: IconProps) {
   return (

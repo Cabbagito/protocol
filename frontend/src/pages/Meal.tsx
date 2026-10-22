@@ -8,7 +8,7 @@ import { useToast } from '../components/Toast'
 import AmountSheet, { type AmountTarget } from '../components/diet/AmountSheet'
 import FoodSearch from '../components/diet/FoodSearch'
 import MacroTable from '../components/diet/MacroTable'
-import { BarcodeIcon, ChevronLeft, ChevronRight, Chrome, ChromeButton, DotsIcon, SearchIcon, SectionLabel, Sheet } from '../components/diet/ui'
+import { BarcodeIcon, ChevronLeft, ChevronRight, Chrome, ChromeButton, DotsIcon, NamingTag, SearchIcon, SectionLabel, Sheet } from '../components/diet/ui'
 import { MACRO_COLORS, MONO, accentChipStyle, ctaStyle, glassRow, macroLabelStyle } from '../components/diet/styles'
 import { ApiError, NetworkError } from '../api/client'
 import { useBarcodeLookup, useDailyTargets, useFood, useMeal } from '../api/hooks'
@@ -79,6 +79,7 @@ function MealEditor({ id }: { id: string }) {
     name: null,
     name_source: 'auto',
     summary: null,
+    naming: false,
     totals: ZERO,
     items: [],
   }
@@ -246,10 +247,12 @@ function MealEditor({ id }: { id: string }) {
         {mode === 'edit' && (
           <button type="button" onClick={() => setRenaming(true)} style={rowStyle}>
             Name
-            <span style={{ marginLeft: 'auto', fontSize: 14, color: 'var(--text-1)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>
+            <span style={{ marginLeft: 'auto', fontSize: 14, color: meal.naming ? 'var(--text-2)' : 'var(--text-1)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>
               {mealName(meal)}
             </span>
-            {meal.name_source === 'auto' && meal.name && (
+            {meal.naming ? (
+              <NamingTag />
+            ) : meal.name_source === 'auto' && meal.name && (
               <span style={{ fontFamily: MONO, fontSize: 9, letterSpacing: '0.14em', color: 'var(--ai)' }}>AUTO</span>
             )}
             <span style={{ color: 'var(--text-2)', display: 'grid' }}>

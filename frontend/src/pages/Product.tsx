@@ -1,11 +1,11 @@
-import { useRef, useState } from 'react'
+import { useRef, useState, type CSSProperties } from 'react'
 import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import BarcodeScanner from '../components/BarcodeScanner'
 import DecimalInput from '../components/DecimalInput'
 import PageLoader from '../components/PageLoader'
 import { useToast } from '../components/Toast'
 import UnitList, { type UnitRow } from '../components/diet/UnitList'
-import { BarcodeIcon, CameraIcon, ChevronLeft, Chrome, ChromeButton, CloseIcon, SectionLabel, SparkleIcon } from '../components/diet/ui'
+import { AiSpinner, BarcodeIcon, CameraIcon, ChevronLeft, Chrome, ChromeButton, CloseIcon, SectionLabel, SparkleIcon } from '../components/diet/ui'
 import { MACRO_COLORS, MONO, ctaStyle, glassRow } from '../components/diet/styles'
 import { ApiError } from '../api/client'
 import { useBarcodeLookup, useCreateFood, useFood, useReadLabel, useUpdateFood } from '../api/hooks'
@@ -22,6 +22,23 @@ type FieldKey = 'name' | 'brand' | 'kcal' | 'protein' | 'carbs' | 'fat'
 type Fields = Record<FieldKey, string>
 
 const EMPTY: Fields = { name: '', brand: '', kcal: '', protein: '', carbs: '', fat: '' }
+
+/** Under the photos: the read button, and Claude at work while it reads. */
+const aiBar: CSSProperties = {
+  marginTop: 10,
+  width: '100%',
+  height: 40,
+  borderRadius: 12,
+  background: 'rgba(var(--ai-rgb),0.12)',
+  border: '1px solid rgba(var(--ai-rgb),0.35)',
+  color: 'var(--ai)',
+  fontSize: 13,
+  fontWeight: 600,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: 8,
+}
 
 function num(n: number | null | undefined): string {
   return n == null ? '' : fmtQty(n)
@@ -302,27 +319,14 @@ function ProductForm({ food }: { food: FoodItem | null }) {
               if (file) addPhoto(file)
             }}
           />
+          {reading && (
+            <div role="status" style={aiBar}>
+              <AiSpinner size={14} />
+              Reading the photos…
+            </div>
+          )}
           {showReadButton && (
-            <button
-              type="button"
-              onClick={() => readPhotos(photos)}
-              style={{
-                marginTop: 10,
-                width: '100%',
-                height: 40,
-                borderRadius: 12,
-                background: 'rgba(var(--ai-rgb),0.12)',
-                border: '1px solid rgba(var(--ai-rgb),0.35)',
-                color: 'var(--ai)',
-                fontSize: 13,
-                fontWeight: 600,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 8,
-                cursor: 'pointer',
-              }}
-            >
+            <button type="button" onClick={() => readPhotos(photos)} style={{ ...aiBar, cursor: 'pointer' }}>
               <SparkleIcon />
               {readCount > 0 ? 'Read the photos again' : photos.length === 1 ? 'Read this photo' : 'Read the photos'}
             </button>
@@ -376,7 +380,7 @@ function ProductForm({ food }: { food: FoodItem | null }) {
             color: 'var(--ai)',
           }}
         >
-          <SparkleIcon />
+          {reading ? <AiSpinner /> : <SparkleIcon />}
           {reading ? 'READING THE PHOTOS…' : 'READ FROM THE PHOTOS · CHECK THEM'}
         </div>
       )}

@@ -39,7 +39,12 @@ components and rules: the Protocol design system, group "Diet" (link in
 - The card's amounts come from the items, never from Claude: a line with one item
   shows its own amount, a group shows its grams. If Claude's lines don't cover every
   item exactly once, the summary is dropped and the card lists the foods.
-- The client refetches the meal and its day 3 s after a save that came back unnamed.
+- While Claude works on a meal, responses say `naming: true`. The API counts the
+  running jobs per meal in its process (it runs as one worker) and only makes a job
+  when `ANTHROPIC_API_KEY` is set, so nothing claims to be naming without a key or
+  after a failure. The meal's card and Name row show a turning **NAMING** tag (the
+  fallback name dimmed), and the day and the meal refetch every 1.5 s until it's
+  done (`refetchInterval` in `api/hooks.ts`).
 
 ## Foods and units
 
@@ -72,7 +77,8 @@ components and rules: the Protocol design system, group "Diet" (link in
   on the phone to 1568 px JPEG, sent as base64) go to `claude-opus-5-5` with a
   structured-output schema; it returns name, brand, per-100 g values (converted from
   per serving or kJ when needed) and units such as "cookie" and "pack". Nothing is
-  saved; the user checks the values, which stay marked until edited. 30 readings per
+  saved; while it reads, a bar under the photos says "Reading the photos…" with a
+  spinner. The user checks the values, which stay marked until edited. 30 readings per
   user per hour; about 2–3 cents each. Without `ANTHROPIC_API_KEY` it answers 503 and
   the product is typed in.
 
