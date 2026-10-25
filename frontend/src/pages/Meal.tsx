@@ -8,7 +8,8 @@ import { useToast } from '../components/Toast'
 import AmountSheet, { type AmountTarget } from '../components/diet/AmountSheet'
 import FoodSearch from '../components/diet/FoodSearch'
 import MacroTable from '../components/diet/MacroTable'
-import { BarcodeIcon, ChevronLeft, ChevronRight, Chrome, ChromeButton, DotsIcon, NamingTag, SearchIcon, SectionLabel, Sheet } from '../components/diet/ui'
+import { BarcodeIcon, ChevronLeft, ChevronRight, Chrome, ChromeButton, DotsIcon, NamingTag, SearchIcon, SectionLabel } from '../components/diet/ui'
+import { Sheet, SheetHeader } from '../components/Sheet'
 import { MACRO_COLORS, MONO, accentChipStyle, ctaStyle, glassRow, macroLabelStyle } from '../components/diet/styles'
 import { ApiError, NetworkError } from '../api/client'
 import { useBarcodeLookup, useDailyTargets, useFood, useMeal } from '../api/hooks'
@@ -486,6 +487,7 @@ function RenameSheet({
 }) {
   return (
     <Sheet open={open} onClose={onClose} label="Rename meal">
+      <SheetHeader title="Name this meal" onClose={onClose} />
       {open && <RenameBody meal={meal} onSave={onSave} />}
     </Sheet>
   )
@@ -501,7 +503,6 @@ function RenameBody({ meal, onSave }: { meal: MealType; onSave: (name: string | 
         onSave(name && !(meal.name_source === 'auto' && name === mealName(meal)) ? name : null)
       }}
     >
-      <div style={{ fontSize: 19, fontWeight: 600, letterSpacing: '-0.01em' }}>Name this meal</div>
       <input
         value={value}
         onChange={(e) => setValue(e.target.value)}

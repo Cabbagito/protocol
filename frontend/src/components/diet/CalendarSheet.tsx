@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { useDietDays } from '../../api/hooks'
 import { localDateKey, parseIso } from '../../lib/dates'
 import { KcalBar } from './DayStrip'
-import { ChevronLeft, ChevronRight, ChromeButton, Sheet } from './ui'
+import { Sheet, SheetHeader } from '../Sheet'
+import { ChevronLeft, ChevronRight, ChromeButton } from './ui'
 import { MONO, ctaStyle, dayCellStyle, eyebrowStyle } from './styles'
 
 const HEADS = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
@@ -40,6 +41,7 @@ export default function CalendarSheet({
 }) {
   return (
     <Sheet open={open} onClose={onClose} label="Calendar">
+      <SheetHeader title="Pick a day" onClose={onClose} />
       {open && <Month key={monthOf(date)} date={date} today={today} target={target} onPick={onPick} />}
     </Sheet>
   )
@@ -54,7 +56,7 @@ function Month({ date, today, target, onPick }: { date: string; today: string; t
   const first = parseIso(days[0]!)
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', marginTop: 16 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <ChromeButton label="Previous month" onClick={() => setMonth(shiftMonth(month, -1))}>
           <ChevronLeft />

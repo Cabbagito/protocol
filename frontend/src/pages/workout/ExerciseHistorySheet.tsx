@@ -1,5 +1,5 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { useScrollLock } from '../../hooks/useScrollLock'
+import { useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { FullScreen } from '../../components/FullScreen'
 import {
   CHIP_GAP, DATE_COLUMN, chipLayout, groupByMesocycle, historySlots, usualCount,
   type ChipLayout, type ExerciseSessionHistory,
@@ -15,8 +15,8 @@ const MONO = 'JetBrains Mono, ui-monospace, monospace'
 const LABEL = 'color-mix(in oklab, var(--text-2) 55%, var(--text-m))'
 /** Blocks shown before "Show older". */
 const RECENT_BLOCKS = 3
-/** Side padding of the list. */
-const PAD = 20
+/** Side padding of the list (FullScreen's gutter). */
+const PAD = 22
 
 interface ExerciseHistorySheetProps {
   exerciseName: string
@@ -37,17 +37,16 @@ interface ExerciseHistorySheetProps {
 export function ExerciseHistorySheet({
   exerciseName, muscleGroup, equipmentType, history, mesocycleId, onClose,
 }: ExerciseHistorySheetProps) {
-  useScrollLock(true)
   const c = getMuscleColor(muscleGroup)
   const [showAll, setShowAll] = useState(false)
-  const scrollRef = useRef<HTMLDivElement>(null)
+  const rowsRef = useRef<HTMLDivElement>(null)
   const [rowWidth, setRowWidth] = useState(() => Math.min(window.innerWidth, 512) - 2 * PAD)
 
-  // Rows span the scroll area minus its side padding.
+  // Rows span the content column.
   useLayoutEffect(() => {
-    const el = scrollRef.current
+    const el = rowsRef.current
     if (!el) return
-    setRowWidth(el.clientWidth - 2 * PAD)
+    setRowWidth(el.clientWidth)
     const ro = new ResizeObserver(entries => {
       const w = entries[0]?.contentRect.width
       if (w) setRowWidth(w)
@@ -55,12 +54,6 @@ export function ExerciseHistorySheet({
     ro.observe(el)
     return () => ro.disconnect()
   }, [])
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [onClose])
 
   const slots = useMemo(() => history.map(h => historySlots(h.sets)), [history])
   const blocks = useMemo(() => groupByMesocycle(history), [history])
@@ -77,117 +70,78 @@ export function ExerciseHistorySheet({
   const visible = showAll ? blocks : blocks.slice(0, RECENT_BLOCKS)
 
   return (
-    <div className="fixed inset-0 z-[102]" onClick={onClose}>
-      <div className="absolute inset-0" style={{ background: 'var(--scrim)' }} />
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label={`${exerciseName} history`}
-        className="slide-up"
-        onClick={e => e.stopPropagation()}
-        style={{
-          position: 'absolute', left: 0, right: 0, bottom: 0,
-          top: 'calc(env(safe-area-inset-top) + 56px)',
-          maxWidth: '32rem', margin: '0 auto',
-          display: 'flex', flexDirection: 'column',
-          borderRadius: '26px 26px 0 0',
-          background: 'color-mix(in oklab, var(--card) 94%, transparent)',
-          borderTop: '1px solid var(--fill-strong)',
-          boxShadow: '0 -20px 60px -20px rgba(0,0,0,0.8)',
-        }}
-      >
-        <div style={{ width: 38, height: 4, borderRadius: 2, background: 'var(--fill-strong)', margin: '8px auto 0', flex: 'none' }} />
-        <div style={{ padding: '12px 20px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flex: 'none' }}>
-          <div style={{ minWidth: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: MONO, fontSize: 9, fontWeight: 600, letterSpacing: '0.16em', textTransform: 'uppercase', color: c.text }}>
-              <span style={{ width: 7, height: 7, borderRadius: '50%', background: c.primary, boxShadow: `0 0 10px ${c.primary}` }} />
-              {muscleGroup} · {equipmentType}
+    <FullScreen
+      label={`${exerciseName} history`}
+      eyebrow={`History · ${muscleGroup} · ${equipmentType}`}
+      eyebrowColor={c.text}
+      title={exerciseName}
+      onClose={onClose}
+    >
+      <div ref={rowsRef}>
+        {history.length === 0 ? (
+          <p style={{ marginTop: 32, textAlign: 'center', fontSize: 14, color: 'var(--text-2)' }}>
+            No sets logged for this exercise yet.
+          </p>
+        ) : (
+          <>
+            <div
+              style={{
+                display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', padding: '12px 0',
+                borderRadius: 16, background: 'var(--fill-soft)', border: '1px solid var(--line)',
+              }}
+            >
+              <Stat label="Best set" divider={false}>
+                {best && <>{formatWeight(best.weight ?? 0)}<Times />{best.reps}</>}
+              </Stat>
+              <Stat label="Best est. 1RM">{best ? formatWeight(setE1rm(best)) : '—'}</Stat>
+              <Stat label="Sessions">{history.length}</Stat>
             </div>
-            <div style={{ fontSize: 20, fontWeight: 600, letterSpacing: '-0.015em', marginTop: 4, color: 'var(--text-1)' }}>
-              {exerciseName}
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close"
-            style={{ width: 32, height: 32, borderRadius: 10, background: 'var(--fill)', display: 'grid', placeItems: 'center', color: 'var(--text-2)', flex: 'none' }}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" aria-hidden="true">
-              <path d="M18 6 6 18M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
 
-        <div
-          ref={scrollRef}
-          style={{ flex: 1, overflowY: 'auto', overscrollBehavior: 'contain', padding: `0 ${PAD}px calc(env(safe-area-inset-bottom) + 24px)` }}
-        >
-          {history.length === 0 ? (
-            <p style={{ marginTop: 32, textAlign: 'center', fontSize: 14, color: 'var(--text-2)' }}>
-              No sets logged for this exercise yet.
-            </p>
-          ) : (
-            <>
-              <div
+            <div>
+              {visible.map((block, bi) => (
+                <div key={starts[bi]}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 10, margin: '22px 0 6px' }}>
+                    <span style={{ fontFamily: "'Fraunces', 'Instrument Serif', Georgia, serif", fontStyle: 'italic', fontSize: 15, color: 'var(--text-1)', minWidth: 0 }}>
+                      {block.mesoName}
+                      {block.mesoId === mesocycleId && <ThisBlockTag />}
+                    </span>
+                    <span style={{ fontFamily: MONO, fontSize: 9, letterSpacing: '0.14em', color: LABEL, whiteSpace: 'nowrap' }}>
+                      {dateRange(block.sessions)}
+                    </span>
+                  </div>
+                  {block.sessions.map((h, si) => {
+                    const i = starts[bi]! + si
+                    return (
+                      <SessionRow
+                        key={i}
+                        entry={h}
+                        slots={slots[i]!}
+                        previous={slots[i + 1] ?? null}
+                        layout={layout}
+                        color={c}
+                      />
+                    )
+                  })}
+                </div>
+              ))}
+            </div>
+
+            {!showAll && blocks.length > RECENT_BLOCKS && (
+              <button
+                type="button"
+                onClick={() => setShowAll(true)}
                 style={{
-                  display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', marginTop: 14, padding: '12px 0',
-                  borderRadius: 16, background: 'var(--fill-soft)', border: '1px solid var(--line)',
+                  marginTop: 14, width: '100%', height: 42, borderRadius: 12,
+                  border: '1px dashed var(--border)', color: 'var(--text-2)', fontSize: 12.5,
                 }}
               >
-                <Stat label="Best set" divider={false}>
-                  {best && <>{formatWeight(best.weight ?? 0)}<Times />{best.reps}</>}
-                </Stat>
-                <Stat label="Best est. 1RM">{best ? formatWeight(setE1rm(best)) : '—'}</Stat>
-                <Stat label="Sessions">{history.length}</Stat>
-              </div>
-
-              <div>
-                {visible.map((block, bi) => (
-                  <div key={starts[bi]}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 10, margin: '22px 0 6px' }}>
-                      <span style={{ fontFamily: "'Fraunces', 'Instrument Serif', Georgia, serif", fontStyle: 'italic', fontSize: 15, color: 'var(--text-1)', minWidth: 0 }}>
-                        {block.mesoName}
-                        {block.mesoId === mesocycleId && <ThisBlockTag />}
-                      </span>
-                      <span style={{ fontFamily: MONO, fontSize: 9, letterSpacing: '0.14em', color: LABEL, whiteSpace: 'nowrap' }}>
-                        {dateRange(block.sessions)}
-                      </span>
-                    </div>
-                    {block.sessions.map((h, si) => {
-                      const i = starts[bi]! + si
-                      return (
-                        <SessionRow
-                          key={i}
-                          entry={h}
-                          slots={slots[i]!}
-                          previous={slots[i + 1] ?? null}
-                          layout={layout}
-                          color={c}
-                        />
-                      )
-                    })}
-                  </div>
-                ))}
-              </div>
-
-              {!showAll && blocks.length > RECENT_BLOCKS && (
-                <button
-                  type="button"
-                  onClick={() => setShowAll(true)}
-                  style={{
-                    marginTop: 14, width: '100%', height: 42, borderRadius: 12,
-                    border: '1px dashed var(--border)', color: 'var(--text-2)', fontSize: 12.5,
-                  }}
-                >
-                  Show older
-                </button>
-              )}
-            </>
-          )}
-        </div>
+                Show older
+              </button>
+            )}
+          </>
+        )}
       </div>
-    </div>
+    </FullScreen>
   )
 }
 
