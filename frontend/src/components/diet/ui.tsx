@@ -1,10 +1,8 @@
 /**
  * Small building blocks shared by the Diet screens, after the Protocol design
- * system (Chrome, SectionLabel, sheets, the inline icons).
+ * system (Chrome, SectionLabel, the inline icons).
  */
-import { useEffect, useState, type CSSProperties, type ReactNode } from 'react'
-import { createPortal } from 'react-dom'
-import { useScrollLock } from '../../hooks/useScrollLock'
+import type { CSSProperties, ReactNode } from 'react'
 import { OFFLINE_COLOR } from '../SyncPill'
 import { MONO, eyebrowStyle } from './styles'
 
@@ -185,127 +183,6 @@ export function SectionLabel({
       <span>{children}</span>
       {hint && <span>{hint}</span>}
     </div>
-  )
-}
-
-/** The visual viewport, so a sheet's bottom stays above the iOS keyboard. */
-function useVisualViewport(): { top: number; height: number } {
-  const read = () => {
-    const vv = window.visualViewport
-    return vv ? { top: vv.offsetTop, height: vv.height } : { top: 0, height: window.innerHeight }
-  }
-  const [box, setBox] = useState(read)
-  useEffect(() => {
-    const vv = window.visualViewport
-    if (!vv) return
-    const update = () => setBox(read())
-    vv.addEventListener('resize', update)
-    vv.addEventListener('scroll', update)
-    return () => {
-      vv.removeEventListener('resize', update)
-      vv.removeEventListener('scroll', update)
-    }
-  }, [])
-  return box
-}
-
-/** A bottom sheet on a scrim. Tapping the scrim or Escape closes it. */
-export function Sheet({
-  open,
-  onClose,
-  label,
-  children,
-}: {
-  open: boolean
-  onClose: () => void
-  label: string
-  children: ReactNode
-}) {
-  useScrollLock(open)
-  const box = useVisualViewport()
-
-  useEffect(() => {
-    if (!open) return
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [open, onClose])
-
-  if (!open) return null
-  return createPortal(
-    <div
-      style={{
-        position: 'fixed',
-        left: 0,
-        right: 0,
-        top: box.top,
-        height: box.height,
-        zIndex: 102,
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'flex-end',
-      }}
-    >
-      <div
-        aria-hidden="true"
-        onClick={onClose}
-        style={{ position: 'absolute', inset: 0, background: 'var(--scrim)', backdropFilter: 'blur(2px)' }}
-      />
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label={label}
-        style={{
-          position: 'relative',
-          width: '100%',
-          maxWidth: 520,
-          margin: '0 auto',
-          maxHeight: '92%',
-          overflowY: 'auto',
-          overscrollBehavior: 'contain',
-          borderRadius: '24px 24px 0 0',
-          background: 'var(--base)',
-          borderTop: '1px solid var(--border)',
-          padding: '10px 20px calc(env(safe-area-inset-bottom) + 20px)',
-          boxSizing: 'border-box',
-          color: 'var(--text-1)',
-        }}
-      >
-        <div
-          aria-hidden="true"
-          style={{ width: 36, height: 4, borderRadius: 2, background: 'var(--fill-strong)', margin: '0 auto 14px' }}
-        />
-        {children}
-      </div>
-    </div>,
-    document.body,
-  )
-}
-
-export function CloseButton({ onClick, label = 'Close' }: { onClick: () => void; label?: string }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-label={label}
-      style={{
-        width: 32,
-        height: 32,
-        borderRadius: '50%',
-        background: 'var(--fill-strong)',
-        border: 'none',
-        color: 'var(--text-2)',
-        display: 'grid',
-        placeItems: 'center',
-        flex: 'none',
-        cursor: 'pointer',
-        padding: 0,
-      }}
-    >
-      <CloseIcon size={13} />
-    </button>
   )
 }
 

@@ -17,7 +17,8 @@ import {
   per100OfItem,
   unitWord,
 } from '../../lib/diet'
-import { CloseButton, OfflineNote, Sheet } from './ui'
+import { CloseButton, Sheet, SheetHeader } from '../Sheet'
+import { OfflineNote } from './ui'
 import { MACRO_COLORS, MONO, ctaStyle, macroLabelStyle } from './styles'
 
 export interface AmountTarget {
@@ -182,45 +183,41 @@ function AmountBody({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column' }}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 19, fontWeight: 600, letterSpacing: '-0.01em' }}>{name}</div>
-          {per100 && (
-            <div
-              style={{
-                fontFamily: MONO,
-                fontSize: 10,
-                letterSpacing: '0.06em',
-                color: 'var(--text-2)',
-                opacity: 0.8,
-                marginTop: 5,
-              }}
-            >
-              PER 100 G · {fmtKcal(per100.kcal)} KCAL · {fmtQty(per100.protein_g)} P · {fmtQty(per100.carbs_g)} C ·{' '}
-              {fmtQty(per100.fat_g)} F
-            </div>
-          )}
-          {food?.editable && onEditProduct && (
-            <button
-              type="button"
-              onClick={() => onEditProduct(food)}
-              style={{
-                marginTop: 6,
-                padding: 0,
-                border: 'none',
-                background: 'transparent',
-                color: 'var(--accent-l)',
-                fontSize: 12,
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
-            >
-              Edit product
-            </button>
-          )}
-        </div>
-        <CloseButton onClick={onClose} />
-      </div>
+      <SheetHeader title={name} onClose={onClose}>
+        {per100 && (
+          <div
+            style={{
+              fontFamily: MONO,
+              fontSize: 10,
+              letterSpacing: '0.06em',
+              color: 'var(--text-2)',
+              opacity: 0.8,
+              marginTop: 5,
+            }}
+          >
+            PER 100 G · {fmtKcal(per100.kcal)} KCAL · {fmtQty(per100.protein_g)} P · {fmtQty(per100.carbs_g)} C ·{' '}
+            {fmtQty(per100.fat_g)} F
+          </div>
+        )}
+        {food?.editable && onEditProduct && (
+          <button
+            type="button"
+            onClick={() => onEditProduct(food)}
+            style={{
+              marginTop: 6,
+              padding: 0,
+              border: 'none',
+              background: 'transparent',
+              color: 'var(--accent-l)',
+              fontSize: 12,
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            Edit product
+          </button>
+        )}
+      </SheetHeader>
       {target.offline && per100 && (
         <OfflineNote style={{ marginTop: 12 }}>Offline · units need a connection</OfflineNote>
       )}
