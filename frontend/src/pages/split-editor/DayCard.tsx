@@ -73,12 +73,21 @@ export default function DayCard({
         overflow: 'hidden',
       }}
     >
-      {/* Header */}
-      <button
-        type="button"
+      {/* Header: a div, not a button, so the name input and the icon buttons
+          aren't nested inside another button (iOS won't type into those). */}
+      <div
+        role="button"
+        tabIndex={0}
+        aria-expanded={isExpanded}
         onClick={(e) => {
-          if ((e.target as HTMLElement).closest('.day-delete') || (e.target as HTMLElement).closest('.day-name-input')) return
+          if ((e.target as HTMLElement).closest('button, input')) return
           onToggle()
+        }}
+        onKeyDown={(e) => {
+          if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) {
+            e.preventDefault()
+            onToggle()
+          }
         }}
         style={{
           width: '100%',
@@ -110,10 +119,8 @@ export default function DayCard({
         {isEditingName ? (
           <input
             ref={nameInputRef}
-            className="day-name-input"
             value={localName}
             onChange={(e) => setLocalName(e.target.value)}
-            onClick={(e) => e.stopPropagation()}
             onKeyDown={(e) => {
               if (e.key === 'Enter' || e.key === 'Escape') commitName()
             }}
@@ -134,11 +141,6 @@ export default function DayCard({
           />
         ) : (
           <span
-            onDoubleClick={(e) => {
-              if (readOnly) return
-              e.stopPropagation()
-              onStartRename()
-            }}
             style={{
               flex: 1,
               fontSize: 14,
@@ -168,14 +170,35 @@ export default function DayCard({
           {day.exercises.length} {day.exercises.length === 1 ? 'lift' : 'lifts'}
         </span>
 
+        {!readOnly && !isEditingName && (
+          <button
+            type="button"
+            onClick={onStartRename}
+            aria-label="Rename day"
+            style={{
+              width: 26,
+              height: 26,
+              borderRadius: 8,
+              background: 'transparent',
+              border: 'none',
+              color: 'var(--text-m)',
+              display: 'grid',
+              placeItems: 'center',
+              cursor: 'pointer',
+              flexShrink: 0,
+            }}
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round">
+              <path d="M12 20h9" />
+              <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z" />
+            </svg>
+          </button>
+        )}
+
         {canDelete && !readOnly && (
           <button
             type="button"
-            className="day-delete"
-            onClick={(e) => {
-              e.stopPropagation()
-              onDelete()
-            }}
+            onClick={onDelete}
             aria-label="Delete day"
             style={{
               width: 26,
@@ -212,7 +235,7 @@ export default function DayCard({
         >
           <path d="M9 18l6-6-6-6" />
         </svg>
-      </button>
+      </div>
 
       {/* Body */}
       <div
