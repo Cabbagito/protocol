@@ -45,7 +45,7 @@ export default function SplitEditor() {
   const [days, setDays] = useState<DayState[]>([{ tempId: 1, name: '', exercises: [] }])
   const [expandedDay, setExpandedDay] = useState<number>(1)
   const [searchOpenDay, setSearchOpenDay] = useState<number | null>(null)
-  const [editingNameDay, setEditingNameDay] = useState<number | null>(1)
+  const [editingNameDay, setEditingNameDay] = useState<number | null>(null)
   // Id of the split loaded into the form; the route can switch to another
   // split (Duplicate opens the copy) without remounting this component.
   const [loadedId, setLoadedId] = useState<string | null>(null)
