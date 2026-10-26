@@ -1,203 +1,104 @@
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://img.shields.io/badge/%E2%97%86-Protocol-0ea5e9?style=for-the-badge&labelColor=0d1b2a">
-  <img alt="Protocol" src="https://img.shields.io/badge/%E2%97%86-Protocol-0ea5e9?style=for-the-badge&labelColor=0d1b2a">
-</picture>
-
 # Protocol
 
-Personal fitness tracking PWA — gym training and nutrition.
+A fitness app for the gym and the kitchen: plan training blocks, log every set,
+and track what you eat. It's built for the phone, and it keeps working with no signal.
 
-Built mobile-first for an installed iPhone PWA: local-first workout logging
-that keeps working with no signal, "last time" targets on every set, and a
-diet log with barcode scanning.
+<p align="center">
+  <img src="docs/screenshots/home.webp" width="200" alt="Home: today's workout, Upper A, with the training block's progress">
+  &nbsp;
+  <img src="docs/screenshots/workout.webp" width="200" alt="Logging a set of cable flys, with last time's weight and reps">
+  &nbsp;
+  <img src="docs/screenshots/diet.webp" width="200" alt="The diet day: calories and macros against targets, meals on a timeline">
+</p>
 
-```
- ┌─────────────────────────────────────────────────────────┐
- │                                                         │
- │   ◇ Exercises (seeded + custom)   ◇ Splits (templates)  │
- │   ◇ Mesocycles                    ◇ Workout logging     │
- │   ◇ Offline sync                  ◇ Progress            │
- │   ◇ Meals + barcode + labels      ◇ Macro targets       │
- │   ◇ Bodyweight                                          │
- │                                                         │
- └─────────────────────────────────────────────────────────┘
-```
+Protocol is a personal project: a web app you install to your iPhone's home screen
+(a PWA), self-hosted on a small server.
 
-## Tech Stack
+## Training
 
-| Layer | Tech |
-|-------|------|
-| **Frontend** | React 18 + Vite + TypeScript + Tailwind CSS (via Bun) |
-| **Backend** | FastAPI + SQLAlchemy async + Alembic migrations (via uv) |
-| **Database** | PostgreSQL 16 |
-| **Proxy** | Caddy (auto-HTTPS via Let's Encrypt) |
-| **Infra** | Docker Compose — Caddy, API and Postgres in prod; Postgres and API in dev (Vite on the host) |
+Training is planned in **mesocycles**: blocks of 3–8 weeks built from a split
+(Upper/Lower, Push/Pull/Legs, … or your own).
 
-## Development
+- **One set at a time.** Weight, reps, *Log*. Sets you haven't touched show last
+  time's weight and reps, so most sets take a single tap.
+- **Change the plan mid-workout.** Skip a set, an exercise or the whole session;
+  swap, add or reorder exercises; keep a note on any exercise.
+- **The whole block on one screen.** Every session in a grid, where you left off,
+  and this week's sets per muscle group.
+- **A review after every workout.** Totals against last week, sets by muscle,
+  each lift set by set against last time, and estimated 1RM.
+- 115 exercises and 6 split templates to start from, plus your own.
 
-### Start
+<p align="center">
+  <img src="docs/screenshots/meso.webp" width="170" alt="A mesocycle: progress, the week-by-session grid and weekly volume per muscle">
+  &nbsp;
+  <img src="docs/screenshots/review.webp" width="170" alt="A workout review: totals, sets by muscle and each lift compared with last week">
+  &nbsp;
+  <img src="docs/screenshots/progress.webp" width="170" alt="Progress for one lift: estimated 1RM over eight weeks and weekly volume">
+</p>
 
-**Prerequisites:** Docker, [bun](https://bun.sh/) (and [uv](https://docs.astral.sh/uv/) to run backend tools on the host)
+## Diet
 
-```bash
-# Terminal 1: PostgreSQL + API with hot reload
-docker compose up
+- **Meals, not slots.** Log what you ate and when; the day is a timeline, with
+  calories and macros against your targets.
+- **Three ways to add a food:** search, scan a barcode (Open Food Facts), or
+  photograph the nutrition label and let Claude read it.
+- **Amounts the way you think of them:** grams, or a food's own units (a slice,
+  a scoop, a tablespoon), plus units of your own.
+- **Meals name themselves.** Claude names and groups each meal in the
+  background; a name you type always wins.
+- Daily macro targets and a bodyweight log.
 
-# Terminal 2: frontend on the host
-cd frontend && bun install && bun run dev
-```
+<p align="center">
+  <img src="docs/screenshots/meal.webp" width="170" alt="A chickpea and quinoa bowl: its foods with calories and macros">
+  &nbsp;
+  <img src="docs/screenshots/search.webp" width="170" alt="Adding a food: beans, with what you had last time">
+  &nbsp;
+  <img src="docs/screenshots/product.webp" width="170" alt="A barcode product, smoked tofu: macros per 100 g and its units">
+</p>
 
-| Service | URL | Details |
-|---------|-----|---------|
-| **PostgreSQL** | `localhost:5432` | Data persisted in Docker volume |
-| **FastAPI** | `http://localhost:8000` | Hot reload via bind mount; venv in the `backend_venv` volume at `/venv` |
-| **Vite** | `http://localhost:5173` | Runs on the host, HMR, proxies `/api` to `localhost:8000` |
+## Works offline
 
-Login with password: `devpassword`
+Every set and every meal is saved on the phone first and synced in the
+background, retrying until the server has it. A gym basement with no signal
+doesn't lose anything, and the app opens offline.
 
-The frontend is not containerized: on Docker Desktop for Mac a `node_modules` volume nested inside the `./frontend` bind mount is shared with the host, so host and container installs overwrite each other's native binaries. The backend container keeps its virtualenv at `/venv`, outside the `./backend` bind mount, for the same reason, so `uv sync` on the host and in the container no longer interfere.
+## Themes
 
-Coming from the old setup? Run `docker compose up --remove-orphans` once to drop the old frontend container, reinstall host deps (`rm -rf frontend/node_modules && bun install`, plus `uv sync` in `backend/`), and optionally `docker volume rm protocol_backend_cache protocol_frontend_node_modules`.
+Fifteen of them, dark and light.
 
-### Backend on the host
+<p align="center">
+  <img src="docs/screenshots/themes.webp" width="560" alt="The mesocycle screen in the Plum, Sage, Ochre and Paper themes">
+</p>
 
-```bash
-docker compose up db                     # just the database
-cp .env.example backend/.env             # APP_ENV=dev, local DATABASE_URL
-cd backend && uv sync && uv run uvicorn app.main:app --reload
-```
+## Under the hood
 
-### Useful Commands
+- **Frontend:** React, TypeScript, Vite and Tailwind, installable as a PWA, with
+  TanStack Query and local drafts for offline use.
+- **Backend:** FastAPI, async SQLAlchemy and PostgreSQL, with Alembic migrations.
+- **Hosting:** Docker Compose on one VPS, with Caddy serving the app over HTTPS.
+- **Claude** (optional): Haiku names meals and Opus reads nutrition labels. Without an
+  `ANTHROPIC_API_KEY`, meals show their foods and products are typed in.
 
-```bash
-# Backend (tests need PostgreSQL; the protocol_test* database is dropped and recreated)
-uv run pytest                                            # Run tests
-TEST_DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/protocol_test uv run pytest
-uv run ruff check . && uv run ruff format .              # Lint + format
-uv run alembic revision --autogenerate -m "description"  # New migration
-uv run alembic upgrade head                              # Apply migrations
+The rules behind workouts and meals are written up in
+[`docs/WORKOUT-LOGIC.md`](docs/WORKOUT-LOGIC.md) and [`docs/DIET-LOGIC.md`](docs/DIET-LOGIC.md).
 
-# Frontend
-bun run build          # Production build
-bun run lint           # ESLint
-```
+## Running it locally
 
-## Architecture
-
-```
-                    ┌──────────────────────────────────────┐
-                    │            Docker Compose            │
-                    │                                      │
-  :5173 (dev)       │  ┌───────────┐    ┌───────────────┐  │
-  :443  (prod)  ────┼──│   Caddy   │───▸│    FastAPI    │  │
-                    │  │  (proxy)  │    │   (backend)   │  │
-                    │  └───────────┘    └──────┬────────┘  │
-                    │                          │           │
-                    │                   ┌──────▾────────┐  │
-                    │                   │  PostgreSQL   │  │
-                    │                   │    :5432      │  │
-                    │                   └───────────────┘  │
-                    └──────────────────────────────────────┘
-
-  Dev:  Vite (on the host) serves frontend, proxies /api → backend
-  Prod: Caddy serves built React, reverse-proxies /api → backend
-```
-
-**Auth:** Multi-user, password-only login (no username field). Each user has a unique password hashed with bcrypt. JWT tokens valid 1 year, user UUID in `sub` claim. Admin user bootstrapped from `APP_PASSWORD` env var on first run.
-
-**Data ownership:** Exercises, splits, mesocycles and foods have a nullable `user_id` FK. `NULL` = shared seed data (visible to all, read-only). Non-null = user-owned (visible only to owner).
-
-**Workout data model:** No separate workout log table. Mesocycles store a `structure` JSONB column: `weeks[] → sessions[] → exercises[] → sets[]`. Each set tracks `weight`, `reps`, `logged`, `skipped` and an optional set type. Workouts are saved local-first: every change goes to the phone's storage, then a background queue syncs whole-session snapshots (`PUT /api/workouts/session`, idempotent) until the server confirms. How skips, set counts, targets and dates work: [`docs/WORKOUT-LOGIC.md`](docs/WORKOUT-LOGIC.md).
-
-## Project Structure
-
-```
-protocol/
-├── frontend/                    React + Vite + Tailwind (Bun)
-│   ├── src/
-│   │   ├── api/client.ts        Fetch wrapper with auth headers
-│   │   ├── components/          AppHeader, BottomSheet, MesoGrid,
-│   │   │                        SplashScreen, ProtocolMark, Toast, ...
-│   │   ├── hooks/               Custom React hooks
-│   │   ├── lib/                 Auth, muscle colors, meso utilities
-│   │   ├── pages/               12 lazy-loaded route pages
-│   │   └── types/               TypeScript interfaces
-│   └── package.json
-│
-├── backend/                     FastAPI + SQLAlchemy (uv)
-│   ├── app/
-│   │   ├── core/                Config, database, security, seed data
-│   │   ├── models/              User, Exercise, Split, Mesocycle
-│   │   ├── routers/             Auth, exercises, splits, mesocycles,
-│   │   │                        workouts, health
-│   │   └── services/            Business logic
-│   ├── migrations/              Alembic migrations (auto-upgrade on start)
-│   └── pyproject.toml
-│
-├── docs/                        PRD, roadmap, go-live notes, workout and diet logic
-├── docker-compose.yml           Development (hot reload)
-├── docker-compose.prod.yml      Production (Caddy + auto-SSL)
-├── Caddyfile                    Reverse proxy config
-├── Dockerfile.caddy             Frontend build + Caddy image
-└── backend/Dockerfile           API server image
-```
-
-## Deployment
-
-**Production** runs on a VPS with Docker Compose — three containers:
-
-| Container | Role |
-|-----------|------|
-| **Caddy** | Serves React frontend, reverse-proxies `/api/*` to backend, auto-provisions HTTPS |
-| **FastAPI** | Pure API server (no static files), runs Alembic migrations on startup |
-| **PostgreSQL** | Persistent data via named Docker volume |
+You need Docker and [Bun](https://bun.sh/).
 
 ```bash
-# Deploy
-git pull && docker compose -f docker-compose.prod.yml up -d --build
+docker compose up                              # PostgreSQL + API
+cd frontend && bun install && bun run dev      # app at http://localhost:5173
 ```
 
-### Environment Variables
-
-**Production** (`.env` file on VPS — see `.env.prod.example`):
-
-| Variable | Purpose |
-|----------|---------|
-| `DOMAIN` | Your domain (Caddy auto-SSL) |
-| `DB_PASSWORD` | PostgreSQL password |
-| `APP_PASSWORD` | Bootstrap admin user password (only used while no user exists) |
-| `SECRET_KEY` | JWT signing key — required; the backend refuses to start if it is empty or a placeholder from this repo (`openssl rand -hex 32`) |
-| `ADMIN_NAME` | Admin display name (default: "Admin") |
-
-`docker-compose.prod.yml` refuses to start without `SECRET_KEY` and `DB_PASSWORD`. Locally, `APP_ENV=dev` (set in `docker-compose.yml` and `.env.example`) allows the placeholder secrets.
-
-## Design System
-
-The implemented design is "v5": themeable dark UI (several themes in Settings) on a static gradient background, Inter + JetBrains Mono, with one color per muscle group. The spec is the Protocol design system in Claude Design (linked from `CLAUDE.md`); new screens are designed there before they are built. Tokens live as CSS variables in `frontend/src/index.css` and `frontend/src/lib/themes.ts`.
-
-## API Endpoints
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/api/auth/login` | Password-only login, returns JWT |
-| `GET` | `/api/exercises` | List exercises (shared + user-owned) |
-| `POST` | `/api/exercises` | Create exercise |
-| `GET` | `/api/splits` | List training templates |
-| `POST` | `/api/splits` | Create split with sessions |
-| `GET` | `/api/mesocycles` | List user's mesocycles |
-| `POST` | `/api/mesocycles` | Create mesocycle from split |
-| `GET` | `/api/mesocycles/{id}` | Mesocycle with its full workout structure |
-| `PUT` | `/api/workouts/session` | Save one session's snapshot (idempotent) |
-| `POST` | `/api/workouts/add-exercise` · `replace-exercise` · `remove-exercise` · `reorder-exercises` | Change a session's exercise list |
-| `POST` | `/api/workouts/skip-session` | Skip / restore a whole workout |
-| `GET` | `/api/exercises/{id}/history` | Every logged session of an exercise |
-| `GET` · `PUT` | `/api/meals?date=` · `/api/meals/days` · `/api/meals/{id}` | Meals by day; save a meal's snapshot (idempotent) |
-| `GET` · `POST` | `/api/foods` · `/api/foods/{id}/units` · `/api/foods/by-barcode/{code}` · `/api/foods/read-label` | Foods, units, barcodes, pack photos |
-| `GET` | `/api/weight-logs` · `/api/me/daily-targets` | Bodyweight, macro targets |
-| `GET` | `/api/health` | Health check |
-
-All endpoints except `/auth/login` and `/health` require a Bearer JWT token.
+Log in with the password `devpassword`. Tests, migrations and deployment are covered in
+[`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md).
 
 ## Status
 
-Gym tracking and the diet log are in use. What's next: [`docs/ROADMAP.md`](docs/ROADMAP.md).
+In daily use. Up next: [`docs/ROADMAP.md`](docs/ROADMAP.md).
+
+## License
+
+[MIT](LICENSE)
